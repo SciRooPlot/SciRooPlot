@@ -179,7 +179,7 @@ plot[2].AddRatio(templ("num"), Data("den", "src"));                           //
 plot[2].AddRatio({"num", "src"}, {"den"});                                   // denominator without data source: the numerator's
 plot[2].AddRatio(...).Both().Normalize().Result().SetColor(kRed);            // modifier scope: Numer() / Denom() / Both() / Result() (default)
 ```
-Incompatible binnings are divided via spline interpolation. Modifiers and data selections on the ratio itself (`Result()` mode) are usually meaningless for Rebin/Project etc. and warn — write them explicitly with `Numer()`, `Denom()` or `Both()`.
+Incompatible binnings are divided via spline interpolation; a profile is divided as the histogram of its means (after its `Numer()`/`Denom()` modifiers). Modifiers and data selections on the ratio itself (`Result()` mode) are usually meaningless for Rebin/Project etc. and warn — write them explicitly with `Numer()`, `Denom()` or `Both()`.
 
 ## Trees and tables (TTree, RNTuple, CSV)
 

@@ -1971,6 +1971,387 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         drawOption = "SAME ";  // next data should be drawn to same pad
       };
 
+      auto warn = [&](auto&&... args) {
+        if (dataIndex != 0) logger::warning(std::forward<decltype(args)>(args)...);
+      };
+
+      // apply the data modifiers stored in mods to ptr (plain data, ratio inputs and ratio result)
+      auto applyModifiers = [&](auto& ptr, const Plot::Pad::Data& mods) {
+        using ptr_type = std::decay_t<decltype(ptr)>;
+        auto warnUnsupported = [&](bool requested, const char* what) {
+          if (requested) warn("{} is not supported for {} ({}), ignoring.", what, ptr->GetName(), ptr->ClassName());
+        };
+        // multiplies a factor of Scale (axis 0) or ScaleX/Y/Z into product; a factor that is not positive is ignored
+        auto multiplyFactor = [&](optional<double_t>& product, const optional<double_t>& factor, char axis = 0) {
+          if (!factor) return;
+          if (*factor <= 0.) {
+            if (axis) {
+              warn("Scale factor for {} axis of {} must be positive, ignoring.", axis, ptr->GetName());
+            } else {
+              warn("Scale factor for {} must be positive, ignoring.", ptr->GetName());
+            }
+            return;
+          }
+          product = product.value_or(1.) * *factor;
+        };
+
+        auto scaleAxis = [&](int16_t axisIndex, const optional<double_t>& factor) {
+          if (!factor) return;
+          if constexpr (is_hist_1d<ptr_type>()) {
+            if (axisIndex == 1) return;  // y is bin content here - equivalent to Scale()
+          } else if constexpr (is_hist_2d<ptr_type>()) {
+            if (axisIndex == 2) return;  // z is bin content here - equivalent to Scale()
+          } else if constexpr (is_graph_1d<ptr_type>()) {
+            if (axisIndex == 1) return;  // same operation as Scale() for a graph
+          } else if constexpr (is_graph_2d<ptr_type>()) {
+            if (axisIndex == 2) return;  // z is the value Scale() targets for a 2d graph
+          } else if constexpr (is_func<ptr_type>()) {
+            return;
+          }
+          string axisLetter = GetAxisStr(axisIndex);
+          if (*factor <= 0.) {
+            warn("Scale factor for {} axis of {} must be positive, ignoring.", axisLetter, ptr->GetName());
+            return;
+          }
+          if constexpr (is_hist_1d<ptr_type>()) {
+            if (axisIndex == 2) {
+              warn("Cannot scale z axis of 1d histogram {} (no such axis).", ptr->GetName());
+              return;
+            }
+            ScaleAxis(ptr, axisIndex, *factor);
+          } else if constexpr (is_hist_2d<ptr_type>()) {
+            ScaleAxis(ptr, axisIndex, *factor);
+          } else if constexpr (is_hist_3d<ptr_type>()) {
+            ScaleAxis(ptr, axisIndex, *factor);
+          } else if constexpr (is_graph_1d<ptr_type>()) {
+            if (axisIndex == 2) {
+              warn("Cannot scale z axis of graph {} (graphs have no z-axis).", ptr->GetName());
+              return;
+            }
+            ScaleGraphAxis(ptr, axisIndex, *factor);
+          } else if constexpr (is_graph_2d<ptr_type>()) {
+            ScaleGraphAxis(ptr, axisIndex, *factor);
+          }
+        };
+        scaleAxis(0, mods.GetScaleAxisX());
+        scaleAxis(1, mods.GetScaleAxisY());
+        scaleAxis(2, mods.GetScaleAxisZ());
+
+        if constexpr (is_hist<ptr_type>()) {
+          if (!ptr->GetSumw2N()) ptr->Sumw2();
+          // ROOT merges the bins of a labelled axis but keeps the first labels, so the drawn categories are wrong
+          auto warnLabelled = [&](const TAxis* axis, const optional<uint16_t>& group, const char* what) {
+            if (group && axis->GetLabels()) warn("{} on the labelled {} axis of {} mixes up the labels.", what, axis->GetName(), ptr->GetName());
+          };
+          warnLabelled(ptr->GetXaxis(), mods.GetRebinGroupX(), "RebinX");
+          warnLabelled(ptr->GetYaxis(), mods.GetRebinGroupY(), "RebinY");
+          warnLabelled(ptr->GetZaxis(), mods.GetRebinGroupZ(), "RebinZ");
+          if constexpr (is_hist_2d<ptr_type>()) {
+            if (mods.GetRebinGroupX() && mods.GetRebinGroupY()) {
+              ptr->Rebin2D(*mods.GetRebinGroupX(), *mods.GetRebinGroupY());
+            } else if (mods.GetRebinGroupX()) {
+              ptr->RebinX(*mods.GetRebinGroupX());
+            } else if (mods.GetRebinGroupY()) {
+              ptr->RebinY(*mods.GetRebinGroupY());
+            }
+            warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
+          } else if constexpr (is_hist_3d<ptr_type>()) {
+            if (mods.GetRebinGroupX()) {
+              ptr->RebinX(*mods.GetRebinGroupX());
+            }
+            if (mods.GetRebinGroupY()) {
+              ptr->RebinY(*mods.GetRebinGroupY());
+            }
+            if (mods.GetRebinGroupZ()) {
+              ptr->RebinZ(*mods.GetRebinGroupZ());
+            }
+          } else {
+            if (mods.GetRebinGroupX()) {
+              ptr->RebinX(*mods.GetRebinGroupX());
+            }
+            warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
+            warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
+          }
+          bool isDensity = mods.GetScaleBinWidthNorm() && *mods.GetScaleBinWidthNorm();
+          if constexpr (is_one_of_v<ptr_type, TProfile*, TProfile2D*>()) {
+            // ROOT does not divide the mean values of a profile by the bin widths
+            warnUnsupported(mods.GetDivideBinWidth() && *mods.GetDivideBinWidth(), "DivideBinWidth");
+          } else if (mods.GetDivideBinWidth() && *mods.GetDivideBinWidth()) {
+            ptr->Scale(1., "width");
+            isDensity = true;
+          }
+          if (mods.GetNiterSmooth()) {
+            if constexpr (is_one_of_v<ptr_type, TProfile*, TProfile2D*>()) {
+              // ROOT's Smooth would treat the sums stored in a profile as its contents: the mean values are smoothed instead,
+              // over the filled bins only (an empty bin has no mean), keeping the entries and the spread (i.e. the error) of each bin
+              const int32_t nTimes = *mods.GetNiterSmooth();
+              double_t* sums = ptr->GetArray();                     // per bin: sum of weight * y
+              double_t* sumsSquared = ptr->GetSumw2()->GetArray();  // per bin: sum of weight * y^2
+              auto setMean = [&](int32_t bin, double_t newMean) {
+                const double_t entries = ptr->GetBinEntries(bin);
+                const double_t mean = sums[bin] / entries;
+                sums[bin] = newMean * entries;
+                sumsSquared[bin] += entries * (newMean * newMean - mean * mean);
+              };
+              if constexpr (is_one_of_v<ptr_type, TProfile*>()) {
+                // the algorithm of TH1::Smooth, applied to the sequence of filled bins
+                vector<int32_t> bins;
+                vector<double_t> means;
+                for (int32_t bin = 1; bin <= ptr->GetNbinsX(); ++bin) {
+                  if (ptr->GetBinEntries(bin) == 0.) continue;
+                  bins.push_back(bin);
+                  means.push_back(ptr->GetBinContent(bin));
+                }
+                if (means.size() < 3) {
+                  warn("Smooth needs at least three filled bins in profile histogram {}, ignoring.", ptr->GetName());
+                } else {
+                  TH1::SmoothArray(static_cast<int32_t>(means.size()), means.data(), nTimes);
+                  for (size_t i = 0; i < bins.size(); ++i) {
+                    setMean(bins[i], means[i]);
+                  }
+                }
+              } else {
+                // the kernel of TH2::Smooth, normalized to the filled bins it covers (empty bins do not pull the means towards zero)
+                unique_ptr<TH2D> means(ptr->ProjectionXY("smoothedMeans", "e"));
+                means->SetDirectory(nullptr);
+                means->Sumw2(false);
+                unique_ptr<TH2D> filled(static_cast<TH2D*>(means->Clone("smoothedFilled")));
+                filled->SetDirectory(nullptr);
+                for (int32_t bin = 0; bin < ptr->GetNcells(); ++bin) {
+                  filled->SetBinContent(bin, (ptr->GetBinEntries(bin) == 0.) ? 0. : 1.);
+                }
+                means->Smooth(nTimes);
+                filled->Smooth(nTimes);
+                for (int32_t bin = 0; bin < ptr->GetNcells(); ++bin) {
+                  if (ptr->GetBinEntries(bin) == 0. || ptr->IsBinUnderflow(bin) || ptr->IsBinOverflow(bin)) continue;
+                  setMean(bin, means->GetBinContent(bin) / filled->GetBinContent(bin));
+                }
+              }
+            } else {
+              ptr->Smooth(*mods.GetNiterSmooth());
+            }
+          }
+
+          // Normalize and NormalizeToMaximum within a range in x: the bins reaching into it, as for the drawn range
+          // (the axis range is set for the computation only; nullopt if the range contains no bins)
+          auto inRangeX = [&](const optional<double_t>& min, const optional<double_t>& max, const char* modifier, auto compute) -> optional<double_t> {
+            if (!min && !max) return compute();
+            TAxis* axis = ptr->GetXaxis();
+            auto [first, last] = BinRange(axis, min, max);
+            first = std::max(first, 1);
+            last = std::min(last, axis->GetNbins());
+            if (first > last) {
+              warn("The range of {} for {} contains no bins, ignoring.", modifier, ptr->GetName());
+              return nullopt;
+            }
+            const int32_t oldFirst = axis->GetFirst();
+            const int32_t oldLast = axis->GetLast();
+            const bool hadRange = axis->TestBit(TAxis::kAxisRange);
+            axis->SetRange(first, last);
+            const double_t result = compute();
+            axis->SetRange(oldFirst, oldLast);
+            axis->SetBit(TAxis::kAxisRange, hadRange);
+            return result;
+          };
+
+          // normalize to the integral before Cumulative, then normalized distribution results in CDF ending at 1
+          if (mods.GetScaleBinWidthNorm()) {
+            string scaleMode = (isDensity) ? "width" : "";
+            const optional<double_t> integral = inRangeX(mods.GetNormMin(), mods.GetNormMax(), "Normalize", [&]() { return ptr->Integral(scaleMode.data()); });
+            if (integral) {
+              if (*integral == 0.) {
+                warn("Cannot normalize histogram because integral is zero.");
+              } else {
+                ptr->Scale(1. / *integral);
+              }
+            }
+          }
+
+          if constexpr (is_hist_1d<ptr_type>()) {
+            if (mods.GetCumulative()) {
+              if constexpr (is_one_of_v<ptr_type, TProfile*>()) {
+                warn("Cumulative is not supported for profile histogram {} (bin content would become invalid), ignoring.", ptr->GetName());
+              } else {
+                if (isDensity) {
+                  // the running sum of a density has to be weighted with the bin widths to yield its integral
+                  for (int32_t i = 1; i <= ptr->GetNbinsX(); ++i) {
+                    double_t width = ptr->GetBinWidth(i);
+                    ptr->SetBinContent(i, ptr->GetBinContent(i) * width);
+                    ptr->SetBinError(i, ptr->GetBinError(i) * width);
+                  }
+                }
+                TH1* cumulativeHist = ptr->GetCumulative(*mods.GetCumulative());
+                cumulativeHist->SetDirectory(nullptr);
+                cumulativeHist->SetBit(kCanDelete);
+                delete ptr;
+                ptr = cumulativeHist;
+              }
+            }
+          } else {
+            warnUnsupported(mods.GetCumulative().has_value(), "Cumulative");
+          }
+          // remaining factors act on the final shape (NormalizeToMaximum after Cumulative -> CDF ending at 1)
+          optional<double_t> scaleFactor;
+          if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
+            const optional<double_t> maximum = inRangeX(mods.GetNormMaximumMin(), mods.GetNormMaximumMax(), "NormalizeToMaximum", [&]() { return ptr->GetMaximum(); });
+            if (maximum) {
+              if (*maximum == 0.) {
+                warn("Cannot normalize {} to maximum because it is zero.", ptr->GetName());
+              } else {
+                scaleFactor = 1. / *maximum;
+              }
+            }
+          }
+          multiplyFactor(scaleFactor, mods.GetScaleFactor());
+          if constexpr (is_hist_1d<ptr_type>()) {
+            multiplyFactor(scaleFactor, mods.GetScaleAxisY(), 'y');
+          } else if constexpr (is_hist_2d<ptr_type>()) {
+            multiplyFactor(scaleFactor, mods.GetScaleAxisZ(), 'z');
+          }
+          if (scaleFactor) ptr->Scale(*scaleFactor);
+        } else if constexpr (is_graph_1d<ptr_type>()) {
+          warnUnsupported(mods.GetRebinGroupX().has_value(), "RebinX");
+          warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
+          warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
+          warnUnsupported(mods.GetDivideBinWidth() && *mods.GetDivideBinWidth(), "DivideBinWidth");
+          warnUnsupported(mods.GetShowOverflowBins().has_value(), "ShowOverflowBins");
+          warnUnsupported(mods.GetCumulative().has_value(), "Cumulative");
+          if (mods.GetNiterSmooth()) {
+            if (ptr->GetN() < 4) {
+              warn("Smooth needs at least 4 points, {} has {}; ignoring.", ptr->GetName(), ptr->GetN());
+            } else {
+              ptr->Sort();
+              TGraphSmooth smoother;
+              for (uint16_t iter = 0; iter < *mods.GetNiterSmooth(); ++iter) {
+                TGraph* smoothGraph = smoother.SmoothSuper(ptr);
+                for (int32_t i = 0; i < ptr->GetN(); ++i) {
+                  ptr->GetY()[i] = smoothGraph->GetY()[i];
+                }
+              }
+            }
+          }
+          optional<double_t> scaleFactor;
+          // the values of the points within a range in x (all points without a range)
+          auto valuesInRangeX = [&](const optional<double_t>& min, const optional<double_t>& max) {
+            vector<double_t> values;
+            values.reserve(ptr->GetN());
+            for (int32_t i = 0; i < ptr->GetN(); ++i) {
+              if ((min && ptr->GetPointX(i) < *min) || (max && ptr->GetPointX(i) > *max)) continue;
+              values.push_back(ptr->GetPointY(i));
+            }
+            return values;
+          };
+          if (mods.GetScaleBinWidthNorm()) {
+            // like for histograms the integral is the sum of the values (TGraph::Integral is the area of the closed polygon)
+            const vector<double_t> values = valuesInRangeX(mods.GetNormMin(), mods.GetNormMax());
+            const double_t integral = std::accumulate(values.begin(), values.end(), 0.);
+            if (values.empty() && ptr->GetN() > 0) {
+              warn("The range of Normalize for {} contains no points, ignoring.", ptr->GetName());
+            } else if (integral == 0.) {
+              warn("Cannot normalize graph because the sum of its values is zero.");
+            } else {
+              scaleFactor = 1. / integral;
+            }
+            if (*mods.GetScaleBinWidthNorm()) {
+              warn("Cannot normalize graph by width.");
+            }
+          }
+          if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
+            const vector<double_t> values = valuesInRangeX(mods.GetNormMaximumMin(), mods.GetNormMaximumMax());
+            if (ptr->GetN() == 0) {
+              warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
+            } else if (values.empty()) {
+              warn("The range of NormalizeToMaximum for {} contains no points, ignoring.", ptr->GetName());
+            } else if (double_t maxY = *std::max_element(values.begin(), values.end()); maxY == 0.) {
+              warn("Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
+            } else {
+              scaleFactor = 1. / maxY;
+            }
+          }
+          multiplyFactor(scaleFactor, mods.GetScaleFactor());
+          multiplyFactor(scaleFactor, mods.GetScaleAxisY(), 'y');
+          if (scaleFactor) ScaleGraphAxis(ptr, 1, *scaleFactor);
+        } else if constexpr (is_graph_2d<ptr_type>()) {
+          warnUnsupported(mods.GetRebinGroupX().has_value(), "RebinX");
+          warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
+          warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
+          warnUnsupported(mods.GetDivideBinWidth() && *mods.GetDivideBinWidth(), "DivideBinWidth");
+          warnUnsupported(mods.GetNiterSmooth().has_value(), "Smooth");
+          warnUnsupported(mods.GetShowOverflowBins().has_value(), "ShowOverflowBins");
+          warnUnsupported(mods.GetCumulative().has_value(), "Cumulative");
+          warnUnsupported(mods.GetScaleBinWidthNorm().has_value(), "Normalize");
+          optional<double_t> scaleFactor;
+          if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
+            // the largest value of the points within the range in x (all points without a range)
+            const auto& min = mods.GetNormMaximumMin();
+            const auto& max = mods.GetNormMaximumMax();
+            optional<double_t> maxZ;
+            for (int32_t i = 0; i < ptr->GetN(); ++i) {
+              if ((min && ptr->GetX()[i] < *min) || (max && ptr->GetX()[i] > *max)) continue;
+              maxZ = std::max(maxZ.value_or(ptr->GetZ()[i]), ptr->GetZ()[i]);
+            }
+            if (ptr->GetN() == 0) {
+              warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
+            } else if (!maxZ) {
+              warn("The range of NormalizeToMaximum for {} contains no points, ignoring.", ptr->GetName());
+            } else if (*maxZ == 0.) {
+              warn("Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
+            } else {
+              scaleFactor = 1. / *maxZ;
+            }
+          }
+          multiplyFactor(scaleFactor, mods.GetScaleFactor());
+          multiplyFactor(scaleFactor, mods.GetScaleAxisZ(), 'z');
+          if (scaleFactor) ScaleGraphAxis(ptr, 2, *scaleFactor);
+        } else if constexpr (is_func<ptr_type>()) {
+          warnUnsupported(mods.GetRebinGroupX().has_value(), "RebinX");
+          warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
+          warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
+          warnUnsupported(mods.GetDivideBinWidth() && *mods.GetDivideBinWidth(), "DivideBinWidth");
+          warnUnsupported(mods.GetNiterSmooth().has_value(), "Smooth");
+          warnUnsupported(mods.GetNormMaximum() && *mods.GetNormMaximum(), "NormalizeToMaximum");
+          warnUnsupported(mods.GetScaleBinWidthNorm().has_value(), "Normalize");
+          warnUnsupported(mods.GetShowOverflowBins().has_value(), "ShowOverflowBins");
+          warnUnsupported(mods.GetCumulative().has_value(), "Cumulative");
+          if constexpr (is_func_1d<ptr_type>()) {
+            warnUnsupported(mods.GetScaleAxisZ().has_value(), "ScaleZ");
+          }
+          optional<double_t> domainX, domainY, domainZ, contentFactor;
+          multiplyFactor(domainX, mods.GetScaleAxisX(), 'x');
+          if constexpr (is_func_2d<ptr_type>() || is_func_3d<ptr_type>()) multiplyFactor(domainY, mods.GetScaleAxisY(), 'y');
+          if constexpr (is_func_3d<ptr_type>()) multiplyFactor(domainZ, mods.GetScaleAxisZ(), 'z');
+          multiplyFactor(contentFactor, mods.GetScaleFactor());
+          if constexpr (is_func_1d<ptr_type>()) {
+            multiplyFactor(contentFactor, mods.GetScaleAxisY(), 'y');
+          } else if constexpr (is_func_2d<ptr_type>()) {
+            multiplyFactor(contentFactor, mods.GetScaleAxisZ(), 'z');
+          }
+          const double_t domainFactorX = domainX.value_or(1.);
+          const double_t domainFactorY = domainY.value_or(1.);
+          const double_t domainFactorZ = domainZ.value_or(1.);
+          if (domainFactorX != 1. || domainFactorY != 1. || domainFactorZ != 1. || contentFactor) {
+            if constexpr (is_func_1d<ptr_type>()) {
+              ptr = ScaleFunc(ptr, domainFactorX, contentFactor.value_or(1.));
+            } else if constexpr (is_func_2d<ptr_type>()) {
+              ptr = ScaleFunc(ptr, domainFactorX, domainFactorY, contentFactor.value_or(1.));
+            } else if constexpr (is_func_3d<ptr_type>()) {
+              ptr = ScaleFunc(ptr, domainFactorX, domainFactorY, domainFactorZ, contentFactor.value_or(1.));
+            }
+          }
+        }
+      };
+
+      // an input of a ratio gets its modifiers (Numer() / Denom()) before the division, then a profile is divided as the histogram of
+      // its means (its errors as set by its error option): TProfile::Divide accepts only profiles and estimates the errors poorly;
+      // returns whether it was a profile
+      bool numeratorMeans{}, denominatorMeans{};
+      auto prepareOperand = [&](data_ptr_t& operand, const Plot::Pad::Data::modify_t& operandModify) {
+        Plot::Pad::Data mods = *data;
+        mods.Modify() = operandModify;
+        std::visit([&](auto& ptr) { applyModifiers(ptr, mods); }, operand);
+        return ProfileMeans(operand);
+      };
+
       auto processData = [&](auto&& data_ptr) {
         using data_type = std::decay_t<decltype(data_ptr)>;
         if constexpr (is_func<data_type>()) isSampledFunc = !data_ptr->GetFormula();
@@ -1978,389 +2359,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         // the drawing option alias of the data (without one, the rule below decides once the data is final)
         optional<draw_option_t> optionAlias = data->GetDrawOptionAlias();
 
-        auto warn = [&](auto&&... args) {
-          if (dataIndex != 0) logger::warning(std::forward<decltype(args)>(args)...);
-        };
-
-        // apply the data modifiers stored in mods to ptr (plain data, ratio inputs and ratio result)
-        auto applyModifiers = [&](auto& ptr, const Plot::Pad::Data& mods) {
-          using ptr_type = std::decay_t<decltype(ptr)>;
-          auto warnUnsupported = [&](bool requested, const char* what) {
-            if (requested) warn("{} is not supported for {} ({}), ignoring.", what, ptr->GetName(), ptr->ClassName());
-          };
-          // multiplies a factor of Scale (axis 0) or ScaleX/Y/Z into product; a factor that is not positive is ignored
-          auto multiplyFactor = [&](optional<double_t>& product, const optional<double_t>& factor, char axis = 0) {
-            if (!factor) return;
-            if (*factor <= 0.) {
-              if (axis) {
-                warn("Scale factor for {} axis of {} must be positive, ignoring.", axis, ptr->GetName());
-              } else {
-                warn("Scale factor for {} must be positive, ignoring.", ptr->GetName());
-              }
-              return;
-            }
-            product = product.value_or(1.) * *factor;
-          };
-
-          auto scaleAxis = [&](int16_t axisIndex, const optional<double_t>& factor) {
-            if (!factor) return;
-            if constexpr (is_hist_1d<ptr_type>()) {
-              if (axisIndex == 1) return;  // y is bin content here - equivalent to Scale()
-            } else if constexpr (is_hist_2d<ptr_type>()) {
-              if (axisIndex == 2) return;  // z is bin content here - equivalent to Scale()
-            } else if constexpr (is_graph_1d<ptr_type>()) {
-              if (axisIndex == 1) return;  // same operation as Scale() for a graph
-            } else if constexpr (is_graph_2d<ptr_type>()) {
-              if (axisIndex == 2) return;  // z is the value Scale() targets for a 2d graph
-            } else if constexpr (is_func<ptr_type>()) {
-              return;
-            }
-            string axisLetter = GetAxisStr(axisIndex);
-            if (*factor <= 0.) {
-              warn("Scale factor for {} axis of {} must be positive, ignoring.", axisLetter, ptr->GetName());
-              return;
-            }
-            if constexpr (is_hist_1d<ptr_type>()) {
-              if (axisIndex == 2) {
-                warn("Cannot scale z axis of 1d histogram {} (no such axis).", ptr->GetName());
-                return;
-              }
-              ScaleAxis(ptr, axisIndex, *factor);
-            } else if constexpr (is_hist_2d<ptr_type>()) {
-              ScaleAxis(ptr, axisIndex, *factor);
-            } else if constexpr (is_hist_3d<ptr_type>()) {
-              ScaleAxis(ptr, axisIndex, *factor);
-            } else if constexpr (is_graph_1d<ptr_type>()) {
-              if (axisIndex == 2) {
-                warn("Cannot scale z axis of graph {} (graphs have no z-axis).", ptr->GetName());
-                return;
-              }
-              ScaleGraphAxis(ptr, axisIndex, *factor);
-            } else if constexpr (is_graph_2d<ptr_type>()) {
-              ScaleGraphAxis(ptr, axisIndex, *factor);
-            }
-          };
-          scaleAxis(0, mods.GetScaleAxisX());
-          scaleAxis(1, mods.GetScaleAxisY());
-          scaleAxis(2, mods.GetScaleAxisZ());
-
-          if constexpr (is_hist<ptr_type>()) {
-            if (!ptr->GetSumw2N()) ptr->Sumw2();
-            // ROOT merges the bins of a labelled axis but keeps the first labels, so the drawn categories are wrong
-            auto warnLabelled = [&](const TAxis* axis, const optional<uint16_t>& group, const char* what) {
-              if (group && axis->GetLabels()) warn("{} on the labelled {} axis of {} mixes up the labels.", what, axis->GetName(), ptr->GetName());
-            };
-            warnLabelled(ptr->GetXaxis(), mods.GetRebinGroupX(), "RebinX");
-            warnLabelled(ptr->GetYaxis(), mods.GetRebinGroupY(), "RebinY");
-            warnLabelled(ptr->GetZaxis(), mods.GetRebinGroupZ(), "RebinZ");
-            if constexpr (is_hist_2d<ptr_type>()) {
-              if (mods.GetRebinGroupX() && mods.GetRebinGroupY()) {
-                ptr->Rebin2D(*mods.GetRebinGroupX(), *mods.GetRebinGroupY());
-              } else if (mods.GetRebinGroupX()) {
-                ptr->RebinX(*mods.GetRebinGroupX());
-              } else if (mods.GetRebinGroupY()) {
-                ptr->RebinY(*mods.GetRebinGroupY());
-              }
-              warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
-            } else if constexpr (is_hist_3d<ptr_type>()) {
-              if (mods.GetRebinGroupX()) {
-                ptr->RebinX(*mods.GetRebinGroupX());
-              }
-              if (mods.GetRebinGroupY()) {
-                ptr->RebinY(*mods.GetRebinGroupY());
-              }
-              if (mods.GetRebinGroupZ()) {
-                ptr->RebinZ(*mods.GetRebinGroupZ());
-              }
-            } else {
-              if (mods.GetRebinGroupX()) {
-                ptr->RebinX(*mods.GetRebinGroupX());
-              }
-              warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
-              warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
-            }
-            bool isDensity = mods.GetScaleBinWidthNorm() && *mods.GetScaleBinWidthNorm();
-            if constexpr (is_one_of_v<ptr_type, TProfile*, TProfile2D*>()) {
-              // ROOT does not divide the mean values of a profile by the bin widths
-              warnUnsupported(mods.GetDivideBinWidth() && *mods.GetDivideBinWidth(), "DivideBinWidth");
-            } else if (mods.GetDivideBinWidth() && *mods.GetDivideBinWidth()) {
-              ptr->Scale(1., "width");
-              isDensity = true;
-            }
-            if (mods.GetNiterSmooth()) {
-              if constexpr (is_one_of_v<ptr_type, TProfile*, TProfile2D*>()) {
-                // ROOT's Smooth would treat the sums stored in a profile as its contents: the mean values are smoothed instead,
-                // over the filled bins only (an empty bin has no mean), keeping the entries and the spread (i.e. the error) of each bin
-                const int32_t nTimes = *mods.GetNiterSmooth();
-                double_t* sums = ptr->GetArray();                     // per bin: sum of weight * y
-                double_t* sumsSquared = ptr->GetSumw2()->GetArray();  // per bin: sum of weight * y^2
-                auto setMean = [&](int32_t bin, double_t newMean) {
-                  const double_t entries = ptr->GetBinEntries(bin);
-                  const double_t mean = sums[bin] / entries;
-                  sums[bin] = newMean * entries;
-                  sumsSquared[bin] += entries * (newMean * newMean - mean * mean);
-                };
-                if constexpr (is_one_of_v<ptr_type, TProfile*>()) {
-                  // the algorithm of TH1::Smooth, applied to the sequence of filled bins
-                  vector<int32_t> bins;
-                  vector<double_t> means;
-                  for (int32_t bin = 1; bin <= ptr->GetNbinsX(); ++bin) {
-                    if (ptr->GetBinEntries(bin) == 0.) continue;
-                    bins.push_back(bin);
-                    means.push_back(ptr->GetBinContent(bin));
-                  }
-                  if (means.size() < 3) {
-                    warn("Smooth needs at least three filled bins in profile histogram {}, ignoring.", ptr->GetName());
-                  } else {
-                    TH1::SmoothArray(static_cast<int32_t>(means.size()), means.data(), nTimes);
-                    for (size_t i = 0; i < bins.size(); ++i) {
-                      setMean(bins[i], means[i]);
-                    }
-                  }
-                } else {
-                  // the kernel of TH2::Smooth, normalized to the filled bins it covers (empty bins do not pull the means towards zero)
-                  unique_ptr<TH2D> means(ptr->ProjectionXY("smoothedMeans", "e"));
-                  means->SetDirectory(nullptr);
-                  means->Sumw2(false);
-                  unique_ptr<TH2D> filled(static_cast<TH2D*>(means->Clone("smoothedFilled")));
-                  filled->SetDirectory(nullptr);
-                  for (int32_t bin = 0; bin < ptr->GetNcells(); ++bin) {
-                    filled->SetBinContent(bin, (ptr->GetBinEntries(bin) == 0.) ? 0. : 1.);
-                  }
-                  means->Smooth(nTimes);
-                  filled->Smooth(nTimes);
-                  for (int32_t bin = 0; bin < ptr->GetNcells(); ++bin) {
-                    if (ptr->GetBinEntries(bin) == 0. || ptr->IsBinUnderflow(bin) || ptr->IsBinOverflow(bin)) continue;
-                    setMean(bin, means->GetBinContent(bin) / filled->GetBinContent(bin));
-                  }
-                }
-              } else {
-                ptr->Smooth(*mods.GetNiterSmooth());
-              }
-            }
-
-            // Normalize and NormalizeToMaximum within a range in x: the bins reaching into it, as for the drawn range
-            // (the axis range is set for the computation only; nullopt if the range contains no bins)
-            auto inRangeX = [&](const optional<double_t>& min, const optional<double_t>& max, const char* modifier, auto compute) -> optional<double_t> {
-              if (!min && !max) return compute();
-              TAxis* axis = ptr->GetXaxis();
-              auto [first, last] = BinRange(axis, min, max);
-              first = std::max(first, 1);
-              last = std::min(last, axis->GetNbins());
-              if (first > last) {
-                warn("The range of {} for {} contains no bins, ignoring.", modifier, ptr->GetName());
-                return nullopt;
-              }
-              const int32_t oldFirst = axis->GetFirst();
-              const int32_t oldLast = axis->GetLast();
-              const bool hadRange = axis->TestBit(TAxis::kAxisRange);
-              axis->SetRange(first, last);
-              const double_t result = compute();
-              axis->SetRange(oldFirst, oldLast);
-              axis->SetBit(TAxis::kAxisRange, hadRange);
-              return result;
-            };
-
-            // normalize to the integral before Cumulative, then normalized distribution results in CDF ending at 1
-            if (mods.GetScaleBinWidthNorm()) {
-              string scaleMode = (isDensity) ? "width" : "";
-              const optional<double_t> integral = inRangeX(mods.GetNormMin(), mods.GetNormMax(), "Normalize", [&]() { return ptr->Integral(scaleMode.data()); });
-              if (integral) {
-                if (*integral == 0.) {
-                  warn("Cannot normalize histogram because integral is zero.");
-                } else {
-                  ptr->Scale(1. / *integral);
-                }
-              }
-            }
-
-            if constexpr (is_hist_1d<ptr_type>()) {
-              if (mods.GetCumulative()) {
-                if constexpr (is_one_of_v<ptr_type, TProfile*>()) {
-                  warn("Cumulative is not supported for profile histogram {} (bin content would become invalid), ignoring.", ptr->GetName());
-                } else {
-                  if (isDensity) {
-                    // the running sum of a density has to be weighted with the bin widths to yield its integral
-                    for (int32_t i = 1; i <= ptr->GetNbinsX(); ++i) {
-                      double_t width = ptr->GetBinWidth(i);
-                      ptr->SetBinContent(i, ptr->GetBinContent(i) * width);
-                      ptr->SetBinError(i, ptr->GetBinError(i) * width);
-                    }
-                  }
-                  TH1* cumulativeHist = ptr->GetCumulative(*mods.GetCumulative());
-                  cumulativeHist->SetDirectory(nullptr);
-                  cumulativeHist->SetBit(kCanDelete);
-                  delete ptr;
-                  ptr = cumulativeHist;
-                }
-              }
-            } else {
-              warnUnsupported(mods.GetCumulative().has_value(), "Cumulative");
-            }
-            // remaining factors act on the final shape (NormalizeToMaximum after Cumulative -> CDF ending at 1)
-            optional<double_t> scaleFactor;
-            if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
-              const optional<double_t> maximum = inRangeX(mods.GetNormMaximumMin(), mods.GetNormMaximumMax(), "NormalizeToMaximum", [&]() { return ptr->GetMaximum(); });
-              if (maximum) {
-                if (*maximum == 0.) {
-                  warn("Cannot normalize {} to maximum because it is zero.", ptr->GetName());
-                } else {
-                  scaleFactor = 1. / *maximum;
-                }
-              }
-            }
-            multiplyFactor(scaleFactor, mods.GetScaleFactor());
-            if constexpr (is_hist_1d<ptr_type>()) {
-              multiplyFactor(scaleFactor, mods.GetScaleAxisY(), 'y');
-            } else if constexpr (is_hist_2d<ptr_type>()) {
-              multiplyFactor(scaleFactor, mods.GetScaleAxisZ(), 'z');
-            }
-            if (scaleFactor) ptr->Scale(*scaleFactor);
-          } else if constexpr (is_graph_1d<ptr_type>()) {
-            warnUnsupported(mods.GetRebinGroupX().has_value(), "RebinX");
-            warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
-            warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
-            warnUnsupported(mods.GetDivideBinWidth() && *mods.GetDivideBinWidth(), "DivideBinWidth");
-            warnUnsupported(mods.GetShowOverflowBins().has_value(), "ShowOverflowBins");
-            warnUnsupported(mods.GetCumulative().has_value(), "Cumulative");
-            if (mods.GetNiterSmooth()) {
-              if (ptr->GetN() < 4) {
-                warn("Smooth needs at least 4 points, {} has {}; ignoring.", ptr->GetName(), ptr->GetN());
-              } else {
-                ptr->Sort();
-                TGraphSmooth smoother;
-                for (uint16_t iter = 0; iter < *mods.GetNiterSmooth(); ++iter) {
-                  TGraph* smoothGraph = smoother.SmoothSuper(ptr);
-                  for (int32_t i = 0; i < ptr->GetN(); ++i) {
-                    ptr->GetY()[i] = smoothGraph->GetY()[i];
-                  }
-                }
-              }
-            }
-            optional<double_t> scaleFactor;
-            // the values of the points within a range in x (all points without a range)
-            auto valuesInRangeX = [&](const optional<double_t>& min, const optional<double_t>& max) {
-              vector<double_t> values;
-              values.reserve(ptr->GetN());
-              for (int32_t i = 0; i < ptr->GetN(); ++i) {
-                if ((min && ptr->GetPointX(i) < *min) || (max && ptr->GetPointX(i) > *max)) continue;
-                values.push_back(ptr->GetPointY(i));
-              }
-              return values;
-            };
-            if (mods.GetScaleBinWidthNorm()) {
-              // like for histograms the integral is the sum of the values (TGraph::Integral is the area of the closed polygon)
-              const vector<double_t> values = valuesInRangeX(mods.GetNormMin(), mods.GetNormMax());
-              const double_t integral = std::accumulate(values.begin(), values.end(), 0.);
-              if (values.empty() && ptr->GetN() > 0) {
-                warn("The range of Normalize for {} contains no points, ignoring.", ptr->GetName());
-              } else if (integral == 0.) {
-                warn("Cannot normalize graph because the sum of its values is zero.");
-              } else {
-                scaleFactor = 1. / integral;
-              }
-              if (*mods.GetScaleBinWidthNorm()) {
-                warn("Cannot normalize graph by width.");
-              }
-            }
-            if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
-              const vector<double_t> values = valuesInRangeX(mods.GetNormMaximumMin(), mods.GetNormMaximumMax());
-              if (ptr->GetN() == 0) {
-                warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
-              } else if (values.empty()) {
-                warn("The range of NormalizeToMaximum for {} contains no points, ignoring.", ptr->GetName());
-              } else if (double_t maxY = *std::max_element(values.begin(), values.end()); maxY == 0.) {
-                warn("Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
-              } else {
-                scaleFactor = 1. / maxY;
-              }
-            }
-            multiplyFactor(scaleFactor, mods.GetScaleFactor());
-            multiplyFactor(scaleFactor, mods.GetScaleAxisY(), 'y');
-            if (scaleFactor) ScaleGraphAxis(ptr, 1, *scaleFactor);
-          } else if constexpr (is_graph_2d<ptr_type>()) {
-            warnUnsupported(mods.GetRebinGroupX().has_value(), "RebinX");
-            warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
-            warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
-            warnUnsupported(mods.GetDivideBinWidth() && *mods.GetDivideBinWidth(), "DivideBinWidth");
-            warnUnsupported(mods.GetNiterSmooth().has_value(), "Smooth");
-            warnUnsupported(mods.GetShowOverflowBins().has_value(), "ShowOverflowBins");
-            warnUnsupported(mods.GetCumulative().has_value(), "Cumulative");
-            warnUnsupported(mods.GetScaleBinWidthNorm().has_value(), "Normalize");
-            optional<double_t> scaleFactor;
-            if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
-              // the largest value of the points within the range in x (all points without a range)
-              const auto& min = mods.GetNormMaximumMin();
-              const auto& max = mods.GetNormMaximumMax();
-              optional<double_t> maxZ;
-              for (int32_t i = 0; i < ptr->GetN(); ++i) {
-                if ((min && ptr->GetX()[i] < *min) || (max && ptr->GetX()[i] > *max)) continue;
-                maxZ = std::max(maxZ.value_or(ptr->GetZ()[i]), ptr->GetZ()[i]);
-              }
-              if (ptr->GetN() == 0) {
-                warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
-              } else if (!maxZ) {
-                warn("The range of NormalizeToMaximum for {} contains no points, ignoring.", ptr->GetName());
-              } else if (*maxZ == 0.) {
-                warn("Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
-              } else {
-                scaleFactor = 1. / *maxZ;
-              }
-            }
-            multiplyFactor(scaleFactor, mods.GetScaleFactor());
-            multiplyFactor(scaleFactor, mods.GetScaleAxisZ(), 'z');
-            if (scaleFactor) ScaleGraphAxis(ptr, 2, *scaleFactor);
-          } else if constexpr (is_func<ptr_type>()) {
-            warnUnsupported(mods.GetRebinGroupX().has_value(), "RebinX");
-            warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
-            warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
-            warnUnsupported(mods.GetDivideBinWidth() && *mods.GetDivideBinWidth(), "DivideBinWidth");
-            warnUnsupported(mods.GetNiterSmooth().has_value(), "Smooth");
-            warnUnsupported(mods.GetNormMaximum() && *mods.GetNormMaximum(), "NormalizeToMaximum");
-            warnUnsupported(mods.GetScaleBinWidthNorm().has_value(), "Normalize");
-            warnUnsupported(mods.GetShowOverflowBins().has_value(), "ShowOverflowBins");
-            warnUnsupported(mods.GetCumulative().has_value(), "Cumulative");
-            if constexpr (is_func_1d<ptr_type>()) {
-              warnUnsupported(mods.GetScaleAxisZ().has_value(), "ScaleZ");
-            }
-            optional<double_t> domainX, domainY, domainZ, contentFactor;
-            multiplyFactor(domainX, mods.GetScaleAxisX(), 'x');
-            if constexpr (is_func_2d<ptr_type>() || is_func_3d<ptr_type>()) multiplyFactor(domainY, mods.GetScaleAxisY(), 'y');
-            if constexpr (is_func_3d<ptr_type>()) multiplyFactor(domainZ, mods.GetScaleAxisZ(), 'z');
-            multiplyFactor(contentFactor, mods.GetScaleFactor());
-            if constexpr (is_func_1d<ptr_type>()) {
-              multiplyFactor(contentFactor, mods.GetScaleAxisY(), 'y');
-            } else if constexpr (is_func_2d<ptr_type>()) {
-              multiplyFactor(contentFactor, mods.GetScaleAxisZ(), 'z');
-            }
-            const double_t domainFactorX = domainX.value_or(1.);
-            const double_t domainFactorY = domainY.value_or(1.);
-            const double_t domainFactorZ = domainZ.value_or(1.);
-            if (domainFactorX != 1. || domainFactorY != 1. || domainFactorZ != 1. || contentFactor) {
-              if constexpr (is_func_1d<ptr_type>()) {
-                ptr = ScaleFunc(ptr, domainFactorX, contentFactor.value_or(1.));
-              } else if constexpr (is_func_2d<ptr_type>()) {
-                ptr = ScaleFunc(ptr, domainFactorX, domainFactorY, contentFactor.value_or(1.));
-              } else if constexpr (is_func_3d<ptr_type>()) {
-                ptr = ScaleFunc(ptr, domainFactorX, domainFactorY, domainFactorZ, contentFactor.value_or(1.));
-              }
-            }
-          }
-        };
-
         if (data->GetType() == "ratio") {
           auto data_as_ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
           bool binomialErrors = data_as_ratio->GetCorrelated();
-          // modifiers requested via Numer() / Denom() act on the inputs before the division
-          auto operandMods = [&](const auto& operandModify) {
-            Plot::Pad::Data mods = *data;
-            mods.Modify() = operandModify;
-            return mods;
-          };
-          applyModifiers(data_ptr, operandMods(data_as_ratio->GetNumModify()));
           auto processDenominator = [&](auto&& denom_data_ptr) {
             using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
-            applyModifiers(denom_data_ptr, operandMods(data_as_ratio->GetDenomModify()));
             auto unsupported = [&]() {
               logger::error("Unsupported division of {} and {}.", data_ptr->ClassName(), denom_data_ptr->ClassName());
               fail = true;
@@ -2398,6 +2401,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
 
           if (rawDenomData) {
+            denominatorMeans = prepareOperand(*rawDenomData, data_as_ratio->GetDenomModify());
+            if (binomialErrors && (numeratorMeans || denominatorMeans)) {
+              warn("Ratio {}: binomial errors (SetCorrelated) are not defined for the mean values of a profile, ignoring.", data->GetName());
+              binomialErrors = false;
+            }
             std::visit(processDenominator, *rawDenomData);
           } else {
             fail = true;
@@ -2540,6 +2548,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       }
 
       if (rawData) {
+        gErrorIgnoreLevel = dataIndex ? userErrorLevel : kFatal;
+        if (data->GetType() == "ratio") {
+          numeratorMeans = prepareOperand(*rawData, std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetNumModify());
+        }
         std::visit(processData, *rawData);
       } else {
         fail = true;
@@ -5783,6 +5795,25 @@ optional<float_t> PlotPainter::LayoutValue(const Plot::Pad& pad, const Plot::Pad
     }
   }
   return std::nullopt;
+}
+
+//**************************************************************************************************
+/**
+ * Replaces a profile by the histogram of its means (errors as set by its error option); returns whether data was a profile.
+ */
+//**************************************************************************************************
+bool PlotPainter::ProfileMeans(data_ptr_t& data)
+{
+  auto replace = [&](auto* profile, auto* means) {
+    means->SetDirectory(nullptr);
+    means->SetName(profile->GetName());
+    delete profile;
+    data = means;
+    return true;
+  };
+  if (auto* profile = std::get_if<TProfile*>(&data)) return replace(*profile, static_cast<TH1*>((*profile)->ProjectionX("means")));
+  if (auto* profile = std::get_if<TProfile2D*>(&data)) return replace(*profile, static_cast<TH2*>((*profile)->ProjectionXY("means")));
+  return false;
 }
 
 //**************************************************************************************************
