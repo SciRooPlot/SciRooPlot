@@ -145,19 +145,19 @@ void Config::LoadConfig()
       read_info(mSettingsFile, settingsTree);
       for (auto& setting : settingsTree) {
 
-        if (setting.first == "log_level") {
+        if (setting.first == "verbosity") {
           const int level = std::stoi(setting.second.data());
           if (level < LogLevel::silent || level > LogLevel::debug) {
-            std::cerr << "Ignoring out-of-range log_level " << level << " in " << mSettingsFile << "." << std::endl;
+            std::cerr << "Ignoring out-of-range verbosity " << level << " in " << mSettingsFile << "." << std::endl;
           } else {
             mLogLevel = level;
           }
           continue;
         }
-        if (setting.first == "color_mode") {
+        if (setting.first == "color") {
           const int mode = std::stoi(setting.second.data());
           if (mode < ColorMode::bright || mode > ColorMode::off) {
-            std::cerr << "Ignoring out-of-range color_mode " << mode << " in " << mSettingsFile << "." << std::endl;
+            std::cerr << "Ignoring out-of-range color " << mode << " in " << mSettingsFile << "." << std::endl;
           } else {
             mColorMode = mode;
           }
@@ -234,8 +234,8 @@ bool Config::Save()
 
   // save settings tree
   ptree settingsTree;
-  settingsTree.add("log_level", mLogLevel);
-  settingsTree.add("color_mode", mColorMode);
+  settingsTree.add("verbosity", mLogLevel);
+  settingsTree.add("color", mColorMode);
   settingsTree.add("plot_mode", mPlotMode);
   settingsTree.add("match_case_insensitive", mMatchCaseInsensitive);
   settingsTree.add("match_contains", mMatchContains);
