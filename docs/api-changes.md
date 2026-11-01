@@ -177,6 +177,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 |---|---|---|---|
 | `srp remove`, `srp reset` only unregistered projects | Also delete each project's configuration directory (`plots.info`, `dataSources.info`; never user code or output) | CLI | Re-run the plotting program to recreate them; back them up before `srp reset` if needed. |
 | `srp add <p> <prog>` on an existing project replaced its program; `srp add <p>` without a program did nothing; `srp set`/`get`/`show` on an unknown project (`set` created it) | All fail with exit code 1 | CLI | Use `srp set <p> program …` to change a program; `srp add` for new projects. |
+| `srp set <p> program`/`outdir` stored any value (an unset `${VAR}` too) | Checked like `srp add`: an unset variable or a relative path is an error and nothing is stored | input validation | Give an absolute path, or one starting with `~` or a set variable. |
 | `srp` and `plot` returned 0 on most errors; any `srp plotmode X` was accepted | Exit code 1 on errors and unknown commands; `plotmode` is validated; `plot` rejects more than 3 arguments and invalid group regexes | CLI | Quote regex arguments (`plot g '.+'`); check scripts relying on exit codes. |
 | `srp print` listed object names | Lists key names (what you pass to `AddData`), branch types and the members of stacks and multigraphs | CLI | Update scripts that parse the output. |
 | `srp open` used ROOT's default browser (the web browser on recent ROOT versions) | Always the classic `TBrowser`; closing it ends `srp` | CLI | none |

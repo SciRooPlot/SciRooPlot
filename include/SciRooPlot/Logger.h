@@ -54,7 +54,7 @@ enum color_mode : int {
   off,
 };
 int verbosity();
-int color_scheme();
+int color();
 }  // namespace detail
 
 enum class Color {
@@ -70,10 +70,10 @@ enum class Color {
 
 inline std::string_view begin_color(Color c)
 {
-  if (detail::color_scheme() == detail::color_mode::off) {
+  if (detail::color() == detail::color_mode::off) {
     return "";
   }
-  bool bright = detail::color_scheme() == detail::color_mode::bright;
+  bool bright = detail::color() == detail::color_mode::bright;
   switch (c) {
     case Color::Black:
       return bright ? "\033[90m" : "\033[38;5;16m";
@@ -98,7 +98,7 @@ inline std::string_view begin_color(Color c)
 
 inline std::string_view end_color()
 {
-  if (detail::color_scheme() == detail::color_mode::off) {
+  if (detail::color() == detail::color_mode::off) {
     return "";
   }
   return "\033[0m";

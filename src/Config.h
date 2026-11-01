@@ -46,7 +46,7 @@ class Config
   static std::optional<int> ParseColorMode(const std::string& name);
 
   int Verbosity() const { return mLogLevel; }
-  int ColorScheme() const { return mColorMode; }
+  int Color() const { return mColorMode; }
   const std::string& PlotMode() const { return mPlotMode; }
   bool MatchCaseInsensitive() const { return mMatchCaseInsensitive; }
   bool MatchContains() const { return mMatchContains; }
@@ -72,11 +72,9 @@ class Config
   const std::string& CurrentProject() const { return mCurrentProject; }
 
   void SetVerbosity(int logLevel);
-  void SetColorScheme(int colorMode);
+  void SetColor(int colorMode);
   void SetPlotMode(const std::string& plotMode);
   bool SetProperty(const std::string& projectName, const std::string& property, const std::string& value);
-  bool SetOutputDir(const std::string& projectName, const std::string& outputDir);
-  bool SetProgram(const std::string& projectName, const std::string& program);
   void SetMatchCaseInsensitive(bool matchCaseInsensitive);
   void SetMatchContains(bool matchContains);
   void SetScreenScale(double screenScale);
@@ -84,6 +82,7 @@ class Config
 
   void Reset();
   void Clean();
+  bool Add(const std::string& projectName, const std::string& program, const std::string& outputDir = "");
   bool Remove(const std::string& projectName);
   bool Rename(const std::string& projectName, const std::string& newProjectName);
   bool Select(const std::string& projectName);
@@ -95,6 +94,8 @@ class Config
   static Config& Instance();
   void LoadConfig();
   bool DeleteProjectDir(const std::string& projectName) const;
+  static bool CheckProjectName(const std::string& projectName);
+  static bool CheckPath(const std::string& path);
 
   bool mModified{false};
   int mLogLevel{LogLevel::debug};

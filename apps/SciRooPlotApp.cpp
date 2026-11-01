@@ -163,13 +163,13 @@ int main(int argc, char* argv[])
     logger::print("-----------------------------------------------------------");
     logger::print("Maintenance:");
     logger::print("  srp info");
-    logger::print("  srp update");
+    logger::print("  srp update [--reinstall]  (--reinstall: configure the build of a source installation from scratch)");
     logger::print("  srp clean");
     logger::print("  srp reset");
     logger::print("-----------------------------------------------------------");
     logger::print("Utilities:");
     logger::print("  srp open  <file>");
-    logger::print("  srp print <file>");
+    logger::print("  srp print <file>[:<path>]  (the objects in the file, or below a path in it)");
     logger::print("  srp colorwheel [<file>]  (ROOT's colours with their names; saved to the file if one is given)");
     logger::print("===========================================================");
   } else if (command == "open") {
@@ -213,16 +213,16 @@ int main(int argc, char* argv[])
     Config::Get().ShowSettings();
   } else if (command == "color") {
     if (auto colorMode = Config::ParseColorMode(project)) {
-      Config::GetMutable().SetColorScheme(*colorMode);
+      Config::GetMutable().SetColor(*colorMode);
     } else {
-      logger::error("Invalid color scheme (bright | dark | off).");
+      logger::error("Invalid color '{}' (bright | dark | off).", project);
       return 1;
     }
   } else if (command == "verbosity") {
     if (auto logLevel = Config::ParseLogLevel(project)) {
       Config::GetMutable().SetVerbosity(*logLevel);
     } else {
-      logger::error("Invalid verbosity (debug | log | info | warning | error | silent).");
+      logger::error("Invalid verbosity '{}' (debug | log | info | warning | error | silent).", project);
       return 1;
     }
   } else if (command == "plotmode") {
@@ -278,43 +278,32 @@ int main(int argc, char* argv[])
       const char* value = std::getenv(name);
       return value ? value : "<not set>";
     };
-    std::cout << "========================================\n";
-    std::cout << "SciRooPlot " << SCIROOPLOT_VERSION << "\n";
-    std::cout << "========================================\n";
-    std::cout << "Installation\n";
-    std::cout << "  Prefix: " << getenv("SCIROOPLOT_ROOT") << "\n";
-    std::cout << "  Binary: " << getenv("SCIROOPLOT_BIN") << "\n";
-    std::cout << "  Library: " << getenv("SCIROOPLOT_LIB") << "\n";
-    auto sourceDir = getenv("SCIROOPLOT_SOURCE_DIR");
-    std::filesystem::path path(sourceDir);
-    if (std::filesystem::exists(path)) {
-      std::cout << "  Source: " << std::filesystem::canonical(path).string() << "\n";
+    logger::print("========================================");
+    logger::print("SciRooPlot {}", SCIROOPLOT_VERSION);
+    logger::print("========================================");
+    logger::print("Installation");
+    logger::print("  Prefix:  {}", getenv("SCIROOPLOT_ROOT"));
+    logger::print("  Binary:  {}", getenv("SCIROOPLOT_BIN"));
+    logger::print("  Library: {}", getenv("SCIROOPLOT_LIB"));
+    const std::filesystem::path sourceDir(getenv("SCIROOPLOT_SOURCE_DIR"));
+    if (std::filesystem::exists(sourceDir)) {
+      logger::print("  Source:  {}", std::filesystem::canonical(sourceDir).string());
     }
-    std::cout << "  Env:    " << getenv("SCIROOPLOT_ENV") << "\n";
-
-    std::cout << "\nDependencies\n";
-    std::cout << "  ROOT:   " << SCIROOPLOT_ROOT_EXECUTABLE
-              << " (version " << SCIROOPLOT_ROOT_VERSION << ")\n";
-    std::cout << "  Python: " << getenv("SCIROOPLOT_PYTHON_EXECUTABLE") << "\n";
-
-    std::cout << "\nBuild\n";
-    std::cout << "  Type:     " << SCIROOPLOT_BUILD_TYPE << "\n";
-    std::cout << "  Commit:   " << SCIROOPLOT_GIT_DESCRIBE << "\n";
-    std::cout << "  Compiler: " << SCIROOPLOT_CXX_COMPILER << "\n";
-
-    std::cout << "========================================\n";
+    logger::print("  Env:     {}", getenv("SCIROOPLOT_ENV"));
+    logger::print("");
+    logger::print("Dependencies");
+    logger::print("  ROOT:   {} (version {})", SCIROOPLOT_ROOT_EXECUTABLE, SCIROOPLOT_ROOT_VERSION);
+    logger::print("  Python: {}", getenv("SCIROOPLOT_PYTHON_EXECUTABLE"));
+    logger::print("");
+    logger::print("Build");
+    logger::print("  Type:     {}", SCIROOPLOT_BUILD_TYPE);
+    logger::print("  Commit:   {}", SCIROOPLOT_GIT_DESCRIBE);
+    logger::print("  Compiler: {}", SCIROOPLOT_CXX_COMPILER);
+    logger::print("========================================");
   } else if (command == "confdir") {
     std::cout << ((project.empty()) ? Config::Get().Path().string() : Config::Get().ProjectPath(project).string()) << std::endl;
     return 0;
   } else if (command == "rename") {
-    if (project.empty()) {
-      logger::error("Specify project to rename.");
-      return 1;
-    }
-    if (property.empty()) {
-      logger::error("Specify new name for {}.", project);
-      return 1;
-    }
     if (!Config::GetMutable().Rename(project, property)) return 1;
   } else if (command == "clean") {
     Config::GetMutable().Clean();
@@ -333,25 +322,7 @@ int main(int argc, char* argv[])
     }
     Config::Get().Show(project);
   } else if (command == "add") {
-    if (project.empty()) {
-      logger::error("Specify project name.");
-      return 1;
-    }
-    if (property.empty()) {
-      logger::error("Specify program for project {}.", project);
-      return 1;
-    }
-    if (Config::Get().Exists(project)) {
-      logger::error("Project {} already exists. Use srp set {} program <program> to change its program.", project, project);
-      return 1;
-    }
-    if (!Config::GetMutable().SetProgram(project, property)) return 1;
-    if (!setting.empty() && !Config::GetMutable().SetOutputDir(project, setting)) {
-      Config::GetMutable().Remove(project);  // otherwise the project would be saved with the program only
-      return 1;
-    }
-    Config::GetMutable().Select(project);
-    logger::info("Selecting project {}.", project);
+    if (!Config::GetMutable().Add(project, property, setting)) return 1;
   } else if (command == "get") {
     if (project.empty()) {
       logger::error("Specify project or use @current.");
@@ -369,33 +340,9 @@ int main(int argc, char* argv[])
       std::cout << Config::Get().Property(project, property) << std::endl;
     }
   } else if (command == "unset") {
-    if (project.empty()) {
-      logger::error("Specify project or use @current.");
-      return 1;
-    }
-    if (!Config::Get().Exists(project)) {
-      logger::error("Cannot find project {}.", project);
-      return 1;
-    }
-    if (property.empty()) {
-      logger::error("Specify property to unset for {}.", project);
-      return 1;
-    }
     if (!Config::GetMutable().SetProperty(project, property, "")) return 1;
   } else if (command == "set") {
-    if (project.empty()) {
-      logger::error("Specify project or use @current.");
-      return 1;
-    }
-    if (!Config::Get().Exists(project)) {
-      logger::error("Cannot find project {}. Use srp add or srp init-cpp/init-py to create it.", project);
-      return 1;
-    }
-    if (property.empty()) {
-      logger::error("Specify property to set for {}.", project);
-      return 1;
-    }
-    if (setting.empty()) {
+    if (Config::Get().Exists(project) && !property.empty() && setting.empty()) {
       logger::error("Specify new setting for {}.", project);
       return 1;
     }

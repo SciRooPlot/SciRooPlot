@@ -3473,7 +3473,7 @@ void PlotManager::SaveProject() const
       // not registered yet (e.g. the program was run before srp add): a project without program would block the registration
       logger::info("Project {} is not registered yet, the output directory is not stored: srp add {} <program> [<outdir>].", mProjectName, mProjectName);
     } else if (mOutputDirectory != Config::Get().OutputDir(mProjectName)) {
-      Config::GetMutable().SetOutputDir(mProjectName, mOutputDirectory);
+      Config::GetMutable().SetProperty(mProjectName, "outdir", mOutputDirectory);
       Config::GetMutable().Save();
     }
   }

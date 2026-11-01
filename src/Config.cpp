@@ -255,10 +255,7 @@ bool Config::Save()
 
 bool Config::Exists(const std::string& projectName) const
 {
-  if (mProjects.find(projectName) != mProjects.end()) {
-    return true;
-  }
-  return false;
+  return mProjects.find(projectName) != mProjects.end();
 }
 
 void Config::ListProjects() const
@@ -286,7 +283,11 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
     logger::error("No valid config path; cannot rename.");
     return false;
   }
-  if (mProjects.find(projectName) == mProjects.end()) {
+  if (projectName.empty()) {
+    logger::error("Specify project to rename.");
+    return false;
+  }
+  if (!Exists(projectName)) {
     logger::error("Cannot find project {}.", projectName);
     return false;
   }
@@ -294,11 +295,8 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
     logger::error("Specify new name for {}.", projectName);
     return false;
   }
-  if (auto illegal = find_illegal_name_char(newProjectName)) {
-    logger::error("Project name '{}' contains illegal character '{}'.", newProjectName, *illegal);
-    return false;
-  }
-  if (mProjects.find(newProjectName) != mProjects.end()) {
+  if (!CheckProjectName(newProjectName)) return false;
+  if (Exists(newProjectName)) {
     logger::error("Project {} already exists.", newProjectName);
     return false;
   }
@@ -413,7 +411,7 @@ bool Config::Remove(const string& projectName)
     logger::error("No valid config path; refusing to remove.");
     return false;
   }
-  if (mProjects.find(projectName) == mProjects.end()) {
+  if (!Exists(projectName)) {
     logger::error("Cannot find project {}.", projectName);
     return false;
   }
@@ -457,7 +455,7 @@ bool Config::Select(const string& projectName)
     logger::error("Specify a project to select.");
     return false;
   }
-  if (mProjects.find(projectName) == mProjects.end()) {
+  if (!Exists(projectName)) {
     logger::error("Cannot find project {}.", projectName);
     return false;
   }
@@ -484,55 +482,51 @@ std::string Config::DataSourcesFile(const string& projectName) const
   return mPath / projectName / "dataSources.info";
 }
 
-bool Config::SetProgram(const string& projectName, const string& program)
+// a project name without illegal characters
+bool Config::CheckProjectName(const string& projectName)
 {
-  if (projectName.empty()) {
-    logger::error("Specify project name.");
-    return false;
-  }
   if (auto illegal = find_illegal_name_char(projectName)) {
     logger::error("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
     return false;
   }
-  const auto expandedPath = expand_path(program);
-  if (!expandedPath) return false;
-  if (std::filesystem::path(*expandedPath).is_relative()) {
-    logger::error("The path must not be relative.");
-    return false;
-  }
-  mProjects[projectName].mProperties["program"] = program;
-  mModified = true;
   return true;
 }
 
-string Config::Program(const string& projectName) const
+// a program or output directory: absolute once ~ and environment variables are expanded
+bool Config::CheckPath(const string& path)
 {
-  auto it = mProjects.find(projectName);
-  if (it != mProjects.end()) {
-    const auto& project = it->second;
-    return expand_path(project.Property("program")).value_or("");
+  const auto expandedPath = expand_path(path);
+  if (!expandedPath) return false;
+  if (std::filesystem::path(*expandedPath).is_relative()) {
+    logger::error("The path {} must not be relative.", path);
+    return false;
   }
-  return {};
+  return true;
 }
 
-bool Config::SetOutputDir(const string& projectName, const string& outputDir)
+bool Config::Add(const string& projectName, const string& program, const string& outputDir)
 {
   if (projectName.empty()) {
     logger::error("Specify project name.");
     return false;
   }
-  if (auto illegal = find_illegal_name_char(projectName)) {
-    logger::error("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
+  if (!CheckProjectName(projectName)) return false;
+  if (Exists(projectName)) {
+    logger::error("Project {} already exists. Use srp set {} program <program> to change its program.", projectName, projectName);
     return false;
   }
-  const auto expandedPath = expand_path(outputDir);
-  if (!expandedPath) return false;
-  if (std::filesystem::path(*expandedPath).is_relative()) {
-    logger::error("The path must not be relative.");
+  if (program.empty()) {
+    logger::error("Specify program for project {}.", projectName);
     return false;
   }
-  mProjects[projectName].mProperties["outdir"] = outputDir;
+  // checked before anything is stored, so that a failing add leaves no project behind
+  if (!CheckPath(program) || (!outputDir.empty() && !CheckPath(outputDir))) return false;
+  auto& properties = mProjects[projectName].mProperties;
+  properties["program"] = program;
+  if (!outputDir.empty()) properties["outdir"] = outputDir;
+  mCurrentProject = projectName;
   mModified = true;
+  logger::info("Selecting project {}.", projectName);
   return true;
 }
 
@@ -548,21 +542,22 @@ string Config::Project::Property(const string& property) const
 bool Config::SetProperty(const string& projectName, const string& property, const string& value)
 {
   if (projectName.empty()) {
-    logger::error("Specify project name.");
+    logger::error("Specify project or use @current.");
+    return false;
+  }
+  if (!Exists(projectName)) {
+    logger::error("Cannot find project {}. Use srp add or srp init-cpp/init-py to create it.", projectName);
     return false;
   }
   if (property.empty()) {
-    logger::error("Specify property to set for {}.", projectName);
-    return false;
-  }
-  if (auto illegal = find_illegal_name_char(projectName)) {
-    logger::error("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
+    logger::error("Specify a property of {}.", projectName);
     return false;
   }
   if (auto illegal = find_illegal_name_char(property)) {
     logger::error("Property '{}' contains illegal character '{}'.", property, *illegal);
     return false;
   }
+  if ((property == "program" || property == "outdir") && !value.empty() && !CheckPath(value)) return false;
   auto& properties = mProjects[projectName].mProperties;
   properties[property] = value;
   mModified = true;
@@ -577,21 +572,17 @@ bool Config::SetProperty(const string& projectName, const string& property, cons
 string Config::Property(const string& projectName, const string& property) const
 {
   auto it = mProjects.find(projectName);
-  if (it != mProjects.end()) {
-    const auto& project = it->second;
-    return project.Property(property);
-  }
-  return {};
+  return (it != mProjects.end()) ? it->second.Property(property) : "";
+}
+
+string Config::Program(const string& projectName) const
+{
+  return expand_path(Property(projectName, "program")).value_or("");
 }
 
 string Config::OutputDir(const string& projectName) const
 {
-  auto it = mProjects.find(projectName);
-  if (it != mProjects.end()) {
-    const auto& project = it->second;
-    return expand_path(project.Property("outdir")).value_or("");
-  }
-  return {};
+  return expand_path(Property(projectName, "outdir")).value_or("");
 }
 
 Config::Project::Project(const ptree& tree)
@@ -631,7 +622,7 @@ void Config::SetVerbosity(int logLevel)
   mModified = true;
 }
 
-void Config::SetColorScheme(int colorMode)
+void Config::SetColor(int colorMode)
 {
   mColorMode = colorMode;
   mModified = true;
@@ -673,9 +664,9 @@ int logger::detail::verbosity()
   return Config::Get().Verbosity();
 }
 
-int logger::detail::color_scheme()
+int logger::detail::color()
 {
-  return Config::Get().ColorScheme();
+  return Config::Get().Color();
 }
 
 }  // namespace SciRooPlot
