@@ -366,8 +366,10 @@ TH1* PlotPainter::ToHist(TGraph* graph, bool warn)
   bool asymmetricErrors = false;
   for (int32_t i = 0; i < n; ++i) {
     hist->SetBinContent(binOfPoint[i], graph->GetPointY(i));
-    hist->SetBinError(binOfPoint[i], 0.5 * (graph->GetErrorYlow(i) + graph->GetErrorYhigh(i)));
-    asymmetricErrors |= (graph->GetErrorYlow(i) != graph->GetErrorYhigh(i));
+    // a plain TGraph has no errors: GetErrorY* then return -1, which would become an error of 1
+    const double errorLow = std::max(0.0, graph->GetErrorYlow(i)), errorHigh = std::max(0.0, graph->GetErrorYhigh(i));
+    hist->SetBinError(binOfPoint[i], 0.5 * (errorLow + errorHigh));
+    asymmetricErrors |= (errorLow != errorHigh);
   }
   if (asymmetricErrors && warn) logger::warning("Graph {} has asymmetric y errors: it is drawn with their mean, since histograms have symmetric errors.", graph->GetName());
   CopyStyle(*graph, *hist);
@@ -551,6 +553,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     const int32_t nLineColors = nDefaultColors([](const auto& data) { return data.GetLineColor().has_value(); });
     const int32_t nFillColors = nDefaultColors([](const auto& data) { return data.GetFillColor().has_value(); });
     // a gradient is generated only if a data item takes colours from it, or if its number of colours is given explicitly
+    // a gradient of pad 0 is turned into colours of this pad: written into pad 0, it would be replaced by the colours sized for the first pad
     auto applyGradient = [](const auto& gradient, int32_t nTaking, auto&& setColors) {
       if (nTaking == 0 && !gradient.nColors) return;
       const vector<int16_t> indices = GenerateGradientColors(get_first_or(nTaking, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
@@ -558,18 +561,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     };
     if (pad.GetDefaultMarkerColorsGradient().rgbEndpoints) {
       applyGradient(pad.GetDefaultMarkerColorsGradient(), nMarkerColors, [&](const auto& colors) { pad.SetDefaultMarkerColors(colors); });
-    } else if (padDefaults.GetDefaultMarkerColorsGradient().rgbEndpoints) {
-      applyGradient(padDefaults.GetDefaultMarkerColorsGradient(), nMarkerColors, [&](const auto& colors) { padDefaults.SetDefaultMarkerColors(colors); });
+    } else if (padDefaults.GetDefaultMarkerColorsGradient().rgbEndpoints && !pad.GetDefaultMarkerColors()) {
+      applyGradient(padDefaults.GetDefaultMarkerColorsGradient(), nMarkerColors, [&](const auto& colors) { pad.SetDefaultMarkerColors(colors); });
     }
     if (pad.GetDefaultLineColorsGradient().rgbEndpoints) {
       applyGradient(pad.GetDefaultLineColorsGradient(), nLineColors, [&](const auto& colors) { pad.SetDefaultLineColors(colors); });
-    } else if (padDefaults.GetDefaultLineColorsGradient().rgbEndpoints) {
-      applyGradient(padDefaults.GetDefaultLineColorsGradient(), nLineColors, [&](const auto& colors) { padDefaults.SetDefaultLineColors(colors); });
+    } else if (padDefaults.GetDefaultLineColorsGradient().rgbEndpoints && !pad.GetDefaultLineColors()) {
+      applyGradient(padDefaults.GetDefaultLineColorsGradient(), nLineColors, [&](const auto& colors) { pad.SetDefaultLineColors(colors); });
     }
     if (pad.GetDefaultFillColorsGradient().rgbEndpoints) {
       applyGradient(pad.GetDefaultFillColorsGradient(), nFillColors, [&](const auto& colors) { pad.SetDefaultFillColors(colors); });
-    } else if (padDefaults.GetDefaultFillColorsGradient().rgbEndpoints) {
-      applyGradient(padDefaults.GetDefaultFillColorsGradient(), nFillColors, [&](const auto& colors) { padDefaults.SetDefaultFillColors(colors); });
+    } else if (padDefaults.GetDefaultFillColorsGradient().rgbEndpoints && !pad.GetDefaultFillColors()) {
+      applyGradient(padDefaults.GetDefaultFillColorsGradient(), nFillColors, [&](const auto& colors) { pad.SetDefaultFillColors(colors); });
     }
     if (pad.GetPaletteGradient().rgbEndpoints) {
       const auto& gradient = pad.GetPaletteGradient();

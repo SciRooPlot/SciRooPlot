@@ -420,9 +420,9 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
 {
   if (!IsValidDataSourceName(dataSource)) return;
   string mode = mUserDataFileInitialized ? "UPDATE" : "RECREATE";
-  if (!mProjectName.empty()) {
-    std::filesystem::create_directories(Config::Get().ProjectPath(mProjectName));
-  }
+  // the folder of the file: the project's folder, or without a project the config path, which does not exist before srp first ran
+  std::error_code dirError;
+  std::filesystem::create_directories(std::filesystem::path(mUserDataFile).parent_path(), dirError);
 
   TDirectory::TContext keepCurrentDirectory;  // the calling program's current directory stays as it is
   TFile file(mUserDataFile.data(), mode.data());
@@ -673,18 +673,21 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
     }
   };
 
-  std::function<void(const string&)> addEntry;
-  addEntry = [&](const string& entry) {
+  // literal: a match of a pattern is a path, not a pattern again (a file b?.root would match itself forever, run[1]/ no longer match)
+  std::function<void(const string&, bool)> addEntry;
+  addEntry = [&](const string& entry, bool literal) {
     auto fileAndFolder = split_string(entry, ':', true);
     const string& filePart = fileAndFolder[0];
     const string folderPart = (fileAndFolder.size() > 1) ? fileAndFolder[1] : "";
 
-    if (hasWildcard(filePart)) {
+    // a path that exists as written is taken as it is, even with [ ? * in its name
+    std::error_code existsError;
+    if (!literal && hasWildcard(filePart) && !std::filesystem::exists(expand_path(filePart).value_or(""), existsError)) {
       glob_t matches{};
       const bool found = (glob(expand_path(filePart).value_or("").data(), 0, nullptr, &matches) == 0);
       if (!found) logger::warning("No files match {} (data source {}).", filePart, dataSource);
       for (size_t i = 0; found && i < matches.gl_pathc; ++i) {
-        addEntry(string(matches.gl_pathv[i]) + ((fileAndFolder.size() > 1) ? ":" + folderPart : ""));
+        addEntry(string(matches.gl_pathv[i]) + ((fileAndFolder.size() > 1) ? ":" + folderPart : ""), true);
       }
       globfree(&matches);
       return;
@@ -733,7 +736,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
     }
   };
   for (const auto& entry : inputsIt->second) {
-    addEntry(entry);
+    addEntry(entry, false);
   }
   return inputs;
 }
@@ -1064,7 +1067,14 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
   uint32_t nPlotsInFile{};
   uint32_t nBasePlotsLoaded{};
   for (const auto& plotTree : fileTree) {
-    const string& curGroup = plotTree.second.get<string>("group");
+    // an entry without group or name (a damaged or hand-edited file) is skipped, the other plots are still loaded
+    const auto curGroupValue = plotTree.second.get_optional<string>("group");
+    const auto curNameValue = plotTree.second.get_optional<string>("name");
+    if (!curGroupValue || !curNameValue) {
+      logger::error("Could not load plot {} from file: it has no {}.", plotTree.first, curGroupValue ? "name" : "group");
+      continue;
+    }
+    const string& curGroup = *curGroupValue;
     if (curGroup == "BASE_PLOTS") {
       try {
         Plot basePlot(plotTree.second);
@@ -1076,7 +1086,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
       continue;
     }
     ++nPlotsInFile;
-    if (!matches(curGroup, plotTree.second.get<string>("name"))) continue;
+    if (!matches(curGroup, *curNameValue)) continue;
 
     ++nMatched;
     try {
@@ -1127,6 +1137,9 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   if (!wasMTEnabled) ROOT::EnableImplicitMT();
   gROOT->SetWebDisplay("off");
   auto quiet = ignore_root_messages_below(kWarning);
+  // the files opened and closed while plotting would leave gDirectory at gROOT: objects the caller makes afterwards
+  // would no longer go into the file it had open
+  TDirectory::TContext keepCurrentDirectory;
 
   if (!mHasDisplay) {
     // determine OS dependent offset between window and frame
@@ -2914,6 +2927,7 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
   const auto columnNames = split(lines[0].second, delimiter);
   vector<column_kind_t> columnKinds(columnNames.size(), column_kind_t::open);
   vector<bool> forceDouble(columnNames.size(), false);
+  vector<bool> hasEmptyCell(columnNames.size(), false);  // an integer column with an empty cell is read as floating point: ROOT stores 0 for it otherwise
   auto isInteger = [](const string& value) {
     const size_t start = (value[0] == '+' || value[0] == '-') ? 1 : 0;
     return value.size() > start && value.find_first_not_of("0123456789", start) == string::npos;
@@ -2928,7 +2942,10 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
       column_kind_t& kind = columnKinds[column];
       if (kind == column_kind_t::done) continue;
       const string value = trim(fields[column]);
-      if (value.empty()) continue;  // the type comes from the values that are there
+      if (value.empty()) {  // the type comes from the values that are there
+        hasEmptyCell[column] = true;
+        continue;
+      }
       if (kind == column_kind_t::open) {
         // as ROOT: integers and numbers with a decimal point are numeric, everything else text
         static const std::regex decimal(R"([+-]?(\d+\.\d*|\d*\.\d+)([eE][+-]?\d+)?)");
@@ -2969,6 +2986,9 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
       return;
     }
     checkTypes(fields);
+  }
+  for (size_t column = 0; column < columnKinds.size(); ++column) {
+    if (columnKinds[column] == column_kind_t::integer && hasEmptyCell[column]) forceDouble[column] = true;  // the empty cells become NaN
   }
 
   // ROOT does not trim the fields: names and values with surrounding spaces end up as such (values as text)
