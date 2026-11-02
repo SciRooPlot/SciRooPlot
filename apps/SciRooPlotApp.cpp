@@ -35,18 +35,23 @@
 #include <TROOT.h>
 #include <TRootBrowser.h>
 #include <TRootCanvas.h>
+#include <TSystem.h>
 #include <TTree.h>
 
 #include <boost/program_options.hpp>
 #include <boost/property_tree/info_parser.hpp>
+#include <boost/version.hpp>
 
 #include <algorithm>
 #include <cstdlib>
+#include <ctime>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -128,18 +133,21 @@ int main(int argc, char* argv[])
     return 1;
   }
 
+  // help, info and stats: headings, then names and their explanations in two columns
+  bool firstHeading = true;
+  auto heading = [&firstHeading](const string& title) {
+    if (!firstHeading) logger::print("");
+    firstHeading = false;
+    logger::print("{}{}{}", logger::begin_color(logger::Color::Yellow), title, logger::end_color());
+  };
+  auto rows = [](int column) {
+    return [column](const string& name, const string& text) {
+      logger::print("  {}{:<{}}{}  {}", logger::begin_color(logger::Color::Cyan), name, column, logger::end_color(), text);
+    };
+  };
+
   if (command == "help") {
-    // headings, then commands and explanations in two columns
-    const int column = 39;
-    bool first = true;
-    auto heading = [&first](const string& title) {
-      if (!first) logger::print("");
-      first = false;
-      logger::print("{}{}{}", logger::begin_color(logger::Color::Yellow), title, logger::end_color());
-    };
-    auto row = [column](const string& command, const string& text) {
-      logger::print("  {}{:<{}}{}  {}", logger::begin_color(logger::Color::Cyan), command, column, logger::end_color(), text);
-    };
+    const auto row = rows(39);
     heading("Projects");
     row("srp projects", "list the projects");
     row("srp select <project>", "select a project");
@@ -195,6 +203,8 @@ int main(int argc, char* argv[])
     row("srp print <file>[:<path>]", "objects in a ROOT file (below a path)");
     row("srp open <file>", "open a ROOT file in a TBrowser");
     row("srp colorwheel [<file>]", "ROOT's colours with their names");
+    heading("Environment");
+    row("SCIROOPLOT_CONFIG_PATH", "config folder (default ~/.SciRooPlot)");
     heading("Arguments");
     row("<project>", "a project name (@current: selected project)");
     row("<property>", "program | outdir | <variable>");
@@ -308,28 +318,75 @@ int main(int argc, char* argv[])
       const char* value = std::getenv(name);
       return value ? value : "<not set>";
     };
-    logger::print("========================================");
-    logger::print("SciRooPlot {}", SCIROOPLOT_VERSION);
-    logger::print("========================================");
-    logger::print("Installation");
-    logger::print("  Prefix:  {}", getenv("SCIROOPLOT_ROOT"));
-    logger::print("  Binary:  {}", getenv("SCIROOPLOT_BIN"));
-    logger::print("  Library: {}", getenv("SCIROOPLOT_LIB"));
+    const auto row = rows(15);
+    heading(fmt::format("SciRooPlot {}", SCIROOPLOT_VERSION));
+    heading("Installation");
+    row("prefix", getenv("SCIROOPLOT_ROOT"));
+    row("programs", getenv("SCIROOPLOT_BIN"));
+    row("library", getenv("SCIROOPLOT_LIB"));
     const std::filesystem::path sourceDir(getenv("SCIROOPLOT_SOURCE_DIR"));
-    if (std::filesystem::exists(sourceDir)) {
-      logger::print("  Source:  {}", std::filesystem::canonical(sourceDir).string());
+    if (std::filesystem::exists(sourceDir)) row("source", std::filesystem::canonical(sourceDir).string());
+    row("env script", getenv("SCIROOPLOT_ENV"));
+    heading("Configuration");
+    row("folder", Config::Get().Path().string() + (std::getenv("SCIROOPLOT_CONFIG_PATH") ? "  (SCIROOPLOT_CONFIG_PATH)" : "  (default)"));
+    row("current project", Config::Get().CurrentProject().empty() ? "none" : Config::Get().CurrentProject());
+    heading("Dependencies");
+    row("ROOT", fmt::format("{}  {}", SCIROOPLOT_ROOT_VERSION, SCIROOPLOT_ROOT_EXECUTABLE));
+    row("Python", getenv("SCIROOPLOT_PYTHON_EXECUTABLE"));
+    string boostVersion = BOOST_LIB_VERSION;
+    std::replace(boostVersion.begin(), boostVersion.end(), '_', '.');
+    row("Boost", boostVersion);
+    row("fmt", fmt::format("{}.{}.{}", FMT_VERSION / 10000, FMT_VERSION / 100 % 100, FMT_VERSION % 100));
+    heading("Build");
+    row("type", SCIROOPLOT_BUILD_TYPE);
+    row("commit", SCIROOPLOT_GIT_DESCRIBE);
+    row("compiler", SCIROOPLOT_CXX_COMPILER);
+  } else if (command == "stats") {
+    if (project.empty()) {
+      logger::error("Specify a project or use @current.");
+      return 1;
     }
-    logger::print("  Env:     {}", getenv("SCIROOPLOT_ENV"));
-    logger::print("");
-    logger::print("Dependencies");
-    logger::print("  ROOT:   {} (version {})", SCIROOPLOT_ROOT_EXECUTABLE, SCIROOPLOT_ROOT_VERSION);
-    logger::print("  Python: {}", getenv("SCIROOPLOT_PYTHON_EXECUTABLE"));
-    logger::print("");
-    logger::print("Build");
-    logger::print("  Type:     {}", SCIROOPLOT_BUILD_TYPE);
-    logger::print("  Commit:   {}", SCIROOPLOT_GIT_DESCRIBE);
-    logger::print("  Compiler: {}", SCIROOPLOT_CXX_COMPILER);
-    logger::print("========================================");
+    if (!Config::Get().Exists(project)) {
+      logger::error("Cannot find project {}.", project);
+      return 1;
+    }
+    const auto projectPath = Config::Get().ProjectPath(project);
+    // the tab-completion list has one line <name>,<group> per plot
+    size_t nPlots = 0;
+    std::set<string> groups;
+    std::ifstream plotList(projectPath / "tabcomp.csv");
+    for (string line; std::getline(plotList, line);) {
+      if (line.empty()) continue;
+      ++nPlots;
+      groups.insert(line.substr(line.rfind(',') + 1));
+    }
+    size_t nDataSources = 0;
+    size_t nInputs = 0;
+    if (std::filesystem::exists(Config::Get().DataSourcesFile(project))) {
+      ptree dataSources;
+      try {
+        boost::property_tree::read_info(Config::Get().DataSourcesFile(project), dataSources);
+      } catch (const boost::property_tree::ptree_error& e) {
+        logger::error("Cannot read {} ({}).", Config::Get().DataSourcesFile(project), e.what());
+        return 1;
+      }
+      nDataSources = dataSources.size();
+      for (const auto& [name, dataSource] : dataSources)
+        nInputs += dataSource.count("INPUT");
+    }
+    string lastSaved = "never";
+    if (FileStat_t fileStat; gSystem->GetPathInfo(Config::Get().PlotsFile(project).data(), fileStat) == 0) {
+      const std::time_t time = fileStat.fMtime;
+      std::tm localTime{};
+      char buffer[32];
+      if (localtime_r(&time, &localTime) && std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", &localTime)) lastSaved = buffer;
+    }
+    auto count = [](size_t n, const string& what) { return fmt::format("{} {}{}", n, what, (n == 1) ? "" : "s"); };
+    const auto row = rows(13);
+    heading(fmt::format("Project {}", project));
+    row("plots", fmt::format("{} in {}", nPlots, count(groups.size(), "group")));
+    row("data sources", fmt::format("{} with {}", nDataSources, count(nInputs, "input")));
+    row("last saved", lastSaved);
   } else if (command == "confdir") {
     std::cout << ((project.empty()) ? Config::Get().Path().string() : Config::Get().ProjectPath(project).string()) << std::endl;
     return 0;
@@ -382,7 +439,7 @@ int main(int argc, char* argv[])
     }
     if (!Config::GetMutable().SetProperty(project, property, setting)) return 1;
   } else {
-    const vector<string> shellCommands = {"update", "edit", "cd", "out", "stats", "init-py", "init-cpp", "example-py", "example-cpp"};
+    const vector<string> shellCommands = {"update", "edit", "cd", "out", "init-py", "init-cpp", "example-py", "example-cpp"};
     if (std::find(shellCommands.begin(), shellCommands.end(), command) != shellCommands.end()) {
       logger::error("Source environment script to use this feature.");
     } else {
