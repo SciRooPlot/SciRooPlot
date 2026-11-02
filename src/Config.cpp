@@ -150,7 +150,8 @@ void Config::LoadConfig()
   mSettingsFile = mPath / "settings.info";
 
   // read global settings: the keys and values are those of the srp commands; a bad value is ignored on its own
-  if (std::filesystem::exists(mSettingsFile)) {
+  std::error_code existsError;  // a config path that cannot be checked (a symlink loop, no permission) counts as empty instead of aborting
+  if (std::filesystem::exists(mSettingsFile, existsError)) {
     ptree settingsTree;
     try {
       read_info(mSettingsFile, settingsTree);
@@ -203,7 +204,7 @@ void Config::LoadConfig()
   }
 
   // read project settings
-  if (std::filesystem::exists(mProjectsFile)) {
+  if (std::filesystem::exists(mProjectsFile, existsError)) {
     try {
       ptree projectsTree;
       read_info(mProjectsFile, projectsTree);
@@ -213,6 +214,12 @@ void Config::LoadConfig()
           continue;
         }
         if (project.second.empty()) continue;
+        // the name is a directory in the config path: one written by hand or by an old version could be '..' or '.',
+        // and remove, clean and reset would then delete the folder above the config path or the config path itself
+        if (project.first.empty() || find_illegal_name_char(project.first)) {
+          std::cerr << "Ignoring project '" << project.first << "' in " << mProjectsFile << ": the name may contain only letters, digits, _ and -." << std::endl;
+          continue;
+        }
         mProjects.insert_or_assign(project.first, Project(project.second));
       }
     } catch (const std::exception& e) {
@@ -371,7 +378,14 @@ void Config::Clean()
       if (!program) {
         logger::warning("Cannot expand program path '{}' of project {}; keeping it.", rawProgram, projectName);
       } else {
-        isStale = !std::filesystem::exists(std::filesystem::path(*program).parent_path());
+        // a folder that cannot be checked (no permission, a symlink loop, a stale mount) is kept, not taken as gone
+        std::error_code ec;
+        const bool folderExists = std::filesystem::exists(std::filesystem::path(*program).parent_path(), ec);
+        if (ec) {
+          logger::warning("Cannot check the program folder of project {} ({}); keeping it.", projectName, ec.message());
+        } else {
+          isStale = !folderExists;
+        }
       }
     }
     if (isStale) {
@@ -448,7 +462,9 @@ bool Config::DeleteProjectDir(const string& projectName) const
   // deletes only the project's directory in the config path (plots.info, dataSources.info),
   // never the user code or the output directory
   const auto projectPath = ProjectPath(projectName);
-  if (!projectPath.is_absolute() || projectPath.parent_path() != mPath) {
+  // compared after normalising: the parent of config/.. and of config/. is config, but they are not inside it
+  if (projectName.empty() || find_illegal_name_char(projectName) || !projectPath.is_absolute() ||
+      projectPath.lexically_normal().parent_path() != mPath.lexically_normal()) {
     logger::error("Refusing to delete {} for project {}: not inside the config directory.", projectPath.string(), projectName);
     return false;
   }
