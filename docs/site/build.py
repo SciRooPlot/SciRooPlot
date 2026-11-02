@@ -118,7 +118,7 @@ s = s.replace("/*NUMPY*/", json.dumps({**blocks(f"{SITE}/numpy/DefinePlots.py"),
 s = s.replace("/*MESSAGES*/", subprocess.run([sys.executable, f"{SITE}/extract_messages.py", REPO], capture_output=True, text=True, check=True).stdout)
 s = s.replace("/*MSG_HELP*/", open(f"{SITE}/messages_help.js").read())
 s = s.replace("/*EXDATA*/", open(f"{GEN}/data.json").read())
-s = "<meta charset=\"utf-8\">\n" + s
+s = "<!doctype html>\n<meta charset=\"utf-8\">\n" + s
 open(f"{OUT}/index.html", "w").write(s)
 
 # the logo: the one of the slides, its dark background made transparent for the dark hero area, and a small one for the header

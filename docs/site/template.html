@@ -1,4 +1,5 @@
 <title>SciRooPlot</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="SciRooPlot: ROOT-based C++ and Python framework to define, organize and generate plots">
 <link rel="icon" type="image/png" sizes="32x32" href="img/brand/favicon.png">
 <link rel="apple-touch-icon" href="img/brand/apple-touch-icon.png">
@@ -32,6 +33,7 @@
   --cat-1: #3cb6c7; --cat-2: #e8b33d; --cat-3: #a497ee; --cat-4: #f08a78; --cat-5: #6cc489; --cat-6: #e88cc4; --cat-7: #9aa6b6; color-scheme: dark }
 
 * { box-sizing: border-box }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100% }  /* no font inflation when a phone is turned to landscape */
 [hidden] { display: none !important }
 body { margin: 0; background: var(--paper); color: var(--text); font-family: var(--sans); font-size: 1rem; line-height: 1.55;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
@@ -85,7 +87,7 @@ nav.views a[aria-current="page"] { color: #ffffff; background: #16233a; border-c
 main { padding-block: 0 80px }
 section.view { display: grid; gap: 44px; padding-top: 36px }
 .npteaser { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px }
-.npteaser button { font: inherit; text-align: left; background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 8px; cursor: pointer; display: grid; gap: 6px; align-content: start; color: var(--text) }
+.npteaser button { font: inherit; text-align: left; background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 8px; cursor: pointer; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; align-content: start; color: var(--text) }
 .npteaser button:hover, .npteaser button:focus-visible { border-color: var(--teal) }
 .npteaser img { width: 100%; height: 190px; object-fit: contain; background: #fff; border-radius: 6px }
 .npteaser span { font-size: 0.85rem; font-weight: 700 }
@@ -264,13 +266,13 @@ h3.sub { font-size: 0.95rem; margin: 6px 0 0 }
   #v-cheatsheet > *:not(.cheat), svg[aria-hidden="true"][width="0"] { display: none !important }
   html, body { height: auto !important }
 }
-.res { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px }
+.res { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 12px }
 .rescard { display: grid; gap: 4px; text-decoration: none; background: var(--panel); border: 1px solid var(--hairline); border-top: 3px solid var(--teal); border-radius: 10px; padding: 12px 14px; color: var(--text) }
 .rescard:hover { border-color: var(--teal) }
 .rescard b { color: var(--ink); font-size: 1rem }
 .rescard > span { color: var(--muted); font-size: 0.85rem }
 .reflinks { display: flex; flex-wrap: wrap; gap: 8px }
-.twocode { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px }
+.twocode { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); gap: 16px }
 .twocode > div { min-width: 0 }
 .twocode h3 { margin: 0 0 6px }
 .reads { display: grid; gap: 8px }
@@ -310,7 +312,7 @@ h3.sub { font-size: 0.95rem; margin: 6px 0 0 }
 .msgall summary { cursor: pointer; font-weight: 700; margin-top: 12px }
 .pal-wrap { margin-top: 28px; display: grid; gap: 12px }
 .pal-wrap h3 { margin: 0 }
-.palgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px }
+.palgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 6px }
 .palsw { display: grid; gap: 3px; font: inherit; background: var(--panel); border: 1px solid var(--hairline); border-radius: 7px; padding: 5px; cursor: pointer; text-align: left; color: var(--text) }
 .palsw span { display: block; height: 14px; border-radius: 3px; position: relative }
 .pal-wrap { --pveil: 0 }
@@ -332,7 +334,7 @@ h3.sub { font-size: 0.95rem; margin: 6px 0 0 }
 @media (max-width: 760px) { .palout { grid-template-columns: minmax(0, 1fr) } }
 #palmap { width: 100%; height: auto; background: #fff; border: 1px solid var(--hairline); border-radius: 8px }
 .cvd { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 0.85rem }
-.lb-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 4px 12px; margin: 8px 0 }
+.lb-cols { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr)); gap: 4px 12px; margin: 8px 0 }
 .lb-cols label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem }
 .lb-cols .lb-colnum { color: var(--muted); min-width: 1.8em; text-align: right; font: inherit; font-weight: 700; background: none; border: 1px solid transparent; border-radius: 5px; padding: 0 3px; cursor: pointer }
 .lb-cols .lb-colnum[aria-pressed="true"] { color: var(--ink); border-color: var(--teal) }
@@ -355,14 +357,14 @@ h3.sub { font-size: 0.95rem; margin: 6px 0 0 }
 
 /* drawing options and examples */
 .filters { display: flex; flex-wrap: wrap; gap: 6px; align-items: center }
-.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr)); gap: 14px }
 .card { font: inherit; color: inherit; text-align: left; background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 8px; cursor: pointer; display: grid; gap: 6px; align-content: start }
 .card:hover { border-color: var(--teal) }
 .card .plot { padding: 2px; border-radius: 6px }
 .card b { font-family: var(--mono); font-size: 0.82rem; color: var(--ink) }
 .card small { color: var(--muted); font-size: 0.78rem; line-height: 1.35 }
 .card .root { font-family: var(--mono); font-size: 0.72rem; color: var(--muted) }
-.grid.ex { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)) }
+.grid.ex { grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)) }
 dialog { border: 1px solid var(--hairline); border-radius: 12px; background: var(--panel); color: var(--text); padding: 0; width: min(1080px, calc(100vw - 32px)); max-height: calc(100vh - 48px) }
 dialog::backdrop { background: rgba(8, 14, 26, 0.55) }
 .dlg { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 22px; padding: 20px }
@@ -386,12 +388,12 @@ dialog::backdrop { background: rgba(8, 14, 26, 0.55) }
 .toc a:hover { color: var(--ink); background: var(--grid) }
 .toc a[aria-current="location"] { color: var(--ink); background: var(--tint); border-left-color: var(--amber) }
 .toc input { font: inherit; padding: 6px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--panel); color: var(--text); margin-bottom: 8px; width: 100% }
-.refsec { display: grid; gap: 14px; padding-bottom: 28px; scroll-margin-top: 80px }
+.refsec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding-bottom: 28px; scroll-margin-top: 80px }
 .refsec h2 { font-size: 1.45rem }
 .pipeline { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-family: var(--mono); font-size: 0.78rem }
 .pipeline span { background: var(--panel); border: 1px solid var(--hairline); border-radius: 6px; padding: 4px 8px }
 .dg { display: grid; gap: 14px; background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 14px 16px; margin: 12px 0; font-size: 0.85rem }
-.dg.life { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) }
+.dg.life { grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)) }
 .dg.life > div { display: grid; gap: 4px; align-content: start }
 .dg.life code { font-size: 0.8rem; justify-self: start }
 .dg.find { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) }
@@ -438,7 +440,7 @@ tr:last-child td { border-bottom: 0 }
 /* reference */
 .grouplabel { font-size: 0.75rem; font-weight: 700; color: var(--amber); letter-spacing: 0.04em; margin: 14px 0 4px }
 .toc .grouplabel:first-child { margin-top: 0 }
-.refgroup { display: grid; gap: 4px }
+.refgroup { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px }
 .refgroup > .grouplabel { font-size: 0.85rem; border-bottom: 1px solid var(--hairline); padding-bottom: 6px; margin-top: 24px }
 .refsec h3 { font-size: 1.05rem; margin-top: 6px }
 table.cmd td:first-child { white-space: nowrap }
@@ -461,7 +463,7 @@ table.cmd code { white-space: nowrap }
 .laybuilder { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 20px; background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 16px }
 .lb-controls { display: grid; gap: 8px; align-content: start }
 .lb-l { min-width: 6.5em; color: var(--muted) }
-.lay-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px }
+.lay-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 20px }
 .lay-notes h3 { margin: 0 0 6px }
 .lay-notes > div { min-width: 0 }
 .lb-start { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-weight: 700; color: var(--ink) }
@@ -488,7 +490,7 @@ table.cmd code { white-space: nowrap }
 .lb-line { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 5px 0; font-size: 0.85rem }
 .lb-line input[type=number] { width: 4.8em }
 .lb-chk { display: inline-flex; gap: 4px; align-items: center; color: var(--muted) }
-.lb-sizes { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 4px 12px; margin: 8px 0 }
+.lb-sizes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr)); gap: 4px 12px; margin: 8px 0 }
 .lb-sizes .lb-h { grid-column: 1 / -1; font-weight: 700; color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em }
 .lb-sizes label { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 0.82rem }
 .lb-sizes input { width: 5.2em }
@@ -516,7 +518,7 @@ table.up td { font-size: 0.85rem }
 table.up td:first-child { width: 32% } table.up td:nth-child(2) { width: 32% }
 .kind { display: inline-block; font-size: 0.7rem; font-weight: 700; color: var(--c); border: 1px solid var(--c); border-radius: 999px; padding: 0 7px; margin-right: 6px; white-space: nowrap }
 /* methods at a glance */
-.glance { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px }
+.glance { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 12px }
 .gl { background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 10px 12px; display: grid; gap: 6px; align-content: start }
 .gl b { color: var(--ink) }
 .gl div { display: flex; flex-wrap: wrap; gap: 3px 4px }
@@ -566,6 +568,23 @@ figure.plot figcaption { color: #5b6b80 }
 .grid.ex .card .plot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain }
 .opt .code pre { white-space: pre; overflow-x: auto }
 @media (max-width: 700px) {
+  /* phones: body text stays at 16px; the small print of the desktop layout (code, captions, labels) is raised to stay readable */
+  .hero .tag-line { font-size: 1.2rem }
+  .lede { font-size: 1.05rem }
+  code, kbd { font-size: 0.9em }
+  .code pre, .opt .code pre { font-size: 0.82rem }
+  .cmp-card pre { font-size: 0.8rem }
+  .switches .seg button { font-size: 0.78rem }
+  .code .tag, .code .copy { font-size: 0.75rem }
+  .cat small, .chip, .dn, .card b, .apicls li code { font-size: 0.85rem }
+  .card small, .card .root, .hit small, .lb-table, .lb-gh, .msg .mk, .kind { font-size: 0.8rem }
+  .lb-table th { font-size: 0.75rem }
+  .cheat { font-size: 0.85rem } .cheat pre, .cheat kbd, .cheat .chain { font-size: 0.78rem }
+  .u { font-size: 0.8em }
+  code.nw { white-space: normal }  /* a long call kept on one line would run past the screen edge */
+  .cheat pre { overflow-wrap: anywhere }
+  /* iOS zooms into a focused field with text smaller than 16px */
+  input[type="search"], input[type="text"], input[type="number"], input:not([type]), select, textarea { font-size: 16px }
   nav.views, .steps, .opt .code pre { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent) }
   .code:has(.copy) pre { padding-top: 34px }
 }
@@ -1020,7 +1039,7 @@ figure.plot figcaption { color: #5b6b80 }
   </div>
   <div class="ref">
     <nav class="toc" id="toc" aria-label="Reference topics"></nav>
-    <div id="refbody" style="display:grid;gap:12px;min-width:0"></div>
+    <div id="refbody" style="display:grid;grid-template-columns:minmax(0, 1fr);gap:12px;min-width:0"></div>
   </div>
 </section>
 
