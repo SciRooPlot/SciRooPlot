@@ -8,6 +8,8 @@ set -euo pipefail
 PREFIX=$1 CFG=$2 EXDIR=$3 OUT=$4
 D=:55; export DISPLAY=$D
 WORK=$(mktemp -d)
+# on any exit, also a failed step: stop Xvfb, openbox, xterm and ffmpeg, or the next run finds display :55 taken
+trap 'kill $(jobs -p) 2>/dev/null || true; rm -rf "${WORK}"' EXIT  # kill fails when nothing is left to stop
 cat > "$WORK/rc.sh" <<RC
 source $PREFIX/share/scirooplot/env.sh
 export SCIROOPLOT_CONFIG_PATH=$CFG SCIROOPLOT_DATA_DIR=$PREFIX/share/scirooplot
