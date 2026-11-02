@@ -96,8 +96,11 @@ section.view { display: grid; gap: 44px; padding-top: 36px }
 html[data-level="expert"] .basics { display: none !important }
 html[data-level="beginner"] .expert-only { display: none !important }
 /* key-idea box of the slides */
+/* two kinds of boxes: .basics explain ROOT terms (teal, hidden in Expert mode); .key are notes for everyone (amber, always shown) */
 .basics, .key { border-left: 4px solid var(--teal); background: var(--tint); padding: 10px 16px; border-radius: 0 8px 8px 0; max-width: 74ch }
+.key { border-left-color: var(--amber); background: color-mix(in srgb, var(--amber) 12%, var(--panel)) }
 .basics > b:first-child, .key > b:first-child { color: var(--teal); margin-right: 0.6em }
+.key > b:first-child { color: var(--ink) }
 
 /* ROOT term explainers */
 .term { font: inherit; font-weight: 600; background: none; border: 0; padding: 0 2px; margin: 0 -2px; color: var(--term); cursor: help; border-radius: 4px }
