@@ -75,10 +75,8 @@ nav.views a[aria-current="page"] { color: #ffffff; background: #16233a; border-c
 .seg { display: inline-flex; border: 1px solid var(--hairline); border-radius: 8px; overflow: hidden; background: var(--panel) }
 .seg button { font: inherit; font-size: 0.8rem; font-weight: 700; border: 0; background: none; color: var(--muted); padding: 5px 8px; cursor: pointer }
 .seg button[aria-pressed="true"] { background: var(--teal); color: var(--teal-ink) }
-.gh { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 700; color: #ffffff; background: #16233a; border: 1px solid #16233a; border-radius: 8px; padding: 4px 10px }
-.gh:hover { background: var(--teal); border-color: var(--teal); color: var(--teal-ink) }
-:root[data-theme="dark"] .gh { background: var(--teal); border-color: var(--teal); color: var(--teal-ink) }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .gh { background: var(--teal); border-color: var(--teal); color: var(--teal-ink) } }
+.gh { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 700; color: var(--muted); background: none; border: 1px solid transparent; border-radius: 8px; padding: 4px 8px }
+.gh:hover { color: var(--ink); border-color: var(--hairline) }  /* a quiet link like the sections, not a button: the start page has the big one */
 .hero-links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 18px 0 0 }
 .hero-links span { color: var(--hero-muted); font-size: 0.875rem }
 .gh-hero { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 700; color: #16233a; background: #ffffff; border-radius: 10px; padding: 9px 16px }
@@ -543,7 +541,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px }
   .steps, .toc, .step .side, .preview { position: static }
   .steps { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; padding-bottom: 4px }
   .toc { display: flex; flex-wrap: wrap; max-height: none; overflow: visible }
-  .toc input { flex-basis: 100% }
+  .toc input, .toc .grouplabel { flex-basis: 100% }  /* a group label starts its own line, not in the middle of the links */
   .flow { grid-template-columns: minmax(0, 1fr) }
   .flow .arrow { transform: rotate(90deg); justify-self: center }
   .paths { grid-template-columns: minmax(0, 1fr) }
@@ -563,7 +561,7 @@ figure.plot figcaption { color: #5b6b80 }
 .palsw small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 #palmap { shape-rendering: crispEdges }
 .filters.tags { position: relative; padding-left: 3.6em }
-.filters.tags > .lb-l { position: absolute; left: 0; top: 5px }
+.filters.tags > .lb-l { position: absolute; left: 0; top: 5px; min-width: 0 }  /* the general .lb-l width would cover the first chip */
 .grid.ex .card .plot { aspect-ratio: 1; display: block; position: relative; background: #fff; overflow: hidden }
 .grid.ex .card .plot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain }
 .opt .code pre { white-space: pre; overflow-x: auto }
@@ -594,7 +592,7 @@ figure.plot figcaption { color: #5b6b80 }
   <div class="wrap">
     <a class="logo" href="#start"><img src="img/brand/logo-small.png" alt="" width="126" height="96"><span class="wordmark">Sci<span>Roo</span>Plot</span></a>
     <nav class="views" aria-label="Sections">
-      <a href="#tour">Tour</a><a href="#from-root">vs. ROOT</a><a href="#numpy">numpy</a><a href="#layouts">Layouts</a>
+      <a href="#tour">Tour</a><a href="#from-root" title="SciRooPlot for ROOT users: the same plots as ROOT macros, side by side">From ROOT</a><a href="#numpy" title="SciRooPlot for numpy and pandas users: arrays and DataFrames as figures">From numpy</a><a href="#layouts">Layouts</a>
       <a href="#options">Draw options</a><a href="#styles">Styles</a><a href="#examples">Examples</a><a href="#reference">Reference</a><a href="#install">Install</a><a href="#updating">Updating</a>
     </nav>
     <div class="search" role="search">
