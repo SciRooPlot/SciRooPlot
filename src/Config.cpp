@@ -27,7 +27,10 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
+#include <map>
+#include <set>
 #include <string>
 #include <unistd.h>
 #include <utility>
@@ -228,6 +231,22 @@ void Config::LoadConfig()
   }
 }
 
+// writes to a temporary file and renames it, so an interrupted write cannot leave a truncated file behind
+static bool WriteInfoFile(const string& file, const ptree& tree)
+{
+  const string tmpFile = file + "." + std::to_string(getpid()) + ".tmp";
+  try {
+    write_info(tmpFile, tree);
+    std::filesystem::rename(tmpFile, file);
+  } catch (const std::exception& e) {
+    std::error_code ec;
+    std::filesystem::remove(tmpFile, ec);
+    logger::error("Cannot save the configuration: {}.", e.what());
+    return false;
+  }
+  return true;
+}
+
 bool Config::Save()
 {
   if (!mModified) return true;
@@ -236,21 +255,6 @@ bool Config::Save()
     logger::error("No valid config path; cannot save the configuration.");
     return false;
   }
-  // write to a temporary file and rename it, so an interrupted write cannot leave a truncated file behind
-  auto write = [](const string& file, const ptree& tree) {
-    const string tmpFile = file + "." + std::to_string(getpid()) + ".tmp";
-    try {
-      write_info(tmpFile, tree);
-      std::filesystem::rename(tmpFile, file);
-    } catch (const std::exception& e) {
-      std::error_code ec;
-      std::filesystem::remove(tmpFile, ec);
-      logger::error("Cannot save the configuration: {}.", e.what());
-      return false;
-    }
-    return true;
-  };
-
   // save settings tree
   ptree settingsTree;
   settingsTree.add("verbosity", LogLevelName(mLogLevel));
@@ -260,16 +264,23 @@ bool Config::Save()
   settingsTree.add("matchcase", mMatchCaseInsensitive ? "insensitive" : "sensitive");
   settingsTree.add("screenscale", mScreenScale);
   settingsTree.add("bitmapscale", mBitmapScale);
-  const bool savedSettings = write(SettingsFile(), settingsTree);
+  const bool savedSettings = WriteInfoFile(SettingsFile(), settingsTree);
+  const bool savedProjects = SaveProjects();
+  return savedSettings && savedProjects;
+}
 
-  // save projects tree
+bool Config::SaveProjects() const
+{
+  if (mPath.empty()) {
+    logger::error("No valid config path; cannot save the configuration.");
+    return false;
+  }
   ptree projectsTree;
   for (const auto& [projectName, project] : mProjects) {
     projectsTree.put_child(projectName, project.GetTree());
   }
   projectsTree.add("@current", mCurrentProject);
-  const bool savedProjects = write(ProjectsFile(), projectsTree);
-  return savedSettings && savedProjects;
+  return WriteInfoFile(ProjectsFile(), projectsTree);
 }
 
 bool Config::Exists(const std::string& projectName) const
@@ -326,22 +337,34 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
     logger::error("Cannot rename {} to {}: {} already exists.", projectName, newProjectName, newProjectPath.string());
     return false;
   }
-  if (std::filesystem::exists(projectPath)) {
+  if (!CheckProjectDir(projectName)) return false;
+
+  // the configuration is saved first: if that fails nothing has changed on disk, and projects.info never names a directory that is gone
+  const string previousCurrent = mCurrentProject;
+  auto renameEntry = [this](const string& from, const string& to) {
+    auto node = mProjects.extract(from);
+    node.key() = to;
+    mProjects.insert(std::move(node));
+  };
+  renameEntry(projectName, newProjectName);
+  if (mCurrentProject == projectName) mCurrentProject = newProjectName;
+  if (!SaveNow()) {
+    renameEntry(newProjectName, projectName);
+    mCurrentProject = previousCurrent;
+    return false;
+  }
+  std::error_code existsError;
+  if (std::filesystem::exists(projectPath, existsError)) {
     std::error_code ec;
     std::filesystem::rename(projectPath, newProjectPath, ec);
     if (ec) {
       logger::error("Could not rename {} to {}: {}.", projectPath.string(), newProjectPath.string(), ec.message());
+      renameEntry(newProjectName, projectName);
+      mCurrentProject = previousCurrent;
+      SaveNow();
       return false;
     }
   }
-
-  auto node = mProjects.extract(projectName);
-  node.key() = newProjectName;
-  mProjects.insert(std::move(node));
-  if (mCurrentProject == projectName) {
-    mCurrentProject = newProjectName;
-  }
-  mModified = true;
   logger::print("Renamed project {} to {}. User code should be adjusted accordingly.", projectName, newProjectName);
   return true;
 }
@@ -352,12 +375,11 @@ void Config::Reset()
     logger::error("No valid config path; refusing to reset.");
     return;
   }
-  for (auto it = mProjects.begin(); it != mProjects.end();) {
-    // a project whose directory cannot be deleted stays registered instead of being orphaned
-    it = DeleteProjectDir(it->first) ? mProjects.erase(it) : std::next(it);
+  vector<string> projectNames;
+  for (const auto& [projectName, project] : mProjects) {
+    projectNames.push_back(projectName);
   }
-  mCurrentProject = mProjects.empty() ? "" : mProjects.begin()->first;
-  mModified = true;
+  RemoveProjects(projectNames, "");
 }
 
 void Config::Clean()
@@ -394,21 +416,8 @@ void Config::Clean()
       firstProject = projectName;
     }
   }
-  bool updatedActiveProject = false;
-  for (const auto& inactiveProject : inactiveProjects) {
-    if (!DeleteProjectDir(inactiveProject)) {
-      continue;
-    }
-    logger::print("- deleting project {}", inactiveProject);
-    mProjects.erase(inactiveProject);
-    mModified = true;
-    if (mCurrentProject == inactiveProject) {
-      mCurrentProject = firstProject;
-      updatedActiveProject = true;
-    }
-  }
-  if (updatedActiveProject && !mCurrentProject.empty()) {
-    logger::info("Selecting project {}.", mCurrentProject);
+  for (const auto& removed : RemoveProjects(inactiveProjects, firstProject)) {
+    logger::print("- deleting project {}", removed);
   }
 }
 
@@ -441,33 +450,92 @@ bool Config::Remove(const string& projectName)
     logger::error("Cannot find project {}.", projectName);
     return false;
   }
-  if (!DeleteProjectDir(projectName)) {
+  const string otherProject = (mProjects.begin()->first != projectName) ? mProjects.begin()->first : (mProjects.size() > 1 ? std::next(mProjects.begin())->first : "");
+  return !RemoveProjects({projectName}, otherProject).empty();
+}
+
+/**
+ * Removes the projects from the configuration and deletes their directories in the config path; returns the ones removed.
+ * The configuration is saved first: if that fails nothing is deleted. A directory that cannot be deleted afterwards
+ * keeps its project registered (saved again), so projects.info always matches the directories.
+ */
+vector<string> Config::RemoveProjects(const vector<string>& projectNames, const string& nextCurrent)
+{
+  std::map<string, Project> removed;
+  for (const auto& projectName : projectNames) {
+    if (!CheckProjectDir(projectName)) continue;  // stays registered
+    auto node = mProjects.extract(projectName);
+    if (node) removed.insert(std::move(node));
+  }
+  if (removed.empty()) return {};
+  const string previousCurrent = mCurrentProject;
+  if (removed.count(mCurrentProject)) mCurrentProject = mProjects.count(nextCurrent) ? nextCurrent : (mProjects.empty() ? "" : mProjects.begin()->first);
+  auto restore = [&](const string& projectName) { mProjects.insert(removed.extract(projectName)); };
+  if (!SaveNow()) {
+    while (!removed.empty())
+      restore(removed.begin()->first);
+    mCurrentProject = previousCurrent;
+    return {};
+  }
+  vector<string> deleted;
+  bool restored = false;
+  for (auto it = removed.begin(); it != removed.end();) {
+    const string projectName = it->first;
+    ++it;
+    if (DeleteProjectDir(projectName)) {
+      deleted.push_back(projectName);
+    } else {
+      restore(projectName);
+      if (projectName == previousCurrent) mCurrentProject = previousCurrent;
+      restored = true;
+    }
+  }
+  if (restored) SaveNow();
+  if (mCurrentProject != previousCurrent && !mCurrentProject.empty()) logger::info("Selecting project {}.", mCurrentProject);
+  return deleted;
+}
+
+bool Config::CheckProjectDir(const string& projectName) const
+{
+  // only the project's directory in the config path (plots.info, dataSources.info, ...), never the user code or the output directory
+  const auto projectPath = ProjectPath(projectName);
+  // compared after normalising: the parent of config/.. and of config/. is config, but they are not inside it
+  if (projectName.empty() || find_illegal_name_char(projectName) || !projectPath.is_absolute() ||
+      projectPath.lexically_normal().parent_path() != mPath.lexically_normal()) {
+    logger::error("Refusing to change {} for project {}: not inside the config directory.", projectPath.string(), projectName);
     return false;
   }
-  mProjects.erase(projectName);
-  mModified = true;
-  if (mCurrentProject == projectName) {
-    mCurrentProject.clear();
-    auto it = mProjects.begin();
-    if (it != mProjects.end()) {
-      mCurrentProject = it->first;
-      logger::info("Selecting project {}.", mCurrentProject);
+  // a config path set to a general folder (SCIROOPLOT_CONFIG_PATH=$HOME) makes project names real folders (Documents):
+  // a directory is changed only if it holds nothing but the files SciRooPlot writes there
+  static const std::set<string> kProjectFiles = {"plots.info", "dataSources.info", "tabcomp.csv", "UserData.root"};
+  std::error_code ec;
+  const auto status = std::filesystem::symlink_status(projectPath, ec);
+  if (ec || status.type() == std::filesystem::file_type::not_found) return true;  // nothing there to change
+  if (status.type() == std::filesystem::file_type::symlink) return true;          // the link itself is removed, not what it points to
+  if (status.type() != std::filesystem::file_type::directory) {
+    logger::error("Refusing to change {} for project {}: it is not a directory.", projectPath.string(), projectName);
+    return false;
+  }
+  for (std::filesystem::directory_iterator entry(projectPath, ec), end; !ec && entry != end; entry.increment(ec)) {
+    const string name = entry->path().filename().string();
+    const bool isOwnFile = entry->is_regular_file(ec) && (kProjectFiles.count(name) || (name.size() > 4 && name.compare(name.size() - 4, 4, ".tmp") == 0));
+    if (!isOwnFile) {
+      logger::error("Refusing to change {} for project {}: it contains {}, which SciRooPlot did not write. Is SCIROOPLOT_CONFIG_PATH a folder of its own?",
+                    projectPath.string(), projectName, name);
+      return false;
     }
+  }
+  if (ec) {
+    logger::error("Refusing to change {} for project {}: cannot read it ({}).", projectPath.string(), projectName, ec.message());
+    return false;
   }
   return true;
 }
 
 bool Config::DeleteProjectDir(const string& projectName) const
 {
-  // deletes only the project's directory in the config path (plots.info, dataSources.info),
-  // never the user code or the output directory
+  if (!CheckProjectDir(projectName)) return false;
   const auto projectPath = ProjectPath(projectName);
-  // compared after normalising: the parent of config/.. and of config/. is config, but they are not inside it
-  if (projectName.empty() || find_illegal_name_char(projectName) || !projectPath.is_absolute() ||
-      projectPath.lexically_normal().parent_path() != mPath.lexically_normal()) {
-    logger::error("Refusing to delete {} for project {}: not inside the config directory.", projectPath.string(), projectName);
-    return false;
-  }
   std::error_code ec;
   std::filesystem::remove_all(projectPath, ec);
   if (ec) {
@@ -475,6 +543,12 @@ bool Config::DeleteProjectDir(const string& projectName) const
     return false;
   }
   return true;
+}
+
+bool Config::SaveNow()
+{
+  mModified = true;  // the settings are still written at exit
+  return SaveProjects();
 }
 
 bool Config::Select(const string& projectName)

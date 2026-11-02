@@ -1140,6 +1140,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   // the files opened and closed while plotting would leave gDirectory at gROOT: objects the caller makes afterwards
   // would no longer go into the file it had open
   TDirectory::TContext keepCurrentDirectory;
+  mWrittenFiles.clear();
 
   if (!mHasDisplay) {
     // determine OS dependent offset between window and frame
@@ -1261,8 +1262,12 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     mGifLastFrame = nullptr;
     if (str_starts_with(mode, "gif")) {
       optional<vector<string>> commonGroup;
+      // frames that cannot be made are left out here already (missing data, a missing base plot): the last one written must close the gif
+      auto hasBasePlot = [this](const Plot& plot) {
+        return !plot.GetBasePlotName() || std::any_of(mBasePlots.begin(), mBasePlots.end(), [&](const Plot& basePlot) { return basePlot.GetName() == *plot.GetBasePlotName(); });
+      };
       for (auto plot : selectedPlots) {
-        if (!GetMissingData(*plot).empty()) continue;
+        if (!GetMissingData(*plot).empty() || plot->GetGroup().empty() || !hasBasePlot(*plot)) continue;
         mGifLastFrame = plot;
         const vector<string> parts = split_string(plot->GetGroup(), '/');
         if (!commonGroup) {
@@ -1744,6 +1749,7 @@ vector<tuple<string, string, Plot::Pad::Data::data_info_t>> PlotManager::GetMiss
     if (padID != 0 && pad.GetFrame()) {
       checkKey(pad.GetFrame()->GetDataSource(), pad.GetFrame()->GetName(), pad.GetFrame()->GetDataInfo());
     }
+    if (padID == 0) continue;  // data of pad 0 is not drawn (AddPlot warns about it), so it is not needed either
     for (const auto& data : pad.GetData()) {
       checkKey(data->GetDataSource(), data->GetName(), data->GetDataInfo());
       if (data->GetType() == "ratio") {
@@ -2122,6 +2128,21 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   // create output folders and files
   string folderName = mOutputDirectory + "/" + plot.GetGroup();
   string fullName = folderName + "/" + fileName + fileEnding;
+  // names that differ only in characters a file name or a macro cannot have (eff-pi and eff_pi, a/b and a_b) would get the same file:
+  // the later plot gets a number, so it does not replace the earlier one
+  if (!(isGifMode && !mGifName.empty())) {
+    const string plotID = plot.GetGroup() + ":" + plot.GetName();
+    string uniqueName = fileName;
+    for (int32_t n = 2; mWrittenFiles.count(folderName + "/" + uniqueName + fileEnding) && mWrittenFiles[folderName + "/" + uniqueName + fileEnding] != plotID; ++n) {
+      uniqueName = fileName + "_" + std::to_string(n);
+    }
+    if (uniqueName != fileName) {
+      logger::warning("Plot {} of group {} is saved as {}{}, since {} has the same file name.", plot.GetName(), plot.GetGroup(), uniqueName, fileEnding, mWrittenFiles[fullName]);
+      fileName = uniqueName;
+      fullName = folderName + "/" + fileName + fileEnding;
+    }
+    mWrittenFiles[fullName] = plotID;
+  }
 
   if (isGifMode && !mGifName.empty()) {
     fullName = mGifName;

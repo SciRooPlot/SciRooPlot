@@ -652,7 +652,7 @@ figure.plot figcaption { color: #5b6b80 }
     <div class="flow" aria-label="How SciRooPlot works">
       <div class="box"><h3>Store</h3><p>Keep your analysis results in <button class="term" data-term="rootfile">ROOT</button> or CSV files.</p></div>
       <div class="arrow" aria-hidden="true">→</div>
-      <div class="box"><h3>Define</h3><p>Describe the plots you want, in C++ or Python.</p></div>
+      <div class="box"><h3>Define</h3><p>Describe the plots you want,<br>in C++ or Python.</p></div>
       <div class="arrow" aria-hidden="true">→</div>
       <div class="box"><h3>Generate</h3><p>Browse and export plots with the <code>plot</code> command.</p></div>
       <div class="arrow" aria-hidden="true">→</div>
@@ -2218,7 +2218,14 @@ function showMethod(el, name) {
 
 function glueTerms() { // a full stop or comma after a term stays on its line
   document.querySelectorAll(".term").forEach(t => { const n = t.nextSibling;
-    if (n && n.nodeType === 3 && /^[.,;:)]/.test(n.data) && !t.parentNode.classList.contains("nw")) { const w = document.createElement("span"); w.className = "nw"; t.replaceWith(w); w.append(t, n.data[0]); n.data = n.data.slice(1) } }) }
+    if (n && n.nodeType === 3 && /^[.,;:)]/.test(n.data) && !t.parentNode.classList.contains("nw")) { const w = document.createElement("span"); w.className = "nw"; t.replaceWith(w); w.append(t, n.data[0]); n.data = n.data.slice(1) } });
+  // browsers may break a line after a + sign: "C+" at the end of one line, "+" at the start of the next
+  const texts = [], walker = document.createTreeWalker(document.querySelector("main"), NodeFilter.SHOW_TEXT,
+    { acceptNode: n => n.data.includes("C++") && !n.parentNode.closest("pre, code, .nw, script, style") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
+  while (walker.nextNode()) texts.push(walker.currentNode);
+  texts.forEach(n => { const parts = n.data.split("C++"), glued = document.createDocumentFragment();
+    parts.forEach((part, i) => { if (i) { const w = document.createElement("span"); w.className = "nw"; w.textContent = "C++"; glued.append(w) } if (part) glued.append(part) });
+    n.replaceWith(glued) }) }
 
 /* ---------------- search across the whole site */
 function searchIndex() {

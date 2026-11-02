@@ -845,9 +845,21 @@ void Plot::operator+=(const Plot& plot)
 
   mFill.Update(plot.mFill);
 
+  // the data of an added pad come after the data the pad already has: references to the data of a named pad (<mean:1@2>,
+  // a legend row for data of pad 2) move by the number of data that pad had before, whichever pad they are in
+  std::map<uint8_t, uint16_t> dataOffsets;
+  for (const auto& [padID, pad] : mPads) {
+    if (!pad.mData.empty()) dataOffsets[padID] = static_cast<uint16_t>(pad.mData.size());
+  }
   for (const auto& [padID, pad] : plot.mPads) {
-    mPads[padID];  // initializes the pad in case it was not yet defined in this plot
-    mPads[padID] += pad;
+    auto& thisPad = mPads[padID];  // initializes the pad in case it was not yet defined in this plot
+    const size_t nLegendBoxes = thisPad.mLegendBoxes.size(), nTextBoxes = thisPad.mTextBoxes.size();
+    thisPad += pad;
+    if (dataOffsets.empty()) continue;
+    for (size_t i = nLegendBoxes; i < thisPad.mLegendBoxes.size(); ++i)
+      thisPad.mLegendBoxes[i]->ShiftDataIDsOfPads(dataOffsets);
+    for (size_t i = nTextBoxes; i < thisPad.mTextBoxes.size(); ++i)
+      thisPad.mTextBoxes[i]->ShiftDataIDsOfPads(dataOffsets);
   }
   mSharedAxes.insert(mSharedAxes.end(), plot.mSharedAxes.begin(), plot.mSharedAxes.end());  // later declarations win
   mCommonTitles.insert(mCommonTitles.end(), plot.mCommonTitles.begin(), plot.mCommonTitles.end());
@@ -3988,6 +4000,23 @@ void Plot::Pad::TextBox::ShiftDataIDs(uint16_t offset)
   shifted.append(last, mText.cend());
   mText = std::move(shifted);
 }
+void Plot::Pad::TextBox::ShiftDataIDsOfPads(const std::map<uint8_t, uint16_t>& offsets)
+{
+  // <mean:1@2> names the first data of pad 2: when plots are added, the data of pad 2 move up by the data pad 2 had before
+  if (mText.find('@') == string::npos) return;
+  static const std::regex refRegex("(<[a-z]+[^<>:]*:)(\\d{1,5})@(\\d{1,3})([^<>\\d][^<>]*)?>");
+  string shifted;
+  auto last = mText.cbegin();
+  for (auto match = std::sregex_iterator(mText.begin(), mText.end(), refRegex); match != std::sregex_iterator(); ++match) {
+    const auto padID = std::stoul((*match)[3].str());
+    const auto offset = (padID <= std::numeric_limits<uint8_t>::max() && offsets.count(static_cast<uint8_t>(padID))) ? offsets.at(static_cast<uint8_t>(padID)) : 0;
+    shifted.append(last, (*match)[0].first);
+    shifted += (*match)[1].str() + std::to_string(std::stoul((*match)[2].str()) + offset) + "@" + (*match)[3].str() + (*match)[4].str() + ">";
+    last = (*match)[0].second;
+  }
+  shifted.append(last, mText.cend());
+  mText = std::move(shifted);
+}
 auto Plot::Pad::TextBox::SetTextAlign(int16_t align) -> decltype(*this)
 {
   int16_t hAlign = (align / 10) * 10;
@@ -4281,6 +4310,14 @@ void Plot::Pad::LegendBox::ShiftDataIDs(uint16_t offset)
   for (auto& entry : mLegendEntriesUser) {
     if (entry.mRefDataID && !entry.mRefPadID) *entry.mRefDataID += offset;  // rows for the data of another pad keep their number
     entry.ShiftPosition(offset);
+  }
+}
+void Plot::Pad::LegendBox::ShiftDataIDsOfPads(const std::map<uint8_t, uint16_t>& offsets)
+{
+  for (auto& entry : mLegendEntriesUser) {
+    if (!entry.mRefDataID || !entry.mRefPadID) continue;
+    const auto offset = offsets.find(*entry.mRefPadID);
+    if (offset != offsets.end()) *entry.mRefDataID += offset->second;
   }
 }
 

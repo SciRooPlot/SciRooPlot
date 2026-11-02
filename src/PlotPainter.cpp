@@ -1066,6 +1066,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
               }
               const TAxis* axis = (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis();
+              const optional<double_t> rangeMin = userMin, rangeMax = userMax;  // the user's range, before the reset below
               constexpr double_t relTol = 1e-12;
               if (userMin && !(*userMin < axis->GetXmin() && !TMath::AreEqualRel(*userMin, axis->GetXmin(), relTol))) userMin.reset();
               if (userMax && !(*userMax > axis->GetXmax() && !TMath::AreEqualRel(*userMax, axis->GetXmax(), relTol))) userMax.reset();
@@ -1076,7 +1077,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 pad_ptr->SetLogy(true);
                 pad_ptr->Update();
               }
-              TH1* extended = ExtendFrameAxis(axisHist_ptr, axisLabel, userMin, userMax);
+              TH1* extended = ExtendFrameAxis(axisHist_ptr, axisLabel, userMin, userMax, rangeMin, rangeMax);
               // the added empty bins must not change the automatic range of the dependent axis: keep the one of the original frame
               // (for 1d the range ROOT determined when drawing it, for 2d the extremes of the contents, which define the colour scale below)
               if (axisHist_ptr->GetMinimumStored() == -1111 && axisHist_ptr->GetMaximumStored() == -1111) {
@@ -3591,17 +3592,25 @@ void PlotPainter::ApplyScale(TObject* obj, std::set<TObject*>& done, const std::
  * The lengths of the other axes and the attributes are kept; the result replaces the frame in the pad and has to be drawn by the caller.
  */
 //**************************************************************************************************
-TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<double_t> newMin, optional<double_t> newMax)
+TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<double_t> newMin, optional<double_t> newMax,
+                                  optional<double_t> rangeMin, optional<double_t> rangeMax)
 {
   const int32_t dim = frame->GetDimension();
   const int32_t extendedDim = (axisLabel == 'X') ? 0 : 1;
-  const int32_t shift = (newMin) ? 1 : 0;  // bins move up by one if a bin is added below
   const array<const TAxis*, 3> axes = {frame->GetXaxis(), frame->GetYaxis(), frame->GetZaxis()};
+  // a range wholly outside the frame (20 to 30 for data from 0 to 10) also needs an edge at its inner end: a range is shown
+  // in whole bins, so with the one added bin from 10 to 30 the axis would start at 10
+  const TAxis* extendedAxis = axes[extendedDim];
+  const optional<double_t> innerLow = (newMin && rangeMax && *rangeMax > *newMin && *rangeMax < extendedAxis->GetXmin()) ? rangeMax : nullopt;
+  const optional<double_t> innerHigh = (newMax && rangeMin && *rangeMin < *newMax && *rangeMin > extendedAxis->GetXmax()) ? rangeMin : nullopt;
+  const int32_t shift = (newMin ? 1 : 0) + (innerLow ? 1 : 0);  // the bins move up by the number of bins added below
   array<vector<double_t>, 3> edges;
   for (int32_t i = 0; i < dim; ++i) {
     if (i == extendedDim && newMin) edges[i].push_back(*newMin);
+    if (i == extendedDim && innerLow) edges[i].push_back(*innerLow);
     for (int32_t bin = 1; bin <= axes[i]->GetNbins() + 1; ++bin)
       edges[i].push_back(axes[i]->GetBinLowEdge(bin));
+    if (i == extendedDim && innerHigh) edges[i].push_back(*innerHigh);
     if (i == extendedDim && newMax) edges[i].push_back(*newMax);
   }
   TH1* extended{nullptr};
@@ -5249,6 +5258,14 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
         denomEyHigh = ptr->GetEYhigh();
       }
       deleteDenom = true;
+    }
+    // a spline needs strictly increasing x: with a repeated x (steps, bands) every interpolated value is NaN and the ratio empty
+    for (int32_t i = 1; i < denomN; ++i) {
+      if (denomX[i] == denomX[i - 1]) {
+        logger::error("Cannot divide {} by graph {}: it has two points at x = {}, so it cannot be interpolated at the x values of {}.", numerator->GetName(), denominator->GetName(), denomX[i], numerator->GetName());
+        if (deleteDenom) delete denominator;
+        return false;
+      }
     }
 
     // create splines for values and error envelope of denominator

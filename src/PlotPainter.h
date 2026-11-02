@@ -281,7 +281,8 @@ class PlotPainter
   Width_t ScaleLineWidth(Width_t width) const;
   Style_t ScaleMarkerStyle(Style_t style) const;
   Style_t ScreenLineStyle(Style_t style) const;
-  static TH1* ExtendFrameAxis(const TH1* frame, char axisLabel, std::optional<double_t> newMin, std::optional<double_t> newMax);
+  static TH1* ExtendFrameAxis(const TH1* frame, char axisLabel, std::optional<double_t> newMin, std::optional<double_t> newMax,
+                              std::optional<double_t> rangeMin = std::nullopt, std::optional<double_t> rangeMax = std::nullopt);
   std::optional<data_ptr_t> GetDataClone(TObject* obj, const std::optional<Plot::Pad::Data::proj_info_t>& projInfo = std::nullopt, bool keepStoredRanges = false);
   template <typename T>
   std::optional<data_ptr_t> GetDataClone(TObject* obj);

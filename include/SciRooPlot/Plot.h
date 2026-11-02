@@ -1500,6 +1500,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
   // placeholders naming the data of the pad (<mean:2>) or of another pad (<mean:1@4>)
   bool RefersToOtherPads() const;  // the text is made once all pads are drawn
   void ShiftDataIDs(uint16_t offset);
+  void ShiftDataIDsOfPads(const std::map<uint8_t, uint16_t>& offsets);  // placeholders naming a pad: by the offset of that pad
 
  private:
   std::string mText;  // lines separated by newlines
@@ -1697,6 +1698,7 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   void AddDataRow(const std::string& label, uint16_t dataID, const std::optional<LegendEntry>& appearance);
   bool HasForeignRows() const;  // rows for data of other pads: the legend is made once all pads are drawn
   void ShiftDataIDs(uint16_t offset);
+  void ShiftDataIDsOfPads(const std::map<uint8_t, uint16_t>& offsets);  // rows naming a pad: by the offset of that pad
 
   const auto& GetEntries() const { return mLegendEntries; }
   const auto& GetDefaultSymbolElements() const { return mSymbolElementsDefault; }
