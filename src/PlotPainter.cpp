@@ -1333,6 +1333,16 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               const bool shrunkByRoot = axisLabel != 'Z' && axis_ptr->GetLabels() && axis_ptr->GetLabelFont() % 10 != 3;
               axis_ptr->SetLabelSize(shrunkByRoot ? *textSizeLabel / 0.66666f : *textSizeLabel);
             }
+            // TGaxis::PaintAxis moves the numbers below a horizontal axis down by a multiple of the label size taken as a fraction of the pad
+            // height, while ROOT sizes text by the shorter side of the pad: in a pad taller than wide they would sit too far from the axis
+            if (axisLabel == 'X' && !axis_ptr->GetLabels() && axis_ptr->GetLabelFont() % 10 != 3 && !IsViewFrame(pad_ptr, axisHist_ptr)) {
+              const double_t width = pad_ptr->GetWw() * pad_ptr->GetAbsWNDC();
+              const double_t height = pad_ptr->GetWh() * pad_ptr->GetAbsHNDC();
+              if (height > width) {
+                const double_t drop = (pad_ptr->GetLogx()) ? (axis_ptr->GetNoExponent() ? 0.82 : 1.15) : 0.8;
+                axis_ptr->SetLabelOffset(static_cast<float_t>(axis_ptr->GetLabelOffset() - drop * axis_ptr->GetLabelSize() * (1. - width / height)));
+              }
+            }
             if (textColorLabel) axis_ptr->SetLabelColor(textColorLabel->ToIndex());
             if (textAlphaLabel) axis_ptr->SetLabelColor(TColor::GetColorTransparent(axis_ptr->GetLabelColor(), *textAlphaLabel));
             if (labelAngle) {
@@ -2742,12 +2752,26 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       // re-draw axes; for a frame with colour scale with a copy without it, since ROOT removes the colour scale of a histogram painted
       // without Z (THistPainter::PaintTable) and makes a new one at the default position with the next paint
       TObject* palette = axisHist_ptr->GetListOfFunctions()->FindObject("palette");
+      // a frame drawn with HBAR shows its x axis vertically, but ROOT repaints it horizontally (THistPainter::PaintAxis swaps the axes only for
+      // alphanumeric labels): the copy gets the look of the axis drawn at each place
+      const bool swapAxes = IsHBarFrame(pad_ptr, axisHist_ptr) && !axisHist_ptr->GetXaxis()->GetLabels() && !axisHist_ptr->GetYaxis()->GetLabels();
       TH1* axes = axisHist_ptr;
-      if (palette) {
+      if (palette || swapAxes) {
         axes = static_cast<TH1*>(axisHist_ptr->Clone());
         axes->SetDirectory(nullptr);
         axes->SetBit(kCanDelete);
-        delete axes->GetListOfFunctions()->Remove(axes->GetListOfFunctions()->FindObject("palette"));
+      }
+      if (palette) delete axes->GetListOfFunctions()->Remove(axes->GetListOfFunctions()->FindObject("palette"));
+      if (swapAxes) {
+        for (auto [from, to] : {std::pair{axisHist_ptr->GetYaxis(), axes->GetXaxis()}, std::pair{axisHist_ptr->GetXaxis(), axes->GetYaxis()}}) {
+          from->TAttAxis::Copy(*to);
+          for (const auto bit : {TAxis::kCenterLabels, TAxis::kNoExponent, TAxis::kTickPlus, TAxis::kTickMinus, TAxis::kMoreLogLabels}) {
+            to->SetBit(bit, from->TestBit(bit));
+          }
+          to->SetDecimals(from->GetDecimals());
+          to->SetTimeDisplay(from->GetTimeDisplay());
+          to->SetTimeFormat(from->GetTimeFormat());
+        }
       }
       axes->Draw("SAME AXIS");
     }
