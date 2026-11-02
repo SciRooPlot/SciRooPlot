@@ -28,7 +28,7 @@
 
 namespace SciRooPlot
 {
-// output modes of GeneratePlots (in addition: gif+<centiseconds between frames>[++[<repeats>]])
+// output modes of GeneratePlots (in addition: gif+<centiseconds between frames>[++[<repeats>]]), explained by srp help
 inline const std::vector<std::string>& plot_modes()
 {
   static const std::vector<std::string> modes{"show", "spread", "print", "file", "data", "macro", "pdf", "eps", "ps", "svg", "png", "jpg", "gif", "html", "json", "xml", "root"};
@@ -41,15 +41,6 @@ inline bool is_valid_plot_mode(const std::string& mode)
   // an animation: gif+<centiseconds>, played once, or with ++ looping endlessly, with ++<repeats> that many times
   static const std::regex gifMode(R"(gif\+\d+(\+\+\d*)?)");
   return std::regex_match(mode, gifMode);
-}
-
-// the valid modes for messages and help texts: show | spread | ... | gif[+<centiseconds>[++[<repeats>]]] | ...
-inline std::string plot_modes_description()
-{
-  std::string description;
-  for (const auto& mode : plot_modes())
-    description += ((description.empty()) ? "" : " | ") + mode + ((mode == "gif") ? "[+<centiseconds>[++[<repeats>]]]" : "");
-  return description;
 }
 
 // data sources of data defined in the plots: functions (also reference functions) and graphs given by their points

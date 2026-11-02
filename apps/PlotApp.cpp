@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 
     if (mode.empty()) mode = Config::Get().PlotMode();
     if (mode != "list" && !is_valid_plot_mode(mode)) {  // before the plots are looked up: also when none match
-      logger::error("Invalid plot mode '{}' ({} | list).", mode, plot_modes_description());
+      logger::error("Invalid plot mode '{}' (srp help lists the modes).", mode);
       return 1;
     }
 

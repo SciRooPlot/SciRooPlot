@@ -1110,7 +1110,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
 bool PlotManager::GeneratePlots(const string& mode, const string& name, const string& group)
 {
   if (!is_valid_plot_mode(mode)) {
-    logger::error("Invalid plot mode '{}' ({}).", mode, plot_modes_description());
+    logger::error("Invalid plot mode '{}' (srp help lists the modes).", mode);
     return false;
   }
   const bool isInteractiveMode = (mode == "show" || mode == "spread");
