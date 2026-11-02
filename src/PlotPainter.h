@@ -49,6 +49,7 @@ class TCanvas;
 class TObject;
 class TLatex;
 class TPad;
+class TVirtualPad;
 class TObjArray;
 class TPave;
 class TAxis;

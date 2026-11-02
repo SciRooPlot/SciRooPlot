@@ -878,6 +878,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             auto* polygon = new TGraph(data_ptr->GetN() + 2);
             polygon->SetName(data_ptr->GetName());
             polygon->SetTitle(data_ptr->GetTitle());
+            polygon->SetBit(kCanDelete);  // owned by the pad, as the copy it replaces
             CopyStyle(*data_ptr, *polygon);
             data_ptr->Sort();
             polygon->SetPoint(0, data_ptr->GetPointX(0), 0.);
