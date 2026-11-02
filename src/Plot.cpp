@@ -1619,10 +1619,10 @@ ptree Plot::Pad::GetPropertyTree() const
 void Plot::Pad::operator+=(const Pad& pad)
 {
   if (this == &pad) logger::throw_invalid_argument("Cannot add a pad to itself.");
-  if (pad.mPosition.xlow) mPosition.xlow = pad.mPosition.xlow;
-  if (pad.mPosition.ylow) mPosition.ylow = pad.mPosition.ylow;
-  if (pad.mPosition.xup) mPosition.xup = pad.mPosition.xup;
-  if (pad.mPosition.yup) mPosition.yup = pad.mPosition.yup;
+  // the position is one setting (SetPosition sets all four): a pad placed by the added plot is placed entirely by it, never with
+  // corners from both (a plots file with only some of them would otherwise mix them); margins are merged one by one, since a plot
+  // may change a single margin of its base plot (SetLeftMargin)
+  if (pad.mPosition.xlow || pad.mPosition.ylow || pad.mPosition.xup || pad.mPosition.yup) mPosition = pad.mPosition;
   if (pad.mMargins.top) mMargins.top = pad.mMargins.top;
   if (pad.mMargins.bottom) mMargins.bottom = pad.mMargins.bottom;
   if (pad.mMargins.left) mMargins.left = pad.mMargins.left;
