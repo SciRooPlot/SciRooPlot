@@ -32,8 +32,8 @@ const MSG_HELP = [
   ["needs a graphical display", "<code>show</code> and the interactive modes open a window, but there is no display (e.g. an ssh session without X forwarding).", "Log in with <code>ssh -X</code>, or write files: <code>plot g name pdf</code>."],
   ["has data or a frame in pad", "Data was added to a base plot; base plots only hold the layout.", "Add the data in the plots; share it with a loop or a data template (see <a href=\"#ref-templates\">Templates</a>)."],
   ["stored on axis … of … is not applied", "Ranges stored with an input histogram are ignored, so the same input looks the same everywhere.", "Set the range in the definition (<code>plot[1]['X'].SetRange</code>), or mark the data <code>SetDefinesFrame()</code>."],
-  ["receives a second object named", "Two inputs of a data source contain an object of the same name; the later one wins.", "Use separate data sources, or address the object by its path."],
+  ["receives a second object named", "Two objects given to a data source in your program have the same name; the later one replaces the first.", "Use separate data sources, or address the object by its path."],
   ["same file as input", "The same file is listed twice in one data source.", "Remove the duplicate; it is read once."],
-  ["a tree stored in a list cannot be chained", "A tree inside a TList is read from the first file only.", "Store trees directly in the file or a directory, not in a list."],
+  ["a tree stored in a list cannot be chained", "A tree inside a TList is ignored when the same tree is found in other inputs.", "Store trees directly in the file or a directory, not in a list."],
   ["already exists and will be replaced", "Two plots (or base plots) have the same name in the same group, often from a loop.", "Put the loop variable into the name or the group."],
   ["Cannot find project", "No project of that name is registered.", "<code>srp projects</code> lists them; <code>srp add &lt;project&gt; &lt;program&gt;</code> registers one."]];

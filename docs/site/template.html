@@ -66,6 +66,8 @@ kbd { border: 1px solid var(--hairline); border-bottom-width: 2px; border-radius
 .logo img { height: 34px; width: auto; display: block }
 .logo .wordmark span { color: var(--teal) }
 nav.views { display: flex; flex-wrap: wrap; gap: 2px; flex: 1 1 auto }
+/* wider screens: logo, search and switches in the first row, the sections as a row of tabs below (all of it does not fit in one row) */
+@media (min-width: 701px) { nav.views { order: 3; flex-basis: 100%; margin-inline: -6px } .search { order: 1; margin-left: auto } .switches { order: 2 } }
 nav.views a { text-decoration: none; color: var(--muted); padding: 5px 6px; border-radius: 8px; font-size: 0.84rem; font-weight: 700; border: 1px solid transparent }
 nav.views a:hover { color: var(--ink); border-color: var(--hairline) }
 nav.views a[aria-current="page"] { color: #ffffff; background: #16233a; border-color: #16233a }
@@ -430,7 +432,7 @@ tr:last-child td { border-bottom: 0 }
 .hidden-by-search { display: none !important }
 
 /* search */
-.search { position: relative; flex: 0 1 120px; min-width: 0 }
+.search { position: relative; flex: 0 1 240px; min-width: 0 }
 .search input { width: 100%; font: inherit; font-size: 0.875rem; padding: 6px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--paper); color: var(--text) }
 .sres { position: absolute; top: calc(100% + 6px); right: 0; width: min(440px, calc(100vw - 32px)); max-height: 70vh; overflow: auto; background: var(--panel); border: 1px solid var(--hairline); border-top: 4px solid var(--amber); border-radius: 10px; box-shadow: 0 12px 32px rgba(10, 20, 40, 0.2); z-index: 35; padding: 4px }
 .hit { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 0 10px; width: 100%; text-align: left; font: inherit; background: none; border: 0; border-radius: 6px; padding: 7px 10px; color: var(--text); cursor: pointer }
@@ -531,8 +533,8 @@ table.up td:first-child { width: 32% } table.up td:nth-child(2) { width: 32% }
 .opt { display: grid; grid-template-columns: 2.2em minmax(15.5em, 0.7fr) minmax(0, 1.6fr); gap: 14px; align-items: center; background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 14px 16px }
 .badge { width: 2em; height: 2em; border-radius: 50%; background: var(--amber); color: #16233a; font-weight: 700; display: grid; place-items: center }
 .opt p { font-size: 0.875rem; color: var(--muted) }
-.opt p span { white-space: nowrap }
-@media (min-width: 761px) { .opt p span { display: block } }
+.opt p > span { white-space: nowrap }
+@media (min-width: 761px) { .opt p > span { display: block } }
 
 footer { border-top: 1px solid var(--hairline); padding-block: 22px 40px; font-size: 0.875rem; color: var(--muted) }
 footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px }
@@ -664,6 +666,13 @@ figure.plot figcaption { color: #5b6b80 }
     <p class="key"><b>Key idea</b>You describe <i>what</i> a figure shows, once. SciRooPlot finds the data by name, in one file or in hundreds, draws it with ROOT, and keeps every plot of your project in one place.</p>
   </div>
 
+  <div style="display:grid;gap:16px">
+    <h2 class="title">Plots from many fields</h2>
+    <p>A few of the <span id="showcasecount"></span> plots of the example project, from particle physics to climate science and neuroscience. Open one to see the code that makes it.</p>
+    <div class="grid ex showcase" id="showcase"></div>
+    <p><a class="btn" href="#examples">All examples</a></p>
+  </div>
+
   <div class="teaser">
     <div style="display:grid;gap:16px">
       <h2 class="title">An everyday example</h2>
@@ -781,7 +790,7 @@ figure.plot figcaption { color: #5b6b80 }
     <p>Each plot is a few lines in <code>DefinePlots</code>, using the data source above. Pick one:</p>
     <div class="filters" id="nptabs" role="group" aria-label="Figure"></div>
     <div class="step" id="npbody"></div>
-    <p class="key"><b>Try it</b>Make a Python project and put the parts above into its <code>DefinePlots.py</code>: the data part at the top, the data source into <code>DefineDataSources</code>, the plots into <code>DefinePlots</code>. Then draw a plot by its group and name, or all of them: <span class="term-line" style="display:block;margin-top:8px"><span class="p">$ </span>srp init-py ml<br><span class="p">$ </span>plot ml roc<br><span class="p">$ </span>plot ml .+ pdf</span></p>
+    <p class="key"><b>Try it</b>Make a Python project and put the parts above into its <code>DefinePlots.py</code>: the data part at the top, the data source into <code>DefineDataSources</code>, the plots into <code>DefinePlots</code>, and for the grid of panels its base plot into <code>DefineBasePlots</code>: <code>pm.AddBasePlot(PlotManager.MakeBasePlot("1d_2x2"))</code>. Then draw a plot by its group and name, or all of them: <span class="term-line" style="display:block;margin-top:8px"><span class="p">$ </span>srp init-py ml<br><span class="p">$ </span>plot ml roc<br><span class="p">$ </span>plot ml .+ pdf</span></p>
   </div>
 
   <div style="display:grid;gap:14px">
@@ -968,7 +977,7 @@ figure.plot figcaption { color: #5b6b80 }
       <tr><td><code>.SetDrawOption(alias)</code></td><td id="csopts"></td></tr></table></section>
     <section><h4>Pads, axes, boxes</h4><table>
       <tr><td><code>plot[1]</code>, <code>plot[2]</code> …</td><td>pads from 1; <code>plot[0]</code> = all pads</td></tr>
-      <tr><td><code>['X'].SetRange(0, 10).SetTitle("…")</code></td><td>also <code>SetLog()</code>, <code>SetNumDivisions(505)</code></td></tr>
+      <tr><td><code>['X'].SetRange(0, 10).SetTitle("…")</code></td><td>also <code>SetLog()</code>, <code>SetNumDivisions(n)</code></td></tr>
       <tr><td><code>AddLegend(x, y)</code> <code>.SetNumColumns(2)</code></td><td>upper left corner, pad fraction</td></tr>
       <tr><td><code>AddText(x, y, "…")</code> <code>.SetUserCoordinates()</code></td><td>pad fraction / axis units</td></tr>
       <tr><td><code>AddImage(x, y, "logo.png")</code> <code>.SetWidth(0.3)</code></td><td>image; in pdf from ROOT 6.42</td></tr>
@@ -1177,7 +1186,7 @@ const PETROFF_INDEX = {}, PETROFF_NAMES = {};
 PETROFF.forEach(([set, first, cols]) => cols.forEach(([n, hex], i) => { const c = { base: set + n, off: 0, hex, index: first + i, set }; PETROFF_INDEX[first + i] = c; PETROFF_NAMES[set + n] = c }));
 function cname(c) { return c.off === 0 ? c.base : `${c.base} ${c.off > 0 ? "+" : "-"} ${Math.abs(c.off)}` }
 function explainK(word) {
-  const c = colorOf(word); if (c) return [cname(c), `Colour index ${c.index}, shown as <span class="sw" style="background:${c.hex}"></span><code>${c.hex}</code>. ${c.classic ? "One of ROOT's first 50 colours, which have only a number." : c.set ? `A colour of ROOT's ${c.set.slice(2)}-colour set, made to stay apart for colour-blind viewers and in grey print; + 1 gives the next colour of the set.` : c.off ? `${c.off > 0 ? "Darker" : "Lighter"} variant of ${c.base}.` : "A base colour of ROOT's colour wheel; add or subtract up to 10 for darker or lighter shades."}`, true];
+  const c = colorOf(word); if (c) return [cname(c), `Colour index ${c.index}, shown as <span class="sw" style="background:${c.hex}"></span><code>${c.hex}</code>. ${c.classic ? "One of ROOT's first 51 colours (0 to 50), which have only a number." : c.set ? `A colour of ROOT's ${c.set.slice(2)}-colour set, made to stay apart for colour-blind viewers and in grey print; + 1 gives the next colour of the set.` : c.off ? `${c.base} ${c.off > 0 ? "+" : "−"} ${Math.abs(c.off)}: a shade of ${c.base} (for the six primaries plus is darker, minus lighter; for the others the steps move towards the neighbouring hues).` : "A base colour of ROOT's colour wheel; numbers added or subtracted step through its shades."}`, true];
   const mk = MARKERS.find(x => x[1] === word); if (mk) return [`${word} = ${mk[0]}`, `Marker style ${mk[0]}.`, true];
   const ln = LINES.find(x => x[1] === word); if (ln) return [`${word} = ${ln[0]}`, `Line style ${ln[0]}.`, true];
   const fl = FILLS.find(x => x[1] === word); if (fl) return [`${word} = ${fl[0]}`, fl[0] ? `Fill pattern ${fl[0]}.` : "Fill style 0: hollow.", true];
@@ -1288,6 +1297,7 @@ for (const std::string name : {"1d", "1d_ratio", "2d", "1d_2x1", "1d_3x2_gap"}) 
 def main():
     pm = PlotManager("myProject")       # the name given to srp
     pm.AddDataSource("data", "/path/run1.root")
+    pm.AddDataSource("mc", "/path/mc.root")
     pm.AddBasePlot(PlotManager.MakeBasePlot("1d_ratio"))
 
     plot = Plot("spectrum", "paper/pt", "1d_ratio")   # name, group, base plot
@@ -1307,6 +1317,7 @@ using namespace SciRooPlot;
 int main() {
   PlotManager pm("myProject");          // the name given to srp
   pm.AddDataSource("data", "/path/run1.root");
+  pm.AddDataSource("mc", "/path/mc.root");
   pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
   {
     Plot plot("spectrum", "paper/pt", "1d_ratio");   // name, group, base plot
@@ -1635,6 +1646,14 @@ function renderExamples() {
     return `<button class="card" data-ex="${k}"><span class="plot"><img loading="lazy" src="${exImage(k)}" alt="${name}"></span><b>${name}</b><small>${parts.join("/")}${EXAMPLES[k].gif ? " · animation" : ""}</small></button>` }).join("")
     : `<p class="muted">No example in this group shows all of these. Clear a feature or pick another group.</p>`;
   document.querySelectorAll("[data-ex]").forEach(b => b.onclick = () => openExample(b.dataset.ex)) }
+(function renderShowcase() { // the start page: a few examples from different fields; a click opens the example on its page
+  const picks = ["higgs/limits/brazilPlot", "heavyion/correlations/ridge", "atomic/orbitals", "electronics/link/eyeDiagram",
+    "astronomy/hertzsprungRussell", "neutronStars/merger/gwSpectrogram", "biophysics/ramachandran", "animations/legoRotation"].filter(k => EXAMPLES[k]);
+  document.getElementById("showcasecount").textContent = Object.keys(EXAMPLES).length;
+  document.getElementById("showcase").innerHTML = picks.map(k => {
+    const parts = k.split("/"), name = parts.pop();
+    return `<button class="card" data-exopen="${k}"><span class="plot"><img loading="lazy" src="${exImage(k)}" alt="${name}"></span><b>${name}</b><small>${groupLabel(parts[0])}${EXAMPLES[k].gif ? " · animation" : ""}</small></button>` }).join("");
+  document.querySelectorAll("#showcase [data-exopen]").forEach(b => b.onclick = () => { location.hash = "examples"; setTimeout(() => openExample(b.dataset.exopen), 60) }) })();
 let exOpen = null;
 function openExample(k) { exOpen = k; const parts = k.split("/"), name = parts.pop(), grp = parts.join("/");
   document.getElementById("exttl").textContent = name; document.getElementById("eximg").src = exImage(k); document.getElementById("eximg").alt = name;
@@ -1655,7 +1674,7 @@ document.getElementById("exdlg").addEventListener("close", () => { pop.hidden = 
 const REF_GROUPS = [["basics", "Getting around"], ["data", "Data"], ["layout", "Layout"], ["help", "Help"]];
 const REF = [
   { id: "mental", g: "basics", t: "How it fits together", body: `<ol style="margin:0;padding-left:1.2em;display:grid;gap:6px;max-width:72ch">
-<li>Your program declares data sources and plots and ends with <code>pm.SaveProject()</code>. It draws nothing; it writes the definitions to <code>~/.SciRooPlot/&lt;project&gt;/</code> (or <code>$SCIROOPLOT_CONFIG_PATH</code>).</li>
+<li>Your program declares data sources and plots and ends with <code>pm.SaveProject()</code>. It draws nothing; it writes the definitions to <code>~/.SciRooPlot/&lt;project&gt;/</code> (or <code>$SCIROOPLOT_CONFIG_PATH/&lt;project&gt;/</code>).</li>
 <li><code>plot &lt;group&gt; &lt;name&gt; [&lt;mode&gt;]</code> reads them, loads the data, draws and shows or saves. It rebuilds and re-runs your program when its sources changed.</li>
 <li>Every plot has a group, builds on a base plot and consists of pads <code>plot[1]</code>, <code>plot[2]</code>, …; <code>plot[0]</code> holds defaults for all pads. All setters return the object, so they chain.</li>
 <li><code>plot</code> and <code>srp</code> act on the selected project (<code>srp select</code>), not on the current directory.</li></ol>
@@ -1904,12 +1923,12 @@ TGraph ncoll(3, cent, values);  ncoll.SetName("ncoll");
 pm.AddDataSource("glauber", &ncoll);                     // made in the program, copied into the project` },
   sources: { py: `pm.AddDataSource("run", "/path/a.root")                    # whole file
 pm.AddDataSource("qa", "/path/a.root:TrackQA/output")       # a folder or TList inside it
-pm.AddDataSource("all", "/path/folder/")                    # every ROOT file below a directory
+pm.AddDataSource("all", "/path/folder/")                    # every ROOT and table file below a directory
 pm.AddDataSource("tf", "/path/AO2D_*.root:DF_*")            # wildcards for files and folders
 pm.AddDataSource("merged", ["/path/a.root", "/path/b.root"])
 pm.AddDataSource("table", "/path/results.csv")              # data name: results`, cpp: `pm.AddDataSource("run", "/path/a.root");                    // whole file
 pm.AddDataSource("qa", "/path/a.root:TrackQA/output");       // a folder or TList inside it
-pm.AddDataSource("all", "/path/folder/");                    // every ROOT file below a directory
+pm.AddDataSource("all", "/path/folder/");                    // every ROOT and table file below a directory
 pm.AddDataSource("tf", "/path/AO2D_*.root:DF_*");            // wildcards for files and folders
 pm.AddDataSource("merged", {"/path/a.root", "/path/b.root"});
 pm.AddDataSource("table", "/path/results.csv");              // data name: results` },
@@ -2221,12 +2240,12 @@ function showMethod(el, name) {
 function glueTerms() { // a full stop or comma after a term stays on its line
   document.querySelectorAll(".term").forEach(t => { const n = t.nextSibling;
     if (n && n.nodeType === 3 && /^[.,;:)]/.test(n.data) && !t.parentNode.classList.contains("nw")) { const w = document.createElement("span"); w.className = "nw"; t.replaceWith(w); w.append(t, n.data[0]); n.data = n.data.slice(1) } });
-  // browsers may break a line after a + sign: "C+" at the end of one line, "+" at the start of the next
+  // browsers may break a line after a + sign: "C+" at the end of one line, "+" (or "+17") at the start of the next
   const texts = [], walker = document.createTreeWalker(document.querySelector("main"), NodeFilter.SHOW_TEXT,
     { acceptNode: n => n.data.includes("C++") && !n.parentNode.closest("pre, code, .nw, script, style") ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT });
   while (walker.nextNode()) texts.push(walker.currentNode);
-  texts.forEach(n => { const parts = n.data.split("C++"), glued = document.createDocumentFragment();
-    parts.forEach((part, i) => { if (i) { const w = document.createElement("span"); w.className = "nw"; w.textContent = "C++"; glued.append(w) } if (part) glued.append(part) });
+  texts.forEach(n => { const glued = document.createDocumentFragment();
+    n.data.split(/(C\+\+\d*)/).forEach((part, i) => { if (i % 2) { const w = document.createElement("span"); w.className = "nw"; w.textContent = part; glued.append(w) } else if (part) glued.append(part) });
     n.replaceWith(glued) }) }
 
 /* ---------------- search across the whole site */
@@ -3321,7 +3340,7 @@ document.getElementById("upq").oninput = renderUpdating;
 /* ---------------- install commands */
 const SHELL = {
   brew: `brew tap SciRooPlot/scirooplot
-brew install SciRooPlot
+brew install scirooplot
 source "$(brew --prefix scirooplot)/share/scirooplot/env.sh"`,
   conda: `conda install conda-forge::scirooplot
 source "\${CONDA_PREFIX}/share/scirooplot/env.sh"`,

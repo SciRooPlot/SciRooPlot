@@ -1,6 +1,6 @@
 ---
 name: scirooplot
-description: Define, organize and generate ROOT plots with SciRooPlot (C++ or Python). Use when writing or changing a DefinePlots.cpp / DefinePlots.py program, calling the `plot` or `srp` command line tools, defining data sources, base plots, ratios, tree/CSV projections or drawing option aliases, or when a user mentions SciRooPlot.
+description: Define, organize and generate ROOT plots with SciRooPlot (C++ or Python). Use when writing or changing a DefinePlots.cpp / DefinePlots.py program, calling the `plot` or `srp` command line tools, defining data sources, base plots, ratios, tree/RNTuple/table projections or drawing option aliases, or when a user mentions SciRooPlot.
 ---
 
 # SciRooPlot
@@ -76,11 +76,12 @@ Python is the same API: `from SciRooPlot import *`, `PlotManager("myProject")`, 
 ## Data sources
 
 `pm.AddDataSource(name, input | [inputs])` — a data source is one data set made of its inputs:
-- `"/path/a.root"` whole file; `"/path/a.root:dir/list"` a directory or TList inside it; `"/path/folder/"` all ROOT files below a directory; wildcards `AO2D_*.root:DF_*` (files and folders inside files); `${HOME}/...` environment variables; `"/path/table.csv"` (data name = file name without `.csv`).
+- `"/path/a.root"` whole file; `"/path/a.root:dir/list"` a directory or TList inside it; `"/path/folder/"` all ROOT and table files below a directory; wildcards `AO2D_*.root:DF_*` (files and folders inside files); `${HOME}/...` environment variables; `"/path/table.csv"` (also `.tsv`, `.dat`, `.txt`, `.tab`, delimiter detected; data name = file name without the ending).
 - Within a data source the first input containing a requested name wins; trees and RNTuples found in several inputs are chained. Train/test samples etc. therefore belong in separate sources.
 - The data name may be a path inside the input: `AddData("folder1/hist", "src")`. A stored `THStack`/`TMultiGraph` is such a folder of its histograms/graphs (`"myStack/hPion"`; `srp print file.root` lists the names). Sub-sources are allowed in `AddData` as `"src:folder"` (restricts the search to that folder) — the folder is part of the source, never of the name.
 - Without a path, a name is searched in the folder of the data source first, then in its sub-folders/lists one after the other in stored order, each completely (depth-first); the first match counts. If a name exists more than once, give the path.
 - `AddDataSource(name, TObject*)` or a vector of objects adds in-memory objects; they are copied into the project, so they may be deleted afterwards. A named list (TList, TObjArray, ...) or a TDirectory becomes a folder of the data source (`AddData("myList/myHist", "src")`, trees inside are copied with all entries); a nameless list (ROOT reports its class name) or an open TFile adds its contents directly. Folders of the same name are merged, an object of an existing name replaces it (with a warning).
+- Calling `AddDataSource` again with the same name appends the new inputs; `AddDataSource(name, inputs, true)` replaces them.
 
 ## Plot, pads, axes
 
@@ -114,12 +115,12 @@ plot[2]['X'].SetRange(120, 130).SetNumDivisions(505).SetTitleSize(0.1).SetLabelS
 plot[2]['Y'].SetRange(1500, 2600).SetNoExponent().SetNumDivisions(505).SetTitleSize(0.1).SetLabelSize(0.08).SetTitleOffset(1.4).SetHideClippedLabels(false);
 ```
 
-Base plots: `PlotManager::MakeBasePlot("<type>[_wide|_tall][_<cols>x<rows>][_ratio][_pull][_gap]")` with type `1d` or `2d` (colour scale), e.g. `1d`, `1d_ratio`, `1d_ratio_pull`, `2d`, `1d_wide`, `1d_2x1`, `1d_2x1_ratio`, `1d_2x2`, `2d_2x1`. Pads are numbered row by row; ratio pads (a line at 1) and pull pads (a line at 0, below the ratio) follow their panels; `2d_<cols>x<rows>` grids share one colour scale in a cell of its own after the panels of the first row (`2d_2x2`: panels 1, 2, 4, 5, scale 3; `_gap` keeps a scale per panel). Modify and re-add them (`auto bp = PlotManager::MakeBasePlot("1d"); bp[1]['X'].SetColor(kRed); pm.AddBasePlot(bp);`). Other text sizes, line widths or margins go in as the lengths of a `PanelLayout` in pixels: `PlotManager::MakeBasePlot("1d_ratio", PanelLayout().SetTextSize(24).SetTitleSize(30))` keeps them equal in all panels; setting `SetDefaultTextSize` on the pads of a base plot afterwards does not (each pad holds a size relative to its own dimensions, and pad 0 is overridden by them in multi-panel layouts). Other proportions go in as a `BasePlotShape`: `MakeBasePlot("1d_wide_ratio", PanelLayout(), BasePlotShape().SetAspectRatio(4.0 / 3.0).SetRatioHeight(0.25))` (`SetPullHeight` for pull panels). Or build your own with `PanelLayout` (see "Own layouts with PanelLayout" below). Touching panels share their axes (x within a column, y within a row: range, log, time format; without a range the union of their automatic ranges) and a row/column of them gets its outer title once (`PanelLayout().SetCommonTitles(false)` keeps one per panel); other pads share with `plot.ShareAxis('Y', {1, 2})`, `ShareAxis('Y', {})` undoes the groups of an axis.
+Base plots: `PlotManager::MakeBasePlot("<type>[_wide|_tall][_<cols>x<rows>][_ratio][_pull][_gap]")` with type `1d` or `2d` (colour scale), e.g. `1d`, `1d_ratio`, `1d_ratio_pull`, `2d`, `1d_wide`, `1d_2x1`, `1d_2x1_ratio`, `1d_2x2`, `2d_2x1`. Pads are numbered row by row; ratio pads (a line at 1) and pull pads (a line at 0, below the ratio) follow their panels; `2d_<cols>x<rows>` grids share one colour scale in a cell of its own after the panels of the first row (`2d_2x2`: panels 1, 2, 4, 5, scale 3; `_gap` keeps a scale per panel). Modify and re-add them (`auto bp = PlotManager::MakeBasePlot("1d"); bp[1]['X'].SetColor(kRed); pm.AddBasePlot(bp);`). Other text sizes, line widths or margins go in as the lengths of a `PanelLayout` in pixels: `PlotManager::MakeBasePlot("1d_ratio", PanelLayout().SetTextSize(24).SetTitleSize(30))` keeps them equal in all panels; setting `SetDefaultTextSize` on the pads of a base plot afterwards does not (each pad holds a size relative to its own dimensions, and pad 0 is overridden by them in multi-panel layouts). Other proportions go in as a `BasePlotShape`: `MakeBasePlot("1d_wide_ratio", PanelLayout(), BasePlotShape().SetAspectRatio(4.0 / 3.0).SetRatioHeight(0.25))` (`SetPullHeight` for pull panels). Or build your own with `PanelLayout` (see "Own layouts with PanelLayout" below). Touching panels share their axes (x within a column, y within a row: range, log, time format; without a range the union of their automatic ranges) and a row/column of them gets its outer title once (`PanelLayout().SetCommonTitles(false)` keeps one per panel); other pads share with `plot.ShareAxis('Y', {1, 2})`, `ShareAxis('Y', {})` undoes the groups of an axis; `ShareAxis('Z', {…})` gives 2D panels one colour range (shown once by a `ColorScale()` cell of the layout).
 
 ## Data: adding, appearance, labels
 
 ```cpp
-plot[1].AddData("hist", "src", "label");                    // histogram, graph, function, tree, csv — type is detected
+plot[1].AddData("hist", "src", "label");                    // histogram, graph, function, TEfficiency, tree, RNTuple, table — type is detected
 plot[1].AddFunction("sin(x)/x", "label");  plot[1].AddPoints({x...}, {y...});  plot[1].AddPoints({x1, x2}, {y1, y2}, "label").SetDrawOption(line);  // a line as data
 // shapes are not data (never in the axis ranges, not numbered, no default colours, no legend row), drawn after the data unless SetBehindData()/SetOnTop():
 plot[1].AddVerticalLine(125.);  plot[1].AddHorizontalLine(1.);  plot[1].AddRegionX(120., 130.).SetBehindData();  plot[1].AddRegionY(y1, y2);
@@ -179,7 +180,7 @@ plot[2].AddRatio(templ("num"), Data("den", "src"));                           //
 plot[2].AddRatio({"num", "src"}, {"den"});                                   // denominator without data source: the numerator's
 plot[2].AddRatio(...).Both().Normalize().Result().SetColor(kRed);            // modifier scope: Numer() / Denom() / Both() / Result() (default)
 ```
-Incompatible binnings are divided via spline interpolation; a profile is divided as the histogram of its means (after its `Numer()`/`Denom()` modifiers). Modifiers and data selections on the ratio itself (`Result()` mode) are usually meaningless for Rebin/Project etc. and warn — write them explicitly with `Numer()`, `Denom()` or `Both()`.
+Incompatible binnings are divided via spline interpolation; a profile is divided as the histogram of its means (after its `Numer()`/`Denom()` modifiers). Modifiers in `Result()` mode (the default) act on the ratio itself; Rebin, Cumulative, DivideBinWidth and Normalize there warn. Data selections (projections, profiles, `Scatter`, `Define`, `Filter`, `Entries`) always act on the inputs: in `Result()` mode they are taken as `Numer()` with a warning — write `Numer()`, `Denom()` or `Both()` explicitly.
 
 ## Trees and tables (TTree, RNTuple, CSV)
 
@@ -252,14 +253,14 @@ Identical names and chains. Differences:
 - No `SRC_DIR` macro: use `Path(__file__).resolve().parent`. The program is plain Python; `plot` runs it with the interpreter from the environment script.
 - Python projects are created with `srp init-py` / `srp example-py` and otherwise behave identically.
 - numpy/pandas data in memory (Python only): `histo(name, values, bins=100, range=None, weights=None)`, `histo2d(name, x, y, bins=None, range=None, weights=None)`, `graph(name, x, y, xerr=None, yerr=None)` and `table(name, data, columns=None)` (dict of arrays, structured array, DataFrame) return ROOT objects for `pm.AddDataSource("src", [...])`; tables work with `Project1D`/`Filter`/`Define`.
-- Boxes are made only with `AddText`/`AddLegend`/`AddImage`; `LegendEntry()` takes no arguments in Python (use its setters).
+- Text, legend and image boxes are made only with `AddText`/`AddLegend`/`AddImage`; `StatsBox()` and `LegendEntry()` take no arguments in Python (use their setters).
 
 ## Pitfalls that cost time
 
 - Nothing shows up / "Found no plots matching": the wrong project is selected (`srp projects`, `srp select`), or the program did not run `pm.SaveProject()`, or the group/name regex does not match whole names (`srp matchmode contains` relaxes this).
 - `plot` uses the program registered for the project (`srp projects @current`), not the file in the current directory.
 - Data not found: check the data source name and that the object name (or path) exists in one of the inputs; `plot ... print` shows the definition; the error of `plot` names the missing data and its data source. For sub-folders use `"src:folder"` or a path in the name, never both for the same folder.
-- A data name appearing twice in a pad gets a unique suffix automatically; refer to data by index (`plot[1](2)`), not by name.
+- The same data may be added several times to a pad; refer to data by its number (`plot[1](2)`), there is no lookup by name.
 - Axis ranges live on the pad (`plot[1]['X'].SetRange`), data ranges on the data (`SetRangeX`); the first data (or `SetDefinesFrame`) decides the frame.
 - Ranges, minimum and maximum stored with an input histogram or graph are ignored: set them in the plot definition. Exception: data marked `.SetDefinesFrame()` and the frame set with `SetFrame` keep them for the frame they draw (e.g. an empty dummy histogram with the y range stored); an explicit `plot[i]['Y'].SetRange` still wins. A projection or profile never applies stored ranges and warns when one sits on an axis it integrates out. Functions from inputs are drawn where they are defined, functions from `AddFunction` span the frame; `SetRangeX` overrides both (a function written from C++ code only has values within its own range).
 - Fill colours are drawn for `hist`/`area`/`band`/`bars`; histograms drawn with `line`/`curve` are not filled even if a fill colour is set by the pad defaults.

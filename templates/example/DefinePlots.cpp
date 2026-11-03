@@ -593,11 +593,7 @@ void DefineDetectorPlots(PlotManager& pm)
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
 
-  // --------------------------------------------------------------------------------------
-  // systematic uncertainties
-  // --------------------------------------------------------------------------------------
-  {  // several columns of one table; line styles cycle through the pad's default styles
-    // hit density on four barrel layers of a tracker (radii invented), from the tracks crossing them (z = r sinh(eta)), in hits per
+  {  // hit density on four barrel layers of a tracker (radii invented), from the tracks crossing them (z = r sinh(eta)), in hits per
     // cm^2: the weight is one over the area of a bin; one colour scale for all layers shows how the density falls with the radius,
     // a scale per layer would make them look alike; one module of the third layer is off
     Plot plot("hitDensity", "detector/tracking", "2d_2x2");  // pads 1, 2, 4, 5; pad 3 is the common scale
@@ -615,7 +611,10 @@ void DefineDetectorPlots(PlotManager& pm)
     plot[0]['Z'].SetTitle("hits per cm^{2}");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
-  {
+  // --------------------------------------------------------------------------------------
+  // systematic uncertainties
+  // --------------------------------------------------------------------------------------
+  {  // several columns of one table; line styles cycle through the pad's default styles
     Plot plot("systematicsBreakdown", "detector/systematics", "1d");
     plot[1].SetDefaultLineStyles({kDashed, kDotted, kDashDotted, 9});  // 9: long dashes
     for (const string& source : {"tracking", "pid", "material", "normalisation"}) {
@@ -1138,7 +1137,7 @@ void DefineAtomicPlots(PlotManager& pm)
     plot[1].AddLegend(0.2, 0.3, "^{87}Rb D_{2}, #it{F} = 2 #rightarrow #it{F}'");
     plot[1]['Y'].SetTitle("probe transmission");
     plot[2].AddRatio({"laser/withPump", "atomic"}, {"laser/probeOnly"}).SetDrawOption(line).SetLine(kSolid, 2.0, kRed + 1);
-    // the lines (F') and the strongest crossover, halfway between F' = 2 and 3, centred above their peaks
+    // the lines (F') and the strongest crossover, halfway between F' = 2 and 3; a text box hangs from its upper left corner
     for (const auto& [x, label] : vector<std::pair<double, string>>{{-95.0, "1"}, {-22.0, "2"}, {115.0, "c"}, {245.0, "3"}}) {
       plot[2].AddText(x, 1.43, label).SetUserCoordinates();
     }

@@ -1937,7 +1937,7 @@
         [`AddDataSource(id, files, replace = false)`], [Register files, directories or ROOT objects (also lists, open files) under an ID (`replace`: clear the ID first).],
         [#names("SaveDataSources(file = {})", "LoadDataSources(file = {}, replace = false)")], [Save or reload the registered data sources (default: the project's file).],
         [`AddPlot(plot)` / `AddBasePlot(basePlot)`], [Register a plot, or a reusable base plot layout.],
-        [`AddColorOverview(name, group, colors = {})`], [Add a plot showing the given colours (default: those of the base plots) with names and indices.],
+        [`AddColorOverview(name, group, colors = {})`], [Add a plot showing the given colours (default: SciRooPlot's own) with names and indices.],
         [#names("SavePlots(name = \".+\", group = \".+\", file = {})", "LoadPlots(name = \".+\", group = \".+\", file = {})")], [Write matching plots to, or load them from, a config file.],
         [`GeneratePlots(mode = "show", name = ".+", group = ".+")`], [Generate plots matching the request in the given mode (groups include their subgroups, `group$` excludes them).],
         [`ListPlots()`], [Print all registered plots.],
@@ -1982,7 +1982,7 @@
     [
       #api-section("PanelLayout lengths (pixels of the plot at scale 1)", (
         [#names("SetPanelSize(px)", "SetMargins(top, bottom, left, right)", "SetColorScaleMargin(px)", "SetPanelSpacing(px)")], [Standard panel (638), space around the panels (32, 118, 118, 32), for the colour scale (268), between touching panels (0).],
-        [#names("SetTextSize(px)", "SetTitleSize(px)", "SetTickLength(px)", "SetLabelOffset(px)", "SetXTitleOffset(px)", "SetYTitleOffset(px)", "SetZTitleOffset(px)", "SetLineWidth(w)", "SetMarkerSize(s)")], [Text (31.52), axis titles (39.4), ticks (19.15), labels from the axis (3.94), titles from the axis (x 63.04, y automatic, z 122.9), ROOT line width (5) and marker size (1.4).],
+        [#names("SetTextSize(px)", "SetTitleSize(px)", "SetTickLength(px)", "SetLabelOffset(px)", "SetXTitleOffset(px)", "SetYTitleOffset(px)", "SetZTitleOffset(px)", "SetLineWidth(w)", "SetMarkerSize(s)")], [Text (31.52), axis titles (39.4), ticks (19.15), labels from the axis (3.94), titles from the axis (x 63.04, y and z automatic), ROOT line width (5) and marker size (1.4).],
       ), text-size: 12pt)
     ],
   )

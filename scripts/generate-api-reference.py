@@ -91,7 +91,9 @@ def methods(section: str, class_name: str):
         stripped = line.strip()
         if not stripped or stripped.startswith(("//", "#", "friend", "using", "template", "class", "struct", "enum")):
             continue
-        match = METHOD.match(line.split("//", 1)[0])  # a comment may hold parentheses too
+        decl = line.split("//", 1)[0]  # a comment may hold parentheses too
+        decl = re.sub(r"\)\s*(const\s*)?\{.*\}\s*;?\s*$", r") \1;", decl)  # an inline body may hold parentheses too
+        match = METHOD.match(decl)
         if not match:
             continue
         name = match["name"]
