@@ -97,11 +97,12 @@ class Config
   Config();
   static Config& Instance();
   void LoadConfig();
-  bool CheckProjectDir(const std::string& projectName) const;  // true if the project's directory may be renamed or deleted
+  bool CheckProjectDir(const std::string& projectName) const;  // true if the project's directory is inside the config path
   bool DeleteProjectDir(const std::string& projectName) const;
   std::vector<std::string> RemoveProjects(const std::vector<std::string>& projectNames, const std::string& nextCurrent);
   bool SaveNow();
   bool SaveProjects() const;  // writes the configuration at once (before the files of a project are changed on disk)
+  static bool WriteInfoFile(const std::string& file, const boost::property_tree::ptree& tree);
   static bool CheckProjectName(const std::string& projectName);
   static bool CheckPath(const std::string& path);
 

@@ -8,6 +8,7 @@
 # support execution with zsh in case the interpreter is explicitly chosen
 # shellcheck disable=SC2296
 SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]:-${(%):-%N}}")/.." >/dev/null 2>&1 && pwd)"
+CALLER_DIR="${PWD}"  # a relative --prefix is relative to it
 cd "${SOURCE_DIR}" || exit 1
 
 if [[ ! -f "CMakeLists.txt" ]]; then
@@ -54,6 +55,20 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+# the prefix as CMake stores it (absolute, without ., .. and trailing slashes), so a repeated run matches the configured one
+if [[ "${PREFIX_SET}" -eq 1 ]]; then
+  [[ "${INSTALL_PREFIX}" == /* ]] || INSTALL_PREFIX="${CALLER_DIR}/${INSTALL_PREFIX}"
+  rest="${INSTALL_PREFIX}/" INSTALL_PREFIX=""
+  while [[ -n "${rest}" ]]; do
+    part="${rest%%/*}" rest="${rest#*/}"
+    case "${part}" in
+      "" | .) ;;
+      ..) INSTALL_PREFIX="${INSTALL_PREFIX%/*}" ;;
+      *) INSTALL_PREFIX+="/${part}" ;;
+    esac
+  done
+  INSTALL_PREFIX="${INSTALL_PREFIX:-/}"
+fi
 
 # on a terminal: colours, steps that turn into check marks, a progress bar for the build
 if [[ -t 1 ]]; then
@@ -164,6 +179,11 @@ build() {
 }
 
 if [[ "${REINSTALL}" -eq 1 ]]; then
+  # without --prefix the configured one is kept
+  if [[ "${PREFIX_SET}" -eq 0 && -f "${CACHE_FILE}" ]]; then
+    CACHED_PREFIX=$(grep -m1 '^CMAKE_INSTALL_PREFIX:PATH=' "${CACHE_FILE}" | cut -d= -f2)
+    INSTALL_PREFIX="${CACHED_PREFIX:-${INSTALL_PREFIX}}"
+  fi
   rm -f "${CACHE_FILE}"
 fi
 

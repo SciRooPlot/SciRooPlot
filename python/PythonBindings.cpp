@@ -155,8 +155,14 @@ struct type_caster<color_t> {
       return true;
     }
     try {
-      if (py::isinstance<py::int_>(src) && !py::isinstance<py::bool_>(src)) {
-        value = color_t(src.cast<int16_t>());
+      // integers, also numpy ones (kRed + np.int64(1)), but not bool
+      if (!py::isinstance<py::bool_>(src) && py::hasattr(src, "__index__")) {
+        PyObject* index = PyNumber_Index(src.ptr());
+        if (!index) {
+          PyErr_Clear();
+          return false;
+        }
+        value = color_t(py::reinterpret_steal<py::int_>(index).cast<int16_t>());
         return true;
       }
       if (!py::isinstance<py::sequence>(src)) return false;
@@ -271,9 +277,11 @@ void exportPlotManager(py::module_& m)
       // py::handle, not py::object/py::module_: a static py::object gets decref'd at program exit, possibly after Python has already shut down, which crashes. release() leaks it on purpose instead -- fine since it's a permanent singleton.
       static py::handle ROOT = py::module_::import("ROOT").release();
       static py::handle TObjectClass = py::object(ROOT.attr("TObject")).release();
-      auto toTObject = [](py::handle obj) {
+      auto toTObject = [&dataSource](py::handle obj) {
         py::object addressof = ROOT.attr("addressof");
-        return reinterpret_cast<TObject*>(addressof(obj).cast<std::uintptr_t>());
+        auto* object = reinterpret_cast<TObject*>(addressof(obj).cast<std::uintptr_t>());
+        if (!object) throw py::value_error("Data source " + dataSource + ": a ROOT object is null (a name not found by Get?).");
+        return object;
       };
       if (py::isinstance<py::str>(input)) {
         self.AddDataSource(dataSource, input.cast<string>(), replace);
@@ -878,8 +886,9 @@ void exportPythonDataInterfaces(py::module_& m)
     if (py::isinstance<py::sequence>(bins) && !py::isinstance<py::str>(bins)) {
       const Values v = values(bins, what);
       vector<double> edges(v.data(), v.data() + v.size());
-      if (edges.size() < 2 || std::adjacent_find(edges.begin(), edges.end(), std::greater_equal<>()) != edges.end()) {
-        throw py::value_error("The " + what + " must be at least two increasing bin edges.");
+      if (edges.size() < 2 || std::adjacent_find(edges.begin(), edges.end(), std::greater_equal<>()) != edges.end() ||
+          !std::all_of(edges.begin(), edges.end(), [](double edge) { return std::isfinite(edge); })) {
+        throw py::value_error("The " + what + " must be at least two increasing, finite bin edges.");
       }
       return edges;
     }
@@ -898,16 +907,29 @@ void exportPythonDataInterfaces(py::module_& m)
   // the range of a number of bins: as given, or from the values
   auto rangeFor = [](const optional<pair<double, double>>& range, const Values& v, const string& what) {
     if (range) {
-      if (!(range->first < range->second)) {
-        throw py::value_error("The " + what + " range must have a lower end below the upper end.");
+      if (!(range->first < range->second) || !std::isfinite(range->first) || !std::isfinite(range->second)) {
+        throw py::value_error("The " + what + " range must be finite, with a lower end below the upper end.");
       }
       return *range;
     }
     if (v.size() == 0) {
       throw py::value_error("No " + what + " values to take the range from: give a range or bin edges.");
     }
+    // as numpy: no range from NaN or infinite values
+    const bool allFinite = std::all_of(v.data(), v.data() + v.size(), [](double value) { return std::isfinite(value); });
+    if (!allFinite) throw py::value_error("The " + what + " values contain NaN or infinite values: give a range or bin edges.");
     auto [minIt, maxIt] = std::minmax_element(v.data(), v.data() + v.size());
     return util::auto_axis_range(*minIt, *maxIt);
+  };
+
+  // as numpy.histogram, the last bin includes its upper edge (ROOT fills the overflow): such values are moved just below it,
+  // in a copy made only if there are any
+  auto fillValues = [](const Values& v, const TAxis* axis, vector<double>& moved) -> const double* {
+    const double upper = axis->GetXmax();
+    if (std::find(v.data(), v.data() + v.size(), upper) == v.data() + v.size()) return v.data();
+    moved.assign(v.data(), v.data() + v.size());
+    std::replace(moved.begin(), moved.end(), upper, std::nextafter(upper, axis->GetXmin()));
+    return moved.data();
   };
 
   auto graph = [bind_owned, values](const string& name, py::object xValues, py::object yValues, py::object xErrors, py::object yErrors) {
@@ -936,6 +958,7 @@ void exportPythonDataInterfaces(py::module_& m)
     const Values x = values(xValues, "values");
     const auto w = weightsFor(weights, x.size());
     const auto spec = binning(bins, "bins");
+    TDirectory::TContext noDirectory(nullptr);  // keeps a same-named object in the caller's open file
     TH1D* h = nullptr;
     if (const auto* edges = std::get_if<vector<double>>(&spec)) {
       if (!range.is_none()) logger::warning("Histogram {}: the range is not used, since bin edges are given.", name);
@@ -946,7 +969,8 @@ void exportPythonDataInterfaces(py::module_& m)
     }
     h->SetDirectory(nullptr);
     if (w) h->Sumw2();
-    if (x.size()) h->FillN(static_cast<int>(x.size()), x.data(), w ? w->data() : nullptr);
+    vector<double> xMoved;
+    if (x.size()) h->FillN(static_cast<int>(x.size()), fillValues(x, h->GetXaxis(), xMoved), w ? w->data() : nullptr);
     return bind_owned(reinterpret_cast<std::uintptr_t>(h), "TH1D");
   };
 
@@ -978,6 +1002,7 @@ void exportPythonDataInterfaces(py::module_& m)
     }
     const auto specX = binning(binsX, "x bins");
     const auto specY = binning(binsY, "y bins");
+    TDirectory::TContext noDirectory(nullptr);  // keeps a same-named object in the caller's open file
     TH2D* h = nullptr;
     if (std::holds_alternative<int32_t>(specX) && std::holds_alternative<int32_t>(specY)) {
       const auto [xMin, xMax] = rangeFor(rangeX, x, "x");
@@ -1004,7 +1029,8 @@ void exportPythonDataInterfaces(py::module_& m)
     }
     h->SetDirectory(nullptr);
     if (w) h->Sumw2();
-    if (x.size()) h->FillN(static_cast<int>(x.size()), x.data(), y.data(), w ? w->data() : nullptr);
+    vector<double> xMoved, yMoved;
+    if (x.size()) h->FillN(static_cast<int>(x.size()), fillValues(x, h->GetXaxis(), xMoved), fillValues(y, h->GetYaxis(), yMoved), w ? w->data() : nullptr);
     return bind_owned(reinterpret_cast<std::uintptr_t>(h), "TH2D");
   };
 
@@ -1061,6 +1087,7 @@ void exportPythonDataInterfaces(py::module_& m)
       throw py::type_error("A table must be a dict of arrays, a numpy structured array or a pandas DataFrame, or a 2D array with columns=[names].");
     }
 
+    TDirectory::TContext noDirectory(nullptr);  // keeps a same-named object in the caller's open file
     auto tree = std::make_unique<TTree>(name.data(), "");
     tree->SetDirectory(nullptr);
     std::deque<std::any> buffers;  // what the branches read when filling (a deque keeps the addresses)

@@ -828,6 +828,11 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, con
   }
   const bool zAxis = (match[1] == "2d");
   const string form = match[2];
+  // more than 3 digits (no leading zeros) is more than 255 pads, and could overflow std::stoi
+  if (match[3].length() > 3 || match[4].length() > 3) {
+    logger::error("Base plot {} would have more than 255 pads.", name);
+    return Plot();
+  }
   const int32_t nCols = match[3].matched ? std::stoi(match[3]) : 1;
   const int32_t nRows = match[4].matched ? std::stoi(match[4]) : 1;
   const bool gap = match[7].matched;
@@ -839,7 +844,9 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, con
     logger::error("Unknown base plot {}: ratio and pull panels exist only for 1d base plots.", name);
     return Plot();
   }
-  if (nCols * nRows * static_cast<int32_t>(1 + below.size()) > 255) {
+  // touching 2d panels have one more pad, the shared colour scale
+  const bool sharedScale = zAxis && nCols * nRows > 1 && !gap;
+  if (int64_t{nCols} * nRows * static_cast<int64_t>(1 + below.size()) + (sharedScale ? 1 : 0) > 255) {
     logger::error("Base plot {} would have more than 255 pads.", name);
     return Plot();
   }
@@ -848,7 +855,6 @@ Plot PlotManager::MakeBasePlot(const string& name, const PanelLayout& sizes, con
   // in a cell right of the first row spanning all rows (its pad follows the panels of the first row)
   const double_t width = (form == "wide") ? shape.mAspectRatio : 1.;
   const double_t height = (form == "tall") ? shape.mAspectRatio : 1.;
-  const bool sharedScale = zAxis && nCols * nRows > 1 && !gap;
   vector<vector<Panel>> rows;
   vector<std::pair<uint8_t, string>> refPads;  // the pads below the main panels and the functions of their reference lines
   vector<uint8_t> panelPads;

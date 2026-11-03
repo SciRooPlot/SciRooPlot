@@ -716,6 +716,7 @@ class Plot::Pad : public FillSetters<Pad>
   std::vector<std::shared_ptr<Data>> mData;
   std::shared_ptr<Data> mRefFunc;
   std::shared_ptr<Data> mFrame;
+  static void ReplaceData(std::shared_ptr<Data>& slot, const Data& data);  // copies into an existing object: references to it stay valid
 
   std::vector<std::shared_ptr<LegendBox>> mLegendBoxes;
   std::vector<std::shared_ptr<TextBox>> mTextBoxes;

@@ -3601,16 +3601,17 @@ TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<dou
   // a range wholly outside the frame (20 to 30 for data from 0 to 10) also needs an edge at its inner end: a range is shown
   // in whole bins, so with the one added bin from 10 to 30 the axis would start at 10
   const TAxis* extendedAxis = axes[extendedDim];
-  const optional<double_t> innerLow = (newMin && rangeMax && *rangeMax > *newMin && *rangeMax < extendedAxis->GetXmin()) ? rangeMax : nullopt;
-  const optional<double_t> innerHigh = (newMax && rangeMin && *rangeMin < *newMax && *rangeMin > extendedAxis->GetXmax()) ? rangeMin : nullopt;
+  // flags, not optional copies: GCC 13 reports those as maybe uninitialized in Release builds
+  const bool innerLow = newMin && rangeMax && *rangeMax > *newMin && *rangeMax < extendedAxis->GetXmin();
+  const bool innerHigh = newMax && rangeMin && *rangeMin < *newMax && *rangeMin > extendedAxis->GetXmax();
   const int32_t shift = (newMin ? 1 : 0) + (innerLow ? 1 : 0);  // the bins move up by the number of bins added below
   array<vector<double_t>, 3> edges;
   for (int32_t i = 0; i < dim; ++i) {
     if (i == extendedDim && newMin) edges[i].push_back(*newMin);
-    if (i == extendedDim && innerLow) edges[i].push_back(*innerLow);
+    if (i == extendedDim && innerLow) edges[i].push_back(*rangeMax);
     for (int32_t bin = 1; bin <= axes[i]->GetNbins() + 1; ++bin)
       edges[i].push_back(axes[i]->GetBinLowEdge(bin));
-    if (i == extendedDim && innerHigh) edges[i].push_back(*innerHigh);
+    if (i == extendedDim && innerHigh) edges[i].push_back(*rangeMin);
     if (i == extendedDim && newMax) edges[i].push_back(*newMax);
   }
   TH1* extended{nullptr};

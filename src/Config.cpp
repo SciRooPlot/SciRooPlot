@@ -232,7 +232,7 @@ void Config::LoadConfig()
 }
 
 // writes to a temporary file and renames it, so an interrupted write cannot leave a truncated file behind
-static bool WriteInfoFile(const string& file, const ptree& tree)
+bool Config::WriteInfoFile(const string& file, const ptree& tree)
 {
   const string tmpFile = file + "." + std::to_string(getpid()) + ".tmp";
   try {
@@ -505,30 +505,6 @@ bool Config::CheckProjectDir(const string& projectName) const
     logger::error("Refusing to change {} for project {}: not inside the config directory.", projectPath.string(), projectName);
     return false;
   }
-  // a config path set to a general folder (SCIROOPLOT_CONFIG_PATH=$HOME) makes project names real folders (Documents):
-  // a directory is changed only if it holds nothing but the files SciRooPlot writes there
-  static const std::set<string> kProjectFiles = {"plots.info", "dataSources.info", "tabcomp.csv", "UserData.root"};
-  std::error_code ec;
-  const auto status = std::filesystem::symlink_status(projectPath, ec);
-  if (ec || status.type() == std::filesystem::file_type::not_found) return true;  // nothing there to change
-  if (status.type() == std::filesystem::file_type::symlink) return true;          // the link itself is removed, not what it points to
-  if (status.type() != std::filesystem::file_type::directory) {
-    logger::error("Refusing to change {} for project {}: it is not a directory.", projectPath.string(), projectName);
-    return false;
-  }
-  for (std::filesystem::directory_iterator entry(projectPath, ec), end; !ec && entry != end; entry.increment(ec)) {
-    const string name = entry->path().filename().string();
-    const bool isOwnFile = entry->is_regular_file(ec) && (kProjectFiles.count(name) || (name.size() > 4 && name.compare(name.size() - 4, 4, ".tmp") == 0));
-    if (!isOwnFile) {
-      logger::error("Refusing to change {} for project {}: it contains {}, which SciRooPlot did not write. Is SCIROOPLOT_CONFIG_PATH a folder of its own?",
-                    projectPath.string(), projectName, name);
-      return false;
-    }
-  }
-  if (ec) {
-    logger::error("Refusing to change {} for project {}: cannot read it ({}).", projectPath.string(), projectName, ec.message());
-    return false;
-  }
   return true;
 }
 
@@ -537,7 +513,29 @@ bool Config::DeleteProjectDir(const string& projectName) const
   if (!CheckProjectDir(projectName)) return false;
   const auto projectPath = ProjectPath(projectName);
   std::error_code ec;
-  std::filesystem::remove_all(projectPath, ec);
+  const auto status = std::filesystem::symlink_status(projectPath, ec);
+  if (ec || status.type() == std::filesystem::file_type::not_found) return true;
+  if (status.type() != std::filesystem::file_type::directory) {  // a link: removed, not what it points to
+    std::filesystem::remove(projectPath, ec);
+  } else {
+    // only the files SciRooPlot writes there are deleted (names of older versions stay in the list): with a config path that is
+    // a general folder (SCIROOPLOT_CONFIG_PATH=$HOME), a project named like a folder of the user (Documents) keeps its other files
+    static const std::set<string> kProjectFiles = {"plots.info", "dataSources.info", "tabcomp.csv", "UserData.root", ".DS_Store"};
+    string foreign;
+    for (std::filesystem::directory_iterator entry(projectPath, ec), end; !ec && entry != end; entry.increment(ec)) {
+      const string name = entry->path().filename().string();
+      std::error_code typeError;
+      if (entry->is_regular_file(typeError) && (kProjectFiles.count(name) || (name.size() > 4 && name.compare(name.size() - 4, 4, ".tmp") == 0))) {
+        std::filesystem::remove(entry->path(), ec);
+      } else {
+        foreign += (foreign.empty() ? "" : ", ") + name;
+      }
+    }
+    if (!ec && foreign.empty()) std::filesystem::remove(projectPath, ec);
+    if (!ec && !foreign.empty()) {
+      logger::warning("Kept {}: it also holds {} (not written by this version of SciRooPlot).", projectPath.string(), foreign);
+    }
+  }
   if (ec) {
     logger::error("Could not delete {}: {}.", projectPath.string(), ec.message());
     return false;

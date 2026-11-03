@@ -22,6 +22,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | ROOT ≥ 6.16, Boost ≥ 1.65, fmt ≥ 6.1.2 | ROOT ≥ 6.36.04, Boost ≥ 1.74, fmt ≥ 8.0.0 (fetched if older), pybind11 ≥ 2.9 (fetched) | build | Upgrade ROOT and Boost if older. |
 | Python bindings built for any Python 3 found | Built for the Python version ROOT was built with (if ROOT has PyROOT; otherwise any Python 3 found); disabled with a warning if it is missing | build | Install the development package of ROOT's Python. |
 | Configuring without a prefix installed to `/usr/local` | Installs to `<source>/install` | build | Pass `-DCMAKE_INSTALL_PREFIX` if you relied on the system prefix. |
+| `scripts/install.sh --prefix <relative path>` was relative to the source directory | Relative to the current directory | build | Give an absolute path if you relied on the old meaning. |
 | `add_plotting_executable` copied `INSTALL_RPATH` and include directories from the SciRooPlot target | Uses `INSTALL_RPATH_USE_LINK_PATH`; includes come from linking `SciRooPlot::SciRooPlot` | build | Re-configure existing user projects (delete `CMakeCache.txt`). |
 | Installed `share/scirooplot/user/` and `share/scirooplot/TestFiles/` | `share/scirooplot/templates/{skeleton,example}`, `templates/CMakeLists.txt`, `ExampleData/` | build | Point code copied from the old template at your own data or at `ExampleData`. |
 | `#include "SciRooPlot/Logging.h"` | `#include "SciRooPlot/Logger.h"` | renamed | Change the include. |
@@ -75,6 +76,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| Python `histo`, `histo2d`: a value equal to the upper edge went into the overflow | Into the last bin, as in numpy (`range=(0, 1)` keeps values of exactly 1) | behaviour | Check histograms whose range or last edge equals values in the data. |
 | `Project`, `ProjectX`/`Y` of a `TProfile2D` or `TProfile3D` added up the means of the merged bins (a `TH1`/`TH2` of sums of means) | The profile of the merged bins (`TProfile2D::ProfileX`/`Y`, `TProfile3D::Project3DProfile`): their mean, as `Profile…` gives | behaviour | Check projections of 2D and 3D profiles. |
 | `TH2Poly`: `RebinX`/`RebinY` aborted the program, `ScaleX`/`ScaleY` moved the axes but not the polygons, `DivideBinWidth` and `Smooth` did nothing; `TProfile3D`: `DivideBinWidth` ignored silently, `Smooth` failed in ROOT | `DivideBinWidth` divides each polygon by its area; the others are ignored with a warning (as `DivideBinWidth` of profiles); `Smooth` of 3d histograms warns | behaviour | Check plots of TH2Poly with `DivideBinWidth`. |
 | Ratios of graphs with asymmetric errors by a negative denominator kept the lower error below the point | Lower and upper error swapped with the sign | behaviour | none |
@@ -151,6 +153,8 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| Python `histo`, `histo2d` with NaN or infinite values and neither range nor bin edges (an empty histogram on [0, 1]), an infinite range, a NaN or infinite bin edge | `ValueError`, as in numpy | input validation | Give a finite range or bin edges. |
+| Python `AddDataSource` with a null ROOT object (`file.Get` of a missing name) was ignored | `ValueError` | input validation | Check the name. |
 | Gradients (`SetPalette`, `SetDefaultColors`, `SetDefaultMarkerColors`/`LineColors`/`FillColors`) took any stops: before the first and after the last position the colours were extrapolated (unrelated colours), decreasing positions gave colour jumps | Warning for positions outside 0–1, decreasing positions and colour components outside 0–1; before the first and after the last position the end colours | input validation | Check gradients that warn; a gradient whose first stop is above 0 now starts with its first colour. |
 | `Plot(name, …)` and `Plot(other, name, group)` accepted an empty name | Throw `std::invalid_argument` (Python `ValueError`) | input validation | Give every plot a name. |
 | Group names taken as given | Leading, trailing and doubled `/` removed, with a warning | input validation | Use clean group paths. |
@@ -183,7 +187,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
-| `srp remove`, `srp reset` only unregistered projects | Also delete each project's configuration directory (`plots.info`, `dataSources.info`; never user code or output) | CLI | Re-run the plotting program to recreate them; back them up before `srp reset` if needed. |
+| `srp remove`, `srp reset` only unregistered projects | Also delete the files SciRooPlot writes into each project's configuration directory (`plots.info`, `dataSources.info`, …; never user code or output), and the directory if nothing else is in it | CLI | Re-run the plotting program to recreate them; back them up before `srp reset` if needed. |
 | `srp add <p> <prog>` on an existing project replaced its program; `srp add <p>` without a program did nothing; `srp set`/`get`/`show` on an unknown project (`set` created it) | All fail with exit code 1 | CLI | Use `srp set <p> program …` to change a program; `srp add` for new projects. |
 | `srp set <p> program`/`outdir` stored any value (an unset `${VAR}` too) | Checked like `srp add`: an unset variable or a relative path is an error and nothing is stored | input validation | Give an absolute path, or one starting with `~` or a set variable. |
 | `srp` and `plot` returned 0 on most errors; any `srp plotmode X` was accepted | Exit code 1 on errors and unknown commands; `plotmode` is validated; `plot` rejects more than 3 arguments and invalid group regexes | CLI | Quote regex arguments (`plot g '.+'`); check scripts relying on exit codes. |

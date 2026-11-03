@@ -40,8 +40,8 @@ namespace SciRooPlot
 
 Panel::Panel(double_t width, double_t height) : mWidth(width), mHeight(height)
 {
-  if (!(width > 0.) || !(height > 0.)) {
-    logger::throw_invalid_argument("Panel sizes must be positive (got {} x {}).", width, height);
+  if (!(width > 0.) || !(height > 0.) || !std::isfinite(width) || !std::isfinite(height)) {
+    logger::throw_invalid_argument("Panel sizes must be positive and finite (got {} x {}).", width, height);
   }
 }
 
@@ -135,9 +135,16 @@ PanelLayout::PanelLayout(const PanelLayout& sizes, vector<vector<Panel>> rows) :
 
 double_t PanelLayout::CheckedLength(const char* setter, double_t pixel, bool zeroAllowed)
 {
-  if (pixel < 0. || (!zeroAllowed && pixel == 0.)) {
+  if (!std::isfinite(pixel) || pixel < 0. || (!zeroAllowed && pixel == 0.)) {
     logger::throw_invalid_argument("{}: the length must be {} (got {}).", setter, zeroAllowed ? "zero or positive" : "positive", pixel);
   }
+  return pixel;
+}
+
+// offsets and tick lengths may be negative (outward ticks, labels inside)
+double_t PanelLayout::CheckedFinite(const char* setter, double_t pixel)
+{
+  if (!std::isfinite(pixel)) logger::throw_invalid_argument("{}: the length must be finite (got {}).", setter, pixel);
   return pixel;
 }
 
@@ -164,7 +171,7 @@ PanelLayout& PanelLayout::SetColorScaleMargin(double_t pixel)
 
 PanelLayout& PanelLayout::SetColorScaleOffset(double_t pixel)
 {
-  mColorScaleOffset = pixel;
+  mColorScaleOffset = CheckedFinite("PanelLayout::SetColorScaleOffset", pixel);
   return *this;
 }
 
@@ -194,31 +201,31 @@ PanelLayout& PanelLayout::SetTitleSize(double_t pixel)
 
 PanelLayout& PanelLayout::SetTickLength(double_t pixel)
 {
-  mTickLength = pixel;
+  mTickLength = CheckedFinite("PanelLayout::SetTickLength", pixel);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetLabelOffset(double_t pixel)
 {
-  mLabelOffset = pixel;
+  mLabelOffset = CheckedFinite("PanelLayout::SetLabelOffset", pixel);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetXTitleOffset(double_t pixel)
 {
-  mXTitleOffset = pixel;
+  mXTitleOffset = CheckedFinite("PanelLayout::SetXTitleOffset", pixel);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetYTitleOffset(double_t pixel)
 {
-  mYTitleOffset = pixel;
+  mYTitleOffset = CheckedFinite("PanelLayout::SetYTitleOffset", pixel);
   return *this;
 }
 
 PanelLayout& PanelLayout::SetZTitleOffset(double_t pixel)
 {
-  mZTitleOffset = pixel;
+  mZTitleOffset = CheckedFinite("PanelLayout::SetZTitleOffset", pixel);
   return *this;
 }
 
@@ -366,7 +373,8 @@ void PanelLayout::ApplyTo(Plot& plot) const
       }
     }
     if (!cell->mSized) continue;
-    if (cell->mColumns == 1) {
+    // a ColorScale() column has the width of the scale: an empty cell or hole there only sets the row height
+    if (cell->mColumns == 1 && !colScale[c]) {
       const double_t width = cell->mWidth * mPanelSize;
       if (colWidth[c] == 0.) {
         colWidth[c] = width;
@@ -445,9 +453,10 @@ void PanelLayout::ApplyTo(Plot& plot) const
                   vector<double_t>& low, vector<double_t>& high, vector<double_t>& boundary) {
     double_t pos = lowMargin;
     for (size_t i = 0; i < sizes.size(); ++i) {
-      low.push_back(std::round(pos));
-      pos += sizes[i];
-      high.push_back(std::round(pos));
+      pos = std::round(pos);  // each size rounded on its own: equal panels get equal frames
+      low.push_back(pos);
+      pos += std::round(sizes[i]);
+      high.push_back(pos);
       if (i + 1 < sizes.size()) {
         boundary.push_back(std::round(pos + separations[i].first));
         pos += separations[i].first + separations[i].second;

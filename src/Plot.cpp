@@ -1611,6 +1611,16 @@ ptree Plot::Pad::GetPropertyTree() const
   return padTree;
 }
 
+// the reference function and the frame are handed out by reference (also to Python): a reference kept stays valid
+void Plot::Pad::ReplaceData(std::shared_ptr<Data>& slot, const Data& data)
+{
+  if (slot) {
+    *slot = data;
+  } else {
+    slot = std::make_shared<Data>(data);
+  }
+}
+
 //**************************************************************************************************
 /**
  * Apply all settings from pad on top of this pad.
@@ -1653,8 +1663,8 @@ void Plot::Pad::operator+=(const Pad& pad)
   for (const auto& [key, value] : pad.mLayoutValues) {
     mLayoutValues[key] = value;
   }
-  if (pad.mRefFunc) mRefFunc = pad.mRefFunc->Clone();
-  if (pad.mFrame) mFrame = pad.mFrame->Clone();
+  if (pad.mRefFunc) ReplaceData(mRefFunc, *pad.mRefFunc);
+  if (pad.mFrame) ReplaceData(mFrame, *pad.mFrame);
   for (auto& [axisLabel, axis] : pad.mAxes) {
     mAxes[axisLabel];  // default initialize in case this axis was not yet defined
     mAxes[axisLabel] += axis;
@@ -1944,7 +1954,7 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const Ratio& ratio, const optional<string>
 //**************************************************************************************************
 Plot::Pad::Data& Plot::Pad::SetRefFunc(const string& refFunc)
 {
-  mRefFunc = std::make_shared<Data>(refFunc, kUserFunctions, nullopt);
+  ReplaceData(mRefFunc, Data(refFunc, kUserFunctions, nullopt));
   return *mRefFunc;
 }
 
@@ -1966,7 +1976,7 @@ Plot::Pad::Data& Plot::Pad::SetFrame(const Data& data)
   if (data.mName.empty() || data.mDataSource.empty()) {
     logger::throw_invalid_argument("The frame needs a name and a data source (name: '{}', data source: '{}').", data.mName, data.mDataSource);
   }
-  mFrame = std::make_shared<Data>(data);
+  ReplaceData(mFrame, data);
   mFrame->mType = "data";
   mFrame->mLegend.label = nullopt;
   return *mFrame;
