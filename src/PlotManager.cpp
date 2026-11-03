@@ -165,9 +165,8 @@ PlotManager::PlotManager(const string& projectName)
 //**************************************************************************************************
 PlotManager::~PlotManager()
 {
-  if (mProjectName.empty() && std::filesystem::exists(mUserDataFile)) {
-    std::filesystem::remove(mUserDataFile);
-  }
+  std::error_code ec;  // a destructor must not throw (no permission, a vanished folder)
+  if (mProjectName.empty()) std::filesystem::remove(mUserDataFile, ec);
 }
 
 //**************************************************************************************************
@@ -326,11 +325,11 @@ bool PlotManager::CreateOutputDirectory() const
   }
   std::filesystem::path outputDir = std::filesystem::path(mOutputDirectory).lexically_normal();
   if (!outputDir.has_filename()) outputDir = outputDir.parent_path();  // strip trailing slash
-  if (!std::filesystem::exists(outputDir.parent_path())) {
-    logger::error("Parent path {} of output directory does not exist.", outputDir.parent_path().string());
+  std::error_code ec;
+  if (!std::filesystem::exists(outputDir.parent_path(), ec)) {
+    logger::error("Parent path {} of output directory does not exist{}.", outputDir.parent_path().string(), ec ? " or cannot be read (" + ec.message() + ")" : "");
     return false;
   }
-  std::error_code ec;
   std::filesystem::create_directory(outputDir, ec);
   if (ec) {
     logger::error("Could not create output directory {}: {}.", outputDir.string(), ec.message());
@@ -549,10 +548,15 @@ void PlotManager::WriteInfoFile(const ptree& tree, const string& path, const str
     logger::error("No file path or project specified. Cannot save {}.", content);
     return;
   }
-  if (filePath.has_parent_path() && std::filesystem::create_directories(filePath.parent_path())) {
+  std::error_code ec;
+  if (filePath.has_parent_path() && std::filesystem::create_directories(filePath.parent_path(), ec)) {
     logger::info("Created config folder: {}.", filePath.parent_path().string());
   }
-  boost::property_tree::write_info(filePath.string(), tree);
+  try {
+    boost::property_tree::write_info(filePath.string(), tree);
+  } catch (const std::exception& e) {
+    logger::error("Cannot save {} to {}: {}.", content, filePath.string(), e.what());
+  }
 }
 
 //**************************************************************************************************
@@ -697,7 +701,8 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
       return;
     }
     string path = expand_path(entry).value_or("");
-    if (!std::filesystem::is_directory(path)) {
+    std::error_code dirError;
+    if (!std::filesystem::is_directory(path, dirError)) {
       logger::warning("Data source entry {} (data source {}) is neither a recognized file type nor an existing directory. Skipping.", entry, dataSource);
       return;
     }
@@ -1213,8 +1218,9 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     // determine which input data are needed for plots
     for (auto& [padID, pad] : plot.GetPads()) {
       if (auto refFunc = RefFuncDrawnIn(plot, padID)) mDataBuffer[refFunc->GetDataSource()][refFunc->GetName()];
+      if (padID == 0) continue;  // data and frame of pad 0 are not drawn (AddPlot warns about the data), so they are not read either
       auto padData = pad.GetData();
-      if (padID != 0 && pad.GetFrame()) padData.push_back(pad.GetFrame());  // the frame of a pad is read like its data (pad 0 is not drawn)
+      if (pad.GetFrame()) padData.push_back(pad.GetFrame());  // the frame of a pad is read like its data
       for (const auto& data : padData) {
         mDataBuffer[data->GetDataSource()][data->GetName()];
         // also register requests without projection info: trees and tables then report that they cannot be plotted directly
@@ -1511,12 +1517,16 @@ bool PlotManager::FillBuffer()
             } else {
               vector<double_t> x;
               vector<double_t> y;
-              for (size_t i = 0; i < xStrs.size(); ++i) {
-                x.push_back(std::stod(xStrs[i]));
-                y.push_back(std::stod(yStrs[i]));
+              try {  // independent of the locale, and subnormal values (1e-310) are numbers, not an error as for std::stod
+                for (size_t i = 0; i < xStrs.size(); ++i) {
+                  x.push_back(util::string_to_type<double_t>(xStrs[i]));
+                  y.push_back(util::string_to_type<double_t>(yStrs[i]));
+                }
+                dataPtr.reset(new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data()));
+                static_cast<TGraph*>(dataPtr.get())->SetName(dataName.data());
+              } catch (const std::invalid_argument& e) {
+                logger::error("Cannot read the points {}: {}", dataName, e.what());
               }
-              dataPtr.reset(new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data()));
-              static_cast<TGraph*>(dataPtr.get())->SetName(dataName.data());
             }
           }
           continue;
@@ -1570,8 +1580,9 @@ bool PlotManager::FillBuffer()
 
       if (fileName != openFile.name) {
         openFile.Close();
-        if (!std::filesystem::exists(fileName)) {
-          logger::warning("Input file {} not found (data source {}).", fileName, baseSource);
+        std::error_code existsError;
+        if (!std::filesystem::exists(fileName, existsError)) {
+          logger::warning("Input file {} not found{} (data source {}).", fileName, existsError ? " (" + existsError.message() + ")" : "", baseSource);
           continue;
         }
         openFile.file = std::make_unique<TFile>(fileName.data(), "READ");
@@ -2215,7 +2226,8 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     if (silenceNoPdfImages) SetErrorHandler(rootErrorHandler);
   });
   canvas->SaveAs(fullName.data());
-  if (!isGifMode && !std::filesystem::is_regular_file(fullName)) {
+  std::error_code writtenError;
+  if (!isGifMode && !std::filesystem::is_regular_file(fullName, writtenError)) {
     logger::error("Could not write {}.", fullName);
     return false;
   }
@@ -2872,8 +2884,9 @@ bool PlotManager::PrepareInput(TObject* obj, const string& location)
 //**************************************************************************************************
 void PlotManager::ReadTableData(const string& inputFileName, const string& name, const string& dataSource)
 {
-  if (!std::filesystem::exists(inputFileName)) {
-    logger::error("File {} does not exist.", inputFileName);
+  std::error_code existsError;
+  if (!std::filesystem::exists(inputFileName, existsError)) {
+    logger::error("File {} does not exist{}.", inputFileName, existsError ? " or cannot be read (" + existsError.message() + ")" : "");
     return;
   }
   auto trim = [](const string& line) {
@@ -3162,7 +3175,8 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
   for (const auto& inputRaw : (expandedIt != mExpandedInputs.end()) ? expandedIt->second : ExpandInputs(dataSource)) {
     const auto fileNamePath = split_string(expand_path(inputRaw).value_or(""), ':', true);
     const string& fileName = fileNamePath[0];
-    if (!str_ends_with(fileName, ".root") || !std::filesystem::exists(fileName)) continue;
+    std::error_code existsError;
+    if (!str_ends_with(fileName, ".root") || !std::filesystem::exists(fileName, existsError)) continue;
     TFile file(fileName.data(), "READ");
     if (file.IsZombie()) continue;
     TDirectory* dir = &file;
@@ -3540,8 +3554,12 @@ void PlotManager::SaveProject() const
   }
   namespace fs = std::filesystem;
 
-  if (fs::create_directories(Config::Get().ProjectPath(mProjectName))) {
+  std::error_code ec;
+  if (fs::create_directories(Config::Get().ProjectPath(mProjectName), ec)) {
     logger::info("Created config folder for project {}: {}.", mProjectName, Config::Get().ProjectPath(mProjectName).string());
+  } else if (ec) {
+    logger::error("Cannot create config folder {} of project {}: {}.", Config::Get().ProjectPath(mProjectName).string(), mProjectName, ec.message());
+    return;
   }
 
   SaveDataSources();

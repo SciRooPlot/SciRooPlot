@@ -577,9 +577,9 @@ void PanelLayout::ApplyTo(Plot& plot) const
     // of the colour scale, which for a 3d histogram is the C axis
     target.mLayoutValues["title_size"] = static_cast<float_t>(mTitleSize / minSide);
     target.mLayoutValues["title_offset_x"] = static_cast<float_t>(mXTitleOffset * minSide / (1.6 * mTitleSize * height));
-    target.mLayoutValues["title_offset_y"] = static_cast<float_t>((mYTitleOffset > 0.) ? mYTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: automatic
+    target.mLayoutValues["title_offset_y"] = static_cast<float_t>((mYTitleOffset != 0.) ? mYTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: automatic
     if (colOwnScale[c1]) {
-      target.mLayoutValues["title_offset_z"] = static_cast<float_t>((mZTitleOffset > 0.) ? mZTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: next to the labels
+      target.mLayoutValues["title_offset_z"] = static_cast<float_t>((mZTitleOffset != 0.) ? mZTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: next to the labels
       target.mLayoutValues["color_scale_offset"] = static_cast<float_t>(mColorScaleOffset / width);
       target.mLayoutValues["color_scale_width"] = static_cast<float_t>(mColorScaleWidth / width);
     }

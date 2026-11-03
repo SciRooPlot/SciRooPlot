@@ -889,6 +889,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               polygon->SetPoint(i + 1, data_ptr->GetPointX(i), data_ptr->GetPointY(i));
             }
             polygon->SetPoint(data_ptr->GetN() + 1, data_ptr->GetPointX(data_ptr->GetN() - 1), 0.);
+            // the histogram it was made from (statistics box, placeholders) belongs to the polygon now: a later graph at the freed address is another one
+            if (auto source = mSourceHists.extract(data_ptr)) {
+              source.key() = polygon;
+              mSourceHists.insert(std::move(source));
+            }
             delete data_ptr;
             data_ptr = polygon;
           }
@@ -984,6 +989,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               axisHist_ptr = static_cast<TH1*>(data_ptr->GetHistogram()->Clone());
               axisHist_ptr->SetDirectory(nullptr);
               polarAxisHist.reset(axisHist_ptr);
+              mSourceHists.erase(data_ptr);
               delete data_ptr;
               if (!polargram) {
                 logger::error("Polar graph {} has no points to make the polar grid of pad {} from.", data->GetName(), padID);
@@ -2558,6 +2564,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // a graph is cut at the frame anyway: only the steps need its bins
             if (*optionAlias != curve_clipped) {
               if (TH1* histogram = ToHist(data_ptr, dataIndex != 0)) {
+                mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
                 drawClipped(histogram, *optionAlias);
                 return;
               }
@@ -2578,6 +2585,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         } else if constexpr (is_graph_1d<data_type>()) {
           if (optionAlias && !defaultDrawOptions_Graph.count(*optionAlias) && defaultDrawOptions_Hist.count(*optionAlias)) {
             if (TH1* hist = ToHist(data_ptr, dataIndex != 0)) {
+              mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
               drawItem(hist, optionAlias);
               return;
             }
@@ -2776,6 +2784,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           to->SetDecimals(from->GetDecimals());
           to->SetTimeDisplay(from->GetTimeDisplay());
           to->SetTimeFormat(from->GetTimeFormat());
+          to->SetTitle(from->GetTitle());
         }
       }
       axes->Draw("SAME AXIS");
@@ -3601,18 +3610,21 @@ TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<dou
   // a range wholly outside the frame (20 to 30 for data from 0 to 10) also needs an edge at its inner end: a range is shown
   // in whole bins, so with the one added bin from 10 to 30 the axis would start at 10
   const TAxis* extendedAxis = axes[extendedDim];
-  // flags, not optional copies: GCC 13 reports those as maybe uninitialized in Release builds
   const bool innerLow = newMin && rangeMax && *rangeMax > *newMin && *rangeMax < extendedAxis->GetXmin();
   const bool innerHigh = newMax && rangeMin && *rangeMin < *newMax && *rangeMin > extendedAxis->GetXmax();
   const int32_t shift = (newMin ? 1 : 0) + (innerLow ? 1 : 0);  // the bins move up by the number of bins added below
+  // the edges added to the extended axis, collected before the loop (GCC 13 reports optionals read in it as maybe uninitialized)
+  vector<double_t> below, above;
+  if (newMin) below.push_back(*newMin);
+  if (innerLow) below.push_back(*rangeMax);
+  if (innerHigh) above.push_back(*rangeMin);
+  if (newMax) above.push_back(*newMax);
   array<vector<double_t>, 3> edges;
   for (int32_t i = 0; i < dim; ++i) {
-    if (i == extendedDim && newMin) edges[i].push_back(*newMin);
-    if (i == extendedDim && innerLow) edges[i].push_back(*rangeMax);
+    if (i == extendedDim) edges[i] = below;
     for (int32_t bin = 1; bin <= axes[i]->GetNbins() + 1; ++bin)
       edges[i].push_back(axes[i]->GetBinLowEdge(bin));
-    if (i == extendedDim && innerHigh) edges[i].push_back(*rangeMin);
-    if (i == extendedDim && newMax) edges[i].push_back(*newMax);
+    if (i == extendedDim) edges[i].insert(edges[i].end(), above.begin(), above.end());
   }
   TH1* extended{nullptr};
   if (dim == 1) {
@@ -5128,6 +5140,10 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
         return static_cast<TH2*>(histPtr->Project3D((GetAxisStr(projInfo.dims[1]) + GetAxisStr(projInfo.dims[0])).data()));
       }
     } else if (projInfo.dims.size() == 1) {
+      if (isProfile) {  // Project3D would give the counts; the mean of which of the other two axes is not defined
+        logger::error("Cannot profile 3d histogram {} onto one axis: give two axes (the profile is the mean of the third).", obj->GetName());
+        return nullopt;
+      }
       return histPtr->Project3D(GetAxisStr(projInfo.dims[0]).data());
     }
   } else if (obj->InheritsFrom(TH2::Class())) {
@@ -6139,12 +6155,16 @@ void PlotPainter::DrawCommonTitle(TCanvas* canvas, char axisLabel, const vector<
   text->SetBit(kCanDelete);
   canvas->cd();
   text->Draw();
-  // the panels lose their own titles (also the copies of their frames that redraw the axes)
+  // the panels lose their own titles (also the copies of their frames that redraw the axes): on the frame the axis found above (with
+  // HBAR the histogram's y axis is the horizontal one), on a copy the one holding the title (the copy of an HBAR frame has swapped axes)
   for (const auto& [pad, axis] : members) {
     const string frameName = "axis_hist_pad_" + std::to_string(pad->GetNumber());
     for (TObject* primitive : *pad->GetListOfPrimitives()) {
       auto* hist = dynamic_cast<TH1*>(primitive);
-      if (hist && frameName == hist->GetName()) (isX ? hist->GetXaxis() : hist->GetYaxis())->SetTitle("");
+      if (!hist || frameName != hist->GetName()) continue;
+      TAxis* own = (hist == axis->GetParent()) ? axis : (isX ? hist->GetXaxis() : hist->GetYaxis());
+      TAxis* other = (own == hist->GetXaxis()) ? hist->GetYaxis() : hist->GetXaxis();
+      ((hist == axis->GetParent() || title == own->GetTitle() || title != other->GetTitle()) ? own : other)->SetTitle("");
     }
     pad->Modified();
   }

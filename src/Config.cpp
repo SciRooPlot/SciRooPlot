@@ -227,6 +227,7 @@ void Config::LoadConfig()
       }
     } catch (const std::exception& e) {
       std::cerr << "Cannot load projects file " << mProjectsFile << ": " << e.what() << ". No projects loaded." << std::endl;
+      mProjectsUnreadable = true;
     }
   }
 }
@@ -269,8 +270,16 @@ bool Config::Save()
   return savedSettings && savedProjects;
 }
 
+// a projects file that could not be read is never written over (it would lose every project): changes to projects fail until it is fixed
+bool Config::ProjectsReadable() const
+{
+  if (mProjectsUnreadable) logger::error("Cannot change projects: {} could not be read. Fix or remove it.", mProjectsFile);
+  return !mProjectsUnreadable;
+}
+
 bool Config::SaveProjects() const
 {
+  if (mProjectsUnreadable) return true;  // nothing was changed (ProjectsReadable)
   if (mPath.empty()) {
     logger::error("No valid config path; cannot save the configuration.");
     return false;
@@ -299,6 +308,7 @@ std::vector<std::string> Config::ProjectNames() const
 
 bool Config::Rename(const std::string& projectName, const std::string& newProjectName)
 {
+  if (!ProjectsReadable()) return false;
   if (mPath.empty()) {
     logger::error("No valid config path; cannot rename.");
     return false;
@@ -323,11 +333,16 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
 
   const std::filesystem::path projectPath = ProjectPath(projectName);
   const std::filesystem::path newProjectPath = ProjectPath(newProjectName);
-  if (std::filesystem::exists(newProjectPath)) {
+  std::error_code newPathError;
+  if (std::filesystem::exists(newProjectPath, newPathError) || newPathError) {
     logger::error("Cannot rename {} to {}: {} already exists.", projectName, newProjectName, newProjectPath.string());
     return false;
   }
   if (!CheckProjectDir(projectName)) return false;
+  if (const string foreign = ForeignEntries(projectPath); !foreign.empty()) {
+    logger::error("Cannot rename {}: it also holds {} (not written by this version of SciRooPlot).", projectPath.string(), foreign);
+    return false;
+  }
 
   // the configuration is saved first: if that fails nothing has changed on disk, and projects.info never names a directory that is gone
   const string previousCurrent = mCurrentProject;
@@ -361,6 +376,7 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
 
 void Config::Reset()
 {
+  if (!ProjectsReadable()) return;
   if (mPath.empty()) {
     logger::error("No valid config path; refusing to reset.");
     return;
@@ -374,6 +390,7 @@ void Config::Reset()
 
 void Config::Clean()
 {
+  if (!ProjectsReadable()) return;
   if (mPath.empty()) {
     logger::error("No valid config path; refusing to clean.");
     return;
@@ -419,6 +436,7 @@ std::map<string, string> Config::Properties(const string& projectName) const
 
 bool Config::Remove(const string& projectName)
 {
+  if (!ProjectsReadable()) return false;
   if (projectName.empty()) {
     logger::error("Specify which project to remove.");
     return false;
@@ -489,6 +507,20 @@ bool Config::CheckProjectDir(const string& projectName) const
   return true;
 }
 
+// the entries of a project's directory that SciRooPlot did not write there: with a config path that is a general folder
+// (SCIROOPLOT_CONFIG_PATH=$HOME), a project named like a folder of the user (Documents) is that folder
+string Config::ForeignEntries(const std::filesystem::path& projectPath)
+{
+  string foreign;
+  std::error_code ec;
+  for (std::filesystem::directory_iterator entry(projectPath, ec), end; !ec && entry != end; entry.increment(ec)) {
+    const string name = entry->path().filename().string();
+    std::error_code typeError;
+    if (!entry->is_regular_file(typeError) || !kProjectFiles.count(name)) foreign += (foreign.empty() ? "" : ", ") + name;
+  }
+  return foreign;
+}
+
 bool Config::DeleteProjectDir(const string& projectName) const
 {
   if (!CheckProjectDir(projectName)) return false;
@@ -499,18 +531,10 @@ bool Config::DeleteProjectDir(const string& projectName) const
   if (status.type() != std::filesystem::file_type::directory) {  // a link: removed, not what it points to
     std::filesystem::remove(projectPath, ec);
   } else {
-    // only the files SciRooPlot writes there are deleted (names of older versions stay in the list): with a config path that is
-    // a general folder (SCIROOPLOT_CONFIG_PATH=$HOME), a project named like a folder of the user (Documents) keeps its other files
-    static const std::set<string> kProjectFiles = {"plots.info", "dataSources.info", "tabcomp.csv", "UserData.root", ".DS_Store"};
-    string foreign;
-    for (std::filesystem::directory_iterator entry(projectPath, ec), end; !ec && entry != end; entry.increment(ec)) {
-      const string name = entry->path().filename().string();
-      std::error_code typeError;
-      if (entry->is_regular_file(typeError) && (kProjectFiles.count(name) || (name.size() > 4 && name.compare(name.size() - 4, 4, ".tmp") == 0))) {
-        std::filesystem::remove(entry->path(), ec);
-      } else {
-        foreign += (foreign.empty() ? "" : ", ") + name;
-      }
+    // only SciRooPlot's files are deleted, the directory only if nothing else is in it
+    const string foreign = ForeignEntries(projectPath);
+    for (const auto& file : kProjectFiles) {
+      if (!ec) std::filesystem::remove(projectPath / file, ec);
     }
     if (!ec && foreign.empty()) std::filesystem::remove(projectPath, ec);
     if (!ec && !foreign.empty()) {
@@ -532,6 +556,7 @@ bool Config::SaveNow()
 
 bool Config::Select(const string& projectName)
 {
+  if (!ProjectsReadable()) return false;
   if (projectName.empty()) {
     logger::error("Specify a project to select.");
     return false;
@@ -587,6 +612,7 @@ bool Config::CheckPath(const string& path)
 
 bool Config::Add(const string& projectName, const string& program, const string& outputDir)
 {
+  if (!ProjectsReadable()) return false;
   if (projectName.empty()) {
     logger::error("Specify project name.");
     return false;
@@ -622,6 +648,7 @@ string Config::Project::Property(const string& property) const
 
 bool Config::SetProperty(const string& projectName, const string& property, const string& value)
 {
+  if (!ProjectsReadable()) return false;
   if (projectName.empty()) {
     logger::error("Specify project or use @current.");
     return false;

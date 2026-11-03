@@ -355,6 +355,12 @@ add_custom_target(generate_example_data ALL
 add_dependencies(srp generate_example_data)
 
 set(SCIROOPLOT_PYTHONPATH_DIR "${CMAKE_INSTALL_LIBDIR}")
+# env.sh knows the interpreter only if the bindings are built (a Python found while they got disabled sets no PYTHONPATH)
+if(BUILD_PYTHON_BINDINGS)
+  set(SCIROOPLOT_BINDINGS_PYTHON "${Python3_EXECUTABLE}")
+else()
+  set(SCIROOPLOT_BINDINGS_PYTHON "")
+endif()
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/packaging/env.sh.in
   ${SCIROOPLOT_BUILD_DATA_DIR}/env.sh

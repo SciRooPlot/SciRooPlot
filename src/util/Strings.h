@@ -147,9 +147,13 @@ T string_to_type(const std::string& str)
 {
   if constexpr (std::is_floating_point_v<T>) {
     std::istringstream stream(str);
-    stream.imbue(std::locale::classic());
+    stream.imbue(std::locale::classic());  // independent of the locale (a Python program may set one)
     T value{};
     if (!(stream >> value)) {
+      // the words number_to_string writes for infinity and NaN, which the stream does not read
+      if (str == "inf" || str == "+inf") return std::numeric_limits<T>::infinity();
+      if (str == "-inf") return -std::numeric_limits<T>::infinity();
+      if (str == "nan" || str == "-nan") return std::numeric_limits<T>::quiet_NaN();
       logger::throw_invalid_argument("Cannot parse '{}' as a number.", str);
     }
     return value;

@@ -76,6 +76,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| `PanelLayout::SetYTitleOffset`, `SetZTitleOffset` with a negative value were taken as 0 (automatic) | The value is the distance, as for positive ones | behaviour | none |
 | Python `histo`, `histo2d`: a value equal to the upper edge went into the overflow | Into the last bin, as in numpy (`range=(0, 1)` keeps values of exactly 1) | behaviour | Check histograms whose range or last edge equals values in the data. |
 | `Project`, `ProjectX`/`Y` of a `TProfile2D` or `TProfile3D` added up the means of the merged bins (a `TH1`/`TH2` of sums of means) | The profile of the merged bins (`TProfile2D::ProfileX`/`Y`, `TProfile3D::Project3DProfile`): their mean, as `Profile…` gives | behaviour | Check projections of 2D and 3D profiles. |
 | `TH2Poly`: `RebinX`/`RebinY` aborted the program, `ScaleX`/`ScaleY` moved the axes but not the polygons, `DivideBinWidth` and `Smooth` did nothing; `TProfile3D`: `DivideBinWidth` ignored silently, `Smooth` failed in ROOT | `DivideBinWidth` divides each polygon by its area; the others are ignored with a warning (as `DivideBinWidth` of profiles); `Smooth` of 3d histograms warns | behaviour | Check plots of TH2Poly with `DivideBinWidth`. |
@@ -155,6 +156,8 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 |---|---|---|---|
 | Python `histo`, `histo2d` with NaN or infinite values and neither range nor bin edges (an empty histogram on [0, 1]), an infinite range, a NaN or infinite bin edge | `ValueError`, as in numpy | input validation | Give a finite range or bin edges. |
 | Python `AddDataSource` with a null ROOT object (`file.Get` of a missing name) was ignored | `ValueError` | input validation | Check the name. |
+| `Data::Profile(dataDims, variable)` did not check the last binned axis (no bins accepted) | Checked like `Profile1D`/`Profile2D`: throws | input validation | Give a number of bins or edges. |
+| `Profile({axis})` of a 3d histogram onto one axis gave its projection (counts, not means) | Error, the data is not drawn | input validation | Profile onto two axes (the mean of the third), or use `Project`. |
 | Gradients (`SetPalette`, `SetDefaultColors`, `SetDefaultMarkerColors`/`LineColors`/`FillColors`) took any stops: before the first and after the last position the colours were extrapolated (unrelated colours), decreasing positions gave colour jumps | Warning for positions outside 0–1, decreasing positions and colour components outside 0–1; before the first and after the last position the end colours | input validation | Check gradients that warn; a gradient whose first stop is above 0 now starts with its first colour. |
 | `Plot(name, …)` and `Plot(other, name, group)` accepted an empty name | Throw `std::invalid_argument` (Python `ValueError`) | input validation | Give every plot a name. |
 | Group names taken as given | Leading, trailing and doubled `/` removed, with a warning | input validation | Use clean group paths. |
@@ -188,6 +191,9 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Old | New | Kind | Action |
 |---|---|---|---|
 | `srp remove`, `srp reset` only unregistered projects | Also delete the files SciRooPlot writes into each project's configuration directory (`plots.info`, `dataSources.info`, …; never user code or output), and the directory if nothing else is in it | CLI | Re-run the plotting program to recreate them; back them up before `srp reset` if needed. |
+| `srp rename` moved the configuration directory of a project whatever it held | Refuses if the directory holds files SciRooPlot did not write (e.g. `SCIROOPLOT_CONFIG_PATH=$HOME` and a project named `Documents`) | CLI | Point `SCIROOPLOT_CONFIG_PATH` at a folder of its own. |
+| `srp` with a `projects.info` it cannot read: the next change of a project wrote an empty list over it | Changes of projects fail with an error until the file is fixed or removed | CLI | none |
+| `srp update` with the `env.sh` of a build directory other than `<source>/build` rebuilt `<source>/build` | Refuses and names the build command | CLI | Rebuild such a directory with `cmake --build`. |
 | `srp add <p> <prog>` on an existing project replaced its program; `srp add <p>` without a program did nothing; `srp set`/`get`/`show` on an unknown project (`set` created it) | All fail with exit code 1 | CLI | Use `srp set <p> program …` to change a program; `srp add` for new projects. |
 | `srp set <p> program`/`outdir` stored any value (an unset `${VAR}` too) | Checked like `srp add`: an unset variable or a relative path is an error and nothing is stored | input validation | Give an absolute path, or one starting with `~` or a set variable. |
 | `srp` and `plot` returned 0 on most errors; any `srp plotmode X` was accepted | Exit code 1 on errors and unknown commands; `plotmode` is validated; `plot` rejects more than 3 arguments and invalid group regexes | CLI | Quote regex arguments (`plot g '.+'`); check scripts relying on exit codes. |

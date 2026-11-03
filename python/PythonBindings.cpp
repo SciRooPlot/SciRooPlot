@@ -155,15 +155,13 @@ struct type_caster<color_t> {
       return true;
     }
     try {
-      // integers, also numpy ones (kRed + np.int64(1)), but not bool
+      // integers, also numpy ones (kRed + np.int64(1)), but not bool; an array has __index__ too, but is (r, g, b) below
       if (!py::isinstance<py::bool_>(src) && py::hasattr(src, "__index__")) {
-        PyObject* index = PyNumber_Index(src.ptr());
-        if (!index) {
-          PyErr_Clear();
-          return false;
+        if (PyObject* index = PyNumber_Index(src.ptr())) {
+          value = color_t(py::reinterpret_steal<py::int_>(index).cast<int16_t>());
+          return true;
         }
-        value = color_t(py::reinterpret_steal<py::int_>(index).cast<int16_t>());
-        return true;
+        PyErr_Clear();
       }
       if (!py::isinstance<py::sequence>(src)) return false;
       auto seq = py::reinterpret_borrow<py::sequence>(src);
@@ -922,13 +920,16 @@ void exportPythonDataInterfaces(py::module_& m)
     return util::auto_axis_range(*minIt, *maxIt);
   };
 
-  // as numpy.histogram, the last bin includes its upper edge (ROOT fills the overflow): such values are moved just below it,
-  // in a copy made only if there are any
+  // as numpy.histogram, the last bin includes its upper edge (ROOT fills the overflow): such values are moved below it, as little
+  // as the bin lookup allows (with even bins one step can still round into the overflow), in a copy made only if there are any
   auto fillValues = [](const Values& v, const TAxis* axis, vector<double>& moved) -> const double* {
     const double upper = axis->GetXmax();
     if (std::find(v.data(), v.data() + v.size(), upper) == v.data() + v.size()) return v.data();
+    double inside = std::nextafter(upper, axis->GetXmin());
+    while (axis->FindFixBin(inside) > axis->GetNbins())
+      inside = std::nextafter(inside, axis->GetXmin());
     moved.assign(v.data(), v.data() + v.size());
-    std::replace(moved.begin(), moved.end(), upper, std::nextafter(upper, axis->GetXmin()));
+    std::replace(moved.begin(), moved.end(), upper, inside);
     return moved.data();
   };
 
@@ -1018,9 +1019,10 @@ void exportPythonDataInterfaces(py::module_& m)
         const auto [min, max] = rangeFor(axisRange, v, axis);
         const int32_t n = std::get<int32_t>(spec);
         vector<double> edges(n + 1);
-        for (int32_t i = 0; i <= n; ++i) {
+        for (int32_t i = 0; i < n; ++i) {
           edges[i] = min + (max - min) * i / n;
         }
+        edges[n] = max;  // exactly: the computed one can come out below it
         return edges;
       };
       const vector<double> edgesX = edgesOf(specX, rangeX, x, "x");

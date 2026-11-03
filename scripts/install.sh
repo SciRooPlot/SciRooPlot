@@ -181,7 +181,7 @@ build() {
 if [[ "${REINSTALL}" -eq 1 ]]; then
   # without --prefix the configured one is kept
   if [[ "${PREFIX_SET}" -eq 0 && -f "${CACHE_FILE}" ]]; then
-    CACHED_PREFIX=$(grep -m1 '^CMAKE_INSTALL_PREFIX:PATH=' "${CACHE_FILE}" | cut -d= -f2)
+    CACHED_PREFIX=$(grep -m1 '^CMAKE_INSTALL_PREFIX:PATH=' "${CACHE_FILE}" | cut -d= -f2-)
     INSTALL_PREFIX="${CACHED_PREFIX:-${INSTALL_PREFIX}}"
   fi
   rm -f "${CACHE_FILE}"
@@ -190,7 +190,7 @@ fi
 DO_INSTALL=1
 # determine installation prefix
 if [[ -f "${CACHE_FILE}" ]]; then
-  CACHED_PREFIX=$(grep -m1 '^CMAKE_INSTALL_PREFIX:PATH=' "${CACHE_FILE}" | cut -d= -f2)
+  CACHED_PREFIX=$(grep -m1 '^CMAKE_INSTALL_PREFIX:PATH=' "${CACHE_FILE}" | cut -d= -f2-)
 
   if [[ -z "${CACHED_PREFIX}" ]]; then
     echo "Error: Could not determine CMake install prefix."

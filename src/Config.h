@@ -26,6 +26,7 @@
 #include <filesystem>
 #include <map>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -97,14 +98,19 @@ class Config
   void LoadConfig();
   bool CheckProjectDir(const std::string& projectName) const;  // true if the project's directory is inside the config path
   bool DeleteProjectDir(const std::string& projectName) const;
+  static std::string ForeignEntries(const std::filesystem::path& projectPath);  // names in it SciRooPlot did not write, comma separated
+  // the files SciRooPlot writes into a project's directory; names of older versions stay in the list
+  inline static const std::set<std::string> kProjectFiles{"plots.info", "dataSources.info", "tabcomp.csv", "UserData.root", ".DS_Store"};
   std::vector<std::string> RemoveProjects(const std::vector<std::string>& projectNames, const std::string& nextCurrent);
   bool SaveNow();
   bool SaveProjects() const;  // writes the configuration at once (before the files of a project are changed on disk)
+  bool ProjectsReadable() const;
   static bool WriteInfoFile(const std::string& file, const boost::property_tree::ptree& tree);
   static bool CheckProjectName(const std::string& projectName);
   static bool CheckPath(const std::string& path);
 
   bool mModified{false};
+  bool mProjectsUnreadable{false};  // projects.info exists but could not be read
   int mLogLevel{LogLevel::debug};
   int mColorMode{ColorMode::bright};
   std::string mPlotMode{"show"};

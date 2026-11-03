@@ -553,17 +553,22 @@ Plot::Plot(const ptree& plotTree)
   ReadFill(plotTree);
 
   // loop over all pads defined in property tree
-  auto readPads = [](const string& list) {
+  // a pad number above 255 would wrap around and replace another pad
+  auto checkedPadID = [](int64_t padID) {
+    if (padID < 0 || padID > std::numeric_limits<uint8_t>::max()) logger::throw_invalid_argument("Pad number {} is out of range (0 to 255).", padID);
+    return static_cast<uint8_t>(padID);
+  };
+  auto readPads = [&checkedPadID](const string& list) {
     vector<uint8_t> pads;
     std::istringstream stream(list);
-    for (int32_t padID{}; stream >> padID;) {
-      pads.push_back(static_cast<uint8_t>(padID));
+    for (int64_t padID{}; stream >> padID;) {
+      pads.push_back(checkedPadID(padID));
     }
     return pads;
   };
   for (const auto& [key, child] : plotTree) {
     if (str_starts_with(key, "PAD_")) {
-      uint8_t padID = std::stoi(key.substr(4));
+      const uint8_t padID = checkedPadID(std::stoll(key.substr(4)));
       mPads[padID] = Pad(child);
     } else if (str_starts_with(key, "SHARED_AXIS_")) {
       mSharedAxes.push_back({child.get<char>("axis"), readPads(child.get<string>("pads", "")), child.get<bool>("layout", false)});
@@ -2441,9 +2446,10 @@ auto Plot::Pad::Data::SetLegendEntry(const LegendEntry& legendEntry) -> decltype
     logger::warning("The legend entry of {} cannot set its label, use SetLegendLabel.", mName);
     mLegend.entry->mLabel.reset();
   }
-  if (mLegend.entry->mRefDataID) {
+  if (mLegend.entry->mRefDataID || mLegend.entry->mRefPadID) {  // e.g. a copy of an entry of LegendBox::AddDataEntry
     logger::warning("The legend entry of {} cannot refer to other data.", mName);
     mLegend.entry->mRefDataID.reset();
+    mLegend.entry->mRefPadID.reset();
   }
   return *this;
 }
@@ -2715,8 +2721,9 @@ auto Plot::Pad::Data::Profile(std::initializer_list<uint8_t> dims, const vector<
 }
 void Plot::Pad::Data::data_info_t::set(const data_info_t& other)
 {
-  if (other.dataDims.empty()) {
-    if (other.isProfileNoScatter.value_or(false)) {
+  const bool isProfile = other.isProfileNoScatter.value_or(false);
+  if (other.dataDims.size() < (isProfile ? 2u : 1u)) {  // a profile: a binned axis and the profiled variable
+    if (isProfile) {
       logger::throw_invalid_argument("Profile needs at least one binned axis besides the profiled variable.");
     } else {
       logger::throw_invalid_argument("Project needs at least one dimension.");
@@ -2779,8 +2786,9 @@ auto Plot::Pad::Data::Scatter(const string& x, const string& y, const string& z)
 }
 auto Plot::Pad::Data::Profile(const vector<data_dim_t>& dataDims, const string& profile, optional<string> weight) -> decltype(*this)
 {
-  mDataInfo.set({dataDims, weight, true});
-  mDataInfo.dataDims.push_back({profile, {}});
+  vector<data_dim_t> dims = dataDims;  // checked with the profiled variable last, as the other forms
+  dims.push_back({profile, {}});
+  mDataInfo.set({dims, weight, true});
   return *this;
 }
 auto Plot::Pad::Data::Profile1D(data_dim_t x, const string& profile, optional<string> weight) -> decltype(*this)
