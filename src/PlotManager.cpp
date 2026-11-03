@@ -1019,8 +1019,20 @@ void PlotManager::AddColorOverview(const string& name, const string& group, cons
 //**************************************************************************************************
 std::function<bool(const string&, const string&)> PlotManager::PlotMatcher(const string& name, const string& group)
 {
-  RegexMatcher groupRegex = RegexMatcher::WithSubpaths(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
-  RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
+  // groups are stored without trailing slashes: in a group copied from a path (group/sub/) the slash says where the group name ends
+  string groupPattern = group;
+  while (groupPattern.size() > 1 && groupPattern.back() == '/' && groupPattern[groupPattern.size() - 2] != '\\') {
+    groupPattern.pop_back();
+  }
+  const bool endsHere = (groupPattern != group);
+  if (endsHere) logger::info("Reading group '{}' as '{}' (the slash ends the group name).", group, groupPattern);
+  const bool contains = Config::Get().MatchContains();
+  const bool ignoreCase = Config::Get().MatchCaseInsensitive();
+  // exact mode matches whole names anyway; contains mode must not take group/ for groupx
+  RegexMatcher groupRegex = (endsHere && contains && RegexMatcher(groupPattern, contains, ignoreCase).IsValid())
+                              ? RegexMatcher("(?:" + groupPattern + ")(?=/|$)", contains, ignoreCase)
+                              : RegexMatcher::WithSubpaths(groupPattern, contains, ignoreCase);
+  RegexMatcher nameRegex(name, contains, ignoreCase);
   if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
     logger::error("'{}' is not a valid {} pattern{}.", groupRegex.IsValid() ? name : group, groupRegex.IsValid() ? "name" : "group", WildcardHint(name, group));
     return {};

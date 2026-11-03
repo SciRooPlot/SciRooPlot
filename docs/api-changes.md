@@ -206,6 +206,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | – | `srp colorwheel [<file>]`: ROOT's colour wheel in a window, or saved to a file | CLI | none |
 | `srp projects`, `srp show`, `srp settings` printed plain lists (`* name`, `- key: value`, `Plot mode: …`) | Headed blocks in the style of `srp info` and `srp stats`: the current project marked `(current)`, settings named as their `srp` commands | CLI | Update scripts that parse the output. |
 | `srp stats` without a project: error | Shows the plots, data sources and inputs of every project, the current one marked | CLI | none |
+| `plot <group>/ <name>` (group with a trailing slash, e.g. copied from a path) matched nothing; with `matchmode contains` only the subgroups | A trailing slash ends the group name: `group/` selects `group` and its subgroups (with `contains` also `other/group`, not `groupx`), with an info line; also in tab completion | CLI | Use `group/.+` for the subgroups alone. |
 | – | `srp out [<project>]`: opens the output folder of the project (default: the current one) in the file manager | CLI | none |
 
 ## 3.2.4 → 3.3.3
