@@ -62,11 +62,8 @@ class Config
   const std::string& SettingsFile() const { return mSettingsFile; }
 
   bool Exists(const std::string& projectName) const;
-  void ListProjects() const;
   std::vector<std::string> ProjectNames() const;
-  void ShowSettings() const;
-
-  void Show(const std::string& projectName) const;
+  std::map<std::string, std::string> Properties(const std::string& projectName) const;  // as stored (unexpanded)
   std::string Property(const std::string& projectName, const std::string& property) const;
   std::string Program(const std::string& projectName) const;
   std::string OutputDir(const std::string& projectName) const;

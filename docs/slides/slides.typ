@@ -609,7 +609,7 @@
         width: 100%,
         title-size: 20pt,
         cmd-table(
-          [#prompt `srp projects`], [List all projects (`*` marks the selected one).],
+          [#prompt `srp projects`], [List all projects (the current one marked).],
           [#prompt `srp select <project>`], [Select the project that `plot` works on.],
           [#prompt `srp show [<project>]`], [Show the properties of one or all projects.],
           [#prompt `srp add <project> <program> [<outdir>]`], [Register an existing program as project (rebuilt automatically if it lives in a CMake build directory).],

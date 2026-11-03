@@ -257,7 +257,18 @@ int main(int argc, char* argv[])
     string fileName = project;
     if (!PrintRootFileContents(fileName)) return 1;
   } else if (command == "settings") {
-    Config::Get().ShowSettings();
+    // named as the srp commands that change them
+    const Config& config = Config::Get();
+    const auto row = rows(15);
+    heading("Settings");
+    row("verbosity", Config::LogLevelName(config.Verbosity()));
+    row("color", Config::ColorModeName(config.Color()));
+    row("plotmode", config.PlotMode());
+    row("matchmode", config.MatchContains() ? "contains" : "exact");
+    row("matchcase", config.MatchCaseInsensitive() ? "insensitive" : "sensitive");
+    row("screenscale", fmt::format("{}", config.ScreenScale()));
+    row("bitmapscale", fmt::format("{}", config.BitmapScale()));
+    row("current project", config.CurrentProject().empty() ? "none" : config.CurrentProject());
   } else if (command == "color") {
     if (auto colorMode = Config::ParseColorMode(project)) {
       Config::GetMutable().SetColor(*colorMode);
@@ -336,7 +347,8 @@ int main(int argc, char* argv[])
     string boostVersion = BOOST_LIB_VERSION;
     std::replace(boostVersion.begin(), boostVersion.end(), '_', '.');
     row("Boost", boostVersion);
-    row("fmt", fmt::format("{}.{}.{}", FMT_VERSION / 10000, FMT_VERSION / 100 % 100, FMT_VERSION % 100));
+    row("fmt", fmt::format("{}.{}.{}  {}", FMT_VERSION / 10000, FMT_VERSION / 100 % 100, FMT_VERSION % 100, SCIROOPLOT_FMT_INFO));
+    row("pybind11", SCIROOPLOT_PYBIND11_INFO);
     heading("Build");
     row("type", SCIROOPLOT_BUILD_TYPE);
     row("commit", SCIROOPLOT_GIT_DESCRIBE);
@@ -401,7 +413,14 @@ int main(int argc, char* argv[])
   } else if (command == "reset") {
     Config::GetMutable().Reset();
   } else if (command == "projects") {
-    Config::Get().ListProjects();
+    const vector<string> projects = Config::Get().ProjectNames();
+    if (projects.empty()) {
+      logger::print("No projects yet: srp init-py <project>, srp init-cpp <project> or srp add <project> <program>.");
+      return 0;
+    }
+    heading("Projects");
+    for (const string& name : projects)
+      logger::print("  {}{}{}{}", logger::begin_color(logger::Color::Cyan), name, logger::end_color(), name == Config::Get().CurrentProject() ? "  (current)" : "");
   } else if (command == "remove") {
     if (!Config::GetMutable().Remove(project)) return 1;
   } else if (command == "select") {
@@ -411,7 +430,23 @@ int main(int argc, char* argv[])
       logger::error("Cannot find project {}.", project);
       return 1;
     }
-    Config::Get().Show(project);
+    // program and output folder first, then the user's variables, as stored
+    for (const string& name : project.empty() ? Config::Get().ProjectNames() : vector<string>{project}) {
+      auto properties = Config::Get().Properties(name);
+      const bool markCurrent = project.empty() && name == Config::Get().CurrentProject();
+      heading(fmt::format("Project {}{}", name, markCurrent ? "  (current)" : ""));
+      size_t width = 13;  // as srp stats
+      for (const auto& [property, value] : properties)
+        width = std::max(width, property.size());
+      const auto row = rows(static_cast<int>(width));
+      for (const char* property : {"program", "outdir"}) {
+        auto it = properties.find(property);
+        row(property, it == properties.end() || it->second.empty() ? "-" : it->second);
+        if (it != properties.end()) properties.erase(it);
+      }
+      for (const auto& [property, value] : properties)
+        if (!value.empty()) row(property, value);
+    }
   } else if (command == "add") {
     if (!Config::GetMutable().Add(project, property, setting)) return 1;
   } else if (command == "get") {

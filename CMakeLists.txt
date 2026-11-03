@@ -63,18 +63,37 @@ set(REQUIRED_PYBIND11_VERSION 2.9)
 
 find_package(ROOT ${REQUIRED_ROOT_VERSION} CONFIG REQUIRED)
 find_package(Boost ${REQUIRED_BOOST_VERSION} REQUIRED COMPONENTS program_options)
+set(FETCHED_FMT_VERSION 11.2.0)
+set(FETCHED_PYBIND11_VERSION 3.0.1)
+# a dependency fetched by an earlier configure is not downloaded again
+function(fetch_message name version)
+  if(EXISTS "${FETCHCONTENT_BASE_DIR}/${name}-src/CMakeLists.txt")
+    message(STATUS "${name} not found or too old -- using ${name} ${version}, fetched before")
+  else()
+    message(STATUS "${name} not found or too old -- fetching ${name} ${version}")
+  endif()
+endfunction()
+
 find_package(fmt CONFIG QUIET)
+set(SCIROOPLOT_FMT_FETCHED OFF)
 if(NOT (fmt_FOUND AND fmt_VERSION VERSION_GREATER_EQUAL REQUIRED_FMT_VERSION))
-  message(STATUS "fmt not found or too old -- fetching it now")
   include(FetchContent)
+  fetch_message(fmt ${FETCHED_FMT_VERSION})
   FetchContent_Declare(
     fmt
-    URL https://github.com/fmtlib/fmt/releases/download/11.2.0/fmt-11.2.0.zip
+    URL https://github.com/fmtlib/fmt/releases/download/${FETCHED_FMT_VERSION}/fmt-${FETCHED_FMT_VERSION}.zip
     URL_HASH SHA256=203eb4e8aa0d746c62d8f903df58e0419e3751591bb53ff971096eaa0ebd4ec3
     DOWNLOAD_EXTRACT_TIMESTAMP OFF
   )
   FetchContent_MakeAvailable(fmt)
-  set(fmt_VERSION 11.2.0)
+  set(fmt_VERSION ${FETCHED_FMT_VERSION})
+  set(SCIROOPLOT_FMT_FETCHED ON)
+endif()
+# for srp info
+if(SCIROOPLOT_FMT_FETCHED)
+  set(SCIROOPLOT_FMT_INFO "(fetched by CMake)")
+else()
+  set(SCIROOPLOT_FMT_INFO "${fmt_DIR}")
 endif()
 
 message(STATUS "ROOT  version: ${ROOT_VERSION}")
@@ -104,21 +123,29 @@ if(BUILD_PYTHON_BINDINGS)
     set(SCIROOPLOT_PYTHON_DIR "${CMAKE_INSTALL_LIBDIR}/python${Python3_VERSION_MAJOR}.${Python3_VERSION_MINOR}/site-packages")
     set(PYBIND11_FINDPYTHON NEW)
     find_package(pybind11 ${REQUIRED_PYBIND11_VERSION} CONFIG QUIET)
-    if(NOT pybind11_FOUND)
-      message(STATUS "pybind11 not found or too old -- fetching it now")
+    # a fetched pybind11 caches pybind11_FOUND: the target tells whether it is there in this configure
+    if(pybind11_FOUND AND TARGET pybind11::module)
+      set(SCIROOPLOT_PYBIND11_INFO "${pybind11_VERSION}  ${pybind11_DIR}")
+    else()
       include(FetchContent)
+      fetch_message(pybind11 ${FETCHED_PYBIND11_VERSION})
       FetchContent_Declare(
         pybind11
         GIT_REPOSITORY https://github.com/pybind/pybind11.git
-        GIT_TAG v3.0.1
+        GIT_TAG v${FETCHED_PYBIND11_VERSION}
       )
       FetchContent_MakeAvailable(pybind11)
+      set(SCIROOPLOT_PYBIND11_INFO "${FETCHED_PYBIND11_VERSION}  (fetched by CMake)")
       if(NOT TARGET pybind11::module)
         message(WARNING "pybind11 not fetched -- disabling bindings")
         set(BUILD_PYTHON_BINDINGS OFF CACHE BOOL "" FORCE)
       endif()
     endif()
+    message(STATUS "pybind11 version: ${SCIROOPLOT_PYBIND11_INFO}")
   endif()
+endif()
+if(NOT BUILD_PYTHON_BINDINGS)
+  set(SCIROOPLOT_PYBIND11_INFO "none (no Python bindings)")
 endif()
 
 # -----------------------
@@ -275,6 +302,8 @@ target_compile_definitions(srp PRIVATE
     SCIROOPLOT_ROOT_VERSION="${ROOT_VERSION}"
     SCIROOPLOT_BUILD_TYPE="${CMAKE_BUILD_TYPE}"
     SCIROOPLOT_CXX_COMPILER="${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}"
+    SCIROOPLOT_FMT_INFO="${SCIROOPLOT_FMT_INFO}"
+    SCIROOPLOT_PYBIND11_INFO="${SCIROOPLOT_PYBIND11_INFO}"
 )
 
 # -----------------------

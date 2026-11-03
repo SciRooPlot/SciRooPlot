@@ -288,13 +288,6 @@ bool Config::Exists(const std::string& projectName) const
   return mProjects.find(projectName) != mProjects.end();
 }
 
-void Config::ListProjects() const
-{
-  for (const auto& [projectName, project] : mProjects) {
-    logger::print("{}  {}", (mCurrentProject == projectName) ? "*" : " ", projectName);
-  }
-}
-
 std::vector<std::string> Config::ProjectNames() const
 {
   std::vector<std::string> names;
@@ -302,18 +295,6 @@ std::vector<std::string> Config::ProjectNames() const
   for (const auto& [projectName, project] : mProjects)
     names.push_back(projectName);
   return names;
-}
-
-void Config::ShowSettings() const
-{
-  logger::print("Verbosity:       {}", LogLevelName(mLogLevel));
-  logger::print("Color:           {}", ColorModeName(mColorMode));
-  logger::print("Plot mode:       {}", mPlotMode);
-  logger::print("Match mode:      {}", mMatchContains ? "contains" : "exact");
-  logger::print("Match case:      {}", mMatchCaseInsensitive ? "insensitive" : "sensitive");
-  logger::print("Screen scale:    {}", mScreenScale);
-  logger::print("Bitmap scale:    {}", mBitmapScale);
-  logger::print("Current project: {}", mCurrentProject.empty() ? "<none>" : mCurrentProject);
 }
 
 bool Config::Rename(const std::string& projectName, const std::string& newProjectName)
@@ -430,19 +411,10 @@ void Config::Clean()
   }
 }
 
-void Config::Show(const string& projectNameIn) const
+std::map<string, string> Config::Properties(const string& projectName) const
 {
-  for (const auto& [projectName, project] : mProjects) {
-    if (!projectNameIn.empty() && (projectName != projectNameIn)) {
-      continue;
-    }
-    logger::print("{} {}", (projectName == mCurrentProject) ? "*" : " ", projectName);
-    for (const auto& [property, value] : project.mProperties) {
-      if (!value.empty()) {
-        logger::print("   - {}: {}", property, value);
-      }
-    }
-  }
+  auto it = mProjects.find(projectName);
+  return (it != mProjects.end()) ? it->second.mProperties : std::map<string, string>{};
 }
 
 bool Config::Remove(const string& projectName)
