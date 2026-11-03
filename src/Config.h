@@ -63,6 +63,7 @@ class Config
 
   bool Exists(const std::string& projectName) const;
   void ListProjects() const;
+  std::vector<std::string> ProjectNames() const;
   void ShowSettings() const;
 
   void Show(const std::string& projectName) const;

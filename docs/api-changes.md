@@ -204,6 +204,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `gif` wrote the animation into the folder of the group of the first frame, named after that frame (`animations/legoRotation/phi5.gif`) | Named after the deepest group common to all frames and written next to its folder (`animations/legoRotation.gif`; frames of `anim/a` and `anim/b`: `anim.gif`; frames without a common group: `animation.gif` in the output directory) | CLI | Update scripts that pick up the gif. |
 | – | `srp screenscale <factor>`, `srp bitmapscale <factor>`: size of plots on screen, resolution of png/jpg/gif files (default 1) | CLI | none |
 | – | `srp colorwheel [<file>]`: ROOT's colour wheel in a window, or saved to a file | CLI | none |
+| `srp stats` without a project: error | Shows the plots, data sources and inputs of every project, the current one marked | CLI | none |
 | – | `srp out [<project>]`: opens the output folder of the project (default: the current one) in the file manager | CLI | none |
 
 ## 3.2.4 → 3.3.3

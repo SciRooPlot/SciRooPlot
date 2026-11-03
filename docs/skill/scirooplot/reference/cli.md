@@ -5,7 +5,7 @@ Both commands are shell functions defined by `share/scirooplot/env.sh` (source i
 ## `srp` — projects and settings
 
 ```
-Project management:        srp projects | srp select <project> | srp show [<project>|@current] | srp stats (<project>|@current)
+Project management:        srp projects | srp select <project> | srp show [<project>|@current] | srp stats [<project>|@current] (without one: every project)
                            srp rename (<project>|@current) <name> | srp remove (<project>|@current)
 Project initialization:    srp init-cpp <project> [<dir>] | srp init-py <project> [<dir>]            (minimal skeleton, becomes the current project)
                            srp example-cpp <project> [<dir>] | srp example-py <project> [<dir>]      (commented examples with example data)

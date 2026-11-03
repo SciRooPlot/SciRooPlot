@@ -295,6 +295,15 @@ void Config::ListProjects() const
   }
 }
 
+std::vector<std::string> Config::ProjectNames() const
+{
+  std::vector<std::string> names;
+  names.reserve(mProjects.size());
+  for (const auto& [projectName, project] : mProjects)
+    names.push_back(projectName);
+  return names;
+}
+
 void Config::ShowSettings() const
 {
   logger::print("Verbosity:       {}", LogLevelName(mLogLevel));

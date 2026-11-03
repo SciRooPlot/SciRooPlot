@@ -152,7 +152,7 @@ int main(int argc, char* argv[])
     row("srp projects", "list the projects");
     row("srp select <project>", "select a project");
     row("srp show [<project>]", "properties of one or all projects");
-    row("srp stats <project>", "number of plots and inputs");
+    row("srp stats [<project>]", "plots and inputs of one or all projects");
     row("srp rename <project> <name>", "rename a project");
     row("srp remove <project>", "remove a project (its code is kept)");
     heading("New projects");
@@ -342,51 +342,55 @@ int main(int argc, char* argv[])
     row("commit", SCIROOPLOT_GIT_DESCRIBE);
     row("compiler", SCIROOPLOT_CXX_COMPILER);
   } else if (command == "stats") {
-    if (project.empty()) {
-      logger::error("Specify a project or use @current.");
-      return 1;
-    }
-    if (!Config::Get().Exists(project)) {
+    if (!project.empty() && !Config::Get().Exists(project)) {
       logger::error("Cannot find project {}.", project);
       return 1;
     }
-    const auto projectPath = Config::Get().ProjectPath(project);
-    // the tab-completion list has one line <name>,<group> per plot
-    size_t nPlots = 0;
-    std::set<string> groups;
-    std::ifstream plotList(projectPath / "tabcomp.csv");
-    for (string line; std::getline(plotList, line);) {
-      if (line.empty()) continue;
-      ++nPlots;
-      groups.insert(line.substr(line.rfind(',') + 1));
-    }
-    size_t nDataSources = 0;
-    size_t nInputs = 0;
-    if (std::filesystem::exists(Config::Get().DataSourcesFile(project))) {
-      ptree dataSources;
-      try {
-        boost::property_tree::read_info(Config::Get().DataSourcesFile(project), dataSources);
-      } catch (const boost::property_tree::ptree_error& e) {
-        logger::error("Cannot read {} ({}).", Config::Get().DataSourcesFile(project), e.what());
-        return 1;
-      }
-      nDataSources = dataSources.size();
-      for (const auto& [name, dataSource] : dataSources)
-        nInputs += dataSource.count("INPUT");
-    }
-    string lastSaved = "never";
-    if (FileStat_t fileStat; gSystem->GetPathInfo(Config::Get().PlotsFile(project).data(), fileStat) == 0) {
-      const std::time_t time = fileStat.fMtime;
-      std::tm localTime{};
-      char buffer[32];
-      if (localtime_r(&time, &localTime) && std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", &localTime)) lastSaved = buffer;
-    }
     auto count = [](size_t n, const string& what) { return fmt::format("{} {}{}", n, what, (n == 1) ? "" : "s"); };
     const auto row = rows(13);
-    heading(fmt::format("Project {}", project));
-    row("plots", fmt::format("{} in {}", nPlots, count(groups.size(), "group")));
-    row("data sources", fmt::format("{} with {}", nDataSources, count(nInputs, "input")));
-    row("last saved", lastSaved);
+    // without a project: every project, the current one marked
+    const vector<string> projects = project.empty() ? Config::Get().ProjectNames() : vector<string>{project};
+    bool readable = true;
+    for (const string& name : projects) {
+      const auto projectPath = Config::Get().ProjectPath(name);
+      // the tab-completion list has one line <name>,<group> per plot
+      size_t nPlots = 0;
+      std::set<string> groups;
+      std::ifstream plotList(projectPath / "tabcomp.csv");
+      for (string line; std::getline(plotList, line);) {
+        if (line.empty()) continue;
+        ++nPlots;
+        groups.insert(line.substr(line.rfind(',') + 1));
+      }
+      size_t nDataSources = 0;
+      size_t nInputs = 0;
+      if (std::filesystem::exists(Config::Get().DataSourcesFile(name))) {
+        ptree dataSources;
+        try {
+          boost::property_tree::read_info(Config::Get().DataSourcesFile(name), dataSources);
+        } catch (const boost::property_tree::ptree_error& e) {
+          logger::error("Cannot read {} ({}).", Config::Get().DataSourcesFile(name), e.what());
+          readable = false;
+          continue;
+        }
+        nDataSources = dataSources.size();
+        for (const auto& [sourceName, dataSource] : dataSources)
+          nInputs += dataSource.count("INPUT");
+      }
+      string lastSaved = "never";
+      if (FileStat_t fileStat; gSystem->GetPathInfo(Config::Get().PlotsFile(name).data(), fileStat) == 0) {
+        const std::time_t time = fileStat.fMtime;
+        std::tm localTime{};
+        char buffer[32];
+        if (localtime_r(&time, &localTime) && std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", &localTime)) lastSaved = buffer;
+      }
+      const bool markCurrent = project.empty() && name == Config::Get().CurrentProject();
+      heading(fmt::format("Project {}{}", name, markCurrent ? "  (current)" : ""));
+      row("plots", fmt::format("{} in {}", nPlots, count(groups.size(), "group")));
+      row("data sources", fmt::format("{} with {}", nDataSources, count(nInputs, "input")));
+      row("last saved", lastSaved);
+    }
+    if (!readable) return 1;
   } else if (command == "confdir") {
     std::cout << ((project.empty()) ? Config::Get().Path().string() : Config::Get().ProjectPath(project).string()) << std::endl;
     return 0;

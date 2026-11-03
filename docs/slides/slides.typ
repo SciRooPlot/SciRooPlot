@@ -617,7 +617,7 @@
           [#prompt `srp remove <project>`], [Unregister the project and delete its stored plot definitions (user code and output are kept).],
           [#prompt `srp clean`], [Remove all projects whose program folder no longer exists.],
           [#prompt `srp cd|edit|out [<project>]`], [Go to the folder of the project's program, open its source files, or open its output folder.],
-          [#prompt `srp stats <project>`], [Number of plots and inputs, and when the definitions were last saved.],
+          [#prompt `srp stats [<project>]`], [Number of plots and inputs, and when the definitions were last saved (all projects without one).],
         ),
       )
       #v(-0.4em)
