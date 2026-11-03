@@ -141,7 +141,7 @@ html, body { overflow-x: clip }
 .hero .wrap { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: 40px; align-items: center }
 .hero h1 { color: var(--hero-fg); margin-bottom: 14px }
 .hero .tag-line { font-size: 1.45rem; color: var(--hero-muted); line-height: 1.35 }
-@media (min-width: 761px) { .hero .tag-line span { display: block; white-space: nowrap } .hero .tag-line span:first-child { color: var(--hero-text, #fff); margin-bottom: 4px } }
+@media (min-width: 761px) { .hero .tag-line > span { display: block; white-space: nowrap } .hero .tag-line > span:first-child { color: var(--hero-text, #fff); margin-bottom: 4px } }
 .hero .logo-big { justify-self: center; width: min(440px, 100%); height: auto }
 .paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 30px }
 .path { text-align: left; font: inherit; color: var(--hero-fg); background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.16); border-top: 4px solid var(--amber); border-radius: 10px; padding: 14px 16px; cursor: pointer; display: grid; gap: 4px; align-content: start }
@@ -705,7 +705,7 @@ figure.plot figcaption { color: #5b6b80 }
       <div style="display:grid;gap:14px;min-width:0">
         <div class="cmp-card srp"><header><b>SciRooPlot</b><span id="srpcount"></span></header><pre id="srpcode"></pre>
           <div class="term-line" id="cmpcmd" style="margin:0 16px 14px;font-size:0.78rem"></div></div>
-        <div class="cmp-plots">
+        <div class="cmp-plots" id="cmpplots">
           <figure class="plot"><img id="cmproot" alt="Figure made by the ROOT macro" width="788" height="1024"><figcaption>plain ROOT</figcaption></figure>
           <figure class="plot"><img id="cmpsrp" alt="The same figure made by SciRooPlot" width="788" height="1024"><figcaption>SciRooPlot</figcaption></figure>
         </div>
@@ -730,7 +730,7 @@ figure.plot figcaption { color: #5b6b80 }
         <tr><td>size a <code>TCanvas</code>, divide <code>TPad</code>s, tune margins and text sizes per pad</td><td>pick a base plot: <code>"1d"</code>, <code>"1d_ratio"</code>, <code>"1d_2x2"</code>, <code>"2d"</code>… Text sizes, ticks and line widths are equal in every panel.</td></tr>
         <tr><td>call <code>Draw("E1 SAME")</code> in the right order, different strings for TH1 and TGraph</td><td>add data in drawing order with one alias for both types: <code>SetDrawOption(points_endcaps)</code>. Raw strings still work: <code>SetDrawOption("E1")</code>.</td></tr>
         <tr><td>place a <code>TLegend</code> by trial and error, <code>AddEntry(h, "", "lp")</code></td><td><code>AddLegend()</code> finds a free corner; symbols follow what is drawn. Double-click a box or shape in <code>show</code> mode to print its name and coordinates.</td></tr>
-        <tr><td><code>tree-&gt;Draw("pt&gt;&gt;h(100,0,10)", "abs(eta)&lt;0.8")</code></td><td><code>AddData("tracks", "src").Project1D({"pt", 100, {0.0, 10.0}}).Filter("abs(eta) &lt; 0.8")</code>, run with RDataFrame; CSV tables work the same way.</td></tr>
+        <tr><td><code>tree-&gt;Draw("pt&gt;&gt;h(100,0,10)", "abs(eta)&lt;0.8")</code></td><td><code data-py='AddData("tracks", "src").Project1D(("pt", 100, [0.0, 10.0])).Filter("abs(eta) &lt; 0.8")' data-cpp='AddData("tracks", "src").Project1D({"pt", 100, {0.0, 10.0}}).Filter("abs(eta) &lt; 0.8")'>AddData("tracks", "src").Project1D(("pt", 100, [0.0, 10.0])).Filter("abs(eta) &lt; 0.8")</code>, run with RDataFrame; CSV tables work the same way.</td></tr>
         <tr><td>one macro per figure, <code>SaveAs</code> for every format, re-run after each change</td><td><code>plot paper .+ pdf</code> makes them all; changed sources are rebuilt and re-run automatically.</td></tr>
       </tbody>
     </table></div>
@@ -827,7 +827,7 @@ figure.plot figcaption { color: #5b6b80 }
         <tr><td style="width:30%"><code>kRed + 1</code>, <code>kAzure + 2</code></td><td>ROOT's named colours and their shades; <code>"#d62728"</code> and <code>(0.84, 0.15, 0.16)</code> work everywhere too. <a href="#styles">See them all</a>.</td></tr>
         <tr><td><code>kFullCircle</code>, <code>kDashed</code></td><td>marker shapes and line styles, like matplotlib's <code>marker="o"</code> and <code>ls="--"</code>. <a href="#styles">Styles</a></td></tr>
         <tr><td><code>"#it{p}_{T}"</code></td><td>text formatting: ROOT writes <code>#</code> where LaTeX writes a backslash (<code>#sqrt{s}</code>, <code>#alpha</code>), and <code>_{}</code>, <code>^{}</code> as in LaTeX, without dollar signs.</td></tr>
-        <tr><td><code>hist</code>, <code>points</code>, <code>colz</code></td><td>draw options: steps like <code>plt.step</code>, markers with error bars like <code>plt.errorbar</code>, a colour map with its scale. Without one, SciRooPlot chooses one from the data type. <a href="#options">All of them, drawn</a></td></tr>
+        <tr><td><code>hist</code>, <code>points</code>, <code>colz</code></td><td>drawing options: steps like <code>plt.step</code>, markers with error bars like <code>plt.errorbar</code>, a colour map with its scale. Without one, SciRooPlot chooses one from the data type. <a href="#options">All of them, drawn</a></td></tr>
         <tr><td>tree, table</td><td>ROOT's name for a table with one row per entry; CSV files and <code>table()</code> are read the same way.</td></tr>
         <tr><td>pad, base plot</td><td>a pad is one panel with its axes (matplotlib's <code>Axes</code>); the base plot is the figure layout with its pads, sizes and fonts.</td></tr>
       </tbody>
@@ -857,7 +857,7 @@ figure.plot figcaption { color: #5b6b80 }
         <p class="small muted">Three sets of 6, 8 and 10 colours chosen by M. Petroff (<a href="https://arxiv.org/abs/2107.02270">arXiv:2107.02270</a>) to stay apart for colour-blind viewers and in grey print. They are ordinary ROOT colours (<code>kP10Blue</code> is colour 117) and work wherever <code>kRed</code> does. Unlike on the wheel, + 1 is not a shade but the next colour of the set: <code>kP10Blue + i</code> with i from 0 to 9 walks through the 10-colour set.</p>
         <h3 class="sub">Numbered colours</h3>
         <div class="csets cnums" id="cnums"></div>
-        <p class="small muted">ROOT's first 51 colours have only a number (e.g. 28, a brown, or 12 to 19, greys); write the number where a colour is asked for. Any other colour works as <code>"#rrggbb"</code> or as red, green and blue from 0 to 1, <code>(0.12, 0.47, 0.71)</code>: pick it with the colour field (most browsers offer a pipette there) or type it into <i>Look up</i>. <code>srp colorwheel</code> shows the wheel as ROOT draws it, naming the colour under the mouse; <code>AddColorOverview</code> with a list of colours draws your own as a plot.</p>
+        <p class="small muted">Apart from 0 to 7 (<code>kWhite</code> … <code>kCyan</code>), ROOT's first 51 colours have only a number (e.g. 28, a brown, or 12 to 19, greys); write the number where a colour is asked for. Any other colour works as <code>"#rrggbb"</code> or as red, green and blue from 0 to 1, <code>(0.12, 0.47, 0.71)</code>: pick it with the colour field (most browsers offer a pipette there) or type it into <i>Look up</i>. <code>srp colorwheel</code> shows the wheel as ROOT draws it, naming the colour under the mouse; <code>AddColorOverview</code> with a list of colours draws your own as a plot.</p>
       </fieldset>
       <fieldset>
         <legend>Line style</legend>
@@ -941,7 +941,8 @@ figure.plot figcaption { color: #5b6b80 }
     <section><h4>Commands</h4><table>
       <tr><td><code>plot &lt;group&gt; &lt;name&gt; [mode]</code></td><td>regular expressions on whole names; <code>.+</code> = all</td></tr>
       <tr><td><code>show</code> <code>spread</code></td><td>window to browse / one window each</td></tr>
-      <tr><td><code>pdf png svg eps gif macro file</code></td><td>files in the output folder</td></tr>
+      <tr><td><code>pdf png svg eps macro file</code></td><td>files in the output folder</td></tr>
+      <tr><td><code>gif</code> <code>gif+8++</code></td><td>all plots as one animation (looped)</td></tr>
       <tr><td><code>list</code> <code>print</code></td><td>names / definitions</td></tr>
       <tr><td><kbd>s</kbd> <kbd>a</kbd> <kbd>d</kbd> <kbd>q</kbd> <kbd>x</kbd></td><td>next, previous, detach, close, close all</td></tr>
       <tr><td><code>srp projects</code> <code>select</code> <code>show</code></td><td>list, switch, show a project</td></tr>
@@ -1053,7 +1054,7 @@ figure.plot figcaption { color: #5b6b80 }
   <div class="opts">
     <div class="opt"><span class="badge">A</span><div><h3>Homebrew</h3><p><span>The prebuilt package</span> <span>from the SciRooPlot tap.</span></p></div><div class="code"><pre data-shell="brew"></pre></div></div>
     <div class="opt"><span class="badge">B</span><div><h3>Conda</h3><p><span>The conda-forge package,</span> <span>into the active environment.</span></p></div><div class="code"><pre data-shell="conda"></pre></div></div>
-    <div class="opt"><span class="badge">C</span><div><h3>From source</h3><p><span>Needs <button class="term" data-term="ROOT">ROOT</button> (6.36.04 or newer)</span> <span>and Boost installed already.</span></p></div><div class="code"><pre data-shell="src"></pre></div></div>
+    <div class="opt"><span class="badge">C</span><div><h3>From source</h3><p><span>Needs <button class="term" data-term="ROOT">ROOT</button> (6.36.04 or newer), Boost,</span> <span>CMake 3.27 or newer and a C++17 compiler.</span></p></div><div class="code"><pre data-shell="src"></pre></div></div>
   </div>
   <div class="two">
     <p class="key"><b>In every shell</b>The last line of each way, <code>source …/env.sh</code>, adds <code>srp</code>, <code>plot</code> and tab completion to the shell. Put it into <code>~/.bashrc</code> or <code>~/.zshrc</code> with an absolute path to have them in every new shell.</p>
@@ -1145,7 +1146,7 @@ const T = {
   errors: ["Error bars", "The statistical uncertainty of each bin or point. For a histogram of counts N, ROOT uses √N unless other errors are stored."],
   ratio: ["Ratio panel", "A second pad below the main one that shows data divided by a reference, e.g. data / simulation, so small differences become visible."],
   regex: ["Regular expression", "A pattern for names: . is any character, + means one or more, so .+ matches every name; (a|b) matches a or b."],
-  drawopt: ["Drawing option", "How ROOT renders data: points with errors, steps, a band, a colour map. See the Drawing options page."],
+  drawopt: ["Drawing option", "How ROOT renders data: points with errors, steps, a band, a colour map. See the Draw options page."],
   kSolid: ["kSolid = 1", "Line style: a continuous line."], kDashed: ["kDashed = 2", "Line style: dashes."], kDotted: ["kDotted = 3", "Line style: a dotted line."], kDashDotted: ["kDashDotted = 4", "Line style: dashes and dots."],
   kOpenCircle: ["kOpenCircle = 24", "Marker style: an open circle."], kFullSquare: ["kFullSquare = 21", "Marker style: a filled square."],
 };
@@ -1187,7 +1188,7 @@ function explainK(word) {
 const pop = document.getElementById("pop"); let popFor = null;
 function showPop(el, key) {
   const e = explainK(key); if (!e) return;
-  pop.innerHTML = `<h4>${e[0]}</h4><div>${e[1]}</div>` + (e[2] ? `<a href="#styles" data-lab="${key}">Try it in Colours &amp; styles</a>` : "");
+  pop.innerHTML = `<h4>${e[0]}</h4><div>${e[1]}</div>` + (e[2] ? `<a href="#styles" data-lab="${key}">Try it in Styles</a>` : "");
   placePop(el) }
 /* the pop lives in the top layer (popover) so it lies above the open example dialog; inside the dialog, as everything outside a modal dialog is inert */
 function placePop(el) {
@@ -1358,8 +1359,8 @@ pm.AddPlot(plot);` },
   { title: "Compare with simulation", img: "img/tour/style.png", alt: "Data points with a dotted magenta simulation line",
     text: `<p>Add the simulated spectrum from a second source and give both a look. Colours, line and marker styles are ROOT constants: hover or tap them in the code.</p>
 <p>Here both sources are folders of the same file. A source can just as well be another file, every file of a directory or a wildcard like <code>run_*.root</code>: the plot code stays the same (<a href="#ref-sources">data sources</a>).</p>
-<div class="basics"><b>Reading the style setters</b><code>SetLine(kDotted, 3.0, kMagenta + 2)</code> means line style, line width, colour. <code>kMagenta + 2</code> is a darker magenta, <code>kDotted</code> a dotted line. <code>SetMarker(kFullCircle, 1.0, kBlack)</code> is marker shape, size, colour. Try other values in <a href="#styles">Colours &amp; styles</a>.</div>
-<p><code>SetDrawOption(hist_open)</code> draws the simulation as steps instead of points, without vertical lines at its outer edges (<code>hist</code> closes them down to the axis). The <a href="#options">drawing options</a> page shows all of them.</p>`,
+<div class="basics"><b>Reading the style setters</b><code>SetLine(kDotted, 3.0, kMagenta + 2)</code> means line style, line width, colour. <code>kMagenta + 2</code> is a darker magenta, <code>kDotted</code> a dotted line. <code>SetMarker(kFullCircle, 1.0, kBlack)</code> is marker shape, size, colour. Try other values in <a href="#styles">Styles</a>.</div>
+<p><code>SetDrawOption(hist_open)</code> draws the simulation as steps instead of points, without vertical lines at its outer edges (<code>hist</code> closes them down to the axis). The <a href="#options">Draw options</a> page shows all of them.</p>`,
     py: `pm.AddDataSource("data", "\${SCIROOPLOT_DATA_DIR}/ExampleData/spectra.root:data")
 + pm.AddDataSource("mc", "\${SCIROOPLOT_DATA_DIR}/ExampleData/spectra.root:mc")
 
@@ -1614,7 +1615,7 @@ const EX_TAGS = [
   ["tree", "tree", /Project1D|Project2D|Profile1D|Profile2D|\.Project\(|Filter\(|Define\(/, "trees"],
   ["table", "table (CSV)", /Scatter\(/, "trees"], ["modifiers", "modifiers", /Normalize|Rebin|\.Scale\(|ScaleX|Cumulative|DivideBinWidth|Smooth/, "modifiers"],
   ["projection", "projection", /ProjectX|ProjectY|ProfileX/, "modifiers"], ["uncertainty", "uncertainties", /\bboxes\b|\bband\b|brackets|SetCorrelated/, "appearance"],
-  ["function", "functions, lines and shapes", /AddFunction|AddLine|AddArrow|AddVerticalLine|AddHorizontalLine|AddRegion|AddEllipse|SetRefFunc/, "adding"], ["numbers", "numbers in labels", /"[^"]*<(mean|entries|integral|name|title|rms|max|min)[^"]*"/, "labels"],
+  ["function", "functions, lines and shapes", /AddFunction|AddLine|AddArrow|AddVerticalLine|AddHorizontalLine|AddRegion|AddEllipse|SetRefFunc/, "adding"], ["numbers", "numbers in labels", /"[^"]*<(mean|entries|integral|name|title|stddev|maximum|minimum|source|projection|selection)[^"]*"/, "labels"],
   ["log", "log scale", /SetLog\(/, "plots"], ["text", "texts", /AddText\(/, "legends"], ["loop", "plot families", /\bfor\b/, "templates"]];
 const exTags = k => EX_TAGS.filter(([, , re]) => re.test(EXAMPLES[k].py)).map(x => x[0]);
 let exTagSel = new Set();
@@ -1666,7 +1667,7 @@ const REF = [
   <div><span class="st">3</span><b>Switch</b><code>srp select talk</code><p>now <code>plot</code> works on <code>talk</code>; tab completion offers its plots. <code>srp projects</code> lists all projects.</p></div>
 </div>
 <div class="tablewrap"><table class="cmd"><thead><tr><th>Task</th><th>Command</th></tr></thead><tbody>
-<tr><td>See which project is selected and what it uses</td><td><code>srp show</code>: program, output folder, variables; <code>srp stats @current</code>: number of plots and inputs</td></tr>
+<tr><td>See which project is selected and what it uses</td><td><code>srp show @current</code>: program, output folder, variables (<code>srp show</code>: all projects); <code>srp stats @current</code>: number of plots and inputs</td></tr>
 <tr><td>Change where its plots go</td><td><code>srp set @current outdir ~/thesis/figures</code> (<code>@current</code> is the selected project)</td></tr>
 <tr><td>Store a path for the code</td><td><code>srp set @current inputDir /data/2024</code>, read with <code>pm.GetProjectProperty("inputDir")</code></td></tr>
 <tr><td>Go to its folder, open its program or its output folder</td><td><code>srp cd</code>, <code>srp edit</code>, <code>srp out</code></td></tr>
@@ -1689,7 +1690,8 @@ const REF = [
 <div class="tablewrap"><table class="cmd"><thead><tr><th>Mode</th><th>Result</th></tr></thead><tbody>
 <tr><td><code>show</code> (default)</td><td>One window to browse all matching plots: <kbd>s</kbd> next, <kbd>a</kbd> previous, <kbd>d</kbd> keeps the current plot in a window of its own, <kbd>q</kbd> closes a window, <kbd>x</kbd> all. The keys also work in the terminal. Double-click a legend, text, image or shape to print its name and coordinates.</td></tr>
 <tr><td><code>spread</code></td><td>All matching plots at once, one window each</td></tr>
-<tr><td><code>pdf</code> <code>png</code> <code>svg</code> <code>eps</code> <code>ps</code> <code>jpg</code> <code>gif</code></td><td>Files in the project's output folder, one subfolder per group</td></tr>
+<tr><td><code>pdf</code> <code>png</code> <code>svg</code> <code>eps</code> <code>ps</code> <code>jpg</code></td><td>Files in the project's output folder, one subfolder per group</td></tr>
+<tr><td><code>gif</code>, <code>gif+8++</code></td><td>All matching plots as one animation (see above)</td></tr>
 <tr><td><code>macro</code></td><td>A ROOT macro per plot that redraws it without SciRooPlot</td></tr>
 <tr><td><code>file</code> / <code>data</code></td><td>The canvases / the input objects of the plots in a ROOT file</td></tr>
 <tr><td><code>html</code> <code>json</code> <code>xml</code> <code>root</code></td><td>The canvas in ROOT's other formats</td></tr>
@@ -1699,7 +1701,7 @@ const REF = [
 <div class="tablewrap"><table class="cmd"><thead><tr><th>Task</th><th>Command</th></tr></thead><tbody>
 <tr><td>Start a project</td><td><code>srp init-py &lt;project&gt;</code> or <code>srp init-cpp &lt;project&gt;</code> (minimal), <code>srp example-py &lt;project&gt;</code> (the commented example plots with their data)</td></tr>
 <tr><td>Use a program you already have</td><td><code>srp add &lt;project&gt; &lt;program&gt; [&lt;outdir&gt;]</code></td></tr>
-<tr><td>See and switch projects</td><td><code>srp projects</code>, <code>srp select &lt;project&gt;</code>, <code>srp show</code> (program, output folder, variables)</td></tr>
+<tr><td>See and switch projects</td><td><code>srp projects</code>, <code>srp select &lt;project&gt;</code>, <code>srp show</code> (program, output folder and variables of every project)</td></tr>
 <tr><td>Set where files go</td><td><code>srp set &lt;project&gt; outdir &lt;dir&gt;</code></td></tr>
 <tr><td>Store a path for your code</td><td><code>srp set &lt;project&gt; inputDir &lt;dir&gt;</code>, read with <code>pm.GetProjectProperty("inputDir")</code></td></tr>
 <tr><td>Open the project</td><td><code>srp cd</code> (its folder), <code>srp edit</code> (its program), <code>srp out</code> (its output folder, in the file manager)</td></tr>
@@ -1716,19 +1718,19 @@ const REF = [
 </tbody></table></div>
 <p><code>srp settings</code> lists the current settings. Each one is stored in your configuration folder and kept until you change it:</p>
 <div class="tablewrap"><table class="cmd"><thead><tr><th>Setting</th><th>What it changes</th><th>Values, default first</th></tr></thead><tbody>
-<tr><td><code>srp plotmode pdf</code></td><td>what <code>plot</code> does when you give no mode: open a window or write files</td><td><code>show</code> <code>spread</code> <code>pdf</code> <code>png</code> <code>svg</code> <code>eps</code> <code>gif</code> <code>jpg</code></td></tr>
+<tr><td><code>srp plotmode pdf</code></td><td>what <code>plot</code> does when you give no mode: open a window or write files</td><td><code>show</code>, or any other mode of <code>plot</code>: <code>spread</code> <code>pdf</code> <code>png</code> <code>gif+8++</code> <code>macro</code> …</td></tr>
 <tr><td><code>srp matchmode contains</code></td><td>whether a group or name pattern must match the whole name (<code>plot spec pt</code> finds nothing) or only part of it (finds <code>spectra/ptSpectrum</code>)</td><td><code>exact</code> <code>contains</code></td></tr>
 <tr><td><code>srp matchcase insensitive</code></td><td>whether <code>ptspectrum</code> also finds <code>ptSpectrum</code></td><td><code>sensitive</code> <code>insensitive</code></td></tr>
 <tr><td><code>srp screenscale 0.7</code></td><td>the size of plot windows on your screen (files are not affected): smaller for a laptop, larger for a big monitor</td><td>a factor, <code>1</code></td></tr>
 <tr><td><code>srp bitmapscale 2</code></td><td>the resolution of PNG, JPG and GIF files: <code>2</code> gives twice the pixels in each direction, sharper on slides; PDF and SVG are vector graphics and unaffected</td><td>a factor, <code>1</code></td></tr>
-<tr><td><code>srp verbosity warning</code></td><td>how many messages <code>plot</code> prints: <code>warning</code> shows only problems, <code>debug</code> everything including the files opened</td><td><code>debug</code> <code>log</code> <code>info</code> <code>warning</code> <code>error</code> <code>silent</code></td></tr>
+<tr><td><code>srp verbosity warning</code></td><td>how many messages <code>plot</code> prints: <code>warning</code> shows only problems, <code>info</code> also what was read and how long it took, <code>log</code> also every plot made; <code>debug</code> adds the <code>logger.debug</code> messages of your own program</td><td><code>debug</code> <code>log</code> <code>info</code> <code>warning</code> <code>error</code> <code>silent</code></td></tr>
 <tr><td><code>srp color dark</code></td><td>the colours of the <b>messages in your terminal</b>, not of the plots: <code>bright</code> suits a dark terminal, <code>dark</code> a light one, <code>off</code> plain text</td><td><code>bright</code> <code>dark</code> <code>off</code></td></tr>
 </tbody></table></div>
 <p class="small muted">The colours of the data come from your code: set them per data (<a href="#styles">Styles</a>), once per kind of data (<a href="#ref-templates">templates</a>), or as the colour sequence of a plot or pad (<code>SetDefaultColors</code>; without it SciRooPlot's own). <code>srp clean</code> forgets projects whose program folder no longer exists; <code>srp reset</code> forgets all projects (your programs and plots stay where they are).</p>` },
   { id: "project", g: "basics", t: "Projects across machines and files", body: `<p>Keep machine-specific paths out of the code: store them as project variables or use environment variables in the input paths, so data source names stay the same everywhere.</p>
 <div class="code"><pre data-plain-code="sh">srp set myProject inputDir /data/2024     # then in the code: pm.GetProjectProperty("inputDir")</pre></div>
 <div class="code"><pre data-snip="project"></pre></div>
-<p>When <code>DefinePlots</code> grows, split it into files, one function per group of plots that takes the <code>PlotManager</code>; the main file calls them. <code>plot</code> re-runs the program when any of its files changed.</p>` },
+<p>When <code>DefinePlots</code> grows, split it into files, one function per group of plots that takes the <code>PlotManager</code>; the main file calls them. <code>plot</code> re-runs the program when it changed; a Python program also when a <code>.py</code> file next to it or one folder below changed.</p>` },
   { id: "agents", g: "basics", t: "With an AI coding agent", body: `<p>SciRooPlot ships an agent skill: the workflow, the API and the common pitfalls in condensed form, with the method reference generated from the headers, so an agent writes plot definitions that match the current version.</p>
 <div class="tablewrap"><table><tbody>
 <tr><td><a href="https://scirooplot.github.io/SciRooPlot/skill/scirooplot.skill">scirooplot.skill</a></td><td>the skill as one file: import it into your agent as a skill</td></tr>
@@ -1858,7 +1860,7 @@ plot.ShareAxis('Z', {4, 5});</pre></div>` },
   { id: "problems", g: "help", t: "Common problems", body: `<div class="tablewrap"><table><thead><tr><th style="width:36%">You see</th><th>Usually because</th></tr></thead><tbody>
 <tr><td>"Found no plots matching"</td><td>another project is selected (<code>srp projects</code>, <code>srp select</code>), the program did not call <code>pm.SaveProject()</code>, or the pattern does not match whole names (<code>srp matchmode contains</code> relaxes this)</td></tr>
 <tr><td>Changes in the code have no effect</td><td><code>plot</code> runs the program registered for the project (<code>srp show</code>), not the file in the current directory</td></tr>
-<tr><td>Data not found</td><td>wrong data source name, or the name or path does not exist in any input; <code>srp print &lt;file&gt;</code> lists what is in a file (<code>srp open &lt;file&gt;</code> opens it in ROOT's browser), <code>plot … print</code> shows the definition, <code>srp verbosity debug</code> the files opened</td></tr>
+<tr><td>Data not found</td><td>wrong data source name, or the name or path does not exist in any input; <code>srp print &lt;file&gt;</code> lists what is in a file (<code>srp open &lt;file&gt;</code> opens it in ROOT's browser), <code>plot … print</code> shows the definition</td></tr>
 <tr><td>Range of the input histogram ignored</td><td>ranges stored with inputs are ignored: set them in the definition, or mark the data <code>SetDefinesFrame()</code></td></tr>
 <tr><td><code>Normalize</code> on a ratio does something odd</td><td>it acts on the result; use <code>.Both().Normalize()</code></td></tr>
 <tr><td>A line is thinner or thicker than set</td><td>line widths are whole pixels; a fractional width is rounded, with a warning (<code>3.4</code> becomes 3, <code>3.5</code> becomes 4)</td></tr>
@@ -2419,7 +2421,7 @@ for i, (low, high) in enumerate([(1.0, 1.5), (1.5, 2.0), (2.0, 3.0), (3.0, 4.0),
     pad.AddPoints([190.0, 240.0], [0.05, 0.05], "norm. region").SetDrawOption(line).SetLine(kSolid, 5.0, kRed + 1)
     pad.AddText(0.6, 0.9, f"{low:g} < #it{{p}}_{{T}} < {high:g} GeV/#it{{c}}")
 plot[1].AddLegend(0.6, 0.8)
-plot[0]['X'].SetRange(60.0, 240.0).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})")
+plot[0]['X'].SetRange(60.0, 240.0).SetNumDivisions(505).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})")
 plot[0]['Y'].SetTitle("pairs (norm. region = 1)").SetMinRange(0.0)
 pm.AddPlot(plot)
 pm.SaveProject()`,
@@ -2442,7 +2444,7 @@ for (size_t i = 0; i < ptBins.size(); ++i) {
   pad.AddText(0.6, 0.9, Form("%g < #it{p}_{T} < %g GeV/#it{c}", low, high));
 }
 plot[1].AddLegend(0.6, 0.8);
-plot[0]['X'].SetRange(60.0, 240.0).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})");
+plot[0]['X'].SetRange(60.0, 240.0).SetNumDivisions(505).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})");
 plot[0]['Y'].SetTitle("pairs (norm. region = 1)").SetMinRange(0.0);
 pm.AddPlot(plot);
 pm.SaveProject();` },
@@ -2500,7 +2502,7 @@ plot[1]['X'].SetLog().SetTitle("#it{p}_{T} (GeV/#it{c})");
 plot[1]['Y'].SetLog().SetTitle("tracks");
 pm.AddPlot(plot);
 pm.SaveProject();` },
-  { id: "etaPhiDataVsSim", tab: "Two colour maps", title: "Two colour maps side by side, data and simulation, each with its colour scale",
+  { id: "etaPhiDataVsSim", tab: "Two colour maps", title: "Two colour maps side by side, data and simulation, on one colour scale",
     blurb: "Two TH2 from lists in two files, drawn next to each other with the same frame size, sharing one colour scale. In ROOT the pads, margins and palette are set by hand; in SciRooPlot the base plot 2d_2x1 has them.",
     cmd: "plot detector/tracking etaPhiDataVsSim pdf",
     py: `pm = PlotManager("myProject")
@@ -2514,6 +2516,7 @@ plot[1].AddText(0.15, 0.9, "data")
 plot[2].AddData("hEtaPhi", "TrackQA_MC")
 plot[2].AddText(0.15, 0.9, "simulation")
 plot[0].SetPalette(kViridis)
+plot[0]['X'].SetNumDivisions(505)
 pm.AddPlot(plot)
 pm.SaveProject()`,
     cpp: `PlotManager pm("myProject");
@@ -2527,6 +2530,7 @@ plot[1].AddText(0.15, 0.9, "data");
 plot[2].AddData("hEtaPhi", "TrackQA_MC");
 plot[2].AddText(0.15, 0.9, "simulation");
 plot[0].SetPalette(kViridis);
+plot[0]['X'].SetNumDivisions(505);
 pm.AddPlot(plot);
 pm.SaveProject();` },
   { id: "nuclearModification", tab: "Three panels, CSV", title: "R_AA in three touching panels, with published values from a CSV table",
@@ -2595,8 +2599,8 @@ for tag, label in [("R02", "#it{R} = 0.2"), ("R04", "#it{R} = 0.4"), ("R06", "#i
     plot[1].AddData("hJetPt_" + tag, "jets", label).ApplyLayout(jetStyle).RebinX(2)
 plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kDashed, 2.0, kGray + 2)
 plot[1].AddLegend(0.212, 0.454, "anti-#it{k}_{T} jets, |#eta| < 0.5")
-plot[1]['X'].SetLog()
-plot[1]['Y'].SetLog()
+plot[1]['X'].SetLog().SetTitle("#it{p}_{T}^{jet} (GeV/#it{c})")
+plot[1]['Y'].SetLog().SetTitle("d#it{N}/d#it{p}_{T} (GeV/#it{c})^{-1}")
 pm.AddPlot(plot)
 pm.SaveProject()`,
     cpp: `PlotManager pm("myProject");
@@ -2610,8 +2614,8 @@ for (const auto& [tag, label] : std::vector<std::pair<std::string, std::string>>
 }
 plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kDashed, 2.0, kGray + 2);
 plot[1].AddLegend(0.212, 0.454, "anti-#it{k}_{T} jets, |#eta| < 0.5");
-plot[1]['X'].SetLog();
-plot[1]['Y'].SetLog();
+plot[1]['X'].SetLog().SetTitle("#it{p}_{T}^{jet} (GeV/#it{c})");
+plot[1]['Y'].SetLog().SetTitle("d#it{N}/d#it{p}_{T} (GeV/#it{c})^{-1}");
 pm.AddPlot(plot);
 pm.SaveProject();` }
 ];
@@ -2655,7 +2659,8 @@ function cmpRender(focus) {
   document.getElementById("srpcode").innerHTML = paint(srpLines, sc, lang);
   document.getElementById("cmpcmd").innerHTML = `<span class="p">$ </span>${C.cmd}`;
   document.getElementById("cmproot").src = `img/compare/${C.id}_root.png`;
-  document.getElementById("cmpsrp").src = srpImage(C);
+  const srpImg = document.getElementById("cmpsrp"); srpImg.onload = () => document.getElementById("cmpplots").classList.toggle("wide", srpImg.naturalWidth > 1.3 * srpImg.naturalHeight);
+  srpImg.src = srpImage(C);
   document.getElementById("cmpfile").textContent = `docs/slides/root-examples/${C.id}.C`;
   const nRoot = rootLines.filter(isCode).length, nSrp = srpLines.filter(isCode).length;
   document.getElementById("rootcount").textContent = `${nRoot} lines`;
@@ -3097,11 +3102,11 @@ function renderLayout() {
   const refPick = (pre, at, ref, what) => { const other = !["", "1", "0"].includes(ref);
     return `<select data-${pre}refsel="${at}" aria-label="reference line of ${what}">${[["", "none"], ["1", "at 1 (ratio)"], ["0", "at 0 (pull)"], ["other", "other…"]].map(([v, t]) =>
       `<option value="${v}" ${(other ? "other" : ref) === v ? "selected" : ""}>${t}</option>`).join("")}</select>${other ? ` <input type="text" class="lb-reff" data-${pre === "a" ? "aref" : "rowref"}="${at}" value="${ref.replace(/"/g, "&quot;")}" spellcheck="false" aria-label="function of the reference line of ${what}">` : ""}` };
-  const colsUI = `<div class="lb-twrap"><table class="lb-table"><tr><th>column</th><th>kind</th><th>width</th><th class="c" title="room for a colour scale on its right">colour scale</th><th class="c">own x title</th><th class="c">gap after</th><th title="pixels to the touching column after it; empty: the space of all touching panels">space after</th></tr>${G.cols.map((c, i) =>
+  const colsUI = `<div class="lb-twrap"><table class="lb-table"><tr><th>column</th><th>kind</th><th>width</th><th class="c" title="room for a colour scale on its right">colour scale</th><th class="c" title="this column keeps its own x title instead of one common title">own x title</th><th class="c" title="a gap after it: the panels on both sides get their own axes and labels">gap after</th><th title="pixels to the touching column after it; empty: the space of all touching panels">space after</th></tr>${G.cols.map((c, i) =>
     `<tr class="${c.kind ? "att" : ""}"><td>${i + 1}</td><td>${kindSel(`data-colkind="${i}"`, c.kind, [["", "normal"], ["short", "attached"]], `kind of column ${i + 1}`)}</td><td>${num(`data-colw="${i}"`, c.w, c.kind ? 0.01 : 0.05, 0.05, `width of column ${i + 1}`)}</td>
       <td class="c">${box(`data-colz="${i}"`, c.z, `colour scale right of column ${i + 1}`)}</td><td class="c">${box(`data-colown="${i}"`, c.own, `own x title in column ${i + 1}`)}</td><td class="c">${i < G.cols.length - 1 ? box(`data-colgap="${i}"`, c.gapAfter, `gap after column ${i + 1}`) : none}</td>
       <td>${i < G.cols.length - 1 && g.touchingCols && g.touchingCols[i] ? spaceIn(`data-colspace="${i}"`, c.spaceAfter, `space after column ${i + 1}`) : none}</td></tr>`).join("")}</table></div>`;
-  const rowsUI = `<div class="lb-twrap"><table class="lb-table"><tr><th>row</th><th>kind</th><th>height</th><th>line</th><th class="c" title="few y divisions and a centred y title">few div.</th><th class="c">own y title</th><th class="c">gap after</th><th title="pixels to the touching row after it; empty: the space of all touching panels">space after</th></tr>${G.rows.map((r, i) =>
+  const rowsUI = `<div class="lb-twrap"><table class="lb-table"><tr><th>row</th><th>kind</th><th>height</th><th>line</th><th class="c" title="few y divisions and a centred y title">few div.</th><th class="c" title="this row keeps its own y title instead of one common title">own y title</th><th class="c" title="a gap after it: the panels on both sides get their own axes and labels">gap after</th><th title="pixels to the touching row after it; empty: the space of all touching panels">space after</th></tr>${G.rows.map((r, i) =>
     `<tr class="${r.kind ? "att" : ""}"><td>${i + 1}</td><td>${kindSel(`data-rowkind="${i}"`, r.kind, [["", "normal"], ["short", "attached"]], `kind of row ${i + 1}`)}</td><td>${num(`data-rowh="${i}"`, r.h, r.kind ? 0.01 : 0.05, 0.05, `height of row ${i + 1}`)}</td>
       <td>${refPick("row", i, r.ref || "", `row ${i + 1}`)}</td>
       <td class="c">${box(`data-rowcompact="${i}"`, r.compact, `few divisions in row ${i + 1}`)}</td><td class="c">${box(`data-rowown="${i}"`, r.own, `own y title in row ${i + 1}`)}</td><td class="c">${i < G.rows.length - 1 ? box(`data-rowgap="${i}"`, r.gapAfter, `gap after row ${i + 1}`) : none}</td>
@@ -3126,7 +3131,7 @@ function renderLayout() {
         <div class="row"><span class="lb-l">Shape</span>${opt("shape", "", "square")}${opt("shape", "wide", "wide")}${opt("shape", "tall", "tall")}${LAY.shape && !LAY.custom ? `<label class="lb-chk">aspect ${num('data-shape="aspect"', LAY.aspect, 0.05, 0.1, "aspect ratio of wide and tall panels")}</label>` : ""}</div>
       </div>
       <div class="lb-group"><div class="lb-gh">2 · Attached panels <span class="small">touching the panel (a shared axis), or apart (a gap, own labels)</span></div>
-        ${attUI.length ? `<div class="lb-twrap"><table class="lb-table"><tr><th>panel</th><th>size</th><th>line</th><th class="c" title="few y divisions and a centred y title">few div.</th><th class="c">own title</th><th class="c">apart</th><th title="pixels to the panel inside it; empty: the space of all touching panels">space</th><th></th></tr>${attUI.join("")}</table></div>` : `<span class="small muted">none: add one on any side</span>`}
+        ${attUI.length ? `<div class="lb-twrap"><table class="lb-table"><tr><th>panel</th><th>size</th><th>line</th><th class="c" title="few y divisions and a centred y title">few div.</th><th class="c" title="the attached panel keeps its own axis title instead of the common one">own title</th><th class="c" title="a gap to the panel it is attached to: both get their own axes and labels">apart</th><th title="pixels to the panel inside it; empty: the space of all touching panels">space</th><th></th></tr>${attUI.join("")}</table></div>` : `<span class="small muted">none: add one on any side</span>`}
         <div class="lb-tools">${SIDES.map(side => `<button class="chip" data-aadd="${side}">+ ${side}</button>`).join("")}</div>
         <div class="lb-tools"><label class="lb-chk">space between touching panels ${num('data-size="spacing"', S.spacing, 1, 0, "space between touching panels in pixels")} px</label><span class="small muted">for all touching panels, also between copies; an attached panel can have its own (column “space”)</span></div>
       </div>

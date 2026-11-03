@@ -536,7 +536,7 @@ def DefineCollisionPlots(pm: PlotManager):
     plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kDashed, 2.0, kGray + 2)
     plot[1].AddLegend(0.212, 0.454, "anti-#it{k}_{T} jets, |#eta| < 0.5")  # legend with a title
     # the theory curve defining the frame has no axis titles
-    plot[1]['X'].SetLog().SetRange(10.0, 1000.0).SetTitle("#it{p}_{T}^{jet} (GeV/#it{c})")
+    plot[1]['X'].SetLog().SetTitle("#it{p}_{T}^{jet} (GeV/#it{c})")
     plot[1]['Y'].SetLog().SetTitle("d#it{N}/d#it{p}_{T} (GeV/#it{c})^{-1}")
     pm.AddPlot(plot)
 

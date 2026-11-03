@@ -15,7 +15,7 @@ void jetSpectra(const char* dataDir = "ExampleData", const char* output = "jetSp
     return;
   }
   const std::vector<std::pair<std::string, std::string>> radii = {{"R02", "#it{R} = 0.2"}, {"R04", "#it{R} = 0.4"}, {"R06", "#it{R} = 0.6"}};
-  const Color_t colors[3] = {kBlack, kBlue + 1, kRed + 1};
+  const Color_t colors[3] = {kBlack, kP10Blue, kP10Red};
   std::vector<TH1*> spectra;
   for (const auto& [tag, label] : radii) {
     TFile file(Form("%s/jets/jets_%s.root", dataDir, tag.data()));
@@ -46,8 +46,14 @@ void jetSpectra(const char* dataDir = "ExampleData", const char* output = "jetSp
   for (auto axis : {frame->GetXaxis(), frame->GetYaxis()}) {
     axis->SetLabelFont(43);
     axis->SetLabelSize(31);
+    axis->SetTitleFont(43);
+    axis->SetTitleSize(39);
   }
   frame->GetXaxis()->SetNoExponent();
+  frame->GetXaxis()->SetTitle("#it{p}_{T}^{jet} (GeV/#it{c})");
+  frame->GetXaxis()->SetTitleOffset(1.2);
+  frame->GetYaxis()->SetTitle("d#it{N}/d#it{p}_{T} (GeV/#it{c})^{-1}");
+  frame->GetYaxis()->SetTitleOffset(1.45);
   TLegend legend(0.212, 0.2, 0.6, 0.454);
   legend.SetHeader("anti-#it{k}_{T} jets, |#eta| < 0.5");
   for (size_t i = 0; i < spectra.size(); ++i) {

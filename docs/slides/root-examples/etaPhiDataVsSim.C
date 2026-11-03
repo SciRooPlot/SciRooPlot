@@ -51,6 +51,7 @@ void etaPhiDataVsSim(const char* dataDir = "ExampleData", const char* output = "
     hist->SetMinimum(zMin);
     hist->SetMaximum(zMax);
     hist->GetXaxis()->SetTitleOffset(1.2);
+    hist->GetXaxis()->SetNdivisions(505);
     hist->GetYaxis()->SetTitleOffset(1.1);
     hist->GetZaxis()->SetTitleOffset(2.0);
     if (i == 0) hist->GetXaxis()->SetTitle("");  // one x title, at the end of both axes

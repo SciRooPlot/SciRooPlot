@@ -1898,11 +1898,11 @@
     ]),
     ([Animate a series], [
       - Mode `gif` turns all matching plots into one animation, e.g. a spectrum per multiplicity class.
-      - `plot spectra/classes .+ gif+80` shows each frame for 0.8 s, `gif+80++` loops.
+      - `plot spectra multiplicity.* gif+80` shows each frame for 0.8 s, `gif+80++` loops.
     ]),
     ([Same code on every machine], [
-      - Keep machine-specific paths out of the code: `srp set @current dataDir /data/run3` once on each machine.
-      - The code reads it with `pm.GetProjectProperty("dataDir")` and builds the input paths from it.
+      - Keep machine-specific paths out of the code: `srp set @current inputDir /data/run3` once on each machine.
+      - The code reads it with `pm.GetProjectProperty("inputDir")` and builds the input paths from it.
     ]),
     ([Share with ROOT-only colleagues], [
       - `macro` writes a ROOT macro (`.C`) per plot that redraws it without SciRooPlot.
@@ -1910,7 +1910,7 @@
     ]),
     ([When a plot looks wrong], [
       - `plot <group> <name> print` prints the full definition of a plot, merged with its base plot.
-      - `srp verbosity debug` shows in detail what SciRooPlot reads and does.
+      - Missing data is reported with its name and data source; `srp print <file>` lists what a file holds.
     ]),
   )
   #v(1fr)
@@ -1978,7 +1978,7 @@
         [`PlotManager::MakeBasePlot(name, sizes)`], [The same with the lengths of the `PanelLayout` `sizes` (text sizes, line width, margins, ...), equal in all panels.],
         [`Plot(name, layout)`], [Base plot from a `PanelLayout`, its lengths kept equal in every panel.],
         [#names(if lang == "py" { "PanelLayout(rows = [[Panel()]])" } else { "PanelLayout(rows = {{Panel()}})" }, "PanelLayout(sizes, rows)")], [Panels in rows (top to bottom), or the same lengths with other panels.],
-        [#names("Panel(width = 1, height = 1)", "Panel().ColorScale()", "ColorScale()", "Gap()", "Empty()")], [A panel (in units of the standard panel), with room for a colour scale; a cell with one colour scale for the panels sharing z; a gap between independent panels; a cell without axes (a pad for texts).],
+        [#names("Panel(width = 1, height = 1)", "Panel().ColorScale()", "ColorScale()", "Gap()", "Empty()", "Hole()")], [A panel (in units of the standard panel), with room for a colour scale; a cell with one colour scale for the panels sharing z; a gap between independent panels; a cell without axes (a pad for texts); a blank cell without a pad.],
       ), text-size: 12pt)
     ],
     [

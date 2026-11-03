@@ -175,8 +175,8 @@ int main(int argc, char* argv[])
     heading("Plot modes");
     row("show", "on screen, one after the other");
     row("spread", "on screen, all at once");
-    row("pdf eps ps svg png jpg gif", "one image file per plot");
-    row("gif+<centiseconds>[++[<repeats>]]", "all plots as one animation, ++ loops it");
+    row("pdf eps ps svg png jpg", "one image file per plot");
+    row("gif[+<centiseconds>[++[<repeats>]]]", "all plots as one animation, ++ loops it");
     row("root html json xml", "one ROOT or web file per plot");
     row("macro", "one ROOT macro per plot");
     row("file", "all canvases in one ROOT file");
