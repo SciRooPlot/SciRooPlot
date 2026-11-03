@@ -3791,14 +3791,22 @@ BoxType& Plot::Pad::Box<BoxType>::SetNoBox()
 template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetMargin(float_t margin)
 {
-  mMargin = margin;
+  if (margin >= 0.f) {
+    mMargin = margin;
+  } else {
+    logger::warning("Box cannot have a negative margin ({}).", margin);
+  }
   return *GetThis();
 }
 
 template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetLineSpacing(float_t lineSpacing)
 {
-  mLineSpacing = lineSpacing;
+  if (lineSpacing >= 0.f) {
+    mLineSpacing = lineSpacing;
+  } else {
+    logger::warning("Box cannot have a negative line spacing ({}).", lineSpacing);
+  }
   return *GetThis();
 }
 
@@ -4299,7 +4307,11 @@ auto Plot::Pad::LegendBox::SetDefaultFillStyle(int16_t style) -> decltype(*this)
 
 auto Plot::Pad::LegendBox::SetSymbolColScale(float_t scale) -> decltype(*this)
 {
-  mSymbolColScale = scale;
+  if (scale >= 0.f) {
+    mSymbolColScale = scale;
+  } else {
+    logger::warning("Legend box cannot have a negative symbol column scale ({}).", scale);
+  }
   return *this;
 }
 

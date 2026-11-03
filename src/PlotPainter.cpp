@@ -876,7 +876,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             for (double_t* ex : {data_ptr->GetEX(), data_ptr->GetEXlow(), data_ptr->GetEXhigh()}) {  // symmetric or asymmetric errors
               if (ex) std::fill(ex, ex + data_ptr->GetN(), 0.);
             }
-          } else if (alias == area) {
+          } else if (alias == area && data_ptr->GetN() > 0) {
             // the area between the points and zero (F would close the polygon from the last point to the first)
             auto* polygon = new TGraph(data_ptr->GetN() + 2);
             polygon->SetName(data_ptr->GetName());
@@ -931,19 +931,20 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               data_ptr->SetRange(rangeMinX, rangeMaxX);
             }
           }
-          // smallest positive value of the data, needed for a log scale (infinity if there is none);
-          // for graphs taken from the points, since their axis frame is an empty histogram (and drawing it below deletes the graph)
-          optional<double_t> graphPositiveMinimum;
+          // points with a positive value (x, y, value), needed for a log scale: graphs keep them, since their axis frame is an empty
+          // histogram (and drawing it below deletes the graph); the smallest value inside the frame's ranges is taken once those are set
+          optional<vector<array<double_t, 3>>> graphPositivePoints;
           // the same for the x axis of 1d graphs, from the lower ends of the error bars (from the points where those are not positive)
           optional<double_t> graphPositiveMinimumX;
           // the range of the points of a 2d graph in z, including their errors
           std::pair<double_t, double_t> graphRangeZ{};
           if constexpr (is_graph_2d<data_type>()) graphRangeZ = {data_ptr->GetZminE(), data_ptr->GetZmaxE()};
           if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
-            graphPositiveMinimum = std::numeric_limits<double_t>::infinity();
+            graphPositivePoints.emplace();
             if constexpr (is_graph_1d<data_type>()) graphPositiveMinimumX = std::numeric_limits<double_t>::infinity();
             for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
               double_t value{};
+              double_t y{};
               if constexpr (is_graph_1d<data_type>()) {
                 value = data_ptr->GetPointY(i);
                 const double_t x = data_ptr->GetPointX(i);
@@ -955,8 +956,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 }
               } else {
                 value = data_ptr->GetZ()[i];
+                y = data_ptr->GetY()[i];
               }
-              if (value > 0.) graphPositiveMinimum = std::min(*graphPositiveMinimum, value);
+              if (value > 0.) graphPositivePoints->push_back({data_ptr->GetX()[i], y, value});
             }
           }
           if constexpr (is_2d<data_type>()) polarFrame = isFlatPolar(drawOption);
@@ -1287,16 +1289,43 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   pad_ptr->SetLogz(false);
               };
               if (isLog && isDependentAxis) {
-                // the smallest positive value is taken from the data itself: GetMinimum(0.) would return the stored minimum (which every graph frame has)
-                double_t positiveMinimum = graphPositiveMinimum.value_or(std::numeric_limits<double_t>::infinity());
-                for (int32_t bin = 0; !graphPositiveMinimum && bin < axisHist_ptr->GetNcells(); ++bin) {
-                  const double_t content = axisHist_ptr->GetBinContent(bin);
-                  if (!axisHist_ptr->IsBinUnderflow(bin) && !axisHist_ptr->IsBinOverflow(bin) && content > 0.) positiveMinimum = std::min(positiveMinimum, content);
+                // the smallest positive value is taken from the data drawn inside the frame's ranges (the binned axes are set before):
+                // GetMinimum(0.) would return the stored minimum (which every graph frame has)
+                double_t positiveMinimum = std::numeric_limits<double_t>::infinity();
+                const TAxis* xAxis = axisHist_ptr->GetXaxis();
+                const TAxis* yAxis = axisHist_ptr->GetYaxis();
+                const auto binRange = [](const TAxis* axis) { return std::make_pair(std::max(axis->GetFirst(), 1), std::min(axis->GetLast(), axis->GetNbins())); };
+                if (graphPositivePoints) {
+                  // the frame of a 1d graph has its x axis set to the range, that of a 2d graph its bins selected
+                  const auto inRange = [&](const TAxis* axis, double_t value) {
+                    const auto [first, last] = binRange(axis);
+                    return value >= axis->GetBinLowEdge(first) && value <= axis->GetBinUpEdge(last);
+                  };
+                  for (const auto& [x, y, value] : *graphPositivePoints) {
+                    if (inRange(xAxis, x) && (frameDim == 1 || inRange(yAxis, y))) positiveMinimum = std::min(positiveMinimum, value);
+                  }
+                } else if (axisHist_ptr->InheritsFrom(TH2Poly::Class())) {
+                  for (int32_t bin = 1; bin <= static_cast<TH2Poly*>(axisHist_ptr)->GetNumberOfBins(); ++bin) {
+                    const double_t content = axisHist_ptr->GetBinContent(bin);
+                    if (content > 0.) positiveMinimum = std::min(positiveMinimum, content);
+                  }
+                } else {
+                  const auto [firstX, lastX] = binRange(xAxis);
+                  const auto [firstY, lastY] = (frameDim > 1) ? binRange(yAxis) : std::make_pair(0, 0);
+                  const auto [firstZ, lastZ] = (frameDim > 2) ? binRange(axisHist_ptr->GetZaxis()) : std::make_pair(0, 0);
+                  for (int32_t binZ = firstZ; binZ <= lastZ; ++binZ) {
+                    for (int32_t binY = firstY; binY <= lastY; ++binY) {
+                      for (int32_t binX = firstX; binX <= lastX; ++binX) {
+                        const double_t content = axisHist_ptr->GetBinContent(binX, binY, binZ);
+                        if (content > 0.) positiveMinimum = std::min(positiveMinimum, content);
+                      }
+                    }
+                  }
                 }
                 if (std::isinf(positiveMinimum)) {
                   // a positive user range is enough for ROOT (e.g. an empty histogram as frame), as is a positive minimum stored with a histogram
                   // that defines the frame (graph frames always have a stored minimum, computed from the points)
-                  const bool hasPositiveMinimum = (userRangeMin && *userRangeMin > 0.) || (!graphPositiveMinimum && axisHist_ptr->GetMinimumStored() > 0.);
+                  const bool hasPositiveMinimum = (userRangeMin && *userRangeMin > 0.) || (!graphPositivePoints && axisHist_ptr->GetMinimumStored() > 0.);
                   if (!hasPositiveMinimum) {
                     logger::warning("Log scale of {} axis in pad {} ignored: the data has no positive values.", axisLabel, padID);
                     disableLog();
@@ -4076,6 +4105,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       }
     } else {
       lines = box->GetLines();
+      if (lines.size() == 1 && lines[0].empty()) lines.clear();  // an empty text: no box
     }
 
     uint8_t nColumns{1u};
@@ -4102,14 +4132,24 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     const double_t textHeightPixel = TextHeightPixel(textFont, textSize, pad);  // lines with sub- or superscripts are higher
     double_t lineHeightPixel = textHeightPixel;
 
+    // font and size of an entry that sets one of them: the other one taken from the box, a size inherited across font precisions
+    // converted (pixels for precision 3, a fraction of the pad otherwise), so that both are given to the entry and scale together
+    auto entryText = [&](const auto& entry) -> std::pair<int16_t, float_t> {
+      const int16_t font = entry.GetTextFont().value_or(textFont);
+      if (entry.GetTextSize()) return {font, *entry.GetTextSize()};
+      if ((font % 10 > 2) == (textFont % 10 > 2)) return {font, textSize};
+      const double_t heightPixel = TextHeightPixel(textFont, textSize, pad);
+      const auto [width, height] = TextPadSizePixel(pad);
+      return {font, static_cast<float_t>((font % 10 > 2) ? heightPixel / mScale : heightPixel / std::min(width, height))};
+    };
+
     uint16_t lineID{};
     for (auto& line : lines) {
       auto lineTextFont = textFont;
       auto lineTextSize = textSize;
       if constexpr (isLegend) {
         const auto& entry = box->GetEntries()[lineID];
-        if (entry.GetTextFont()) lineTextFont = *entry.GetTextFont();
-        if (entry.GetTextSize()) lineTextSize = *entry.GetTextSize();
+        if (entry.GetTextFont() || entry.GetTextSize()) std::tie(lineTextFont, lineTextSize) = entryText(entry);
         if (entry.GetRefDataID()) {
           if (TObject* data_ptr = findData(*entry.GetRefDataID(), entry.GetRefPadID())) {
             if (auto source = mSourceHists.find(data_ptr); source != mSourceHists.end()) {
@@ -4302,8 +4342,11 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
         if (entry.GetTextColor()) curEntry->SetTextColor(entry.GetTextColor()->ToIndex());
         if (entry.GetTextAlpha()) curEntry->SetTextColor(TColor::GetColorTransparent(curEntry->GetTextColor(), *entry.GetTextAlpha()));
-        if (entry.GetTextFont()) curEntry->SetTextFont(*entry.GetTextFont());
-        if (entry.GetTextSize()) curEntry->SetTextSize(*entry.GetTextSize());
+        if (entry.GetTextFont() || entry.GetTextSize()) {
+          const auto [font, size] = entryText(entry);
+          curEntry->SetTextFont(font);
+          curEntry->SetTextSize(size);
+        }
       }
       returnBox = legend;
     } else {
@@ -5227,22 +5270,15 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   double_t* numX = numerator->GetX();
   double_t* numY = numerator->GetY();
   double_t* numEy = numerator->GetEY();
-  double_t* numEyLow = nullptr;
-  double_t* numEyHigh = nullptr;
-  if (auto ptr = dynamic_cast<TGraphAsymmErrors*>(numerator)) {
-    numEyLow = ptr->GetEYlow();
-    numEyHigh = ptr->GetEYhigh();
-  }
+  // asymmetric errors through TGraph's virtual getters (TGraphAsymmErrors, TGraphBentErrors; null for the others)
+  double_t* numEyLow = numerator->GetEYlow();
+  double_t* numEyHigh = numerator->GetEYhigh();
   int32_t denomN = denominator->GetN();
   double_t* denomX = denominator->GetX();
   double_t* denomY = denominator->GetY();
   double_t* denomEy = denominator->GetEY();
-  double_t* denomEyLow = nullptr;
-  double_t* denomEyHigh = nullptr;
-  if (auto ptr = dynamic_cast<TGraphAsymmErrors*>(denominator)) {
-    denomEyLow = ptr->GetEYlow();
-    denomEyHigh = ptr->GetEYhigh();
-  }
+  double_t* denomEyLow = denominator->GetEYlow();
+  double_t* denomEyHigh = denominator->GetEYhigh();
 
   bool doInterpol = false;
   if (numN > denomN || (numEy && (denomEyLow && denomEyHigh)) || ((numEyLow && numEyHigh) && denomEy)) {
@@ -5270,10 +5306,8 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
       denomX = denominator->GetX();
       denomY = denominator->GetY();
       denomEy = denominator->GetEY();
-      if (auto ptr = dynamic_cast<TGraphAsymmErrors*>(denominator)) {
-        denomEyLow = ptr->GetEYlow();
-        denomEyHigh = ptr->GetEYhigh();
-      }
+      denomEyLow = denominator->GetEYlow();
+      denomEyHigh = denominator->GetEYhigh();
       deleteDenom = true;
     }
     // a spline needs strictly increasing x: with a repeated x (steps, bands) every interpolated value is NaN and the ratio empty
@@ -6224,9 +6258,15 @@ double_t PlotPainter::TextHeightPixel(int16_t textFont, float_t textSize, const 
 //**************************************************************************************************
 void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::function<TNamed*(uint16_t, const optional<uint8_t>&)>& findData)
 {
-  static const std::regex wordsRegex("<(name|title|source|projection|selection|entries|integral|mean|stddev|maximum|minimum).*?>");
-  static const std::regex formatRegex("\\[.*?\\]");
-  static const std::regex refRegex(":(\\d{1,5})(?:@(\\d{1,3}))?");  // after the format is removed
+  // <word>, with a format in brackets (which may contain '>', e.g. [>8.2f]) and a reference :data@pad, in either order
+  static const std::regex wordsRegex("<(name|title|source|projection|selection|entries|integral|mean|stddev|maximum|minimum)(?:\\[[^\\]]*\\])?(?::\\d{1,9}(?:@\\d{1,9})?)?(?:\\[[^\\]]*\\])?>");
+  static const std::regex formatRegex("\\[[^\\]]*\\]");
+  static const std::regex refRegex(":(\\d{1,9})(?:@(\\d{1,9}))?>$");  // after the format is removed
+  // what looks like a placeholder with a reference but is none, e.g. a typo as <meen:1> (a word with brackets alone, e.g. <x[cm]>, may be text)
+  static const std::regex lookalikeRegex("<[A-Za-z]+(?:\\[[^\\]]*\\])?:\\d+(?:@\\d+)?(?:\\[[^\\]]*\\])?>");
+  for (auto it = std::sregex_iterator(str.begin(), str.end(), lookalikeRegex); it != std::sregex_iterator(); ++it) {
+    if (!std::regex_match(it->str(), wordsRegex)) logger::warning("Placeholder {} is not valid: known are <name>, <title>, <source>, <projection>, <selection>, <entries>, <integral>, <mean>, <stddev>, <maximum>, <minimum>.", it->str());
+  }
   auto wordsBegin = std::sregex_iterator(str.begin(), str.end(), wordsRegex);
   auto wordsEnd = std::sregex_iterator();
 

@@ -2408,7 +2408,10 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
   // a hint at the content: the start of the first line or row
   auto excerpt = [](string first, bool more) {
     if (first.size() > 20) {
-      first = first.substr(0, 19);
+      size_t cut = 19;
+      while (cut > 0 && (static_cast<unsigned char>(first[cut]) & 0xC0) == 0x80)
+        --cut;  // not inside a UTF-8 character
+      first.resize(cut);
       more = true;
     }
     return fmt::format(" \"{}{}\"", first, (more) ? "…" : "");

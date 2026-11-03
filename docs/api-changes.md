@@ -149,6 +149,9 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Numeric labels below the x axis of a pad taller than wide sat too far from the axis (ROOT lowers them by the label size taken relative to the pad height) | `Axis::SetLabelOffset` gives the same distance as in a wide pad | behaviour | Check label offsets set by hand to make up for it in tall pads. |
 | Placeholders (`<mean>`, …) only in data labels; no standard deviation | Also `<stddev>` (`TH1::GetStdDev`, drawn range); in `AddText` with the number of the data: `<mean:2>` (data 2 of the pad), `<mean:1@4>` (data 1 of pad 4); a placeholder without number in a text is left as it is, with a warning | behaviour | Replace values copied by hand into texts with placeholders. |
 | `Plot::SetTransparent()`, `Pad::SetTransparent()` set fill style and colour to 0 | Only the fill style, as for boxes (nothing visible changes: ROOT draws no fill colour under style 0) | behaviour | none (a fill colour set before comes back when a fill style is set again later). |
+| Log scale on the value axis: the lower end came from the smallest positive content of all bins (graphs: all points), also those outside a set x (and y) range | From the bins and points drawn inside the frame's ranges | behaviour | none |
+| A legend entry setting only `SetTextFont` or only `SetTextSize` mixed pixel and relative sizes with the legend's (a font of another precision made the legend vanish; an own pixel size was not scaled by `bitmapscale`/`screenscale`) | The entry gets both: the legend's font with its size, or its font with the legend's size converted | behaviour | none |
+| `AddText("")` drew an empty box that took up space | Not drawn, with the warning that the text is empty | behaviour | none |
 
 ### Input validation
 
@@ -171,6 +174,8 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `Pad::AddData(name, dataSource)`, `Pad::AddRatio(…)` and `Pad::SetFrame(name, dataSource)` with an empty name or data source were accepted (only the `Data` overloads checked) | Throw `std::invalid_argument` (Python `ValueError`) in every overload; only a ratio denominator may leave out its data source (it takes the numerator's) | input validation | Give names and data sources. |
 | `PanelLayout` lengths were taken as given (a negative panel size gave pad margins beyond 1) | `SetPanelSize`, `SetTextSize`, `SetTitleSize` throw for values ≤ 0; `SetMargins`, `SetColorScaleMargin`, `SetColorScaleWidth`, `SetPanelSpacing`, `SetLineWidth`, `SetMarkerSize` for values < 0 | input validation | Fix the lengths. |
 | Python `histo()`/`histo2d()` with a range whose lower end is not below the upper end | `ValueError` | input validation | Fix the range. |
+| `SetMargin`, `SetLineSpacing` (legends and texts) and `LegendBox::SetSymbolColScale` took negative values | Warning, the value is ignored | input validation | Fix the values. |
+| Placeholders: a format containing `>` (`<mean:1[>8.2f]>`) was cut there; an unknown word with a data number (`<meen:1>`) stayed as text silently | Formats may contain `>`; a warning names an invalid placeholder | input validation | none |
 
 ### Files
 

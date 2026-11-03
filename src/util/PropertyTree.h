@@ -53,6 +53,8 @@ void read_from_tree(const boost::property_tree::ptree& tree, std::optional<T>& v
   } else if constexpr (std::is_enum<T>::value) {  // in case using enum types of the framework
     if (auto tmp = tree.get_optional<typename std::underlying_type<T>::type>(label))
       var = static_cast<T>(*tmp);
+  } else if constexpr (std::is_floating_point_v<T>) {  // via string_to_type, which also reads the inf and nan the writer puts out
+    if (auto tmp = tree.get_optional<std::string>(label)) var = string_to_type<T>(*tmp);
   } else {
     if (auto tmp = tree.get_optional<T>(label)) var = *tmp;
   }
