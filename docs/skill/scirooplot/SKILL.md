@@ -31,7 +31,7 @@ srp add <project> <program> [<outdir>]   # register an existing program
 srp select <project>                # make it the current project
 srp set <project> outdir <dir>      # where files are saved (subfolders per group)
 srp set <project> <key> <value>     # own variables, read in code via pm.GetProjectProperty("<key>")
-srp projects | srp show | srp settings | srp help
+srp projects [<project>] | srp settings | srp help
 srp verbosity (debug|log|info|warning|error|silent) ; srp plotmode (show|pdf|png|...) ; srp matchmode (exact|contains)
 ```
 
@@ -257,7 +257,7 @@ Identical names and chains. Differences:
 ## Pitfalls that cost time
 
 - Nothing shows up / "Found no plots matching": the wrong project is selected (`srp projects`, `srp select`), or the program did not run `pm.SaveProject()`, or the group/name regex does not match whole names (`srp matchmode contains` relaxes this).
-- `plot` uses the program registered for the project (`srp show`), not the file in the current directory.
+- `plot` uses the program registered for the project (`srp projects @current`), not the file in the current directory.
 - Data not found: check the data source name and that the object name (or path) exists in one of the inputs; `plot ... print` shows the definition; the error of `plot` names the missing data and its data source. For sub-folders use `"src:folder"` or a path in the name, never both for the same folder.
 - A data name appearing twice in a pad gets a unique suffix automatically; refer to data by index (`plot[1](2)`), not by name.
 - Axis ranges live on the pad (`plot[1]['X'].SetRange`), data ranges on the data (`SetRangeX`); the first data (or `SetDefinesFrame`) decides the frame.

@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
     return 1;
   }
 
-  // help, info and stats: headings, then names and their explanations in two columns
+  // help, info, projects and settings: headings, then names and their explanations in two columns
   bool firstHeading = true;
   auto heading = [&firstHeading](const string& title) {
     if (!firstHeading) logger::print("");
@@ -149,10 +149,8 @@ int main(int argc, char* argv[])
   if (command == "help") {
     const auto row = rows(39);
     heading("Projects");
-    row("srp projects", "list the projects");
+    row("srp projects [<project>]", "all projects or one: program, folders, plots, inputs");
     row("srp select <project>", "select a project");
-    row("srp show [<project>]", "properties of one or all projects");
-    row("srp stats [<project>]", "plots and inputs of one or all projects");
     row("srp rename <project> <name>", "rename a project");
     row("srp remove <project>", "remove a project (its code is kept)");
     heading("New projects");
@@ -353,22 +351,33 @@ int main(int argc, char* argv[])
     row("type", SCIROOPLOT_BUILD_TYPE);
     row("commit", SCIROOPLOT_GIT_DESCRIBE);
     row("compiler", SCIROOPLOT_CXX_COMPILER);
-  } else if (command == "stats") {
+  } else if (command == "confdir") {
+    std::cout << ((project.empty()) ? Config::Get().Path().string() : Config::Get().ProjectPath(project).string()) << std::endl;
+    return 0;
+  } else if (command == "rename") {
+    if (!Config::GetMutable().Rename(project, property)) return 1;
+  } else if (command == "clean") {
+    Config::GetMutable().Clean();
+  } else if (command == "reset") {
+    Config::GetMutable().Reset();
+  } else if (command == "projects") {
     if (!project.empty() && !Config::Get().Exists(project)) {
       logger::error("Cannot find project {}.", project);
       return 1;
     }
-    auto count = [](size_t n, const string& what) { return fmt::format("{} {}{}", n, what, (n == 1) ? "" : "s"); };
-    const auto row = rows(13);
     // without a project: every project, the current one marked
     const vector<string> projects = project.empty() ? Config::Get().ProjectNames() : vector<string>{project};
+    if (projects.empty()) {
+      logger::print("No projects yet: srp init-py <project>, srp init-cpp <project> or srp add <project> <program>.");
+      return 0;
+    }
+    auto count = [](size_t n, const string& what) { return fmt::format("{} {}{}", n, what, (n == 1) ? "" : "s"); };
     bool readable = true;
     for (const string& name : projects) {
-      const auto projectPath = Config::Get().ProjectPath(name);
       // the tab-completion list has one line <name>,<group> per plot
       size_t nPlots = 0;
       std::set<string> groups;
-      std::ifstream plotList(projectPath / "tabcomp.csv");
+      std::ifstream plotList(Config::Get().ProjectPath(name) / "tabcomp.csv");
       for (string line; std::getline(plotList, line);) {
         if (line.empty()) continue;
         ++nPlots;
@@ -380,14 +389,13 @@ int main(int argc, char* argv[])
         ptree dataSources;
         try {
           boost::property_tree::read_info(Config::Get().DataSourcesFile(name), dataSources);
+          nDataSources = dataSources.size();
+          for (const auto& [sourceName, dataSource] : dataSources)
+            nInputs += dataSource.count("INPUT");
         } catch (const boost::property_tree::ptree_error& e) {
           logger::error("Cannot read {} ({}).", Config::Get().DataSourcesFile(name), e.what());
           readable = false;
-          continue;
         }
-        nDataSources = dataSources.size();
-        for (const auto& [sourceName, dataSource] : dataSources)
-          nInputs += dataSource.count("INPUT");
       }
       string lastSaved = "never";
       if (FileStat_t fileStat; gSystem->GetPathInfo(Config::Get().PlotsFile(name).data(), fileStat) == 0) {
@@ -396,49 +404,14 @@ int main(int argc, char* argv[])
         char buffer[32];
         if (localtime_r(&time, &localTime) && std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", &localTime)) lastSaved = buffer;
       }
-      const bool markCurrent = project.empty() && name == Config::Get().CurrentProject();
-      heading(fmt::format("Project {}{}", name, markCurrent ? "  (current)" : ""));
-      row("plots", fmt::format("{} in {}", nPlots, count(groups.size(), "group")));
-      row("data sources", fmt::format("{} with {}", nDataSources, count(nInputs, "input")));
-      row("last saved", lastSaved);
-    }
-    if (!readable) return 1;
-  } else if (command == "confdir") {
-    std::cout << ((project.empty()) ? Config::Get().Path().string() : Config::Get().ProjectPath(project).string()) << std::endl;
-    return 0;
-  } else if (command == "rename") {
-    if (!Config::GetMutable().Rename(project, property)) return 1;
-  } else if (command == "clean") {
-    Config::GetMutable().Clean();
-  } else if (command == "reset") {
-    Config::GetMutable().Reset();
-  } else if (command == "projects") {
-    const vector<string> projects = Config::Get().ProjectNames();
-    if (projects.empty()) {
-      logger::print("No projects yet: srp init-py <project>, srp init-cpp <project> or srp add <project> <program>.");
-      return 0;
-    }
-    heading("Projects");
-    for (const string& name : projects)
-      logger::print("  {}{}{}{}", logger::begin_color(logger::Color::Cyan), name, logger::end_color(), name == Config::Get().CurrentProject() ? "  (current)" : "");
-  } else if (command == "remove") {
-    if (!Config::GetMutable().Remove(project)) return 1;
-  } else if (command == "select") {
-    if (!Config::GetMutable().Select(project)) return 1;
-  } else if (command == "show") {
-    if (!project.empty() && !Config::Get().Exists(project)) {
-      logger::error("Cannot find project {}.", project);
-      return 1;
-    }
-    // program and output folder first, then the user's variables, as stored
-    for (const string& name : project.empty() ? Config::Get().ProjectNames() : vector<string>{project}) {
+      // program and output folder first, then the user's variables as stored, then what the program saved
       auto properties = Config::Get().Properties(name);
-      const bool markCurrent = project.empty() && name == Config::Get().CurrentProject();
-      heading(fmt::format("Project {}{}", name, markCurrent ? "  (current)" : ""));
-      size_t width = 13;  // as srp stats
+      size_t width = 12;
       for (const auto& [property, value] : properties)
         width = std::max(width, property.size());
       const auto row = rows(static_cast<int>(width));
+      const bool markCurrent = project.empty() && name == Config::Get().CurrentProject();
+      heading(fmt::format("Project {}{}", name, markCurrent ? "  (current)" : ""));
       for (const char* property : {"program", "outdir"}) {
         auto it = properties.find(property);
         row(property, it == properties.end() || it->second.empty() ? "-" : it->second);
@@ -446,7 +419,15 @@ int main(int argc, char* argv[])
       }
       for (const auto& [property, value] : properties)
         if (!value.empty()) row(property, value);
+      row("plots", fmt::format("{} in {}", nPlots, count(groups.size(), "group")));
+      row("data sources", fmt::format("{} with {}", nDataSources, count(nInputs, "input")));
+      row("last saved", lastSaved);
     }
+    if (!readable) return 1;
+  } else if (command == "remove") {
+    if (!Config::GetMutable().Remove(project)) return 1;
+  } else if (command == "select") {
+    if (!Config::GetMutable().Select(project)) return 1;
   } else if (command == "add") {
     if (!Config::GetMutable().Add(project, property, setting)) return 1;
   } else if (command == "get") {

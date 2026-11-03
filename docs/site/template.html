@@ -945,7 +945,7 @@ figure.plot figcaption { color: #5b6b80 }
       <tr><td><code>gif</code> <code>gif+8++</code></td><td>all plots as one animation (looped)</td></tr>
       <tr><td><code>list</code> <code>print</code></td><td>names / definitions</td></tr>
       <tr><td><kbd>s</kbd> <kbd>a</kbd> <kbd>d</kbd> <kbd>q</kbd> <kbd>x</kbd></td><td>next, previous, detach, close, close all</td></tr>
-      <tr><td><code>srp projects</code> <code>select</code> <code>show</code></td><td>list, switch, show a project</td></tr>
+      <tr><td><code>srp projects</code> <code>select</code></td><td>projects and their plots, switch</td></tr>
       <tr><td><code>srp init-py</code> <code>example-py</code> <code>add</code></td><td>start a project</td></tr>
       <tr><td><code>srp set &lt;p&gt; outdir|&lt;var&gt; &lt;value&gt;</code></td><td>output folder, project variables</td></tr>
       <tr><td><code>srp plotmode pdf</code>, <code>verbosity</code>, <code>matchmode contains</code></td><td>defaults</td></tr></table></section>
@@ -1074,7 +1074,7 @@ figure.plot figcaption { color: #5b6b80 }
     <h2 class="title">Your first project</h2>
     <div class="term-line"><span class="p">$ </span>srp init-py myPlots      <span class="c"># or init-cpp</span><br><span class="p">$ </span>plot myGroup myFirstPlot<br><span class="p">$ </span>srp example-py examples  <span class="c"># the commented example plots with their data</span></div>
     <p>Edit <code>DefinePlots.py</code> (or <code>.cpp</code>) and run <code>plot</code> again; C++ projects are rebuilt automatically, for which CMake 3.27 or newer and a C++17 compiler are needed.</p>
-    <p class="basics"><b>What is a project?</b>A folder with your <code>DefinePlots</code> program, registered under a name. <code>srp projects</code> lists them, <code>srp select &lt;name&gt;</code> switches between them; <code>plot</code> always works on the selected one, wherever you are in the terminal. More in <a href="#ref-projects">Projects: create, select, switch</a>.</p>
+    <p class="basics"><b>What is a project?</b>A folder with your <code>DefinePlots</code> program, registered under a name. <code>srp projects</code> lists them with their folders and plots, <code>srp select &lt;name&gt;</code> switches between them; <code>plot</code> always works on the selected one, wherever you are in the terminal. More in <a href="#ref-projects">Projects: create, select, switch</a>.</p>
   </div>
 </section>
 <section class="view wrap" id="v-updating" hidden>
@@ -1667,7 +1667,7 @@ const REF = [
   <div><span class="st">3</span><b>Switch</b><code>srp select talk</code><p>now <code>plot</code> works on <code>talk</code>; tab completion offers its plots. <code>srp projects</code> lists all projects.</p></div>
 </div>
 <div class="tablewrap"><table class="cmd"><thead><tr><th>Task</th><th>Command</th></tr></thead><tbody>
-<tr><td>See which project is selected and what it uses</td><td><code>srp show @current</code>: program, output folder, variables (<code>srp show</code>: all projects); <code>srp stats @current</code>: number of plots and inputs (<code>srp stats</code>: of every project)</td></tr>
+<tr><td>See which project is selected and what it uses</td><td><code>srp projects @current</code>: program, output folder, variables, number of plots and inputs, last saved (<code>srp projects</code>: of every project)</td></tr>
 <tr><td>Change where its plots go</td><td><code>srp set @current outdir ~/thesis/figures</code> (<code>@current</code> is the selected project)</td></tr>
 <tr><td>Store a path for the code</td><td><code>srp set @current inputDir /data/2024</code>, read with <code>pm.GetProjectProperty("inputDir")</code></td></tr>
 <tr><td>Go to its folder, open its program or its output folder</td><td><code>srp cd</code>, <code>srp edit</code>, <code>srp out</code></td></tr>
@@ -1701,7 +1701,7 @@ const REF = [
 <div class="tablewrap"><table class="cmd"><thead><tr><th>Task</th><th>Command</th></tr></thead><tbody>
 <tr><td>Start a project</td><td><code>srp init-py &lt;project&gt;</code> or <code>srp init-cpp &lt;project&gt;</code> (minimal), <code>srp example-py &lt;project&gt;</code> (the commented example plots with their data)</td></tr>
 <tr><td>Use a program you already have</td><td><code>srp add &lt;project&gt; &lt;program&gt; [&lt;outdir&gt;]</code></td></tr>
-<tr><td>See and switch projects</td><td><code>srp projects</code>, <code>srp select &lt;project&gt;</code>, <code>srp show</code> (program, output folder and variables of every project)</td></tr>
+<tr><td>See and switch projects</td><td><code>srp projects [&lt;project&gt;]</code> (program, output folder, variables, plots and inputs), <code>srp select &lt;project&gt;</code></td></tr>
 <tr><td>Set where files go</td><td><code>srp set &lt;project&gt; outdir &lt;dir&gt;</code></td></tr>
 <tr><td>Store a path for your code</td><td><code>srp set &lt;project&gt; inputDir &lt;dir&gt;</code>, read with <code>pm.GetProjectProperty("inputDir")</code></td></tr>
 <tr><td>Open the project</td><td><code>srp cd</code> (its folder), <code>srp edit</code> (its program), <code>srp out</code> (its output folder, in the file manager)</td></tr>
@@ -1859,7 +1859,7 @@ plot.ShareAxis('Z', {4, 5});</pre></div>` },
 <details class="msgall"><summary>All errors and warnings</summary><div id="msgall"></div></details>` },
   { id: "problems", g: "help", t: "Common problems", body: `<div class="tablewrap"><table><thead><tr><th style="width:36%">You see</th><th>Usually because</th></tr></thead><tbody>
 <tr><td>"Found no plots matching"</td><td>another project is selected (<code>srp projects</code>, <code>srp select</code>), the program did not call <code>pm.SaveProject()</code>, or the pattern does not match whole names (<code>srp matchmode contains</code> relaxes this)</td></tr>
-<tr><td>Changes in the code have no effect</td><td><code>plot</code> runs the program registered for the project (<code>srp show</code>), not the file in the current directory</td></tr>
+<tr><td>Changes in the code have no effect</td><td><code>plot</code> runs the program registered for the project (<code>srp projects @current</code>), not the file in the current directory</td></tr>
 <tr><td>Data not found</td><td>wrong data source name, or the name or path does not exist in any input; <code>srp print &lt;file&gt;</code> lists what is in a file (<code>srp open &lt;file&gt;</code> opens it in ROOT's browser), <code>plot … print</code> shows the definition</td></tr>
 <tr><td>Range of the input histogram ignored</td><td>ranges stored with inputs are ignored: set them in the definition, or mark the data <code>SetDefinesFrame()</code></td></tr>
 <tr><td><code>Normalize</code> on a ratio does something odd</td><td>it acts on the result; use <code>.Both().Normalize()</code></td></tr>

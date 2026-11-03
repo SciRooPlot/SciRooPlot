@@ -609,15 +609,13 @@
         width: 100%,
         title-size: 20pt,
         cmd-table(
-          [#prompt `srp projects`], [List all projects (the current one marked).],
+          [#prompt `srp projects [<project>]`], [All projects (the current one marked) or one: program, output folder, variables, plots, inputs, last saved.],
           [#prompt `srp select <project>`], [Select the project that `plot` works on.],
-          [#prompt `srp show [<project>]`], [Show the properties of one or all projects.],
           [#prompt `srp add <project> <program> [<outdir>]`], [Register an existing program as project (rebuilt automatically if it lives in a CMake build directory).],
           [#prompt `srp rename <project> <name>`], [Rename a project (then also adjust the name given to `PlotManager`).],
           [#prompt `srp remove <project>`], [Unregister the project and delete its stored plot definitions (user code and output are kept).],
           [#prompt `srp clean`], [Remove all projects whose program folder no longer exists.],
           [#prompt `srp cd|edit|out [<project>]`], [Go to the folder of the project's program, open its source files, or open its output folder.],
-          [#prompt `srp stats [<project>]`], [Number of plots and inputs, and when the definitions were last saved (all projects without one).],
         ),
       )
       #v(-0.4em)
