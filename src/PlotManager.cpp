@@ -1022,10 +1022,25 @@ std::function<bool(const string&, const string&)> PlotManager::PlotMatcher(const
   RegexMatcher groupRegex = RegexMatcher::WithSubpaths(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
   RegexMatcher nameRegex(name, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive());
   if (!groupRegex.IsValid() || !nameRegex.IsValid()) {
-    logger::error("Invalid regular expression.");
+    logger::error("'{}' is not a valid {} pattern{}.", groupRegex.IsValid() ? name : group, groupRegex.IsValid() ? "name" : "group", WildcardHint(name, group));
     return {};
   }
   return [groupRegex, nameRegex](const string& plotGroup, const string& plotName) { return groupRegex.Matches(plotGroup) && nameRegex.Matches(plotName); };
+}
+
+//**************************************************************************************************
+/**
+ * Hint for patterns written as shell wildcards (QA* instead of QA.*), empty if there are none.
+ */
+//**************************************************************************************************
+string PlotManager::WildcardHint(const string& name, const string& group)
+{
+  const string groupPattern = RegexMatcher::FromWildcards(group);
+  const string namePattern = RegexMatcher::FromWildcards(name);
+  if (groupPattern.empty() && namePattern.empty()) return "";
+  string suggestion = groupPattern.empty() ? "" : "group '" + groupPattern + "'";
+  if (!namePattern.empty()) suggestion += (suggestion.empty() ? "name '" : " and name '") + namePattern + "'";
+  return " (patterns are regular expressions: did you mean " + suggestion + "?)";
 }
 
 //**************************************************************************************************
@@ -1109,7 +1124,8 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
     return true;
   }
   if (nMatched == 0) {
-    logger::error("Found no plots matching the request {}{}{} in {}{}{} (plot .+ .+ list shows all plots of the project).", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color());
+    const string hint = WildcardHint(name, group);
+    logger::error("Found no plots matching the request {}{}{} in {}{}{}{}.", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color(), hint.empty() ? " (plot .+ .+ list shows all plots of the project)" : hint);
   } else if (nLoaded == 0) {
     logger::error("{} plot(s) matched the request but none could be loaded.", nMatched);
   } else if (nLoaded > 1) {
@@ -1211,7 +1227,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   }
 
   if (selectedPlots.empty()) {
-    logger::error("No plots were created: found no plots matching the request {}{}{} in {}{}{}.", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color());
+    logger::error("No plots were created: found no plots matching the request {}{}{} in {}{}{}{}.", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color(), WildcardHint(name, group));
     return false;
   }
   if (mode == "print") {

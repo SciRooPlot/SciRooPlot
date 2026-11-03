@@ -28,13 +28,11 @@
 
 #include "Config.h"
 #include "Validation.h"
-#include "util/Regex.h"
 
 using std::string;
 using std::vector;
 
 using namespace SciRooPlot;
-using SciRooPlot::util::RegexMatcher;
 namespace po = boost::program_options;
 
 int main(int argc, char* argv[])
@@ -89,10 +87,6 @@ int main(int argc, char* argv[])
 
     // create plotting environment
     PlotManager pm(Config::Get().CurrentProject());
-    if (!RegexMatcher(group, Config::Get().MatchContains(), Config::Get().MatchCaseInsensitive()).IsValid()) {
-      logger::error("'{}' is not a valid group pattern.", group);
-      return 1;
-    }
     if (!pm.LoadPlots(name, group)) return 1;
     if (mode == "list") {
       pm.ListPlots();

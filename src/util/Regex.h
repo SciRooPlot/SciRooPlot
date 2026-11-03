@@ -21,6 +21,7 @@
 
 #include <regex>
 #include <string>
+#include <string_view>
 
 namespace SciRooPlot::util
 {
@@ -49,6 +50,37 @@ class RegexMatcher
     RegexMatcher matcher(pattern, contains, ignoreCase);
     if (!matcher.IsValid()) return matcher;  // the pattern must be valid by itself, not only once it is wrapped
     return RegexMatcher("(?:" + pattern + ")(?:/.*)?", contains, ignoreCase);
+  }
+
+  // the pattern with the shell wildcards * written as .* (QA* -> QA.*), empty if it has none or the result is no valid pattern;
+  // a * after . ) ] } \ or inside [...] is a regex repetition and stays
+  static std::string FromWildcards(const std::string& pattern)
+  {
+    std::string result;
+    bool changed = false;
+    bool inBrackets = false;
+    bool afterWildcard = false;
+    for (size_t i = 0; i < pattern.size(); ++i) {
+      const char c = pattern[i];
+      if (c == '*' && afterWildcard) continue;  // ** is one wildcard
+      afterWildcard = false;
+      if (c == '\\' && i + 1 < pattern.size()) {
+        result += c;
+        result += pattern[++i];
+        continue;
+      }
+      if (inBrackets) {
+        inBrackets = (c != ']');
+      } else if (c == '[') {
+        inBrackets = true;
+      } else if (c == '*' && (result.empty() || std::string_view(".)]}").find(result.back()) == std::string_view::npos)) {
+        result += '.';
+        changed = afterWildcard = true;
+      }
+      result += c;
+    }
+    if (!changed || !RegexMatcher(result, false, false).IsValid()) return "";
+    return result;
   }
 
   bool IsValid() const { return mValid; }

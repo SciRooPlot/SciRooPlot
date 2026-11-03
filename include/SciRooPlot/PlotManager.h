@@ -153,6 +153,7 @@ class PlotManager
   bool CreateOutputDirectory() const;
   static void WriteInfoFile(const boost::property_tree::ptree& tree, const std::string& path, const std::string& content);
   static std::function<bool(const std::string&, const std::string&)> PlotMatcher(const std::string& name, const std::string& group);
+  static std::string WildcardHint(const std::string& name, const std::string& group);
   static bool IsValidDataSourceName(const std::string& dataSource);
   bool SaveDataToRootFile() const;
 
