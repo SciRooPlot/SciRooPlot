@@ -178,11 +178,13 @@ build() {
   fi
 }
 
+REINSTALL_DEV_BUILD=0
 if [[ "${REINSTALL}" -eq 1 ]]; then
-  # without --prefix the configured one is kept
+  # without --prefix the configured one is kept, and a development build that was never installed stays one
   if [[ "${PREFIX_SET}" -eq 0 && -f "${CACHE_FILE}" ]]; then
     CACHED_PREFIX=$(grep -m1 '^CMAKE_INSTALL_PREFIX:PATH=' "${CACHE_FILE}" | cut -d= -f2-)
     INSTALL_PREFIX="${CACHED_PREFIX:-${INSTALL_PREFIX}}"
+    [[ -f "${INSTALL_PREFIX}/share/scirooplot/env.sh" ]] || REINSTALL_DEV_BUILD=1
   fi
   rm -f "${CACHE_FILE}"
 fi
@@ -218,6 +220,9 @@ if [[ -f "${CACHE_FILE}" ]]; then
     heading "Updating the SciRooPlot development build (not installed)"
     DO_INSTALL=0
   fi
+elif [[ "${REINSTALL_DEV_BUILD}" -eq 1 ]]; then
+  heading "Reconfiguring the SciRooPlot development build (not installed)"
+  DO_INSTALL=0
 else
   heading "Installing SciRooPlot"
 fi

@@ -155,6 +155,8 @@ class PlotManager
   static std::function<bool(const std::string&, const std::string&)> PlotMatcher(const std::string& name, const std::string& group);
   static std::string WildcardHint(const std::string& name, const std::string& group);
   static bool IsValidDataSourceName(const std::string& dataSource);
+  static std::vector<std::string> SplitInputPath(const std::string& input);
+  void ForgetBufferedData(const std::string& dataSource);
   bool SaveDataToRootFile() const;
 
   std::string mProjectName;
@@ -175,7 +177,7 @@ class PlotManager
   std::vector<open_window_t> mOpenWindows;  // windows open until the user closes them: all plots in mode "spread", plots detached in mode "show"
   std::string mGifName;
   const Plot* mGifLastFrame{};                       // the frame that closes an animated gif (its file name sets how often the animation repeats)
-  std::map<std::string, std::string> mWrittenFiles;  // output file -> group:name of the plot written to it, in the current GeneratePlots call
+  std::map<std::string, std::string> mWrittenFiles;  // output file (lower case) -> group:name of the plot written to it, in the current GeneratePlots call
   bool mExitInteractiveBrowsing{false};
   std::optional<std::pair<std::shared_ptr<TCanvas>, std::pair<int32_t, int32_t>>> mDetached;  // in mode "show": plot detached, shown once the browsing window shows another one (with the browsing window's top)
   // mode "show": the selected plots, made when browsing reaches them

@@ -41,6 +41,7 @@
 #include <TGraphAsymmErrors.h>
 #include <TGraphBentErrors.h>
 #include <TGraphErrors.h>
+#include <TGraphMultiErrors.h>
 #include <TGraphPolar.h>
 #include <TGraphPolargram.h>
 #include <TGraphSmooth.h>
@@ -1053,6 +1054,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             drawOptAxis = "";
           }
           if (!polargram) {
+            // drawn without SAME: the pad is cleared, which deletes a graph drawn above (a later graph at its address is another one)
+            if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
+              if (data_ptr->TestBit(kCanDelete)) mSourceHists.erase(data_ptr);
+            }
             axisHist_ptr->Draw((drawOption + drawOptAxis).data());
             axisHist_ptr->Draw((drawOption + "SAME AXIG").data());
           }
@@ -1117,7 +1122,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (frameDim != 3 && pad.GetAxes().count('C')) {
             logger::warning("The C axis of pad {} is ignored: it is the content of a 3d histogram (for other data the Y or Z axis is the value axis).", padID);
           }
-          for (auto axisLabel : {'X', 'Y', 'Z'}) {
+          // the binned axes first: the positive minimum for a log value axis is taken from the bins in their range (with HBAR the value axis is the pad's X)
+          for (auto axisLabel : (hbarFrame) ? array<char, 3>{'Y', 'X', 'Z'} : array<char, 3>{'X', 'Y', 'Z'}) {
             // axisLabel: the axis of the pad (X horizontal, Y vertical); histLabel: the axis of the frame histogram drawn there
             const char histLabel = (hbarFrame && axisLabel != 'Z') ? ((axisLabel == 'X') ? 'Y' : 'X') : axisLabel;
             TAxis* axis_ptr = nullptr;
@@ -1262,10 +1268,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 if (min < max) {
                   axis_ptr->Set(axis_ptr->GetNbins(), min, max);
                   axis_ptr->SetRange();
+                } else {
+                  // one side set beyond the other end of the data (SetMinRange(20) for points up to 10)
+                  logger::warning("The range {} to {} of the {} axis in pad {} is empty: the whole axis is shown.", min, max, axisLabel, padID);
                 }
               } else if (isBinnedAxis) {
                 // bin selection as in TAxis::SetRangeUser, but a side the user did not set keeps its current bin
                 const auto [first, last] = BinRange(axis_ptr, userRangeMin, userRangeMax);
+                if (std::max(first, 1) > std::min(last, axis_ptr->GetNbins())) {
+                  // ROOT shows the whole axis for an empty bin range (one side set beyond the other end of the data, SetMinRange(20) for bins up to 10)
+                  logger::warning("The range {} to {} of the {} axis in pad {} contains no bins of the data ({} to {}): the whole axis is shown.",
+                                  userRangeMin ? fmt::format("{}", *userRangeMin) : "its start", userRangeMax ? fmt::format("{}", *userRangeMax) : "its end", axisLabel, padID, axis_ptr->GetXmin(), axis_ptr->GetXmax());
+                }
                 // never the underflow or overflow bin: a range ending at the edge of the axis (e.g. one extended above) gives the overflow bin,
                 // whose low edge ROOT computes as for equal bins, which for variable bins can lie just below the edge (14.999999999999998 for 15)
                 axis_ptr->SetRange(std::max(first, 1), std::min(last, axis_ptr->GetNbins()));
@@ -1354,9 +1368,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     while (axis_ptr->GetBinLowEdge(bin) <= 0.) {
                       ++bin;
                     }
-                    // start at the first positive bin edge (ROOT would otherwise draw the bins with negative edges left of the frame)
-                    const double_t newMin = (bin <= lastBin) ? axis_ptr->GetBinLowEdge(bin) : 1e-3 * axis_ptr->GetBinUpEdge(lastBin);
-                    axis_ptr->SetRangeUser(newMin, axis_ptr->GetBinUpEdge(lastBin));
+                    // start at the first positive bin edge (ROOT would otherwise draw the bins with negative edges left of the frame); set as bins:
+                    // SetRangeUser up to the last upper edge would add the overflow bin
+                    axis_ptr->SetRange(std::min(bin, lastBin), lastBin);
                   }
                 }
               }
@@ -2516,27 +2530,52 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         applyModifiers(data_ptr, *data);
 
         // NaN or infinite values (e.g. from a division by zero) spoil the axis ranges and ROOT then draws nothing
-        if constexpr (is_one_of_v<data_type, TH1*, TH2*, TH3*>()) {
+        if constexpr (is_hist<data_type>()) {
+          // a profile keeps sums per bin: they are cleared, so the bin is empty (a TProfile3D is held as a TH3)
+          auto clearProfileBin = [](auto* profile, int32_t bin) {
+            profile->SetBinEntries(bin, 0.);
+            profile->TArrayD::SetAt(0., bin);
+            if (profile->GetSumw2N()) profile->GetSumw2()->SetAt(0., bin);
+            if (profile->GetBinSumw2()->fN) profile->GetBinSumw2()->SetAt(0., bin);
+          };
+          TProfile3D* profile3d{};
+          if constexpr (is_hist_3d<data_type>()) profile3d = dynamic_cast<TProfile3D*>(data_ptr);
           int32_t nInvalid{};
           for (int32_t bin = 0; bin < data_ptr->GetNcells(); ++bin) {
             if (!std::isfinite(data_ptr->GetBinContent(bin)) || !std::isfinite(data_ptr->GetBinError(bin))) {
-              data_ptr->SetBinContent(bin, 0.);
-              data_ptr->SetBinError(bin, 0.);
+              if constexpr (is_one_of_v<data_type, TProfile*, TProfile2D*>()) {
+                clearProfileBin(data_ptr, bin);
+              } else {
+                if (profile3d) {
+                  clearProfileBin(profile3d, bin);
+                } else {
+                  data_ptr->SetBinContent(bin, 0.);
+                  data_ptr->SetBinError(bin, 0.);
+                }
+              }
               ++nInvalid;
             }
           }
           if (nInvalid) warn("{} has {} with NaN or infinite values, which are drawn as zero.", data_ptr->GetName(), plural(nInvalid, "bin"));
-        } else if constexpr (is_graph_1d<data_type>()) {
+        } else if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
           int32_t nInvalid{};
           for (int32_t i = data_ptr->GetN() - 1; i >= 0; --i) {
-            if (!std::isfinite(data_ptr->GetPointX(i)) || !std::isfinite(data_ptr->GetPointY(i))) {
+            bool invalid{};
+            if constexpr (is_graph_2d<data_type>()) {
+              invalid = !std::isfinite(data_ptr->GetX()[i]) || !std::isfinite(data_ptr->GetY()[i]) || !std::isfinite(data_ptr->GetZ()[i]) ||
+                        !std::isfinite(data_ptr->GetErrorX(i)) || !std::isfinite(data_ptr->GetErrorY(i)) || !std::isfinite(data_ptr->GetErrorZ(i));
+            } else {
+              invalid = !std::isfinite(data_ptr->GetPointX(i)) || !std::isfinite(data_ptr->GetPointY(i)) || !std::isfinite(data_ptr->GetErrorXlow(i)) ||
+                        !std::isfinite(data_ptr->GetErrorXhigh(i)) || !std::isfinite(data_ptr->GetErrorYlow(i)) || !std::isfinite(data_ptr->GetErrorYhigh(i));
+            }
+            if (invalid) {
               data_ptr->RemovePoint(i);
               ++nInvalid;
             }
           }
           if (nInvalid) warn("{} has {} with NaN or infinite values, which are not drawn.", data_ptr->GetName(), plural(nInvalid, "point"));
           // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
-          data_ptr->SetBit(TGraph::kResetHisto);
+          if constexpr (is_graph_1d<data_type>()) data_ptr->SetBit(TGraph::kResetHisto);
         }
 
         // without a drawing option SciRooPlot decides, the same for histograms and graphs: a fill is drawn (hist, for a graph area),
@@ -2807,7 +2846,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       if (swapAxes) {
         for (auto [from, to] : {std::pair{axisHist_ptr->GetYaxis(), axes->GetXaxis()}, std::pair{axisHist_ptr->GetXaxis(), axes->GetYaxis()}}) {
           from->TAttAxis::Copy(*to);
-          for (const auto bit : {TAxis::kCenterLabels, TAxis::kNoExponent, TAxis::kTickPlus, TAxis::kTickMinus, TAxis::kMoreLogLabels}) {
+          for (const auto bit : {TAxis::kCenterTitle, TAxis::kRotateTitle, TAxis::kCenterLabels, TAxis::kNoExponent, TAxis::kTickPlus, TAxis::kTickMinus, TAxis::kMoreLogLabels}) {
             to->SetBit(bit, from->TestBit(bit));
           }
           to->SetDecimals(from->GetDecimals());
@@ -4449,7 +4488,11 @@ std::pair<double_t, double_t> PlotPainter::PlaceBox(const BoxType& box, TPad* pa
     return {lowerLeftX + 0.5 * borderX, lowerLeftY + 0.5 * borderY + heightNDC};
   }
   if (box.IsUserCoordinates()) {
-    // pad coordinates are log10 of the axis values on a log axis (XtoPad/YtoPad, as ROOT places objects in user coordinates)
+    // pad coordinates are log10 of the axis values on a log axis (XtoPad/YtoPad, as ROOT places objects in user coordinates);
+    // a value at or below zero has none: ROOT puts it at the frame edge
+    if ((pad->GetLogx() && box.GetXPosition() <= 0.) || (pad->GetLogy() && box.GetYPosition() <= 0.)) {
+      logger::warning("The {} at ({}, {}) in user coordinates is put at the edge of the frame: a log axis has no position for values at or below zero.", boxType, box.GetXPosition(), box.GetYPosition());
+    }
     return {(pad->XtoPad(box.GetXPosition()) - pad->GetX1()) / (pad->GetX2() - pad->GetX1()), (pad->YtoPad(box.GetYPosition()) - pad->GetY1()) / (pad->GetY2() - pad->GetY1())};
   }
   return {box.GetXPosition(), box.GetYPosition()};
@@ -4699,6 +4742,8 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       option.ReplaceAll(ignored, "");
     const bool hasErrorBoxes = option.Contains("2") || option.Contains("5");
     const bool hasErrorBand = option.Contains("3") || option.Contains("4");
+    // lines between consecutive points only with L or C, or without any option (TGraphPainter::PaintGraph): markers alone leave the space between them free
+    const bool hasLine = option.Contains("l") || option.Contains("c") || option.Strip(TString::kBoth).IsNull();
     const int32_t n = graph->GetN();
     if (n > 0 && option.Contains("b")) {
       // bar chart (TGraphPainter::PaintGraph): boxes of a fraction of the mean point distance around each point, from the base of a fill
@@ -4721,7 +4766,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       const double_t xUser = graph->GetPointX(i), yUser = graph->GetPointY(i);
       const double_t x = padX(xUser), y = padY(yUser);
       markPoint(x, y);
-      if (i > 0) markLine(padX(graph->GetPointX(i - 1)), padY(graph->GetPointY(i - 1)), x, y);
+      if (hasLine && i > 0) markLine(padX(graph->GetPointX(i - 1)), padY(graph->GetPointY(i - 1)), x, y);
       const double_t exLow = graph->GetErrorXlow(i), exHigh = graph->GetErrorXhigh(i);
       const double_t eyLow = graph->GetErrorYlow(i), eyHigh = graph->GetErrorYhigh(i);
       if (hasErrorBoxes) {
@@ -5189,6 +5234,10 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       }
       return histPtr->Project3D(GetAxisStr(projInfo.dims[0]).data());
     }
+  } else if (obj->InheritsFrom(TH2Poly::Class())) {
+    // its bins are polygons, not cells along the axes: the projections of TH2 would give its empty cell array
+    logger::error("Cannot do {} of TH2Poly {}: its bins are polygons, not rows and columns along the axes.", (isProfile) ? "profiles" : "projections", obj->GetName());
+    return nullopt;
   } else if (obj->InheritsFrom(TH2::Class())) {
     TH2* histPtr = static_cast<TH2*>(obj);
     if (projInfo.dims.size() > 1) {
@@ -5279,6 +5328,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   double_t* denomEy = denominator->GetEY();
   double_t* denomEyLow = denominator->GetEYlow();
   double_t* denomEyHigh = denominator->GetEYhigh();
+  auto multiErrors = MultiErrorSums(numerator);
 
   bool doInterpol = false;
   if (numN > denomN || (numEy && (denomEyLow && denomEyHigh)) || ((numEyLow && numEyHigh) && denomEy)) {
@@ -5403,9 +5453,13 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
         }
       }
       numY[i] = numY[i] / denomY[i];
-      if (denomY[i] < 0. && numEyLow && numEyHigh) std::swap(numEyLow[i], numEyHigh[i]);  // a negative denominator turns the ratio upside down
+      if (denomY[i] < 0. && numEyLow && numEyHigh) {
+        std::swap(numEyLow[i], numEyHigh[i]);  // a negative denominator turns the ratio upside down
+        SwapMultiErrors(numerator, multiErrors, i);
+      }
     }
   }
+  ScaleMultiErrors(numerator, multiErrors);
   if (doInterpol) {
     if (denomY) delete[] denomY;
     if (denomEy) delete[] denomEy;
@@ -5582,6 +5636,7 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
   double_t* ey = numerator->GetEY();
   double_t* eyLow = numerator->GetEYlow();    // asymmetric and bent errors
   double_t* eyHigh = numerator->GetEYhigh();  // (nullptr for symmetric errors)
+  auto multiErrors = MultiErrorSums(numerator);
   for (int32_t i = 0; i < numerator->GetN(); ++i) {
     const double_t denom = denominator->Eval(x[i]);
     const double_t absDenom = std::abs(denom);  // errors must stay positive
@@ -5591,9 +5646,13 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
     } else if (eyLow && eyHigh) {
       eyLow[i] = (denom) ? eyLow[i] / absDenom : 0.;
       eyHigh[i] = (denom) ? eyHigh[i] / absDenom : 0.;
-      if (denom < 0.) std::swap(eyLow[i], eyHigh[i]);  // a negative denominator turns the ratio upside down
+      if (denom < 0.) {
+        std::swap(eyLow[i], eyHigh[i]);  // a negative denominator turns the ratio upside down
+        SwapMultiErrors(numerator, multiErrors, i);
+      }
     }
   }
+  ScaleMultiErrors(numerator, multiErrors);
   if (binomialErrors && verbose) {
     logger::warning("Binomial errors are not supported for the division of {} by function {}.", numerator->GetName(), denominator->GetName());
   }
@@ -5650,11 +5709,51 @@ void PlotPainter::ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFact
   double_t* errors = (axis == 0) ? graph->GetEX() : graph->GetEY();
   double_t* errorsLow = (axis == 0) ? graph->GetEXlow() : graph->GetEYlow();     // asymmetric and bent errors
   double_t* errorsHigh = (axis == 0) ? graph->GetEXhigh() : graph->GetEYhigh();  // (nullptr for symmetric errors)
+  auto multiErrors = (axis == 1) ? MultiErrorSums(graph) : nullopt;
   for (int32_t i{}; i < graph->GetN(); ++i) {
     values[i] *= scaleFactor;
     if (errors) errors[i] *= scaleFactor;
     if (errorsLow) errorsLow[i] *= scaleFactor;
     if (errorsHigh) errorsHigh[i] *= scaleFactor;
+  }
+  ScaleMultiErrors(graph, multiErrors);
+}
+
+//**************************************************************************************************
+/**
+ * A TGraphMultiErrors draws its y errors per dimension, GetEYlow()/GetEYhigh() are only their cached sums.
+ * MultiErrorSums stores the sums before they are changed, ScaleMultiErrors then scales the dimensions of each point to the new sums
+ * (consistent with every mode of summing them), SwapMultiErrors swaps low and high of a point as the sums were swapped.
+ */
+//**************************************************************************************************
+optional<PlotPainter::multi_error_sums_t> PlotPainter::MultiErrorSums(TGraph* graph)
+{
+  if (!dynamic_cast<TGraphMultiErrors*>(graph)) return nullopt;
+  const int32_t n = graph->GetN();
+  return multi_error_sums_t{{graph->GetEYlow(), graph->GetEYlow() + n}, {graph->GetEYhigh(), graph->GetEYhigh() + n}};
+}
+void PlotPainter::SwapMultiErrors(TGraph* graph, optional<multi_error_sums_t>& sums, int32_t i)
+{
+  if (!sums) return;
+  auto* multi = static_cast<TGraphMultiErrors*>(graph);
+  std::swap(sums->first[i], sums->second[i]);
+  for (int32_t e = 0; e < multi->GetNYErrors(); ++e) {
+    std::swap(multi->GetEYlow(e)[i], multi->GetEYhigh(e)[i]);
+  }
+}
+void PlotPainter::ScaleMultiErrors(TGraph* graph, const optional<multi_error_sums_t>& sums)
+{
+  if (!sums) return;
+  auto* multi = static_cast<TGraphMultiErrors*>(graph);
+  for (auto [newSums, oldSums, isLow] : {tuple{multi->GetEYlow(), &sums->first, true}, tuple{multi->GetEYhigh(), &sums->second, false}}) {
+    for (int32_t i = 0; i < multi->GetN(); ++i) {
+      const double_t oldSum = (*oldSums)[i];
+      for (int32_t e = 0; e < multi->GetNYErrors(); ++e) {
+        double_t& error = (isLow) ? multi->GetEYlow(e)[i] : multi->GetEYhigh(e)[i];
+        // without errors before (an error of the denominator was added), the first dimension takes it
+        error = (oldSum) ? error * newSums[i] / oldSum : ((e == 0) ? newSums[i] : 0.);
+      }
+    }
   }
 }
 
@@ -6401,13 +6500,20 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
           replaceStr = formatValue(static_cast<TH1*>(data_ptr)->GetMean());
         } else if (str_contains(matchStr, "stddev")) {
           replaceStr = formatValue(static_cast<TH1*>(data_ptr)->GetStdDev());
-        } else if (str_contains(matchStr, "maximum")) {
+        } else if (str_contains(matchStr, "maximum") || str_contains(matchStr, "minimum")) {
           // from the bins: GetMaximum()/GetMinimum() would return the frame limits stored on the drawn histogram
           auto* hist = static_cast<TH1*>(data_ptr);
-          replaceStr = formatValue(hist->GetBinContent(hist->GetMaximumBin()));
-        } else if (str_contains(matchStr, "minimum")) {
-          auto* hist = static_cast<TH1*>(data_ptr);
-          replaceStr = formatValue(hist->GetBinContent(hist->GetMinimumBin()));
+          const bool isMax = str_contains(matchStr, "maximum");
+          if (auto* poly = dynamic_cast<TH2Poly*>(hist)) {
+            // the polygons, not the cells of the TH2 grid (GetMaximumBin)
+            double_t extreme = (isMax) ? -std::numeric_limits<double_t>::infinity() : std::numeric_limits<double_t>::infinity();
+            for (int32_t bin = 1; bin <= poly->GetNumberOfBins(); ++bin) {
+              extreme = (isMax) ? std::max(extreme, poly->GetBinContent(bin)) : std::min(extreme, poly->GetBinContent(bin));
+            }
+            replaceStr = formatValue(std::isfinite(extreme) ? extreme : 0.);
+          } else {
+            replaceStr = formatValue(hist->GetBinContent((isMax) ? hist->GetMaximumBin() : hist->GetMinimumBin()));
+          }
         }
       } catch (const fmt::format_error& e) {
         logger::error("Incompatible format string in {}: {}.", matchStr, e.what());

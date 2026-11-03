@@ -292,6 +292,10 @@ class PlotPainter
 
   static void RemoveGraphPointsOutside(TGraph* graph, std::optional<double_t> minX, std::optional<double_t> maxX, std::optional<double_t> minY, std::optional<double_t> maxY);
   static void ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFactor);
+  using multi_error_sums_t = std::pair<std::vector<double_t>, std::vector<double_t>>;
+  static std::optional<multi_error_sums_t> MultiErrorSums(TGraph* graph);
+  static void SwapMultiErrors(TGraph* graph, std::optional<multi_error_sums_t>& sums, int32_t i);
+  static void ScaleMultiErrors(TGraph* graph, const std::optional<multi_error_sums_t>& sums);
   static void ScaleGraphAxis(TGraph2D* graph, int16_t axis, double_t scaleFactor);
   void ScaleAxis(TH1* hist, int16_t axisIndex, double_t scaleFactor);
   static TF1* ScaleFunc(TF1* func, double_t domainFactorX, double_t contentFactor);

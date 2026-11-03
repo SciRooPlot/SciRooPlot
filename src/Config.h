@@ -73,6 +73,7 @@ class Config
   std::string PlotsFile(const std::string& projectName) const;
   std::string DataSourcesFile(const std::string& projectName) const;
   const std::string& CurrentProject() const { return mCurrentProject; }
+  bool ProjectsFileUnreadable() const { return mProjectsUnreadable; }  // projects.info exists but could not be read
 
   void SetVerbosity(int logLevel);
   void SetColor(int colorMode);
@@ -96,20 +97,32 @@ class Config
   Config();
   static Config& Instance();
   void LoadConfig();
+  std::optional<bool> ApplySetting(const std::string& key, const std::string& value);
   bool CheckProjectDir(const std::string& projectName) const;  // true if the project's directory is inside the config path
   bool DeleteProjectDir(const std::string& projectName) const;
   static std::string ForeignEntries(const std::filesystem::path& projectPath);  // names in it SciRooPlot did not write, comma separated
   // the files SciRooPlot writes into a project's directory; names of older versions stay in the list
   inline static const std::set<std::string> kProjectFiles{"plots.info", "dataSources.info", "tabcomp.csv", "UserData.root", ".DS_Store"};
   std::vector<std::string> RemoveProjects(const std::vector<std::string>& projectNames, const std::string& nextCurrent);
-  bool SaveNow();
-  bool SaveProjects() const;  // writes the configuration at once (before the files of a project are changed on disk)
+  bool SaveProjects();  // writes the projects at once (before the files of a project are changed on disk)
   bool ProjectsReadable() const;
   static bool WriteInfoFile(const std::string& file, const boost::property_tree::ptree& tree);
   static bool CheckProjectName(const std::string& projectName);
   static bool CheckPath(const std::string& path);
 
-  bool mModified{false};
+  struct Lock {
+    explicit Lock(const std::filesystem::path& path);
+    ~Lock();
+    Lock(const Lock&) = delete;
+    Lock& operator=(const Lock&) = delete;
+    int mFd;
+  };
+
+  // what this process changed, the only parts written back (the files are read again first)
+  std::set<std::string> mChangedSettings;
+  bool mRewriteSettings{false};            // settings.info had bad entries
+  std::set<std::string> mTouchedProjects;  // added, changed or removed
+  bool mCurrentTouched{false};
   bool mProjectsUnreadable{false};  // projects.info exists but could not be read
   int mLogLevel{LogLevel::debug};
   int mColorMode{ColorMode::bright};

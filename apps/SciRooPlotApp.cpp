@@ -367,6 +367,10 @@ int main(int argc, char* argv[])
     }
     // without a project: every project, the current one marked
     const vector<string> projects = project.empty() ? Config::Get().ProjectNames() : vector<string>{project};
+    if (projects.empty() && Config::Get().ProjectsFileUnreadable()) {
+      logger::error("Cannot list the projects: {} could not be read. Fix or remove it.", Config::Get().ProjectsFile());
+      return 1;
+    }
     if (projects.empty()) {
       logger::print("No projects yet: srp init-py <project>, srp init-cpp <project> or srp add <project> <program>.");
       return 0;

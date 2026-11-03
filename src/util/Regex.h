@@ -22,6 +22,7 @@
 #include <regex>
 #include <string>
 #include <string_view>
+#include <utility>
 
 namespace SciRooPlot::util
 {
@@ -60,6 +61,7 @@ class RegexMatcher
     bool changed = false;
     bool inBrackets = false;
     bool afterWildcard = false;
+    bool afterEscape = false;  // a * after an escape (\\d*) repeats it, as in a regular expression
     for (size_t i = 0; i < pattern.size(); ++i) {
       const char c = pattern[i];
       if (c == '*' && afterWildcard) continue;  // ** is one wildcard
@@ -67,13 +69,15 @@ class RegexMatcher
       if (c == '\\' && i + 1 < pattern.size()) {
         result += c;
         result += pattern[++i];
+        afterEscape = true;
         continue;
       }
+      const bool escaped = std::exchange(afterEscape, false);
       if (inBrackets) {
         inBrackets = (c != ']');
       } else if (c == '[') {
         inBrackets = true;
-      } else if (c == '*' && (result.empty() || std::string_view(".)]}").find(result.back()) == std::string_view::npos)) {
+      } else if (c == '*' && !escaped && (result.empty() || std::string_view(".)]}").find(result.back()) == std::string_view::npos)) {
         result += '.';
         changed = afterWildcard = true;
       }

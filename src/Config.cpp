@@ -27,11 +27,15 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <fcntl.h>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <set>
 #include <string>
+#include <sys/file.h>
 #include <unistd.h>
 #include <utility>
 #include <vector>
@@ -162,47 +166,13 @@ void Config::LoadConfig()
       std::cerr << "Cannot load settings file " << mSettingsFile << ": " << e.what() << ". Using default settings." << std::endl;
     }
     for (const auto& [key, node] : settingsTree) {
-      const string value = node.data();
-      bool valid = true;
-      if (key == "verbosity") {
-        if (auto level = ParseLogLevel(value))
-          mLogLevel = *level;
-        else
-          valid = false;
-      } else if (key == "color") {
-        if (auto mode = ParseColorMode(value))
-          mColorMode = *mode;
-        else
-          valid = false;
-      } else if (key == "plotmode") {
-        if (value == "list" || is_valid_plot_mode(value))
-          mPlotMode = value;
-        else
-          valid = false;
-      } else if (key == "matchmode") {
-        if (value == "exact" || value == "contains")
-          mMatchContains = (value == "contains");
-        else
-          valid = false;
-      } else if (key == "matchcase") {
-        if (value == "sensitive" || value == "insensitive")
-          mMatchCaseInsensitive = (value == "insensitive");
-        else
-          valid = false;
-      } else if (key == "screenscale" || key == "bitmapscale") {
-        if (auto scale = ParseScale(value))
-          (key == "screenscale" ? mScreenScale : mBitmapScale) = *scale;
-        else
-          valid = false;
-      } else {
-        std::cerr << "Ignoring unknown setting " << key << " in " << mSettingsFile << "." << std::endl;
-        mModified = true;  // the file is written again without it
-        continue;
-      }
+      const auto valid = ApplySetting(key, node.data());
       if (!valid) {
-        std::cerr << "Ignoring invalid " << key << " '" << value << "' in " << mSettingsFile << " (srp " << key << " sets it)." << std::endl;
-        mModified = true;  // the file is written again with the default
+        std::cerr << "Ignoring unknown setting " << key << " in " << mSettingsFile << "." << std::endl;
+      } else if (!*valid) {
+        std::cerr << "Ignoring invalid " << key << " '" << node.data() << "' in " << mSettingsFile << " (srp " << key << " sets it)." << std::endl;
       }
+      if (!valid || !*valid) mRewriteSettings = true;  // the file is written again without it (or with the default)
     }
   }
 
@@ -232,6 +202,51 @@ void Config::LoadConfig()
   }
 }
 
+// sets a setting from its value in settings.info (those of the srp commands); nullopt for an unknown key, false for a bad value
+std::optional<bool> Config::ApplySetting(const string& key, const string& value)
+{
+  if (key == "verbosity") {
+    if (auto level = ParseLogLevel(value)) mLogLevel = *level;
+    return ParseLogLevel(value).has_value();
+  }
+  if (key == "color") {
+    if (auto mode = ParseColorMode(value)) mColorMode = *mode;
+    return ParseColorMode(value).has_value();
+  }
+  if (key == "plotmode") {
+    const bool valid = (value == "list" || is_valid_plot_mode(value));
+    if (valid) mPlotMode = value;
+    return valid;
+  }
+  if (key == "matchmode") {
+    const bool valid = (value == "exact" || value == "contains");
+    if (valid) mMatchContains = (value == "contains");
+    return valid;
+  }
+  if (key == "matchcase") {
+    const bool valid = (value == "sensitive" || value == "insensitive");
+    if (valid) mMatchCaseInsensitive = (value == "insensitive");
+    return valid;
+  }
+  if (key == "screenscale" || key == "bitmapscale") {
+    auto scale = ParseScale(value);
+    if (scale) (key == "screenscale" ? mScreenScale : mBitmapScale) = *scale;
+    return scale.has_value();
+  }
+  return std::nullopt;
+}
+
+// an exclusive lock of the config path for reading and writing its files: other srp commands and programs wait meanwhile
+// (without the lock file, e.g. in a read-only config path, the files are written unlocked)
+Config::Lock::Lock(const std::filesystem::path& path) : mFd(open((path / ".lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644))
+{
+  if (mFd >= 0) flock(mFd, LOCK_EX);
+}
+Config::Lock::~Lock()
+{
+  if (mFd >= 0) close(mFd);  // releases the lock
+}
+
 // writes to a temporary file and renames it, so an interrupted write cannot leave a truncated file behind
 bool Config::WriteInfoFile(const string& file, const ptree& tree)
 {
@@ -248,24 +263,43 @@ bool Config::WriteInfoFile(const string& file, const ptree& tree)
   return true;
 }
 
+// the files are read again under the lock and only the settings and projects this process changed are written,
+// so that srp commands and programs running at the same time do not undo each other's changes
 bool Config::Save()
 {
-  if (!mModified) return true;
-  mModified = false;  // a failed write is reported once and not repeated at exit
+  const bool settingsChanged = !mChangedSettings.empty() || mRewriteSettings;
+  if (!settingsChanged && mTouchedProjects.empty() && !mCurrentTouched) return true;
   if (mPath.empty()) {
     logger::error("No valid config path; cannot save the configuration.");
     return false;
   }
-  // save settings tree
-  ptree settingsTree;
-  settingsTree.add("verbosity", LogLevelName(mLogLevel));
-  settingsTree.add("color", ColorModeName(mColorMode));
-  settingsTree.add("plotmode", mPlotMode);
-  settingsTree.add("matchmode", mMatchContains ? "contains" : "exact");
-  settingsTree.add("matchcase", mMatchCaseInsensitive ? "insensitive" : "sensitive");
-  settingsTree.add("screenscale", mScreenScale);
-  settingsTree.add("bitmapscale", mBitmapScale);
-  const bool savedSettings = WriteInfoFile(SettingsFile(), settingsTree);
+  bool savedSettings = true;
+  if (settingsChanged) {
+    Lock lock(mPath);
+    std::error_code existsError;
+    if (std::filesystem::exists(mSettingsFile, existsError)) {
+      ptree settingsTree;
+      try {
+        read_info(mSettingsFile, settingsTree);
+      } catch (const std::exception&) {
+      }
+      for (const auto& [key, node] : settingsTree) {
+        if (!mChangedSettings.count(key)) ApplySetting(key, node.data());  // bad entries were reported at start and are dropped
+      }
+    }
+    ptree tree;
+    tree.add("verbosity", LogLevelName(mLogLevel));
+    tree.add("color", ColorModeName(mColorMode));
+    tree.add("plotmode", mPlotMode);
+    tree.add("matchmode", mMatchContains ? "contains" : "exact");
+    tree.add("matchcase", mMatchCaseInsensitive ? "insensitive" : "sensitive");
+    tree.add("screenscale", mScreenScale);
+    tree.add("bitmapscale", mBitmapScale);
+    // a failed write is reported once and not repeated at exit
+    mChangedSettings.clear();
+    mRewriteSettings = false;
+    savedSettings = WriteInfoFile(SettingsFile(), tree);
+  }
   const bool savedProjects = SaveProjects();
   return savedSettings && savedProjects;
 }
@@ -277,13 +311,49 @@ bool Config::ProjectsReadable() const
   return !mProjectsUnreadable;
 }
 
-bool Config::SaveProjects() const
+bool Config::SaveProjects()
 {
   if (mProjectsUnreadable) return true;  // nothing was changed (ProjectsReadable)
+  if (mTouchedProjects.empty() && !mCurrentTouched) return true;
   if (mPath.empty()) {
     logger::error("No valid config path; cannot save the configuration.");
     return false;
   }
+  // the projects as they are on disk now, with the ones this process added, changed or removed (and its current project) replaced
+  Lock lock(mPath);
+  std::map<string, Project> projects;
+  string current;
+  std::error_code existsError;
+  if (std::filesystem::exists(mProjectsFile, existsError)) {
+    try {
+      ptree diskTree;
+      read_info(mProjectsFile, diskTree);
+      for (const auto& [name, node] : diskTree) {
+        if (name == "@current") {
+          current = node.data();
+        } else if (!node.empty() && !name.empty() && !find_illegal_name_char(name)) {
+          projects.insert_or_assign(name, Project(node));
+        }
+      }
+    } catch (const std::exception& e) {
+      logger::error("Cannot save the configuration: {} could not be read ({}). Fix or remove it.", mProjectsFile, e.what());
+      return false;
+    }
+  }
+  for (const auto& name : mTouchedProjects) {
+    if (auto it = mProjects.find(name); it != mProjects.end()) {
+      projects.insert_or_assign(name, it->second);
+    } else {
+      projects.erase(name);
+    }
+  }
+  if (mCurrentTouched || !projects.count(current)) current = (mCurrentTouched || projects.count(mCurrentProject)) ? mCurrentProject : "";
+  if (!current.empty() && !projects.count(current)) current = projects.empty() ? "" : projects.begin()->first;
+  mProjects = std::move(projects);
+  mCurrentProject = current;
+  mTouchedProjects.clear();
+  mCurrentTouched = false;
+
   ptree projectsTree;
   for (const auto& [projectName, project] : mProjects) {
     projectsTree.put_child(projectName, project.GetTree());
@@ -350,10 +420,14 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
     auto node = mProjects.extract(from);
     node.key() = to;
     mProjects.insert(std::move(node));
+    mTouchedProjects.insert({from, to});
+    if (mCurrentProject == from) {
+      mCurrentProject = to;
+      mCurrentTouched = true;
+    }
   };
   renameEntry(projectName, newProjectName);
-  if (mCurrentProject == projectName) mCurrentProject = newProjectName;
-  if (!SaveNow()) {
+  if (!SaveProjects()) {
     renameEntry(newProjectName, projectName);
     mCurrentProject = previousCurrent;
     return false;
@@ -365,9 +439,26 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
     if (ec) {
       logger::error("Could not rename {} to {}: {}.", projectPath.string(), newProjectPath.string(), ec.message());
       renameEntry(newProjectName, projectName);
-      mCurrentProject = previousCurrent;
-      SaveNow();
+      SaveProjects();
       return false;
+    }
+  }
+  // the inputs of in-memory data sources are the UserData.root of the project's folder: they move with it
+  if (const string dataSources = DataSourcesFile(newProjectName); std::filesystem::exists(dataSources, existsError)) {
+    std::ifstream in(dataSources);
+    string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    in.close();
+    const string oldUserData = (projectPath / "UserData.root").string();
+    const string newUserData = (newProjectPath / "UserData.root").string();
+    bool changed = false;
+    for (size_t pos = content.find(oldUserData); pos != string::npos; pos = content.find(oldUserData, pos + newUserData.size())) {
+      content.replace(pos, oldUserData.size(), newUserData);
+      changed = true;
+    }
+    if (changed) {
+      std::ofstream out(dataSources, std::ios::trunc);
+      out << content;
+      if (!out) logger::warning("Could not update the in-memory data sources in {}: run the program of {} again.", dataSources, newProjectName);
     }
   }
   logger::print("Renamed project {} to {}. User code should be adjusted accordingly.", projectName, newProjectName);
@@ -464,13 +555,22 @@ vector<string> Config::RemoveProjects(const vector<string>& projectNames, const 
   for (const auto& projectName : projectNames) {
     if (!CheckProjectDir(projectName)) continue;  // stays registered
     auto node = mProjects.extract(projectName);
-    if (node) removed.insert(std::move(node));
+    if (node) {
+      mTouchedProjects.insert(projectName);
+      removed.insert(std::move(node));
+    }
   }
   if (removed.empty()) return {};
   const string previousCurrent = mCurrentProject;
-  if (removed.count(mCurrentProject)) mCurrentProject = mProjects.count(nextCurrent) ? nextCurrent : (mProjects.empty() ? "" : mProjects.begin()->first);
-  auto restore = [&](const string& projectName) { mProjects.insert(removed.extract(projectName)); };
-  if (!SaveNow()) {
+  if (removed.count(mCurrentProject)) {
+    mCurrentProject = mProjects.count(nextCurrent) ? nextCurrent : (mProjects.empty() ? "" : mProjects.begin()->first);
+    mCurrentTouched = true;
+  }
+  auto restore = [&](const string& projectName) {
+    mProjects.insert(removed.extract(projectName));
+    mTouchedProjects.insert(projectName);
+  };
+  if (!SaveProjects()) {
     while (!removed.empty())
       restore(removed.begin()->first);
     mCurrentProject = previousCurrent;
@@ -485,11 +585,14 @@ vector<string> Config::RemoveProjects(const vector<string>& projectNames, const 
       deleted.push_back(projectName);
     } else {
       restore(projectName);
-      if (projectName == previousCurrent) mCurrentProject = previousCurrent;
+      if (projectName == previousCurrent) {
+        mCurrentProject = previousCurrent;
+        mCurrentTouched = true;
+      }
       restored = true;
     }
   }
-  if (restored) SaveNow();
+  if (restored) SaveProjects();
   if (mCurrentProject != previousCurrent && !mCurrentProject.empty()) logger::info("Selecting project {}.", mCurrentProject);
   return deleted;
 }
@@ -548,12 +651,6 @@ bool Config::DeleteProjectDir(const string& projectName) const
   return true;
 }
 
-bool Config::SaveNow()
-{
-  mModified = true;  // the settings are still written at exit
-  return SaveProjects();
-}
-
 bool Config::Select(const string& projectName)
 {
   if (!ProjectsReadable()) return false;
@@ -566,7 +663,7 @@ bool Config::Select(const string& projectName)
     return false;
   }
   mCurrentProject = projectName;
-  mModified = true;
+  mCurrentTouched = true;
   return true;
 }
 
@@ -631,8 +728,9 @@ bool Config::Add(const string& projectName, const string& program, const string&
   auto& properties = mProjects[projectName].mProperties;
   properties["program"] = program;
   if (!outputDir.empty()) properties["outdir"] = outputDir;
+  mTouchedProjects.insert(projectName);
   mCurrentProject = projectName;
-  mModified = true;
+  mCurrentTouched = true;
   logger::info("Selecting project {}.", projectName);
   return true;
 }
@@ -668,7 +766,7 @@ bool Config::SetProperty(const string& projectName, const string& property, cons
   if ((property == "program" || property == "outdir") && !value.empty() && !CheckPath(value)) return false;
   auto& properties = mProjects[projectName].mProperties;
   properties[property] = value;
-  mModified = true;
+  mTouchedProjects.insert(projectName);
   bool allEmpty = std::all_of(properties.begin(), properties.end(), [](const auto& p) { return p.second.empty(); });
   if (allEmpty) {
     logger::info("Project {} has no properties left after unsetting '{}'. Removing project.", projectName, property);
@@ -727,43 +825,43 @@ ptree Config::Project::GetTree() const
 void Config::SetVerbosity(int logLevel)
 {
   mLogLevel = logLevel;
-  mModified = true;
+  mChangedSettings.insert("verbosity");
 }
 
 void Config::SetColor(int colorMode)
 {
   mColorMode = colorMode;
-  mModified = true;
+  mChangedSettings.insert("color");
 }
 
 void Config::SetPlotMode(const string& plotMode)
 {
   mPlotMode = plotMode;
-  mModified = true;
+  mChangedSettings.insert("plotmode");
 }
 
 void Config::SetMatchCaseInsensitive(bool matchCaseInsensitive)
 {
   mMatchCaseInsensitive = matchCaseInsensitive;
-  mModified = true;
+  mChangedSettings.insert("matchcase");
 }
 
 void Config::SetMatchContains(bool matchContains)
 {
   mMatchContains = matchContains;
-  mModified = true;
+  mChangedSettings.insert("matchmode");
 }
 
 void Config::SetScreenScale(double screenScale)
 {
   mScreenScale = screenScale;
-  mModified = true;
+  mChangedSettings.insert("screenscale");
 }
 
 void Config::SetBitmapScale(double bitmapScale)
 {
   mBitmapScale = bitmapScale;
-  mModified = true;
+  mChangedSettings.insert("bitmapscale");
 }
 
 // the settings the logger of the public headers needs, without exposing the configuration itself

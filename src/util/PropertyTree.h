@@ -46,17 +46,23 @@ void put_in_tree(boost::property_tree::ptree& tree, const std::optional<T>& var,
 template <typename T>
 void read_from_tree(const boost::property_tree::ptree& tree, std::optional<T>& var, const std::string& label)
 {
-  if constexpr (is_vector<T>{})  // vectors are stored as comma separated strings
-  {
-    if (auto tmp = tree.get_optional<std::string>(label))
-      var = string_to_vector<typename T::value_type>(*tmp);
-  } else if constexpr (std::is_enum<T>::value) {  // in case using enum types of the framework
-    if (auto tmp = tree.get_optional<typename std::underlying_type<T>::type>(label))
-      var = static_cast<T>(*tmp);
-  } else if constexpr (std::is_floating_point_v<T>) {  // via string_to_type, which also reads the inf and nan the writer puts out
-    if (auto tmp = tree.get_optional<std::string>(label)) var = string_to_type<T>(*tmp);
-  } else {
-    if (auto tmp = tree.get_optional<T>(label)) var = *tmp;
+  auto value = tree.get_optional<std::string>(label);
+  if (!value) return;
+  // every value is parsed as a whole (via string_to_type, which also reads the inf and nan the writer puts out): a bad value throws naming its key
+  try {
+    if constexpr (is_vector<T>{}) {  // vectors are stored as comma separated strings
+      var = string_to_vector<typename T::value_type>(*value);
+    } else if constexpr (std::is_enum<T>::value) {  // in case using enum types of the framework
+      var = static_cast<T>(string_to_type<typename std::underlying_type<T>::type>(*value));
+    } else if constexpr (std::is_same_v<T, std::string>) {
+      var = *value;
+    } else {
+      var = string_to_type<T>(*value);
+    }
+  } catch (const std::exception& e) {
+    std::string reason = e.what();
+    if (!reason.empty() && reason.back() == '.') reason.pop_back();  // the callers end the message
+    logger::throw_invalid_argument("Bad value '{}' of {}: {}", *value, label, reason);
   }
 }
 

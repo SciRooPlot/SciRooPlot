@@ -149,7 +149,8 @@ T string_to_type(const std::string& str)
     std::istringstream stream(str);
     stream.imbue(std::locale::classic());  // independent of the locale (a Python program may set one)
     T value{};
-    if (!(stream >> value)) {
+    // the whole string must be the number ("0,15" or "2.5abc" are no numbers, not their prefix)
+    if (!(stream >> value) || !(stream >> std::ws).eof()) {
       // the words number_to_string writes for infinity and NaN, which the stream does not read
       if (str == "inf" || str == "+inf") return std::numeric_limits<T>::infinity();
       if (str == "-inf") return -std::numeric_limits<T>::infinity();
@@ -160,13 +161,24 @@ T string_to_type(const std::string& str)
   } else if constexpr (!std::is_arithmetic_v<T>) {  // a class with a stream operator (e.g. color_t)
     std::istringstream stream(str);
     T value{};
-    if (!(stream >> value)) {
+    if (!(stream >> value) || !(stream >> std::ws).eof()) {
       logger::throw_invalid_argument("Cannot parse '{}'.", str);
     }
     return value;
+  } else if constexpr (std::is_same_v<T, bool>) {
+    if (str == "true" || str == "1") return true;
+    if (str == "false" || str == "0") return false;
+    logger::throw_invalid_argument("Cannot parse '{}' as true or false.", str);
   } else {
     static_assert(sizeof(T) < sizeof(int64_t), "string_to_type: integer type too wide for this parser");
-    const int64_t parsed = std::stoll(str);
+    size_t parsedLength{};
+    int64_t parsed{};
+    try {
+      parsed = std::stoll(str, &parsedLength);
+    } catch (const std::exception&) {
+      parsedLength = 0;
+    }
+    if (parsedLength == 0 || parsedLength != str.size()) logger::throw_invalid_argument("Cannot parse '{}' as an integer.", str);
     if (parsed < static_cast<int64_t>(std::numeric_limits<T>::min()) ||
         parsed > static_cast<int64_t>(std::numeric_limits<T>::max())) {
       logger::throw_out_of_range("Value {} is out of range for this field.", str);

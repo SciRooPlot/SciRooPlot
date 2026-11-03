@@ -423,6 +423,7 @@ class Plot : public FillSetters<Plot>
   static std::optional<std::string> NameError(const std::string& name, bool isGroup = false);
   static std::string NormalizeGroup(const std::string& group);
   static float_t RoundWidth(float_t width, const char* what);
+  static void CheckAlpha(float_t alpha);
   static std::optional<float_t> RoundWidth(const std::optional<float_t>& width, const char* what);
   static void ReadWidthFromTree(const boost::property_tree::ptree& tree, std::optional<float_t>& target, const char* key);
   // keys <prefix>color, <prefix>alpha, <prefix><style> and <prefix><scale> (none without scale key, a width is rounded)
@@ -757,6 +758,7 @@ class Plot::Pad::LegendEntry : public MarkerSetters<LegendEntry>, public LineSet
   enum class position_t : uint8_t { top,
                                     before,
                                     after };
+  static void CheckSymbolElements(const std::string& symbolElements);
   // the rows a LegendBox makes itself: an extra row with its label, the row of a data item
   explicit LegendEntry(const std::optional<std::string>& label, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& symbolElements = {});
   void operator+=(const LegendEntry& legendEntry);

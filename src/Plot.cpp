@@ -29,6 +29,7 @@
 #include <cctype>
 #include <cmath>
 #include <filesystem>
+#include <functional>
 #include <initializer_list>
 #include <istream>
 #include <limits>
@@ -180,6 +181,11 @@ float_t Plot::RoundWidth(float_t width, const char* what)
   }
   return rounded;
 }
+// an alpha outside of 0 (transparent) to 1 (opaque) is passed on to ROOT as it is, with a warning
+void Plot::CheckAlpha(float_t alpha)
+{
+  if (!(alpha >= 0.f && alpha <= 1.f)) logger::warning("Alpha {} is outside of 0 (transparent) to 1 (opaque).", alpha);
+}
 optional<float_t> Plot::RoundWidth(const optional<float_t>& width, const char* what)
 {
   if (!width) return nullopt;
@@ -239,6 +245,7 @@ void layout_t::Update(const layout_t& other)
 template <class Derived>
 Derived& MarkerSetters<Derived>::SetMarker(int16_t style, float_t size, color_t color, float_t alpha)
 {
+  Plot::CheckAlpha(alpha);
   mMarker = {color, alpha, style, size};
   return static_cast<Derived&>(*this);
 }
@@ -251,6 +258,7 @@ Derived& MarkerSetters<Derived>::SetMarkerColor(color_t color)
 template <class Derived>
 Derived& MarkerSetters<Derived>::SetMarkerAlpha(float_t alpha)
 {
+  Plot::CheckAlpha(alpha);
   mMarker.alpha = alpha;
   return static_cast<Derived&>(*this);
 }
@@ -280,6 +288,7 @@ void MarkerSetters<Derived>::PutMarker(ptree& tree) const
 template <class Derived>
 Derived& LineSetters<Derived>::SetLine(int16_t style, float_t width, color_t color, float_t alpha)
 {
+  Plot::CheckAlpha(alpha);
   mLine = {color, alpha, style, Plot::RoundWidth(width, "line width")};
   return static_cast<Derived&>(*this);
 }
@@ -292,6 +301,7 @@ Derived& LineSetters<Derived>::SetLineColor(color_t color)
 template <class Derived>
 Derived& LineSetters<Derived>::SetLineAlpha(float_t alpha)
 {
+  Plot::CheckAlpha(alpha);
   mLine.alpha = alpha;
   return static_cast<Derived&>(*this);
 }
@@ -321,6 +331,7 @@ void LineSetters<Derived>::PutLine(ptree& tree) const
 template <class Derived>
 Derived& FillSetters<Derived>::SetFill(int16_t style, color_t color, float_t alpha)
 {
+  Plot::CheckAlpha(alpha);
   mFill = {color, alpha, style, {}};
   return static_cast<Derived&>(*this);
 }
@@ -339,6 +350,7 @@ Derived& FillSetters<Derived>::SetFillStyle(int16_t style)
 template <class Derived>
 Derived& FillSetters<Derived>::SetFillAlpha(float_t alpha)
 {
+  Plot::CheckAlpha(alpha);
   mFill.alpha = alpha;
   return static_cast<Derived&>(*this);
 }
@@ -356,6 +368,7 @@ void FillSetters<Derived>::PutFill(ptree& tree) const
 template <class Derived>
 Derived& TextSetters<Derived>::SetText(int16_t font, float_t size, color_t color, float_t alpha)
 {
+  Plot::CheckAlpha(alpha);
   mText = {color, alpha, font, size};
   return static_cast<Derived&>(*this);
 }
@@ -368,6 +381,7 @@ Derived& TextSetters<Derived>::SetTextColor(color_t color)
 template <class Derived>
 Derived& TextSetters<Derived>::SetTextAlpha(float_t alpha)
 {
+  Plot::CheckAlpha(alpha);
   mText.alpha = alpha;
   return static_cast<Derived&>(*this);
 }
@@ -397,6 +411,7 @@ void TextSetters<Derived>::PutText(ptree& tree) const
 template <class Derived>
 Derived& BorderSetters<Derived>::SetBorder(int16_t style, float_t width, color_t color, float_t alpha)
 {
+  Plot::CheckAlpha(alpha);
   mBorder = {color, alpha, style, Plot::RoundWidth(width, "border width")};
   return static_cast<Derived&>(*this);
 }
@@ -409,6 +424,7 @@ Derived& BorderSetters<Derived>::SetBorderColor(color_t color)
 template <class Derived>
 Derived& BorderSetters<Derived>::SetBorderAlpha(float_t alpha)
 {
+  Plot::CheckAlpha(alpha);
   mBorder.alpha = alpha;
   return static_cast<Derived&>(*this);
 }
@@ -924,6 +940,7 @@ auto Plot::Pad::SetDefaultTextColor(color_t color) -> decltype(*this)
 }
 auto Plot::Pad::SetDefaultTextAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mText.alpha = alpha;
   return *this;
 }
@@ -968,21 +985,25 @@ auto Plot::Pad::SetDefaultLineWidth(float_t width) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultFillAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mFillDefaults.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::SetDefaultMarkerAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mMarkerDefaults.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::SetDefaultLineAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mLineDefaults.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::SetDefaultAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mMarkerDefaults.alpha = alpha;
   mLineDefaults.alpha = alpha;
   mFillDefaults.alpha = alpha;
@@ -1090,6 +1111,7 @@ auto Plot::Pad::SetDefaultMarkerColors(const vector<color_t>& colors) -> decltyp
 }
 auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
+  if (alpha) Plot::CheckAlpha(*alpha);
   CheckGradient(rgbEndpoints, "SetDefaultMarkerColors");
   mMarkerDefaults.SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
@@ -1105,6 +1127,7 @@ auto Plot::Pad::SetDefaultLineColors(const vector<color_t>& colors) -> decltype(
 }
 auto Plot::Pad::SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
+  if (alpha) Plot::CheckAlpha(*alpha);
   CheckGradient(rgbEndpoints, "SetDefaultLineColors");
   mLineDefaults.SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
@@ -1120,6 +1143,7 @@ auto Plot::Pad::SetDefaultFillColors(const vector<color_t>& colors) -> decltype(
 }
 auto Plot::Pad::SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
+  if (alpha) Plot::CheckAlpha(*alpha);
   CheckGradient(rgbEndpoints, "SetDefaultFillColors");
   mFillDefaults.SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
@@ -1136,6 +1160,7 @@ auto Plot::Pad::SetDefaultColors(const vector<color_t>& colors) -> decltype(*thi
 }
 auto Plot::Pad::SetDefaultColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
+  if (alpha) Plot::CheckAlpha(*alpha);
   CheckGradient(rgbEndpoints, "SetDefaultColors");
   for (auto* defaults : {&mMarkerDefaults, &mLineDefaults, &mFillDefaults})
     defaults->SetGradient({rgbEndpoints, alpha, nColors});
@@ -1219,6 +1244,7 @@ auto Plot::Pad::SetTransparent() -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetFrameFill(int16_t style, color_t color, float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mFrameFill.color = color;
   mFrameFill.style = style;
   mFrameFill.alpha = alpha;
@@ -1239,6 +1265,7 @@ auto Plot::Pad::SetFrameFillStyle(int16_t style) -> decltype(*this)
 
 auto Plot::Pad::SetFrameFillAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mFrameFill.alpha = alpha;
   return *this;
 }
@@ -1250,6 +1277,7 @@ auto Plot::Pad::SetFrameFillAlpha(float_t alpha) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetFrameBorder(int16_t style, float_t width, color_t color, float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mFrameBorder.color = color;
   mFrameBorder.alpha = alpha;
   mFrameBorder.style = style;
@@ -1265,6 +1293,7 @@ auto Plot::Pad::SetFrameBorderColor(color_t color) -> decltype(*this)
 
 auto Plot::Pad::SetFrameBorderAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mFrameBorder.alpha = alpha;
   return *this;
 }
@@ -1312,12 +1341,14 @@ auto Plot::Pad::SetFrameTransparent() -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetPalette(int32_t palette, optional<float_t> alpha) -> decltype(*this)
 {
+  if (alpha) Plot::CheckAlpha(*alpha);
   mPalette.index = palette;
   mPalette.colorGradient = {{}, alpha, {}};  // a ROOT palette keeps only the alpha of the gradient settings
   return *this;
 }
 auto Plot::Pad::SetPalette(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
+  if (alpha) Plot::CheckAlpha(*alpha);
   CheckGradient(rgbEndpoints, "SetPalette");
   mPalette.index = {};
   mPalette.colorGradient = {rgbEndpoints, alpha, nColors};
@@ -2554,6 +2585,7 @@ auto Plot::Pad::Data::SetColor(color_t color) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mMarker.alpha = alpha;
   mLine.alpha = alpha;
   mFill.alpha = alpha;
@@ -2571,11 +2603,15 @@ auto Plot::Pad::Data::SetKeepInputStyle(bool keep) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetContours(const vector<double>& contours) -> decltype(*this)
 {
+  if (std::adjacent_find(contours.begin(), contours.end(), std::greater_equal<double>()) != contours.end()) {
+    logger::warning("The contour levels of {} do not increase: ROOT expects them in increasing order.", mName);
+  }
   mContours = contours;
   return *this;
 }
 auto Plot::Pad::Data::SetContours(int32_t nContours) -> decltype(*this)
 {
+  if (nContours < 1) logger::warning("SetContours({}) of {}: the number of contour levels must be positive.", nContours, mName);
   mNContours = nContours;
   return *this;
 }
@@ -2616,6 +2652,7 @@ auto Plot::Pad::Data::Scale(double_t scaleFactor) -> decltype(*this)
 }
 auto Plot::Pad::Data::Smooth(uint16_t nIterSmooth) -> decltype(*this)
 {
+  if (nIterSmooth == 0) logger::warning("Smooth(0) of {} does not smooth: give the number of iterations.", mName);
   mModify.nIterSmooth = nIterSmooth;
   return *this;
 }
@@ -3010,7 +3047,7 @@ string Plot::Pad::Data::data_info_t::GetNameSuffix() const
   };
   // C++ code without whitespace that does not separate tokens ("eta > 0" -> "eta>0", but "x and y", "a - -b" stay):
   // expressions with the same tokens compute the same and get the same name; string and character literals are kept as they are
-  // (';' between statements becomes ',' since ROOT cuts key names at ';')
+  // (';' between statements becomes '`', which C++ code has nowhere outside of literals, since ROOT cuts key names at ';')
   auto compact = [](const string& code) {
     auto isWord = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; };
     auto isOperator = [](char c) { return std::string_view("+-*/%<>=!&|^~?:.#").find(c) != std::string_view::npos; };
@@ -3039,7 +3076,7 @@ string Plot::Pad::Data::data_info_t::GetNameSuffix() const
       }
       // a quote after a digit separates digits (1'000'000)
       if (c == '"' || (c == '\'' && (compacted.empty() || !std::isdigit(static_cast<unsigned char>(compacted.back()))))) quote = c;
-      compacted += (c == ';') ? ',' : c;
+      compacted += (c == ';') ? '`' : c;
     }
     return compacted;
   };
@@ -3540,6 +3577,7 @@ auto Plot::Pad::Axis::SetAxisColor(color_t color) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetAxisAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mAxisFrame.alpha = alpha;
   return *this;
 }
@@ -3590,11 +3628,13 @@ auto Plot::Pad::Axis::SetLabelColor(color_t color) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetTitleAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mTitleLayout.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mLabelLayout.alpha = alpha;
   return *this;
 }
@@ -4008,14 +4048,15 @@ vector<string> Plot::Pad::TextBox::GetLines() const
 }
 bool Plot::Pad::TextBox::RefersToOtherPads() const
 {
-  static const std::regex otherPadRegex("<[a-z]+[^<>]*:\\d+@\\d+[^<>]*>");
+  // the placeholder grammar of the painter: a format in brackets (which may contain < or >) before or after :n@p
+  static const std::regex otherPadRegex("<[a-z]+(?:\\[[^\\]]*\\])?:\\d+@\\d+(?:\\[[^\\]]*\\])?>");
   return mText.find('@') != string::npos && std::regex_search(mText, otherPadRegex);
 }
 void Plot::Pad::TextBox::ShiftDataIDs(uint16_t offset)
 {
   // the data of the pad this text is added to come first: <mean:1> becomes <mean:(1 + offset)>, references to other pads are kept
   if (offset == 0 || mText.find('<') == string::npos) return;
-  static const std::regex refRegex("(<[a-z]+[^<>:]*:)(\\d{1,5})([^<>@\\d][^<>]*)?>");
+  static const std::regex refRegex("(<[a-z]+(?:\\[[^\\]]*\\])?:)(\\d{1,5})((?:\\[[^\\]]*\\])?)>");
   string shifted;
   auto last = mText.cbegin();
   for (auto match = std::sregex_iterator(mText.begin(), mText.end(), refRegex); match != std::sregex_iterator(); ++match) {
@@ -4030,7 +4071,7 @@ void Plot::Pad::TextBox::ShiftDataIDsOfPads(const std::map<uint8_t, uint16_t>& o
 {
   // <mean:1@2> names the first data of pad 2: when plots are added, the data of pad 2 move up by the data pad 2 had before
   if (mText.find('@') == string::npos) return;
-  static const std::regex refRegex("(<[a-z]+[^<>:]*:)(\\d{1,5})@(\\d{1,3})([^<>\\d][^<>]*)?>");
+  static const std::regex refRegex("(<[a-z]+(?:\\[[^\\]]*\\])?:)(\\d{1,5})@(\\d{1,3})((?:\\[[^\\]]*\\])?)>");
   string shifted;
   auto last = mText.cbegin();
   for (auto match = std::sregex_iterator(mText.begin(), mText.end(), refRegex); match != std::sregex_iterator(); ++match) {
@@ -4045,6 +4086,9 @@ void Plot::Pad::TextBox::ShiftDataIDsOfPads(const std::map<uint8_t, uint16_t>& o
 }
 auto Plot::Pad::TextBox::SetTextAlign(int16_t align) -> decltype(*this)
 {
+  if (align < 0 || align / 10 > 3 || align % 10 > 3) {
+    logger::warning("Text alignment {} is not valid: tens 1-3 (left, centre, right), units 1-3 (bottom, middle, top).", align);
+  }
   int16_t hAlign = (align / 10) * 10;
   int16_t vAlign = align % 10;
   if (!hAlign) hAlign = kHAlignLeft;
@@ -4219,6 +4263,7 @@ auto Plot::Pad::LegendBox::SetOrderTopDown(bool topDown) -> decltype(*this)
 
 auto Plot::Pad::LegendBox::SetDefaultSymbolElements(const string& symbolElements) -> decltype(*this)
 {
+  LegendEntry::CheckSymbolElements(symbolElements);
   mSymbolElementsDefault = symbolElements;
   return *this;
 }
@@ -4233,6 +4278,7 @@ auto Plot::Pad::LegendBox::SetDefaultColor(color_t color) -> decltype(*this)
 
 auto Plot::Pad::LegendBox::SetDefaultAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mLineDefault.alpha = alpha;
   mMarkerDefault.alpha = alpha;
   mFillDefault.alpha = alpha;
@@ -4247,6 +4293,7 @@ auto Plot::Pad::LegendBox::SetDefaultLineColor(color_t color) -> decltype(*this)
 
 auto Plot::Pad::LegendBox::SetDefaultLineAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mLineDefault.alpha = alpha;
   return *this;
 }
@@ -4271,6 +4318,7 @@ auto Plot::Pad::LegendBox::SetDefaultMarkerColor(color_t color) -> decltype(*thi
 
 auto Plot::Pad::LegendBox::SetDefaultMarkerAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mMarkerDefault.alpha = alpha;
   return *this;
 }
@@ -4295,6 +4343,7 @@ auto Plot::Pad::LegendBox::SetDefaultFillColor(color_t color) -> decltype(*this)
 
 auto Plot::Pad::LegendBox::SetDefaultFillAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mFillDefault.alpha = alpha;
   return *this;
 }
@@ -4492,8 +4541,16 @@ auto Plot::Pad::LegendEntry::SetRefData(uint16_t refDataID) -> decltype(*this)
   return *this;
 }
 
+// the letters of the symbol of a legend row (TLegendEntry): L line, P marker, F fill, E error bars
+void Plot::Pad::LegendEntry::CheckSymbolElements(const string& symbolElements)
+{
+  if (symbolElements.find_first_not_of("LPFElpfe") != string::npos) {
+    logger::warning("Legend symbol '{}' contains letters other than L (line), P (marker), F (fill) and E (error bars).", symbolElements);
+  }
+}
 auto Plot::Pad::LegendEntry::SetSymbolElements(const string& symbolElements) -> decltype(*this)
 {
+  CheckSymbolElements(symbolElements);
   mSymbolElements = symbolElements;
   return *this;
 }
@@ -4529,6 +4586,7 @@ auto Plot::Pad::LegendEntry::SetColor(color_t color) -> decltype(*this)
 
 auto Plot::Pad::LegendEntry::SetAlpha(float_t alpha) -> decltype(*this)
 {
+  Plot::CheckAlpha(alpha);
   mMarker.alpha = alpha;
   mLine.alpha = alpha;
   mFill.alpha = alpha;

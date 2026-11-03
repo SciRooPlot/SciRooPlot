@@ -382,11 +382,19 @@ bool PlotManager::IsValidDataSourceName(const string& dataSource)
   }
   return true;
 }
+// an input file.root:folder/sub is split after the .root ending (a directory in the path may contain ':', e.g. a time stamp)
+vector<string> PlotManager::SplitInputPath(const string& input)
+{
+  const size_t pos = input.find(".root:");
+  if (pos == string::npos) return {input};
+  return {input.substr(0, pos + 5), input.substr(pos + 6)};
+}
 void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputs, bool replace)
 {
   if (!IsValidDataSourceName(dataSource)) return;
   if (replace) {
     mInputs.erase(dataSource);
+    ForgetBufferedData(dataSource);
   }
   for (const auto& input : inputs) {
     const auto expandedInput = expand_path(input);
@@ -511,7 +519,20 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     if (object) add(object, dir, "");
   }
   file.Close();
+  ForgetBufferedData(dataSource);  // an object can replace one of the same name read before
   AddDataSource(dataSource, {mUserDataFile + ":" + dataSource}, replace);
+}
+
+// data read from the inputs of a data source (also of its folders, dataSource:folder) is read again by the next GeneratePlots
+void PlotManager::ForgetBufferedData(const string& dataSource)
+{
+  auto isPart = [&](const string& source) { return source == dataSource || source.rfind(dataSource + ":", 0) == 0; };
+  for (auto it = mDataBuffer.begin(); it != mDataBuffer.end();) {
+    it = (isPart(it->first)) ? mDataBuffer.erase(it) : std::next(it);
+  }
+  for (auto it = mDataInfoBuffer.begin(); it != mDataInfoBuffer.end();) {
+    it = (isPart(it->first)) ? mDataInfoBuffer.erase(it) : std::next(it);
+  }
 }
 void PlotManager::AddDataSource(const string& dataSource, TObject* input, bool replace)
 {
@@ -680,7 +701,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
   // literal: a match of a pattern is a path, not a pattern again (a file b?.root would match itself forever, run[1]/ no longer match)
   std::function<void(const string&, bool)> addEntry;
   addEntry = [&](const string& entry, bool literal) {
-    auto fileAndFolder = split_string(entry, ':', true);
+    auto fileAndFolder = SplitInputPath(entry);
     const string& filePart = fileAndFolder[0];
     const string folderPart = (fileAndFolder.size() > 1) ? fileAndFolder[1] : "";
 
@@ -1210,6 +1231,13 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   const auto matches = PlotMatcher(name, group);
   if (!matches) return false;
 
+  // only what the selected plots need is read: the requests of earlier calls and what they could not read are dropped (data read stays buffered)
+  mDataInfoBuffer.clear();
+  for (auto& [dataSource, buffer] : mDataBuffer) {
+    for (auto it = buffer.begin(); it != buffer.end();) {
+      it = (it->second) ? std::next(it) : buffer.erase(it);
+    }
+  }
   for (auto& plot : mPlots) {
     if (!matches(plot.GetGroup(), plot.GetName())) continue;
     selectedPlots.push_back(&plot);
@@ -1574,7 +1602,7 @@ bool PlotManager::FillBuffer()
         }
       }
       // check if only a sub-folder in input file should be searched
-      auto fileNamePath = split_string(input, ':', true);
+      auto fileNamePath = SplitInputPath(input);
       string& fileName = fileNamePath[0];
       if (!str_ends_with(fileName, ".root")) continue;
 
@@ -1848,7 +1876,22 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   PlotPainter painter(isInteractiveMode ? Config::Get().ScreenScale() : (isBitmapMode ? Config::Get().BitmapScale() : 1.), isInteractiveMode);
   gROOT->SetBatch(!isInteractiveMode && !isMacroMode);
   shared_ptr<TCanvas> canvas;
-  const auto sharedAxes = fullPlot.GetSharedAxes();
+  auto sharedAxes = fullPlot.GetSharedAxes();
+  // a pad named by ShareAxis that the plot does not define is left out (it would otherwise be created, covering the whole canvas)
+  for (auto& [axisLabel, axisGroups] : sharedAxes) {
+    for (auto& group : axisGroups) {
+      auto undefined = [&, axisLabel = axisLabel](uint8_t padID) {
+        if (fullPlot.GetPads().count(padID)) return false;
+        logger::warning("Plot {}: pad {} is left out of the pads sharing the {} axis: the plot has no pad {}.", fullPlot.GetName(), padID, axisLabel, padID);
+        return true;
+      };
+      group.pads.erase(std::remove_if(group.pads.begin(), group.pads.end(), undefined), group.pads.end());
+    }
+    axisGroups.erase(std::remove_if(axisGroups.begin(), axisGroups.end(), [](const auto& group) { return group.pads.size() < 2; }), axisGroups.end());
+  }
+  for (auto it = sharedAxes.begin(); it != sharedAxes.end();) {
+    it = (it->second.empty()) ? sharedAxes.erase(it) : std::next(it);
+  }
   if (sharedAxes.empty()) {
     canvas.reset(painter.GeneratePlot(fullPlot, mDataBuffer).release());
   } else {
@@ -1859,14 +1902,16 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
         groups[axisLabel].push_back(group.pads);
         auto common = [&, axisLabel = axisLabel](const char* what, auto get, auto set) {
           optional<std::decay_t<decltype(*get(std::declval<const Plot::Pad::Axis&>()))>> value;
+          uint8_t valuePad{};  // the first pad of the group setting it, whose value is used
           for (uint8_t padID : group.pads) {
             const auto& axes = fullPlot[padID].GetAxes();
             auto axis = axes.find(axisLabel);
             if (axis == axes.end() || !get(axis->second)) continue;
             if (!value) {
               value = get(axis->second);
+              valuePad = padID;
             } else if (*value != *get(axis->second)) {
-              logger::warning("Plot {}: the pads sharing the {} axis with pad {} set different {}: the one of pad {} is used.", fullPlot.GetName(), axisLabel, padID, what, group.pads.front());
+              logger::warning("Plot {}: the pads sharing the {} axis with pad {} set different {}: the one of pad {} is used.", fullPlot.GetName(), axisLabel, padID, what, valuePad);
             }
           }
           if (!value) return;
@@ -1887,15 +1932,19 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
             return std::tie(p.GetPalette(), gradient.rgbEndpoints, gradient.alpha, gradient.nColors);
           };
           const Plot::Pad* first{nullptr};
+          uint8_t firstPad{};
           for (uint8_t padID : group.pads) {
             auto pad = pads.find(padID);
             if (pad == pads.end()) continue;
             const Plot::Pad* used = &pad->second;  // the palette a pad is painted with: its own, else the one of pad 0
-            if (!ownPalette(*used) && pads.count(0)) used = &pads.at(0);
+            const bool own = ownPalette(*used);
+            if (!own && pads.count(0)) used = &pads.at(0);
             if (!first) {
               first = used;
+              firstPad = padID;
             } else if (palette(*first) != palette(*used)) {
-              logger::warning("Plot {}: pad {} sets another palette than the pads it shares one colour scale with; separate the panels with a gap for own scales.", fullPlot.GetName(), padID);
+              // named: the pad that sets its own palette (the first one painted differently from the others may take pad 0's)
+              logger::warning("Plot {}: pad {} sets another palette than the pads it shares one colour scale with; separate the panels with a gap for own scales.", fullPlot.GetName(), (own) ? padID : firstPad);
               break;
             }
           }
@@ -1920,8 +1969,10 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
           auto range = ranges.find({padID, axisLabel});
           if (range == ranges.end()) {
             if (!group.fromLayout && fullPlot.GetPads().count(padID)) {
+              auto& pad = fullPlot.GetPads().at(padID);
+              const bool drawsNothing = pad.GetData().empty() && !pad.GetFrame() && !pad.GetRefFunc();
               logger::warning("Plot {}: pad {} is left out of the pads sharing the {} axis: {}.", fullPlot.GetName(), padID, axisLabel,
-                              (axisLabel == 'Z') ? "it draws no 2d histogram, graph or function (or a polar one)" : "it has no flat axis frame (a 3d view or a polar drawing)");
+                              (drawsNothing) ? "it draws nothing" : ((axisLabel == 'Z') ? "it draws no 2d histogram, graph or function (or a polar one)" : "it has no flat axis frame (a 3d view or a polar drawing)"));
             }
             continue;
           }
@@ -1994,13 +2045,19 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     KeepOnClose(canvas.get());
     // the plot is shown in the browsing window (where the previous plot was), which keeps it until browsing moves on
     size_t current = mBrowseIndex;
+    // made before when browsing comes back to it past a plot that failed: replaced by the new one
+    shared_ptr<TCanvas> previous = mBrowseCanvases[current];
     mBrowseCanvases[current] = canvas;
     if (mBrowsePosition) {
       ShowAt(canvas.get(), mBrowsePosition->first, mBrowsePosition->second);
     } else {
       canvas->Show();
     }
-    if (mShownIndex && mBrowseCanvases[*mShownIndex]) Hide(mBrowseCanvases[*mShownIndex].get());
+    if (previous) {
+      Hide(previous.get());
+      previous.reset();
+    }
+    if (mShownIndex && *mShownIndex != current && mBrowseCanvases[*mShownIndex]) Hide(mBrowseCanvases[*mShownIndex].get());
     mShownIndex = current;
     // the plots under the one shown, as on a stack: detaching the plot uncovers the one shown before it
     auto putOnTop = [this](size_t index) {
@@ -2165,28 +2222,31 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   }
 
   string fileName = plot.GetName();
-  std::replace(fileName.begin(), fileName.end(), ':', '_');
-  std::replace(fileName.begin(), fileName.end(), '/', '_');
   // ROOT names the macro function after the file, so it must be a valid identifier as well
   if (isMacroMode) fileName = sanitize(fileName);
 
   // create output folders and files
   string folderName = mOutputDirectory + "/" + plot.GetGroup();
   string fullName = folderName + "/" + fileName + fileEnding;
-  // names that differ only in characters a file name or a macro cannot have (eff-pi and eff_pi, a/b and a_b) would get the same file:
-  // the later plot gets a number, so it does not replace the earlier one
+  // names that would give the same file, as the sanitised macro names (eff-pi and eff_pi) or names differing only in case on a
+  // case-insensitive file system (Eff and eff, the default of macOS): the later plot gets a number, so it does not replace the earlier one
   if (!(isGifMode && !mGifName.empty())) {
     const string plotID = plot.GetGroup() + ":" + plot.GetName();
+    auto fileKey = [&](const string& name) {
+      string key = folderName + "/" + name + fileEnding;
+      std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+      return key;
+    };
     string uniqueName = fileName;
-    for (int32_t n = 2; mWrittenFiles.count(folderName + "/" + uniqueName + fileEnding) && mWrittenFiles[folderName + "/" + uniqueName + fileEnding] != plotID; ++n) {
+    for (int32_t n = 2; mWrittenFiles.count(fileKey(uniqueName)) && mWrittenFiles[fileKey(uniqueName)] != plotID; ++n) {
       uniqueName = fileName + "_" + std::to_string(n);
     }
     if (uniqueName != fileName) {
-      logger::warning("Plot {} of group {} is saved as {}{}, since {} has the same file name.", plot.GetName(), plot.GetGroup(), uniqueName, fileEnding, mWrittenFiles[fullName]);
+      logger::warning("Plot {} of group {} is saved as {}{}, since {} has the same file name.", plot.GetName(), plot.GetGroup(), uniqueName, fileEnding, mWrittenFiles[fileKey(fileName)]);
       fileName = uniqueName;
       fullName = folderName + "/" + fileName + fileEnding;
     }
-    mWrittenFiles[fullName] = plotID;
+    mWrittenFiles[fileKey(fileName)] = plotID;
   }
 
   if (isGifMode && !mGifName.empty()) {
@@ -3176,7 +3236,7 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
   };
   auto expandedIt = mExpandedInputs.find(dataSource);
   for (const auto& inputRaw : (expandedIt != mExpandedInputs.end()) ? expandedIt->second : ExpandInputs(dataSource)) {
-    const auto fileNamePath = split_string(expand_path(inputRaw).value_or(""), ':', true);
+    const auto fileNamePath = SplitInputPath(expand_path(inputRaw).value_or(""));
     const string& fileName = fileNamePath[0];
     std::error_code existsError;
     if (!str_ends_with(fileName, ".root") || !std::filesystem::exists(fileName, existsError)) continue;

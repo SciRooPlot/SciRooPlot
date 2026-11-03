@@ -168,6 +168,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `Project`/`Profile` without dimensions, tree projections with nBins ≤ 0 and no edges | Throw at definition | input validation | Fix these requests. |
 | Empty expressions in `Filter`, `Define`, tree projections, profiles, scatters and weights were stored (a project could then fail to load) | Throw at definition | input validation | Leave them out. |
 | A `TH2Poly` divided by a `TH2Poly` was divided cell by cell by number; a TH2 by a TH1 failed in ROOT without a message (as first data of a pad) | Error unless the polygons are the same and in the same order; error for different dimensions | input validation | Divide histograms with the same cells. |
+| `Data::ProjectX`/`ProjectY`/`Project`/`Profile…` of a `TH2Poly` gave the empty cell array of TH2 (integral 0) | Error, the data is not drawn | input validation | Project the inputs of the `TH2Poly` instead. |
 | `Entries(0)`, `Entries(min, max)` with `max ≤ min` | Error, call ignored | input validation | Fix the entry ranges. |
 | `AddFunction` formulas with free parameters (`gaus`, `pol2`, `[0]`) were drawn with all parameters 0 | Rejected with an error | input validation | Write the parameter values into the formula. |
 | `plot += plot`, `pad += pad` | Throw | input validation | none |
@@ -176,6 +177,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Python `histo()`/`histo2d()` with a range whose lower end is not below the upper end | `ValueError` | input validation | Fix the range. |
 | `SetMargin`, `SetLineSpacing` (legends and texts) and `LegendBox::SetSymbolColScale` took negative values | Warning, the value is ignored | input validation | Fix the values. |
 | Placeholders: a format containing `>` (`<mean:1[>8.2f]>`) was cut there; an unknown word with a data number (`<meen:1>`) stayed as text silently | Formats may contain `>`; a warning names an invalid placeholder | input validation | none |
+| Alpha values outside 0 to 1, `TextBox::SetTextAlign` with tens or units above 3, `Data::SetContours` with non-increasing levels or a count below 1, `Data::Smooth(0)`, `SetSymbolElements`/`SetDefaultSymbolElements` with letters other than `L`, `P`, `F`, `E` were stored silently | A warning (value kept) | input validation | Fix the values. |
 
 ### Files
 
@@ -187,9 +189,11 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `dataSources.info` entries with key `FILE` | Written with key `INPUT`, inputs kept as given and in order | file format | none (re-run to rewrite; `srp projects` counts only `INPUT`). |
 | `Data.root` (`data` mode): names split at `:` and `/`, old suffixes of tree requests, unsorted | Only the data path becomes directories (a `src:dir` source adds subdirectories), new request suffixes (`{dim=…@…}`), sorted | file format | Update scripts that read `Data.root` keys. |
 | `Plots.root`: a `user_colors` canvas; a plot named like a subgroup clashed with it | No `user_colors` (colours are defined inside each canvas); a clashing plot is stored as `<name>_plot`; a histogram repeated in a pad is stored as `<name>_<n>` | file format | Update scripts that expect `user_colors` or the old names. |
+| Output files of plots whose names differ only in case (`Eff`, `eff`) overwrote each other on case-insensitive file systems (macOS) | The later plot is saved as `<name>_2` (on every system), with a warning | file format | Give such plots different names if the numbered file is unwanted. |
 | `macro` mode: a plot named like a C++ keyword or a type ROOT knows (`auto`, `int`, `ratio`, `vector`, `TH1`, …) gave a macro that ROOT cannot run (`void auto()`) | File and function get a trailing `_` (`auto_.C`, `ratio_.C`, `void auto_()`) | file format | Update scripts that run such macros by name. |
 | `UserData.root`: an in-memory `TList`/`TDirectory` added as one object | A named list or directory becomes a folder of the data source | file format | none (objects are still found by name). |
 | `plots.info` keys in camelCase or with capital letters (`dataSource`, `denomName`, `denomDataSource`, `isCorrelated`, `entryMin`/`entryMax`, `isProfile`, `isProfileNoScatter`, `isUserCoord`, `*_gradient_nColors`, `nIter_smooth`, `rangeX_min`, `rebinX`, `title_offset_X`, prefixes `denomData_`/`denomProj_`), `default_candle_option_boxrange`/`whiskerrange`, `number_of_contours`; `settings.info` keys `logLevel`, `colorMode`, `plotMode`, `matchCaseInsensitive`, `matchContains`, `screenScale`, `bitmapScale` | All keys snake_case: `data_source`, `denom_name`, `denom_data_source`, `is_correlated`, `entry_min`/`entry_max`, `is_profile`, `is_profile_no_scatter`, `is_user_coordinates`, `*_gradient_num_colors`, `num_smooth_iterations`, `range_x_min`, `rebin_x`, `title_offset_x`, `denom_data_`/`denom_proj_`, `default_candle_option_box_range`/`whisker_range`, `num_contours`; (child nodes stay upper case); `settings.info` keys and values as the `srp` commands take them: `verbosity info`, `color bright`, `plotmode`, `matchmode exact`, `matchcase sensitive`, `screenscale`, `bitmapscale` | file format | Re-run the plotting program; set the `srp` settings again (old ones are ignored). |
+| `plots.info` values with trailing characters (`0,15`, `2.5abc`, `7x00`, `3x,21`) loaded their numeric prefix or were dropped silently | The plot is not loaded, with an error naming key and value | file format | Fix hand-edited values, or re-run the plotting program. |
 
 ### Command line
 
@@ -220,6 +224,8 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `srp update` in a conda environment ran `conda update conda-forge::scirooplot` | Updates with the tool owning the environment (conda, mamba or micromamba): `<tool> update -p $CONDA_PREFIX -c conda-forge scirooplot`; in a pixi environment it refuses and names `pixi upgrade scirooplot` | CLI | Use `pixi upgrade scirooplot` in pixi environments. |
 | `plot <group>/ <name>` (group with a trailing slash, e.g. copied from a path) matched nothing; with `matchmode contains` only the subgroups | A trailing slash ends the group name: `group/` selects `group` and its subgroups (with `contains` also `other/group`, not `groupx`), with an info line; also in tab completion | CLI | Use `group/.+` for the subgroups alone. |
 | – | `srp out [<project>]`: opens the output folder of the project (default: the current one) in the file manager | CLI | none |
+| `srp` commands and plotting programs running at the same time could undo each other's changes of projects and settings (each wrote back the whole state it had read) | Each writes only what it changed, under a lock (file `.lock` in the configuration directory) | CLI | none |
+| `srp rename` left the in-memory data sources of the project pointing to the `UserData.root` in the old configuration folder (until the program ran again) | They are moved along | CLI | none |
 
 ## 3.2.4 → 3.3.3
 
