@@ -1724,8 +1724,9 @@ void Plot::Pad::operator+=(const Pad& pad)
   const auto dataOffset = static_cast<uint16_t>(mData.size());  // the data of this pad come first
   for (const auto& data : pad.mData) {
     auto clonedData = data->Clone();
-    if (clonedData && clonedData->GetLegendID()) {
-      size_t shiftedLegendID = *clonedData->GetLegendID() + legendOffset;
+    // the legend of the data refers to the boxes of the added pad, also the implicit legend 1; without boxes there it is the first one of this pad
+    if (clonedData && (clonedData->GetLegendID() || !pad.mLegendBoxes.empty())) {
+      size_t shiftedLegendID = clonedData->GetLegendID().value_or(1u) + legendOffset;
       if (shiftedLegendID > std::numeric_limits<uint8_t>::max()) {
         logger::throw_out_of_range("Too many legend boxes to merge into a single pad (legend ID {} would exceed the maximum of {}).", shiftedLegendID, std::numeric_limits<uint8_t>::max());
       }
@@ -2527,7 +2528,10 @@ auto Plot::Pad::Data::SetStatsBox(const StatsBox& statsBox) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetRangeX(double_t min, double_t max) -> decltype(*this)
 {
-  if (min >= max) logger::warning("Range ({}, {}) of {} in x has min >= max.", min, max, mName);
+  if (min >= max) {
+    logger::warning("Range ({}, {}) of {} in x has min >= max, ignoring it.", min, max, mName);
+    return *this;
+  }
   mRangeX.min = min;
   mRangeX.max = max;
   return *this;
@@ -2550,7 +2554,10 @@ auto Plot::Pad::Data::SetRangeX() -> decltype(*this)
 }
 auto Plot::Pad::Data::SetRangeY(double_t min, double_t max) -> decltype(*this)
 {
-  if (min >= max) logger::warning("Range ({}, {}) of {} in y has min >= max.", min, max, mName);
+  if (min >= max) {
+    logger::warning("Range ({}, {}) of {} in y has min >= max, ignoring it.", min, max, mName);
+    return *this;
+  }
   mRangeY.min = min;
   mRangeY.max = max;
   return *this;
@@ -3531,7 +3538,10 @@ auto Plot::Pad::Axis::SetTitle(const string& title) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetRange(double_t min, double_t max) -> decltype(*this)
 {
-  if (min >= max) logger::warning("Range ({}, {}) of axis {} has min >= max.", min, max, mName);
+  if (min >= max) {
+    logger::warning("Range ({}, {}) of axis {} has min >= max, ignoring it.", min, max, mName);
+    return *this;
+  }
   mRange = {min, max};
   return *this;
 }

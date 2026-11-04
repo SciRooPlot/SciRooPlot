@@ -780,7 +780,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (auto it = (options) ? options->find(*optionAlias) : decltype(options->end()){}; options && it != options->end()) {
             drawOption += it->second;
           } else {
-            if (dataIndex != 0) logger::warning("Drawing option {} is not available for {} {}, using the default of ROOT.", draw_option_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), data_ptr->GetName());
+            if (dataIndex != 0) logger::warning("Drawing option {} is not available for {} {}, using the default of ROOT.", draw_option_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), data->GetName());
             alias = static_cast<draw_option_t>(255);
           }
         }
@@ -994,10 +994,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               polarAxisHist.reset(axisHist_ptr);
               mSourceHists.erase(data_ptr);
               delete data_ptr;
-              if (!polargram) {
-                logger::error("Polar graph {} has no points to make the polar grid of pad {} from.", data->GetName(), padID);
-                fail = true;
-                return;
+              if (!polargram) {  // no points: a grid of radius 1 over the full turn
+                polargram = new TGraphPolargram("Polargram", 0., 1., 0., TMath::TwoPi(), drawOption.data());
               }
               polargram->SetBit(kCanDelete);
               polargram->Draw(polarGridOption.data());
@@ -1794,7 +1792,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             exec->Draw();
           };
           if (const string textFormat = data->GetTextFormat().value_or("g"); textFormat != activeTextFormat) {
-            drawExec("text_format_" + std::to_string(dataIndex), fmt::format("gStyle->SetPaintTextFormat(\"{}\");", textFormat));
+            string quoted;  // the format goes into interpreted code
+            for (const char c : textFormat) {
+              if (c == '"' || c == '\\') quoted += '\\';
+              quoted += c;
+            }
+            drawExec("text_format_" + std::to_string(dataIndex), fmt::format("gStyle->SetPaintTextFormat(\"{}\");", quoted));
             activeTextFormat = textFormat;
           }
 
@@ -1911,6 +1914,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             option.ReplaceAll("SAMES", "").ReplaceAll("SAME", "");
             data_ptr->SetBit(TH1::kNoTitle);
             data_ptr->AppendPad(option.Data());
+          } else if constexpr (is_graph_1d<data_type>()) {
+            // ROOT reports an empty graph as an error at every paint
+            if (data_ptr->GetN() == 0) {
+              logger::warning("Graph {} has no points: it is not drawn.", data->GetName());
+            } else {
+              data_ptr->Draw(drawOption.data());
+            }
           } else {
             data_ptr->Draw(drawOption.data());
           }
@@ -2636,7 +2646,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 drawClipped(histogram, *optionAlias);
                 return;
               }
-              if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), data_ptr->GetName());
+              if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), data->GetName());
               optionAlias.reset();
             }
           }
@@ -2657,7 +2667,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               drawItem(hist, optionAlias);
               return;
             }
-            if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), data_ptr->GetName());
+            if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), data->GetName());
             optionAlias.reset();
           }
         }
@@ -4155,10 +4165,10 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     }
     uint16_t nLines = lines.size();
     if (nLines < 1) return;
-    // TLegend fills its columns row by row: for the order top down the entries are rearranged when they are added, and columns that
-    // would stay empty are dropped (5 entries in 4 columns: 2 rows, so 3 columns)
+    // TLegend fills its columns row by row: for the order top down the entries are rearranged when they are added; columns that
+    // would stay empty are dropped (top down: 5 entries in 4 columns are 2 rows, so 3 columns; row by row: fewer entries than columns)
     const uint16_t nRows = (nLines + nColumns - 1) / nColumns;
-    if (orderTopDown) nColumns = (nLines + nRows - 1) / nRows;
+    if (orderTopDown || nLines < nColumns) nColumns = (nLines + nRows - 1) / nRows;
     auto columnOf = [&](uint16_t lineID) { return (orderTopDown) ? lineID / nRows : lineID % nColumns; };
 
     const auto [padWidthPixel, padHeightPixel] = TextPadSizePixel(pad);
@@ -4584,7 +4594,9 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   const int32_t nx = static_cast<int32_t>(padWidthPixel / cellSize);
   const int32_t ny = static_cast<int32_t>(padHeightPixel / cellSize);
   if (nx <= 0 || ny <= 0) return false;
-  vector<uint8_t> blocked(static_cast<size_t>(nx) * ny, 0u);  // cells occupied by drawn objects
+  // cells occupied by drawn objects: bit 1 for objects, bit 2 for filled bins of maps (a box goes on top of a map only if there is no other room)
+  constexpr uint8_t kObject{1u}, kMap{2u};
+  vector<uint8_t> blocked(static_cast<size_t>(nx) * ny, 0u);
 
   // conversion from pad coordinates to (fractional) grid cells
   const double_t cellsPerX = nx / (pad->GetX2() - pad->GetX1());
@@ -4595,7 +4607,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   auto padX = [&](double_t x) { return (!pad->GetLogx()) ? x : ((x > 0.) ? std::log10(x) : pad->GetX1()); };
   auto padY = [&](double_t y) { return (!pad->GetLogy()) ? y : ((y > 0.) ? std::log10(y) : pad->GetY1()); };
 
-  auto setRect = [&](double_t x1, double_t y1, double_t x2, double_t y2, uint8_t value) {  // in cells, inclusive
+  auto setRect = [&](double_t x1, double_t y1, double_t x2, double_t y2, uint8_t value) {  // in cells, inclusive (value: kObject or kMap)
     if (!std::isfinite(x1) || !std::isfinite(y1) || !std::isfinite(x2) || !std::isfinite(y2)) return;
     if (x1 > x2) std::swap(x1, x2);
     if (y1 > y2) std::swap(y1, y2);
@@ -4607,11 +4619,15 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     const int32_t j2 = static_cast<int32_t>(std::floor(std::min(y2, ny - 1.)));
     for (int32_t i = i1; i <= i2; ++i) {
       for (int32_t j = j1; j <= j2; ++j) {
-        blocked[i + static_cast<size_t>(j) * nx] = value;
+        blocked[i + static_cast<size_t>(j) * nx] |= value;
       }
     }
   };
-  auto markPoint = [&](double_t x, double_t y) { setRect(cellX(x), cellY(y), cellX(x), cellY(y), 1u); };
+  // a point, with a marker of that size: ROOT draws 8 pixels per unit of the size, times mScale (ApplyScale, after the placement)
+  auto markPoint = [&](double_t x, double_t y, float_t markerSize = 0.f) {
+    const double_t halfCells = 4. * markerSize * mScale / cellSize;
+    setRect(cellX(x) - halfCells, cellY(y) - halfCells, cellX(x) + halfCells, cellY(y) + halfCells, kObject);
+  };
   auto markLine = [&](double_t x1, double_t y1, double_t x2, double_t y2) {  // in pad coordinates
     double_t cx1 = cellX(x1), cy1 = cellY(y1), cx2 = cellX(x2), cy2 = cellY(y2);
     if (!std::isfinite(cx1) || !std::isfinite(cy1) || !std::isfinite(cx2) || !std::isfinite(cy2)) return;
@@ -4634,7 +4650,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     const int32_t nSteps = static_cast<int32_t>(std::ceil(2. * std::max(std::abs(dx), std::abs(dy)) * (t1 - t0))) + 1;
     for (int32_t step = 0; step <= nSteps; ++step) {
       const double_t t = t0 + (t1 - t0) * step / nSteps;
-      setRect(cx1 + t * dx, cy1 + t * dy, cx1 + t * dx, cy1 + t * dy, 1u);
+      setRect(cx1 + t * dx, cy1 + t * dy, cx1 + t * dx, cy1 + t * dy, kObject);
     }
   };
 
@@ -4659,7 +4675,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       }
       std::sort(crossings.begin(), crossings.end());
       for (size_t k = 0; k + 1 < crossings.size(); k += 2) {
-        setRect(crossings[k], j, crossings[k + 1], j, 1u);
+        setRect(crossings[k], j, crossings[k + 1], j, kObject);
       }
     }
   };
@@ -4668,6 +4684,25 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   auto fillBaseY = [&]() { return (pad->GetLogy()) ? pad->GetUymin() : std::clamp(0., pad->GetUymin(), pad->GetUymax()); };
 
   auto markHist = [&](TH1* hist) {
+    if (hist->GetDimension() == 2 && !pad->GetView()) {
+      // maps drawn in the frame (col, box, text, ...): the filled bins of the visible range; ROOT leaves empty bins blank
+      if (auto* poly = dynamic_cast<TH2Poly*>(hist)) {
+        for (auto* obj : *poly->GetBins()) {
+          auto* bin = static_cast<TH2PolyBin*>(obj);
+          if (bin->GetContent() != 0.) setRect(cellX(padX(bin->GetXMin())), cellY(padY(bin->GetYMin())), cellX(padX(bin->GetXMax())), cellY(padY(bin->GetYMax())), kMap);
+        }
+        return;
+      }
+      TAxis* xAxis = hist->GetXaxis();
+      TAxis* yAxis = hist->GetYaxis();
+      for (int32_t binX = xAxis->GetFirst(); binX <= xAxis->GetLast(); ++binX) {
+        for (int32_t binY = yAxis->GetFirst(); binY <= yAxis->GetLast(); ++binY) {
+          if (hist->GetBinContent(binX, binY) == 0.) continue;
+          setRect(cellX(padX(xAxis->GetBinLowEdge(binX))), cellY(padY(yAxis->GetBinLowEdge(binY))), cellX(padX(xAxis->GetBinUpEdge(binX))), cellY(padY(yAxis->GetBinUpEdge(binY))), kMap);
+        }
+      }
+      return;
+    }
     if (hist->GetDimension() != 1) return;
     // error bars as ROOT draws them (the same rule as for the legend entries in LegendSymbolElements): with an E in the option or stored errors,
     // unless HIST is given; SAME, TEXT etc. contain an E but are no error option
@@ -4684,9 +4719,9 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
         const double_t width = (up - low) * hist->GetBarWidth();
         low += hist->GetBarOffset() * (up - low);
         if (isHorizontal) {
-          setRect(cellX(pad->GetUxmin()), cellY(low), cellX(padX(hist->GetBinContent(bin))), cellY(low + width), 1u);
+          setRect(cellX(pad->GetUxmin()), cellY(low), cellX(padX(hist->GetBinContent(bin))), cellY(low + width), kObject);
         } else {
-          setRect(cellX(low), cellY(pad->GetUymin()), cellX(low + width), cellY(padY(hist->GetBinContent(bin))), 1u);
+          setRect(cellX(low), cellY(pad->GetUymin()), cellX(low + width), cellY(padY(hist->GetBinContent(bin))), kObject);
         }
       }
       return;
@@ -4694,6 +4729,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     const bool hasErrors = !option.Contains("HIST") && (option.Contains("E") || HasErrors(hist));
     const bool hasErrorArea = hasErrors && (option.Contains("E2") || option.Contains("E3") || option.Contains("E4") || option.Contains("E5") || option.Contains("E6"));
     const bool showEmpty = option.Contains("E0");
+    const float_t markerSize = (option.Contains("P") || option.Contains("*") || (hasErrors && !hasErrorArea)) ? hist->GetMarkerSize() : 0.f;
     // the fill of a histogram drawn as steps, line or curve (THistPainter::PaintHist: a fill colour and style are needed):
     // steps are filled per bin, a line with option F2 down to the lower frame edge, a smoothed curve down to the base of the fill
     if (!hasErrors && hist->GetFillColor() != 0 && hist->GetFillStyle() != 0) {
@@ -4713,7 +4749,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       } else {
         const double_t base = fillBaseY();
         for (int32_t bin = axis->GetFirst(); bin <= axis->GetLast(); ++bin) {
-          setRect(cellX(padX(axis->GetBinLowEdge(bin))), cellY(base), cellX(padX(axis->GetBinUpEdge(bin))), cellY(padY(hist->GetBinContent(bin))), 1u);
+          setRect(cellX(padX(axis->GetBinLowEdge(bin))), cellY(base), cellX(padX(axis->GetBinUpEdge(bin))), cellY(padY(hist->GetBinContent(bin))), kObject);
         }
       }
     }
@@ -4725,9 +4761,9 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       const double_t xCenter = padX(axis->GetBinCenter(bin));
       const double_t y = padY(content);
       markLine(xLow, y, xUp, y);
-      markPoint(xCenter, y);
+      markPoint(xCenter, y, markerSize);
       if (hasErrorArea) {
-        setRect(cellX(xLow), cellY(padY(content - hist->GetBinErrorLow(bin))), cellX(xUp), cellY(padY(content + hist->GetBinErrorUp(bin))), 1u);
+        setRect(cellX(xLow), cellY(padY(content - hist->GetBinErrorLow(bin))), cellX(xUp), cellY(padY(content + hist->GetBinErrorUp(bin))), kObject);
       } else if (hasErrors) {
         markLine(xCenter, padY(content - hist->GetBinErrorLow(bin)), xCenter, padY(content + hist->GetBinErrorUp(bin)));
       } else if (bin < axis->GetLast()) {
@@ -4744,13 +4780,14 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     const bool hasErrorBand = option.Contains("3") || option.Contains("4");
     // lines between consecutive points only with L or C, or without any option (TGraphPainter::PaintGraph): markers alone leave the space between them free
     const bool hasLine = option.Contains("l") || option.Contains("c") || option.Strip(TString::kBoth).IsNull();
+    const float_t markerSize = (option.Contains("p") || option.Contains("*")) ? graph->GetMarkerSize() : 0.f;
     const int32_t n = graph->GetN();
     if (n > 0 && option.Contains("b")) {
       // bar chart (TGraphPainter::PaintGraph): boxes of a fraction of the mean point distance around each point, from the base of a fill
       const auto [xMin, xMax] = std::minmax_element(graph->GetX(), graph->GetX() + n);
       const double_t halfWidth = 0.5 * (*xMax - *xMin) / n * gStyle->GetBarWidth();
       for (int32_t i = 0; i < n; ++i) {
-        setRect(cellX(padX(graph->GetPointX(i) - halfWidth)), cellY(fillBaseY()), cellX(padX(graph->GetPointX(i) + halfWidth)), cellY(padY(graph->GetPointY(i))), 1u);
+        setRect(cellX(padX(graph->GetPointX(i) - halfWidth)), cellY(fillBaseY()), cellX(padX(graph->GetPointX(i) + halfWidth)), cellY(padY(graph->GetPointY(i))), kObject);
       }
     }
     if (option.Contains("f") && graph->GetFillColor() != 0 && graph->GetFillStyle() != 0) {
@@ -4765,12 +4802,12 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     for (int32_t i = 0; i < n; ++i) {
       const double_t xUser = graph->GetPointX(i), yUser = graph->GetPointY(i);
       const double_t x = padX(xUser), y = padY(yUser);
-      markPoint(x, y);
+      markPoint(x, y, markerSize);
       if (hasLine && i > 0) markLine(padX(graph->GetPointX(i - 1)), padY(graph->GetPointY(i - 1)), x, y);
       const double_t exLow = graph->GetErrorXlow(i), exHigh = graph->GetErrorXhigh(i);
       const double_t eyLow = graph->GetErrorYlow(i), eyHigh = graph->GetErrorYhigh(i);
       if (hasErrorBoxes) {
-        setRect(cellX(padX(xUser - exLow)), cellY(padY(yUser - eyLow)), cellX(padX(xUser + exHigh)), cellY(padY(yUser + eyHigh)), 1u);
+        setRect(cellX(padX(xUser - exLow)), cellY(padY(yUser - eyLow)), cellX(padX(xUser + exHigh)), cellY(padY(yUser + eyHigh)), kObject);
         continue;
       }
       if (exLow > 0. || exHigh > 0.) markLine(padX(xUser - exLow), y, padX(xUser + exHigh), y);
@@ -4784,7 +4821,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
         for (double_t c = std::floor(c1); c <= c2; c += 1.) {
           const double_t t = (cellX(x) == cellX(xPrev)) ? 0. : (c - cellX(xPrev)) / (cellX(x) - cellX(xPrev));
           if (t < 0. || t > 1.) continue;
-          setRect(c, cellY(lowPrev + t * (low - lowPrev)), c, cellY(highPrev + t * (high - highPrev)), 1u);
+          setRect(c, cellY(lowPrev + t * (low - lowPrev)), c, cellY(highPrev + t * (high - highPrev)), kObject);
         }
       }
     }
@@ -4811,9 +4848,9 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       continue;
     } else if (auto* pave = dynamic_cast<TPave*>(obj)) {
       // legends and texts placed before (coordinates in NDC)
-      setRect(pave->GetX1NDC() * nx, pave->GetY1NDC() * ny, pave->GetX2NDC() * nx, pave->GetY2NDC() * ny, 1u);
+      setRect(pave->GetX1NDC() * nx, pave->GetY1NDC() * ny, pave->GetX2NDC() * nx, pave->GetY2NDC() * ny, kObject);
     } else if (auto* box = dynamic_cast<TBox*>(obj)) {  // regions (shapes), in axis values like lines and ellipses
-      setRect(cellX(padX(box->GetX1())), cellY(padY(box->GetY1())), cellX(padX(box->GetX2())), cellY(padY(box->GetY2())), 1u);
+      setRect(cellX(padX(box->GetX1())), cellY(padY(box->GetY1())), cellX(padX(box->GetX2())), cellY(padY(box->GetY2())), kObject);
     } else if (auto* line = dynamic_cast<TLine*>(obj)) {
       if (!line->TestBit(TLine::kLineNDC)) markLine(padX(line->GetX1()), padY(line->GetY1()), padX(line->GetX2()), padY(line->GetY2()));  // lines and arrows
     } else if (auto* polyline = dynamic_cast<TPolyLine*>(obj)) {                                                                          // polygons (shapes): the outline, and with a fill the inside
@@ -4840,7 +4877,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       if (ellipse->GetFillStyle() != 0) markPolygon(points);
     } else if (auto* subPad = dynamic_cast<TPad*>(obj); subPad && TString(subPad->GetName()).BeginsWith("ImageBox_")) {
       // images placed before (position in NDC of this pad)
-      setRect(subPad->GetXlowNDC() * nx, subPad->GetYlowNDC() * ny, (subPad->GetXlowNDC() + subPad->GetWNDC()) * nx, (subPad->GetYlowNDC() + subPad->GetHNDC()) * ny, 1u);
+      setRect(subPad->GetXlowNDC() * nx, subPad->GetYlowNDC() * ny, (subPad->GetXlowNDC() + subPad->GetWNDC()) * nx, (subPad->GetYlowNDC() + subPad->GetHNDC()) * ny, kObject);
     } else if (auto* hist = dynamic_cast<TH1*>(obj)) {
       if (!TString(hist->GetName()).BeginsWith("axis_hist") && !TString(hist->GetName()).Contains("hframe")) markHist(hist);
     } else if (auto* grid = dynamic_cast<TGraphPolargram*>(obj)) {
@@ -4856,7 +4893,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       const double_t userPerPixelX = (pad->GetX2() - pad->GetX1()) / padWidthPixel;
       const double_t userPerPixelY = (pad->GetY2() - pad->GetY1()) / padHeightPixel;
       const bool ortho = grid->TestBit(TGraphPolargram::kLabelOrtho);
-      auto markLabel = [&](double_t x1, double_t y1, double_t x2, double_t y2) { setRect(cellX(padX(x1)), cellY(padY(y1)), cellX(padX(x2)), cellY(padY(y2)), 1u); };
+      auto markLabel = [&](double_t x1, double_t y1, double_t x2, double_t y2) { setRect(cellX(padX(x1)), cellY(padY(y1)), cellX(padX(x2)), cellY(padY(y2)), kObject); };
       TLatex measure;
       measure.SetTextFont(grid->GetPolarLabelFont());
       measure.SetTextSize(grid->GetPolarLabelSize());
@@ -4940,13 +4977,15 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     }
   }
 
-  // summed area table to check a whole rectangle at once
+  // summed area table to check a whole rectangle at once (counting the cells blocked by the given kinds)
   vector<int32_t> sum(static_cast<size_t>(nx + 1) * (ny + 1), 0);
-  for (int32_t i = 0; i < nx; ++i) {
-    for (int32_t j = 0; j < ny; ++j) {
-      sum[(i + 1) + static_cast<size_t>(j + 1) * (nx + 1)] = blocked[i + static_cast<size_t>(j) * nx] + sum[i + static_cast<size_t>(j + 1) * (nx + 1)] + sum[(i + 1) + static_cast<size_t>(j) * (nx + 1)] - sum[i + static_cast<size_t>(j) * (nx + 1)];
+  auto fillSum = [&](uint8_t mask) {
+    for (int32_t i = 0; i < nx; ++i) {
+      for (int32_t j = 0; j < ny; ++j) {
+        sum[(i + 1) + static_cast<size_t>(j + 1) * (nx + 1)] = ((blocked[i + static_cast<size_t>(j) * nx] & mask) != 0) + sum[i + static_cast<size_t>(j + 1) * (nx + 1)] + sum[(i + 1) + static_cast<size_t>(j) * (nx + 1)] - sum[i + static_cast<size_t>(j) * (nx + 1)];
+      }
     }
-  }
+  };
   // whether a box at this position (lower left corner in NDC) overlaps with any cell occupied by drawn objects
   auto isBlocked = [&](double_t x, double_t y) {
     const int32_t i1 = std::clamp(static_cast<int32_t>(std::floor(x * nx)), 0, nx);
@@ -4982,19 +5021,29 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   bool found = false;
   double_t minDistance{};
   size_t minRank{};  // position of the corner in the order of preference
-  for (const double_t x : xPositions) {
-    for (const double_t y : yPositions) {
-      if (isBlocked(x, y)) continue;
-      for (size_t rank = 0; rank < corners.size(); ++rank) {
-        const double_t distance = distanceToCorner(corners[rank], x, y);
-        if (found && (distance > minDistance || (distance == minDistance && rank >= minRank))) continue;
-        found = true;
-        minDistance = distance;
-        minRank = rank;
-        lowerLeftX = x;
-        lowerLeftY = y;
+  auto search = [&]() {
+    for (const double_t x : xPositions) {
+      for (const double_t y : yPositions) {
+        if (isBlocked(x, y)) continue;
+        for (size_t rank = 0; rank < corners.size(); ++rank) {
+          const double_t distance = distanceToCorner(corners[rank], x, y);
+          if (found && (distance > minDistance || (distance == minDistance && rank >= minRank))) continue;
+          found = true;
+          minDistance = distance;
+          minRank = rank;
+          lowerLeftX = x;
+          lowerLeftY = y;
+        }
       }
     }
+  };
+  const bool hasMaps = std::any_of(blocked.begin(), blocked.end(), [](uint8_t cell) { return cell & kMap; });
+  fillSum(kObject | kMap);
+  search();
+  if (!found && hasMaps) {
+    // a map filling the frame: on top of it, avoiding only the other objects
+    fillSum(kObject);
+    search();
   }
   return found;
 }

@@ -152,6 +152,12 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Log scale on the value axis: the lower end came from the smallest positive content of all bins (graphs: all points), also those outside a set x (and y) range | From the bins and points drawn inside the frame's ranges | behaviour | none |
 | A legend entry setting only `SetTextFont` or only `SetTextSize` mixed pixel and relative sizes with the legend's (a font of another precision made the legend vanish; an own pixel size was not scaled by `bitmapscale`/`screenscale`) | The entry gets both: the legend's font with its size, or its font with the legend's size converted | behaviour | none |
 | `AddText("")` drew an empty box that took up space | Not drawn, with the warning that the text is empty | behaviour | none |
+| `Plot::operator+=` (also base plots): data of the added pad without `SetLegend` joined the first legend of the plot it was added to, data with `SetLegend(n)` the added pad's legend `n` | Both go to the added pad's legends when it has any (without legends of its own, rows still join the first legend) | behaviour | Give `SetLegend(n)` explicitly where rows should go into another legend. |
+| Automatic placement of legends, texts and images ignored 2D maps drawn in the frame and took every marker as one point | Placed beside the filled bins of maps (on top of a map only where nothing else is free) and around markers by their size | behaviour | none |
+| An empty graph was painted with ROOT's "illegal number of points" error; an empty `TGraphPolar` as first data of a pad failed the plot | Not drawn, with a warning; the polar grid then has radius 1 | behaviour | none |
+| `LegendBox::SetNumColumns(n)` with fewer entries than `n` kept the empty columns (a wide box) | They are dropped, as with `SetOrderTopDown()` | behaviour | none |
+| `PanelLayout`: a panel with its own colour scale (`Panel().ColorScale()`) right before a `ColorScale()` cell got no room for its scale | It gets its room; the cell follows it | behaviour | none |
+| An exception thrown by a user expression of a tree request (e.g. `std::stod` in a `Define`) was reported as a value not matching its column type, and all requests of that tree were lost | Reported as an invalid query of that request; the other requests are drawn | behaviour | none |
 
 ### Input validation
 
@@ -178,6 +184,9 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `SetMargin`, `SetLineSpacing` (legends and texts) and `LegendBox::SetSymbolColScale` took negative values | Warning, the value is ignored | input validation | Fix the values. |
 | Placeholders: a format containing `>` (`<mean:1[>8.2f]>`) was cut there; an unknown word with a data number (`<meen:1>`) stayed as text silently | Formats may contain `>`; a warning names an invalid placeholder | input validation | none |
 | Alpha values outside 0 to 1, `TextBox::SetTextAlign` with tens or units above 3, `Data::SetContours` with non-increasing levels or a count below 1, `Data::Smooth(0)`, `SetSymbolElements`/`SetDefaultSymbolElements` with letters other than `L`, `P`, `F`, `E` were stored silently | A warning (value kept) | input validation | Fix the values. |
+| `Axis::SetRange`, `Data::SetRangeX`, `Data::SetRangeY` with min ≥ max: a warning, then the range was applied | A warning, the call is ignored | input validation | Fix the range. |
+| `BasePlotShape::SetAspectRatio`, `SetRatioHeight`, `SetPullHeight` with 0, a negative or a non-finite value: `MakeBasePlot` threw | An error, the value is ignored | input validation | Fix the value. |
+| `PlotManager(name)` accepted any project name (`"../x"` saved the project outside the configuration path) | Throws `std::invalid_argument` (Python `ValueError`) for the characters `srp add` rejects (anything but letters, digits, `_` and `-`) | input validation | Rename the project. |
 
 ### Files
 
@@ -226,6 +235,8 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | – | `srp out [<project>]`: opens the output folder of the project (default: the current one) in the file manager | CLI | none |
 | `srp` commands and plotting programs running at the same time could undo each other's changes of projects and settings (each wrote back the whole state it had read) | Each writes only what it changed, under a lock (file `.lock` in the configuration directory) | CLI | none |
 | `srp rename` left the in-memory data sources of the project pointing to the `UserData.root` in the old configuration folder (until the program ran again) | They are moved along | CLI | none |
+| `srp confdir <project>` of an unknown project printed a path, exit code 0 | Error, exit code 1 | CLI | none |
+| `srp unset <p> program` removed the project (with its `plots.info`) when nothing else was set | Refused with an error: `srp set <p> program <path>` changes it, `srp remove <p>` removes the project | CLI | none |
 
 ## 3.2.4 → 3.3.3
 

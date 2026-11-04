@@ -392,6 +392,7 @@ void PanelLayout::ApplyTo(Plot& plot) const
     }
   }
   for (size_t c = 0; c < nCols; ++c) {
+    if (colWidth[c] == 0. && colScale[c]) logger::throw_invalid_argument("Layout: the ColorScale() cell of column {} has no width (SetColorScaleMargin is 0).", c + 1);
     if (colWidth[c] == 0.) logger::throw_invalid_argument("Layout: column {} has no width: it holds only empty cells without size or cells spanning further columns.", c + 1);
   }
   for (size_t r = 0; r < nRows; ++r) {
@@ -431,7 +432,8 @@ void PanelLayout::ApplyTo(Plot& plot) const
     if (gapAfterColumn[c] == 1) {
       colSep[c] = Separation{colOwnScale[c] ? mColorScaleMargin : mMarginRight, mMarginLeft, false};
     } else if (colScale[c + 1]) {
-      colSep[c] = Separation{0., 0., false};  // the cell of a colour scale holds its room: it starts at the frames on its left
+      // the cell of a colour scale holds its room: it starts at the frames on its left, after the own scale of a panel there
+      colSep[c] = Separation{colOwnScale[c] ? mColorScaleMargin : 0., 0., false};
     } else if (colScale[c]) {
       colSep[c] = Separation{0., mMarginLeft, false};
     } else if (colOwnScale[c]) {

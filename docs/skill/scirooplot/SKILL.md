@@ -72,6 +72,7 @@ int main() {
 }
 ```
 Python is the same API: `from SciRooPlot import *`, `PlotManager("myProject")`, `plot[1]['X']`, `pm.AddPlot(plot)`, `pm.SaveProject()` (see "C++ vs Python").
+Scripts can make plots without the `plot` app: `pm.GeneratePlots("pdf", "name", "group")` (mode, then name and group patterns as for `plot`) on the plots added so far, `pm.LoadPlots(name, group)` to read saved definitions back first, `pm.ListPlots()`.
 
 ## Data sources
 
@@ -100,6 +101,9 @@ plot[1]['X'].SetTitle("#it{x}").SetRange(a, b).SetLog().SetGrid().SetNumDivision
             .SetTitleFont(43).SetTitleSize(28).SetTitleOffset(1.1).SetLabelFont(43).SetLabelSize(24)   // sizes in pixels only with font 43; with the default font 42 they are fractions of the pad
             .SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")   // ticks every fixed number of seconds: not on calendar years; for long ranges store decimal years on a plain axis
             .SetHideClippedLabels(false) // the base plots drop a label whose text would reach beyond the pad (top label of a ratio pad at the shared edge); false keeps it
+            .SetLabelOffset(0.01).SetLabelAngle(45.).SetTitleCenter().SetTickLength(0.03).SetAxisColor(kGray + 2)   // label angle: alphanumeric bin labels of x only
+plot[1]['Z'].SetColorScaleOffset(0.01).SetColorScaleWidth(0.05)   // colour scale beside the frame, fractions of the pad width ('C' for a TH3); room for it: PanelLayout().SetColorScaleMargin(pixel)
+plot[1].SetRedrawAxes()               // axes (ticks) drawn again on top of the data, e.g. over filled areas
 plot[1]['Y'].SetRoomAboveMax(0.3).SetRoomBelowMin(0.1)    // 30 % / 10 % of the frame free beyond everything drawn in the pad (any axis; error bars
                                                          // where ROOT counts them; log axes in decades); an explicit SetMinRange/SetMaxRange wins on its side
 ```
@@ -121,6 +125,7 @@ Base plots: `PlotManager::MakeBasePlot("<type>[_wide|_tall][_<cols>x<rows>][_rat
 
 ```cpp
 plot[1].AddData("hist", "src", "label");                    // histogram, graph, function, TEfficiency, tree, RNTuple, table — type is detected
+// also TH2Poly, TProfile2D/TProfile3D and THn/THnSparse (n dimensions: select with .Project/.Profile, see Modifiers)
 plot[1].AddFunction("sin(x)/x", "label");  plot[1].AddPoints({x...}, {y...});  plot[1].AddPoints({x1, x2}, {y1, y2}, "label").SetDrawOption(line);  // a line as data
 // shapes are not data (never in the axis ranges, not numbered, no default colours, no legend row), drawn after the data unless SetBehindData()/SetOnTop():
 plot[1].AddVerticalLine(125.);  plot[1].AddHorizontalLine(1.);  plot[1].AddRegionX(120., 130.).SetBehindData();  plot[1].AddRegionY(y1, y2);
@@ -136,6 +141,7 @@ plot[1].AddData(myTemplate("hist"), "label");               // Data template: Da
 .SetLegend(2).SetLegendLabel("l").SetDefinesFrame().SetShowOverflowBins().SetContours(n).SetTextFormat("4.2f")
 .SetKeepInputStyle()               // line, marker, fill stored with the input win over the pad defaults (what the data sets still wins)
 .SetNpx(n[, ny])                   // points a function is drawn with (AddFunction: 1000 in 1d; inputs keep their own)
+.SetTextAngle(45.)                 // angle of the values written by text / points_text
 .SetShowStats("eMR", "title")   // statistics box of a histogram (letters of TStyle::SetOptStat; the optional title is its first line)
 .SetStatsBox(StatsBox().SetAutoPlacement(top_left).SetFill(1001, kWhite))   // its placement and appearance: all setters of legend and text boxes
 ```
@@ -209,7 +215,7 @@ plot[1](1).SetLegendEntry(LegendEntry().AfterData(2));       // the row of a dat
 plot[1].AddText({"line one", "line two"});  AddText(top_left, "text");  AddText(0.2, 0.9, "text").SetTextFont(43).SetTextSize(20).SetTextAlign(13);   // font 43: size in pixels
 plot[1].AddImage(0.2, 0.7, "/path/logo.png").SetWidth(0.3);  AddImage(top_right, "logo.png");   // default width 0.2 of the pad, height from the image; in pdf files only with ROOT >= 6.42
 ```
-Positions are pad coordinates (0–1) of the upper left corner, `.SetUserCoordinates()` switches to axis units. Legend symbols are derived from what is actually drawn; override with `SetSymbolElements`/`SetDefaultSymbolElements`.
+Positions are pad coordinates (0–1) of the upper left corner, `.SetUserCoordinates()` switches to axis units. Box geometry (legends, texts, stats boxes): `.SetSize(w, h)` instead of the measured size, `.SetMargin(m)`, `.SetLineSpacing(s)` (in text heights), `.SetBorder(style, width, color)`; `GetLegend(1).SetSymbolColScale(f)` widens or narrows the symbol column. Legend symbols are derived from what is actually drawn; override with `SetSymbolElements`/`SetDefaultSymbolElements`.
 
 ## Practices to suggest (this is where SciRooPlot saves work)
 

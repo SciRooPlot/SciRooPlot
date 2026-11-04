@@ -1155,7 +1155,7 @@ void exportPythonDataInterfaces(py::module_& m)
         py::list items = array.attr("tolist")();
         const bool strings = std::all_of(items.begin(), items.end(), [](py::handle item) { return py::isinstance<py::str>(item) || py::isinstance<py::bytes>(item); });
         if (!strings) {
-          skip(column, "its values are neither numbers of one type nor all strings; convert it, e.g. with astype()");
+          skip(column, "its values are neither numbers of one type nor all strings (missing values count as neither); convert it, e.g. with astype() or fillna()");
           continue;
         }
         auto& buffer = std::any_cast<string&>(buffers.emplace_back(string{}));

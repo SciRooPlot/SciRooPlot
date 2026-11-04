@@ -80,6 +80,7 @@
 #include <array>
 #include <cctype>
 #include <chrono>
+#include <cmath>
 #include <csignal>
 #include <cstdint>
 #include <cstdlib>
@@ -149,6 +150,8 @@ using util::str_starts_with;
 PlotManager::PlotManager(const string& projectName)
   : mProjectName(projectName), mUserDataFile(((mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName)) / (mProjectName.empty() ? "UserData_" + std::to_string(gSystem->GetPid()) + "_" + std::to_string(reinterpret_cast<std::uintptr_t>(this)) + ".root" : string{"UserData.root"}))
 {
+  // the name is a folder of the config path, as for srp add
+  if (auto illegal = find_illegal_name_char(projectName)) logger::throw_invalid_argument("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
   if (!gApplication) {
     new TApplication("MainApp", 0, nullptr);
   }
@@ -819,18 +822,30 @@ void PlotManager::AddPlot(Plot plot)
 
 BasePlotShape& BasePlotShape::SetAspectRatio(double_t ratio)
 {
+  if (!std::isfinite(ratio) || ratio <= 0.) {
+    logger::error("BasePlotShape::SetAspectRatio({}) needs a positive finite value, keeping {}.", ratio, mAspectRatio);
+    return *this;
+  }
   mAspectRatio = ratio;
   return *this;
 }
 
 BasePlotShape& BasePlotShape::SetRatioHeight(double_t height)
 {
+  if (!std::isfinite(height) || height <= 0.) {
+    logger::error("BasePlotShape::SetRatioHeight({}) needs a positive finite value, keeping {}.", height, mRatioHeight);
+    return *this;
+  }
   mRatioHeight = height;
   return *this;
 }
 
 BasePlotShape& BasePlotShape::SetPullHeight(double_t height)
 {
+  if (!std::isfinite(height) || height <= 0.) {
+    logger::error("BasePlotShape::SetPullHeight({}) needs a positive finite value, keeping {}.", height, mPullHeight);
+    return *this;
+  }
   mPullHeight = height;
   return *this;
 }
@@ -3519,9 +3534,8 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           // their range refers to all rows of the tree, so they apply the filter after it
           const bool hasEntryRange = info->entries.max.has_value();
           if (request.Prepare((hasEntryRange) ? base : matched, (hasEntryRange) ? joinKeyColumns : vector<string>{})) requests.push_back(std::move(request));
-        } catch (const std::invalid_argument&) {
-          throw;
         } catch (const std::exception& e) {
+          if (type == "table" && dynamic_cast<const std::invalid_argument*>(&e)) throw;  // the csv reader: a value not matching its column type
           logger::error("Invalid query for {} {} ({}): {}.", type, DataLocation(dataSource, name), info->GetDescription(), getErrorReason(e, rootOutput.Text().substr(outputStart)));
         }
       }
@@ -3555,11 +3569,11 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
         entryCounts.push_back({request.GetInfo(), {request.GetEntriesPreFilter(), request.GetEntriesPostFilter()}});
         ++nRequests;
       }
-    } catch (const std::invalid_argument&) {
-      // thrown by the csv reader if a value does not match the column type deduced from the first lines
-      logger::error("Cannot read {} {}: it contains a value that does not match the type of its column.", type, DataLocation(dataSource, name));
     } catch (const std::exception& e) {
-      if (requests.size() > 1) {
+      if (type == "table" && dynamic_cast<const std::invalid_argument*>(&e)) {
+        // thrown by the csv reader if a value does not match the column type deduced from the first lines
+        logger::error("Cannot read {} {}: it contains a value that does not match the type of its column.", type, DataLocation(dataSource, name));
+      } else if (requests.size() > 1) {
         // an invalid expression only shows up when the event loop starts and then spoils all requests of this data frame: process them one by one
         for (auto& request : requests) {
           processGroup({request.GetInfo()}, sequential);

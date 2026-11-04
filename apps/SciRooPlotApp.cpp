@@ -352,6 +352,11 @@ int main(int argc, char* argv[])
     row("commit", SCIROOPLOT_GIT_DESCRIBE);
     row("compiler", SCIROOPLOT_CXX_COMPILER);
   } else if (command == "confdir") {
+    // also the folder of a project saved by its program but not yet added (env.sh reads plots.info there)
+    if (!project.empty() && !Config::Get().Exists(project) && !std::filesystem::is_directory(Config::Get().ProjectPath(project))) {
+      logger::error("Cannot find project {}.", project);
+      return 1;
+    }
     std::cout << ((project.empty()) ? Config::Get().Path().string() : Config::Get().ProjectPath(project).string()) << std::endl;
     return 0;
   } else if (command == "rename") {

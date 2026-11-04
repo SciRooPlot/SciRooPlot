@@ -763,15 +763,14 @@ bool Config::SetProperty(const string& projectName, const string& property, cons
     logger::error("Property '{}' contains illegal character '{}'.", property, *illegal);
     return false;
   }
+  if (property == "program" && value.empty()) {
+    logger::error("The program of project {} cannot be unset (srp set {} program <path> changes it, srp remove {} removes the project).", projectName, projectName, projectName);
+    return false;
+  }
   if ((property == "program" || property == "outdir") && !value.empty() && !CheckPath(value)) return false;
   auto& properties = mProjects[projectName].mProperties;
   properties[property] = value;
   mTouchedProjects.insert(projectName);
-  bool allEmpty = std::all_of(properties.begin(), properties.end(), [](const auto& p) { return p.second.empty(); });
-  if (allEmpty) {
-    logger::info("Project {} has no properties left after unsetting '{}'. Removing project.", projectName, property);
-    return Remove(projectName);
-  }
   return true;
 }
 

@@ -1885,6 +1885,7 @@ plot.ShareAxis('Z', {4, 5});</pre></div>` },
 <tr><td>A line is thinner or thicker than set</td><td>line widths are whole pixels; a fractional width is rounded, with a warning (<code>3.4</code> becomes 3, <code>3.5</code> becomes 4)</td></tr>
 <tr><td>C++: <code>AddData({"h", "src"}, "label")</code> is ambiguous</td><td>write <code>AddData("h", "src", "label")</code></td></tr>
 <tr><td>bash: syntax error near <code>(</code></td><td>quote patterns with <code>( ) |</code>: <code>plot g 'a_(b|c)'</code></td></tr>
+<tr><td>bash: <code>a || plot …</code> runs <code>plot</code> when <code>a</code> succeeds, or <code>.*</code> becomes file names</td><td>after <code>||</code>, <code>!</code>, <code>time</code> or <code>|</code>, put <code>plot</code> in braces: <code>a || { plot g .*; }</code> (on its own, after <code>;</code> and after <code>&amp;&amp;</code> it works as it is)</td></tr>
 </tbody></table></div>` },
 ];
 const REFSNIP = {
