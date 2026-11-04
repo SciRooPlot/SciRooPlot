@@ -2444,7 +2444,13 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   if (dataLayout.mKeepInputStyle) mKeepInputStyle = true;
   if (dataLayout.mTextFormat) mTextFormat = dataLayout.mTextFormat;
   if (dataLayout.mTextAngle) mTextAngle = dataLayout.mTextAngle;
-  if (dataLayout.mLegend.entry) mLegend.entry = dataLayout.mLegend.entry;
+  if (dataLayout.mLegend.entry) {  // merged like the styles: what the data's own entry sets and the layout does not is kept
+    if (mLegend.entry) {
+      *mLegend.entry += *dataLayout.mLegend.entry;
+    } else {
+      mLegend.entry = dataLayout.mLegend.entry;
+    }
+  }
   if (dataLayout.mRangeX.min) mRangeX.min = dataLayout.mRangeX.min;
   if (dataLayout.mRangeX.max) mRangeX.max = dataLayout.mRangeX.max;
   if (dataLayout.mRangeY.min) mRangeY.min = dataLayout.mRangeY.min;

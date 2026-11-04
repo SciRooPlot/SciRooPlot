@@ -2068,7 +2068,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
               legendBoxVector[legendID - 1]->AddDataRow(*data->GetLegendLabel(), (dataIndex - hasRefFunc), legendEntry);
             } else {
-              logger::warning("Invalid legend label ({}) specified for data {} in {}.", legendID, data->GetName(), data->GetDataSource());
+              logger::warning("The legend set for data {} in {} does not exist in its pad (SetLegend counts the legends added by the plot itself, not those of its base plot).", data->GetName(), data->GetDataSource());
             }
           }
         }
@@ -2080,12 +2080,32 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         if (dataIndex != 0) logger::warning(std::forward<decltype(args)>(args)...);
       };
 
+      // functions stored with an input histogram or graph (fit results) do not follow modifiers or divisions: not drawn then
+      auto dropStoredFunctions = [&](auto* ptr, const char* reason) {
+        using T = std::remove_pointer_t<decltype(ptr)>;
+        if constexpr (std::is_base_of_v<TH1, T> || std::is_base_of_v<TGraph, T>) {
+          TList* functions = ptr->GetListOfFunctions();
+          if (!functions) return;
+          for (TObjLink* link = functions->FirstLink(); link;) {
+            TObject* obj = link->GetObject();
+            link = link->Next();
+            if (!obj->InheritsFrom(TF1::Class())) continue;
+            warn("The function {} stored with {} is not drawn: it does not follow the {}.", obj->GetName(), ptr->GetName(), reason);
+            delete functions->Remove(obj);
+          }
+        }
+      };
+
       // apply the data modifiers stored in mods to ptr (plain data, ratio inputs and ratio result)
       auto applyModifiers = [&](auto& ptr, const Plot::Pad::Data& mods) {
         using ptr_type = std::decay_t<decltype(ptr)>;
         auto warnUnsupported = [&](bool requested, const char* what) {
           if (requested) warn("{} is not supported for {} ({}), ignoring.", what, ptr->GetName(), ptr->ClassName());
         };
+        const auto& m = mods.Modify();
+        if (m.scaleBinWidthNorm || m.normMaximum || m.scaleFactor || m.divideBinWidth || m.rebinGroupX || m.rebinGroupY || m.rebinGroupZ ||
+            m.scaleAxisX || m.scaleAxisY || m.scaleAxisZ || m.cumulative || m.nIterSmooth)
+          dropStoredFunctions(ptr, "modifiers of the data");
         // multiplies a factor of Scale (axis 0) or ScaleX/Y/Z into product; a factor that is not positive is ignored
         auto multiplyFactor = [&](optional<double_t>& product, const optional<double_t>& factor, char axis = 0) {
           if (!factor) return;
@@ -2752,6 +2772,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
 
       if (rawData) {
         if (data->GetType() == "ratio") {
+          std::visit([&](auto* ptr) { dropStoredFunctions(ptr, "division"); }, *rawData);
           numeratorMeans = prepareOperand(*rawData, std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetNumModify());
         }
         std::visit(processData, *rawData);
@@ -3811,6 +3832,7 @@ TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<dou
     newAxes[i]->SetParent(extended);
     if (i != extendedDim) continue;
     newAxes[i]->Set(edges[i].size() - 1, edges[i].data());
+    newAxes[i]->SetCanExtend(false);  // a copied labelled axis can extend: ROOT would shrink it back to the labelled bins when painting
     if (hadRange) {
       newAxes[i]->SetRange(std::max(axes[i]->GetFirst() + shift, 1), axes[i]->GetLast() + shift);
     } else {
@@ -3978,6 +4000,7 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
       if (str_contains(option, "CONT") || str_contains(option, "SURF")) return {L};  // contour lines, mesh
       return (hasFill) ? area(Outline::line) : LegendSymbol{L};
     }
+    if (str_contains(option, "HBAR")) return box();  // bars only, without the errors or markers of other options
     const bool noErrors = takeToken("HIST");
     // E0 - E6 (the digits of other options, as in LF2, are no error types)
     char errorType = '\0';
@@ -5731,11 +5754,13 @@ bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialError
   TGraphErrors numeratorGraph(numerator);
   numeratorGraph.SetName(numerator->GetName());  // used in messages
   if (!Divide(&numeratorGraph, denominator, binomialErrors, verbose)) return false;
+  const double_t entries = numerator->GetEntries();  // SetBinContent counts one entry per bin
   numerator->Reset();
   for (int32_t i = 0; i < numeratorGraph.GetN(); ++i) {
     numerator->SetBinContent(i + 1, numeratorGraph.GetY()[i]);
     numerator->SetBinError(i + 1, numeratorGraph.GetEY()[i]);
   }
+  numerator->SetEntries(entries);
   return true;
 }
 bool PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialErrors, bool verbose)

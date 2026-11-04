@@ -1215,7 +1215,14 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   TDirectory::TContext keepCurrentDirectory;
   mWrittenFiles.clear();
 
-  if (!mHasDisplay) {
+  // a caller that set ROOT's batch mode (gROOT->SetBatch) gets no windows; a canvas made then would still paint through gVirtualX,
+  // which is the display interface once ROOT's graphics were initialised, and crash
+  if (gROOT->IsBatch()) {
+    if (needsDisplay) {
+      logger::error("Mode '{}' needs a graphical display, but ROOT runs in batch mode (is DISPLAY set, or was gROOT->SetBatch called?).", mode);
+      return false;
+    }
+  } else if (!mHasDisplay) {
     // determine OS dependent offset between window and frame
     // (GetWindowTopY gives the current coordinates of the window, but SetWindowPosition moves the frame instead of the window)
     mHasDisplay = false;

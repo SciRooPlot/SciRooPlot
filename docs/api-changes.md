@@ -162,6 +162,11 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `TGraphMultiErrors` in a `Ratio` or scaled (`Scale`, `ScaleY`, `Normalize`): only the summed y errors changed, the errors drawn per dimension kept their values | Every dimension is scaled with the values (low and high swapped for a negative denominator) | behaviour | none |
 | NaN or infinite values: a `TGraph2D` point with such a coordinate or error, and a `TGraph` point with such an error, reached ROOT; such bins of profiles were set to a content of 0 with their entries kept; they were removed only after the modifiers, so `Normalize`, `NormalizeToMaximum` and `Cumulative` spread one NaN to every bin or point | The points are removed and the profile bins emptied, with the warning given for histograms and graphs, before the modifiers are applied | behaviour | none |
 | A data source path with `:` in a folder name (`/data/2026-11-04T10:00/file.root`) was split at the first `:` | Split after `.root:` only | behaviour | none |
+| Functions stored with an input histogram or graph (fit results) were drawn unchanged after modifiers (`Scale`, `Normalize`, `ScaleX`, `Rebin`, …) and in a `Ratio` | Not drawn when the data is modified or divided, with a warning | behaviour | Add the fit as data of its own where it should be shown with modified data. |
+| `Data::ApplyLayout` replaced the data's whole legend entry (`GetLegendEntry()`) by the layout's | Merged like the styles: what only the data's entry sets is kept | behaviour | none |
+| A labelled x axis extended by a range beyond the data (`SetRange(-2, 6)`) shrank back to its labelled bins | Extended as other axes | behaviour | none |
+| Raw option `HBAR` of a histogram with errors: the legend row showed markers and error bars | A box, as drawn | behaviour | none |
+| `GeneratePlots` after `gROOT->SetBatch(true)` in a session with a display crashed | Works; `show`, `spread` and `macro` then report that ROOT runs in batch mode | behaviour | none |
 
 ### Input validation
 
