@@ -84,8 +84,8 @@ class Config
   void SetScreenScale(double screenScale);
   void SetBitmapScale(double bitmapScale);
 
-  void Reset();
-  void Clean();
+  bool Reset();  // false if a project could not be removed
+  bool Clean();
   bool Add(const std::string& projectName, const std::string& program, const std::string& outputDir = "");
   bool Remove(const std::string& projectName);
   bool Rename(const std::string& projectName, const std::string& newProjectName);

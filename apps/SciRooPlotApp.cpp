@@ -363,9 +363,9 @@ int main(int argc, char* argv[])
   } else if (command == "rename") {
     if (!Config::GetMutable().Rename(project, property)) return 1;
   } else if (command == "clean") {
-    Config::GetMutable().Clean();
+    if (!Config::GetMutable().Clean()) return 1;
   } else if (command == "reset") {
-    Config::GetMutable().Reset();
+    if (!Config::GetMutable().Reset()) return 1;
   } else if (command == "projects") {
     if (!project.empty() && !Config::Get().Exists(project)) {
       logger::error("Cannot find project {}.", project);
@@ -484,9 +484,10 @@ bool PrintRootFileContents(const string& inputPath)
 {
   string fileName = inputPath;
   string startPath;
-  if (auto pos = inputPath.find(':'); pos != string::npos) {
-    fileName = inputPath.substr(0, pos);
-    startPath = inputPath.substr(pos + 1);
+  // split after the .root ending, as the inputs of data sources (a directory in the path may contain ':')
+  if (auto pos = inputPath.find(".root:"); pos != string::npos) {
+    fileName = inputPath.substr(0, pos + 5);
+    startPath = inputPath.substr(pos + 6);
   }
   while (!startPath.empty() && startPath.back() == '/')
     startPath.pop_back();

@@ -897,6 +897,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (ex) std::fill(ex, ex + data_ptr->GetN(), 0.);
             }
           } else if (alias == area && data_ptr->GetN() > 0) {
+            // the data range applies to the points, not to the polygon closed at zero below (its corners would be removed with them)
+            if (!pad_ptr->GetView()) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
+          }
+          if (alias == area && data_ptr->GetN() > 0) {
             // the area between the points and zero (F would close the polygon from the last point to the first)
             auto* polygon = new TGraph(data_ptr->GetN() + 2);
             polygon->SetName(data_ptr->GetName());
@@ -1079,19 +1083,22 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             axisHist_ptr->Draw((drawOption + "SAME AXIG").data());
           }
           const int32_t frameDim = axisHist_ptr->GetDimension();
+          const bool hbarFrame = IsHBarFrame(pad_ptr, axisHist_ptr);  // with HBAR the X and Y of the pad are the y and x axis of the histogram
 
           // a user range beyond the axes of the frame histogram needs a wider frame, since ROOT shows at most the axis of a histogram:
           // the frame is replaced by a histogram with extended axes (changing the axis alone would break the bin storage of the histogram)
           if (!pad_ptr->GetView() && !polargram) {
-            for (auto axisLabel : {'X', 'Y'}) {
+            for (auto axisLabel : {'X', 'Y'}) {  // the axis of the frame histogram
               if (axisLabel == 'Y' && frameDim == 1) continue;
+              const char padLabel = (hbarFrame) ? ((axisLabel == 'X') ? 'Y' : 'X') : axisLabel;  // where it is drawn
+              const char valueLabel = (hbarFrame) ? 'X' : 'Y';                                   // the pad axis of the contents of a 1d frame
               optional<double_t> userMin;
               optional<double_t> userMax;
               optional<bool> logY;
-              for (const auto* axis : AxisSettings(pad, padDefaults, 'Y')) {
+              for (const auto* axis : AxisSettings(pad, padDefaults, valueLabel)) {
                 if (axis->GetLog()) logY = axis->GetLog();
               }
-              for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
+              for (const auto* axis : AxisSettings(pad, padDefaults, padLabel)) {
                 if (axis->GetMinRange()) userMin = axis->GetMinRange();
                 if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
               }
@@ -1117,8 +1124,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (!userMin && !userMax) continue;
               // the y range of a 1d frame is taken from the pad below, and ROOT computes it differently for a log scale (margins in decades):
               // the scale is applied first, so the extended frame keeps the log range (one extra paint, only for extended frames with log y)
-              if (frameDim == 1 && logY.value_or(false) && !pad_ptr->GetLogy() && axisHist_ptr->GetMaximum() > 0.) {
-                pad_ptr->SetLogy(true);
+              if (frameDim == 1 && logY.value_or(false) && !((hbarFrame) ? pad_ptr->GetLogx() : pad_ptr->GetLogy()) && axisHist_ptr->GetMaximum() > 0.) {
+                (hbarFrame) ? pad_ptr->SetLogx(true) : pad_ptr->SetLogy(true);
                 pad_ptr->Update();
               }
               TH1* extended = ExtendFrameAxis(axisHist_ptr, axisLabel, userMin, userMax, rangeMin, rangeMax);
@@ -1128,6 +1135,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 if (frameDim > 1) {
                   extended->SetMinimum(axisHist_ptr->GetMinimum());
                   extended->SetMaximum(axisHist_ptr->GetMaximum());
+                } else if (hbarFrame) {
+                  extended->SetMinimum(FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx()));
+                  extended->SetMaximum(FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx()));
                 } else {
                   extended->SetMinimum(FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()));
                   extended->SetMaximum(FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy()));
@@ -1149,7 +1159,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           axisHist_ptr->SetBit(TH1::kNoTitle);
 
           // apply axis settings
-          const bool hbarFrame = IsHBarFrame(pad_ptr, axisHist_ptr);  // with HBAR the X and Y of the pad are the y and x axis of the histogram
           if (frameDim != 3 && pad.GetAxes().count('C')) {
             logger::warning("The C axis of pad {} is ignored: it is the content of a 3d histogram (for other data the Y or Z axis is the value axis).", padID);
           }
@@ -1742,7 +1751,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           } else if constexpr (is_graph_1d<data_type>()) {
             // (histograms converted for a clipped alias got the x range of the data as bins before, the y range does not apply to them)
             const bool isClippedHist = (alias == hist_clipped || alias == hist_open_clipped || alias == curve_clipped) && mSourceHists.count(data_ptr);
-            if (!pad_ptr->GetView() && !isClippedHist) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
+            if (!pad_ptr->GetView() && !isClippedHist && alias != area) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
           } else {
             if (projected) {
               TString upper(drawOption);
@@ -2164,14 +2173,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
             warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
           } else if constexpr (is_hist_3d<ptr_type>()) {
-            if (mods.GetRebinGroupX()) {
-              ptr->RebinX(*mods.GetRebinGroupX());
-            }
-            if (mods.GetRebinGroupY()) {
-              ptr->RebinY(*mods.GetRebinGroupY());
-            }
-            if (mods.GetRebinGroupZ()) {
-              ptr->RebinZ(*mods.GetRebinGroupZ());
+            if (dynamic_cast<TProfile3D*>(ptr)) {
+              // TProfile3D has no rebinning of its own: the one of TH3 leaves every bin empty (ROOT bug)
+              warnUnsupported(mods.GetRebinGroupX() || mods.GetRebinGroupY() || mods.GetRebinGroupZ(), "Rebinning");
+            } else {
+              if (mods.GetRebinGroupX()) ptr->RebinX(*mods.GetRebinGroupX());
+              if (mods.GetRebinGroupY()) ptr->RebinY(*mods.GetRebinGroupY());
+              if (mods.GetRebinGroupZ()) ptr->RebinZ(*mods.GetRebinGroupZ());
             }
           } else {
             if (mods.GetRebinGroupX()) {
@@ -2524,6 +2532,30 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             } else if constexpr (is_graph_1d<data_type>()) {
               if constexpr (is_graph_1d<denom_data_type>() || is_hist_1d<denom_data_type>() || is_func_1d<denom_data_type>()) {
+                // a numerator without errors gets the errors of the denominator (as TH1::Divide): a copy with errors of the same kind
+                if constexpr (is_graph_1d<denom_data_type>() || is_hist_1d<denom_data_type>()) {
+                  bool asymmetric = false;
+                  bool denomErrors = true;  // histograms always have errors
+                  if constexpr (is_graph_1d<denom_data_type>()) {
+                    asymmetric = denom_data_ptr->GetEYlow() && denom_data_ptr->GetEYhigh();
+                    denomErrors = asymmetric || denom_data_ptr->GetEY();
+                  }
+                  if (denomErrors && data_ptr->IsA() == TGraph::Class()) {
+                    TGraph* withErrors = (asymmetric) ? static_cast<TGraph*>(new TGraphAsymmErrors(data_ptr->GetN(), data_ptr->GetX(), data_ptr->GetY()))
+                                                      : static_cast<TGraph*>(new TGraphErrors(data_ptr->GetN(), data_ptr->GetX(), data_ptr->GetY()));
+                    withErrors->SetName(data_ptr->GetName());
+                    withErrors->SetTitle(data_ptr->GetTitle());
+                    withErrors->GetXaxis()->SetTitle(data_ptr->GetXaxis()->GetTitle());
+                    withErrors->SetBit(kCanDelete, data_ptr->TestBit(kCanDelete));
+                    CopyStyle(*data_ptr, *withErrors);
+                    if (auto source = mSourceHists.extract(data_ptr)) {
+                      source.key() = withErrors;
+                      mSourceHists.insert(std::move(source));
+                    }
+                    delete data_ptr;
+                    data_ptr = withErrors;
+                  }
+                }
                 if (!Divide(data_ptr, denom_data_ptr, binomialErrors, dataIndex != 0)) fail = true;
                 data_ptr->GetHistogram()->GetYaxis()->SetTitle("ratio");
               } else {
@@ -2570,9 +2602,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }  // end ratio code
 
-        applyModifiers(data_ptr, *data);
-
-        // NaN or infinite values (e.g. from a division by zero) spoil the axis ranges and ROOT then draws nothing
+        // NaN or infinite values (from the input or a division by zero) spoil the axis ranges and ROOT then draws nothing; removed before
+        // the modifiers, which would spread them (Normalize divides by a NaN integral, Cumulative carries one into every later bin)
         if constexpr (is_hist<data_type>()) {
           // a profile keeps sums per bin: they are cleared, so the bin is empty (a TProfile3D is held as a TH3)
           auto clearProfileBin = [](auto* profile, int32_t bin) {
@@ -2617,9 +2648,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
           }
           if (nInvalid) warn("{} has {} with NaN or infinite values, which are not drawn.", data_ptr->GetName(), plural(nInvalid, "point"));
-          // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
-          if constexpr (is_graph_1d<data_type>()) data_ptr->SetBit(TGraph::kResetHisto);
         }
+
+        applyModifiers(data_ptr, *data);
+        // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
+        if constexpr (is_graph_1d<data_type>()) data_ptr->SetBit(TGraph::kResetHisto);
 
         // without a drawing option SciRooPlot decides, the same for histograms and graphs: a fill is drawn (hist, for a graph area),
         // so is a marker set for the data (points; the defaults of the pad always set one), data with errors is a measurement (points),
@@ -3957,12 +3990,15 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
     const bool markers = has('P') || has('*');
     const bool lineDrawn = has('L') || has('C');
     // ROOT draws the errors with Sumw2 (a profile has them) or E; if all are zero it drops them and draws steps unless P, L, C or * is given
-    const bool errorsAsked = !noErrors && (has('E') || hist->GetSumw2N() > 0 || hist->InheritsFrom(TProfile::Class()));
+    // an E after HIST asks for the errors again, and the steps are then drawn over them (THistPainter::Paint)
+    const bool errorsAsked = has('E') || (!noErrors && (hist->GetSumw2N() > 0 || hist->InheritsFrom(TProfile::Class())));
     if (errorsAsked && nonZeroErrors) {  // markers with the errors (no line, also with L or C), markers of size 0 are skipped
       const string P = (marker && marker->GetMarkerSize() > 0) ? "P" : "";
-      if (errorType >= '3' && errorType <= '6') return join(area(Outline::none), P);  // fill areas
-      if (errorType == '2') return join(box(), P);                                    // boxes
-      return {E + P};
+      LegendSymbol symbol{E + P};
+      if (errorType >= '3' && errorType <= '6') symbol = join(area(Outline::none), P);                  // fill areas
+      if (errorType == '2') symbol = join(box(), P);                                                    // boxes
+      if (noErrors) symbol = (hasFill) ? join(area(Outline::line), symbol.elements) : join(symbol, L);  // the steps are painted over the errors
+      return symbol;
     }
     const bool drawnAsSteps = errorsAsked && !markers && !lineDrawn;
     if (!drawnAsSteps && markers && !lineDrawn && !has('B') && !has('F')) return {"P"};  // markers only
@@ -4861,8 +4897,8 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       return;
     }
     if (hist->GetDimension() != 1) return;
-    // error bars as ROOT draws them: with an E in the option or stored errors, unless HIST is given; SAME, TEXT etc. contain an E
-    // but are no error option
+    // error bars as ROOT draws them (THistPainter::MakeChopt): with an E in the option, also after HIST, or with stored errors unless HIST
+    // is given; SAME, TEXT etc. contain an E but are no error option
     TString option = hist->GetDrawOption();
     option.ToUpper();
     for (const char* ignored : kNonSymbolTokens)
@@ -4883,7 +4919,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       }
       return;
     }
-    const bool hasErrors = !option.Contains("HIST") && (option.Contains("E") || HasErrors(hist));
+    const bool hasErrors = option.Contains("E") || (!option.Contains("HIST") && HasErrors(hist));
     const bool hasErrorArea = hasErrors && (option.Contains("E2") || option.Contains("E3") || option.Contains("E4") || option.Contains("E5") || option.Contains("E6"));
     const bool showEmpty = option.Contains("E0");
     const float_t markerSize = (option.Contains("P") || option.Contains("*") || (hasErrors && !hasErrorArea)) ? hist->GetMarkerSize() : 0.f;
@@ -5646,7 +5682,12 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
       if (numEyLow) numEyLow[i] = 0.;
       if (numEyHigh) numEyHigh[i] = 0.;
     } else {
-      for (auto [errNum, errDenom] : vector<tuple<double_t*, double_t*>>{{numEy, denomEy}, {numEyLow, denomEyHigh}, {numEyHigh, denomEyLow}}) {
+      // the ratio decreases with the denominator if numerator and denominator have the same sign: the lower error of the numerator
+      // then goes with the upper error of the denominator (before the swap for a negative denominator below), else with the lower one
+      const bool sameSign = (numY[i] > 0.) == (denomY[i] > 0.);
+      double_t* denomForLow = (sameSign) ? denomEyHigh : denomEyLow;
+      double_t* denomForHigh = (sameSign) ? denomEyLow : denomEyHigh;
+      for (auto [errNum, errDenom] : vector<tuple<double_t*, double_t*>>{{numEy, denomEy}, {numEyLow, denomForLow}, {numEyHigh, denomForHigh}}) {
         if (errNum) {
           double_t denomError = (errDenom) ? errDenom[i] : 0.;
           if (binomialErrors) {

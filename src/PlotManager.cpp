@@ -395,10 +395,9 @@ vector<string> PlotManager::SplitInputPath(const string& input)
 void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputs, bool replace)
 {
   if (!IsValidDataSourceName(dataSource)) return;
-  if (replace) {
-    mInputs.erase(dataSource);
-    ForgetBufferedData(dataSource);
-  }
+  if (replace) mInputs.erase(dataSource);
+  // data read before is read again from the changed inputs (a tree is then chained over the added file too)
+  if (replace || !inputs.empty()) ForgetBufferedData(dataSource);
   for (const auto& input : inputs) {
     const auto expandedInput = expand_path(input);
     if (!expandedInput) continue;
@@ -522,7 +521,6 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     if (object) add(object, dir, "");
   }
   file.Close();
-  ForgetBufferedData(dataSource);  // an object can replace one of the same name read before
   AddDataSource(dataSource, {mUserDataFile + ":" + dataSource}, replace);
 }
 

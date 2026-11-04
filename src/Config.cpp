@@ -477,26 +477,27 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
   return true;
 }
 
-void Config::Reset()
+// false if a project could not be removed (as for srp remove)
+bool Config::Reset()
 {
-  if (!ProjectsReadable()) return;
+  if (!ProjectsReadable()) return false;
   if (mPath.empty()) {
     logger::error("No valid config path; refusing to reset.");
-    return;
+    return false;
   }
   vector<string> projectNames;
   for (const auto& [projectName, project] : mProjects) {
     projectNames.push_back(projectName);
   }
-  RemoveProjects(projectNames, "");
+  return RemoveProjects(projectNames, "").size() == projectNames.size();
 }
 
-void Config::Clean()
+bool Config::Clean()
 {
-  if (!ProjectsReadable()) return;
+  if (!ProjectsReadable()) return false;
   if (mPath.empty()) {
     logger::error("No valid config path; refusing to clean.");
-    return;
+    return false;
   }
   string firstProject;
   vector<string> inactiveProjects;
@@ -526,9 +527,11 @@ void Config::Clean()
       firstProject = projectName;
     }
   }
-  for (const auto& removed : RemoveProjects(inactiveProjects, firstProject)) {
-    logger::print("- deleting project {}", removed);
+  const auto removed = RemoveProjects(inactiveProjects, firstProject);
+  for (const auto& projectName : removed) {
+    logger::print("- deleting project {}", projectName);
   }
+  return removed.size() == inactiveProjects.size();
 }
 
 std::map<string, string> Config::Properties(const string& projectName) const
