@@ -402,6 +402,8 @@ class PlotPainter
   std::unordered_map<const TObject*, std::shared_ptr<const Plot::Pad::Data>> mDataDefinitions;
   // axis titles of the input a projection was made from, keyed by the projection: <projection> and <selection> name the axes by them
   std::unordered_map<const TObject*, std::vector<std::string>> mProjectionAxisTitles;
+  // x range of the frame a graph is drawn in: its <maximum> and <minimum> take the points inside, as those of histograms the bins in the frame
+  std::unordered_map<const TObject*, std::pair<double_t, double_t>> mGraphFrameRangeX;
   struct StyleSizes {
     Width_t lineWidth;
     int32_t hatchesLineWidth;

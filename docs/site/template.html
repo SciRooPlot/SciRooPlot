@@ -1470,7 +1470,7 @@ pm.AddPlot(plot);` },
   { title: "Writing files", img: null,
     text: `<p>All plots of the tour are now part of your project. Make them all at once, in any format. Files go into the project's output folder, one subfolder per group.</p>
 <div class="term-line"><span class="p">$ </span>srp set tour outdir ~/thesis/figures<br><span class="p">$ </span>plot tour .+ pdf<br><span class="p">$ </span>plot tour '(axes|ratio)' png</div>
-<p class="basics"><b>The patterns</b><code>.+</code> and <code>(axes|ratio)</code> are <button class="term" data-term="regex">regular expressions</button>. In bash, quote patterns that contain brackets or <code>|</code>.</p>
+<p class="basics"><b>The patterns</b><code>.+</code> and <code>(axes|ratio)</code> are <button class="term" data-term="regex">regular expressions</button>. In bash, quote patterns that contain brackets or <code>|</code>, and write <code>plot</code> after <code>||</code>, <code>!</code> or <code>time</code> in braces (<code>make || { plot g '.+'; }</code>): only then does it keep its patterns from being expanded as file names.</p>
 <p>Without a mode, <code>plot</code> opens a window. Browse with <kbd>s</kbd> and <kbd>a</kbd>, press <kbd>d</kbd> to keep the current plot in its own window for comparison, <kbd>q</kbd> to close one window, <kbd>x</kbd> to close all.</p>
 <div class="stepnav"><a class="btn primary" href="#examples">See the example plots</a><a class="btn" href="#reference">Browse the reference</a></div>`,
     py: null, cpp: null },

@@ -83,7 +83,8 @@ set softwrap
 set atblanks
 set titlecolor bold,white,black
 syntax python "\.py$"
-color lightblack "#.*$"
+# comments: whole lines, or after two blanks (a # inside a string, as in Z#rightarrow4l, is no comment)
+color lightblack "^[[:space:]]*#.*$" "[[:space:]]{2}#.*$"
 color green ""([^"\\]|\\.)*""
 color cyan "\<(def|for|in|if|else|elif|return|import|from|as|with|not|and|or)\>"
 NANORC

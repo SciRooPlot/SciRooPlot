@@ -2882,6 +2882,13 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
       if (isOwned) delete tree;
       return;
     }
+    // requests (Project, Profile, Scatter) need a tree or table: otherwise the data would only be reported missing
+    if (auto infos = mDataInfoBuffer[dataSource].find(fullName); infos != mDataInfoBuffer[dataSource].end()) {
+      for (const auto& info : infos->second) {
+        if (info.dataDims.empty()) continue;
+        logger::error("Cannot read {} ({}): it is a {}, Project, Profile and Scatter apply to trees and tables only.", DataLocation(dataSource, fullName), info.GetDescription(), obj->ClassName());
+      }
+    }
     if (!dynamic_cast<TNamed*>(obj)) {
       logger::error("Input data {} (data source {}) is of unsupported type {}.", fullName, dataSource, obj->ClassName());
       if (isOwned) delete obj;

@@ -405,6 +405,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     mSourceHists.clear();
     mDataDefinitions.clear();
     mProjectionAxisTitles.clear();
+    mGraphFrameRangeX.clear();
     mUndrawn.clear();
   });
 
@@ -1779,6 +1780,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // (histograms converted for a clipped alias got the x range of the data as bins before, the y range does not apply to them)
             const bool isClippedHist = (alias == hist_clipped || alias == hist_open_clipped || alias == curve_clipped) && mSourceHists.count(data_ptr);
             if (!pad_ptr->GetView() && !isClippedHist && alias != area) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
+            if (axisHist_ptr && dataIndex != 0 && !pad_ptr->GetView()) {
+              const TAxis* frameX = axisHist_ptr->GetXaxis();
+              mGraphFrameRangeX[data_ptr] = {frameX->GetBinLowEdge(frameX->GetFirst()), frameX->GetBinUpEdge(frameX->GetLast())};
+            }
           } else {
             if (projected) {
               TString upper(drawOption);
@@ -1812,6 +1817,39 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 logger::warning("The y range of {} contains none of its bins: all bins are drawn.", data->GetName());
               }
               if (cutYAtFrame) LimitToFrame(data_ptr->GetYaxis(), axisHist_ptr->GetYaxis());
+            }
+            if constexpr (std::is_same_v<data_type, TH2*>) {
+              // a TH2Poly draws and sums all its polygons whatever the axis ranges: a copy keeps those with their centre inside the ranges
+              auto* poly = dynamic_cast<TH2Poly*>(data_ptr);
+              if (poly && !projected && (hasRangeX || hasRangeY)) {
+                const TAxis* x = poly->GetXaxis();
+                const TAxis* y = poly->GetYaxis();
+                const double_t xMin = x->GetBinLowEdge(x->GetFirst()), xMax = x->GetBinUpEdge(x->GetLast());
+                const double_t yMin = y->GetBinLowEdge(y->GetFirst()), yMax = y->GetBinUpEdge(y->GetLast());
+                auto* kept = new TH2Poly(poly->GetName(), poly->GetTitle(), x->GetXmin(), x->GetXmax(), y->GetXmin(), y->GetXmax());
+                kept->SetDirectory(nullptr);
+                kept->Sumw2();
+                for (TObject* obj : *poly->GetBins()) {
+                  auto* polyBin = static_cast<TH2PolyBin*>(obj);
+                  const double_t cx = 0.5 * (polyBin->GetXMin() + polyBin->GetXMax());
+                  const double_t cy = 0.5 * (polyBin->GetYMin() + polyBin->GetYMax());
+                  if (cx < xMin || cx > xMax || cy < yMin || cy > yMax) continue;
+                  const int32_t bin = kept->AddBin(polyBin->GetPolygon()->Clone());
+                  kept->SetBinContent(bin, polyBin->GetContent());
+                  kept->SetBinError(bin, poly->GetBinError(polyBin->GetBinNumber()));
+                }
+                kept->SetEntries(poly->GetEntries());
+                CopyStyle(*poly, *kept);
+                for (auto [from, to] : {std::pair{poly->GetXaxis(), kept->GetXaxis()}, std::pair{poly->GetYaxis(), kept->GetYaxis()}, std::pair{poly->GetZaxis(), kept->GetZaxis()}}) {
+                  from->TAttAxis::Copy(*to);
+                  to->SetTitle(from->GetTitle());
+                }
+                kept->GetXaxis()->SetRange(x->GetFirst(), x->GetLast());
+                kept->GetYaxis()->SetRange(y->GetFirst(), y->GetLast());
+                kept->SetBit(kCanDelete, poly->TestBit(kCanDelete));
+                mUndrawn.emplace_back(poly);
+                data_ptr = kept;
+              }
             }
             if (projected) {
               // ROOT takes the colours of COL drawn SAME from the frame, those of CONT4 from the histogram itself, and CONT4 also paints
@@ -2868,6 +2906,36 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   } else if constexpr (is_hist_1d<denom_type>()) {
                     for (int32_t bin = 1; bin <= ptr->GetNbinsX(); ++bin)
                       sample(ptr->GetXaxis()->GetBinCenter(bin));
+                  } else if constexpr (is_func_1d<denom_type>()) {
+                    // function / function: sampled at the numerator's SetNpx points where both are defined (a formula of the plot
+                    // definition everywhere: then the range of the other function, of the ratio data or of the frame)
+                    const bool denomFullRange = (ratio->GetDenomDataSource() == kUserFunctions);
+                    double_t lo = -std::numeric_limits<double_t>::infinity(), hi = std::numeric_limits<double_t>::infinity();
+                    if (!fullRange) {
+                      lo = (*func)->GetXmin();
+                      hi = (*func)->GetXmax();
+                    }
+                    if (!denomFullRange) {
+                      lo = std::max(lo, ptr->GetXmin());
+                      hi = std::min(hi, ptr->GetXmax());
+                    }
+                    if (data->GetMinRangeX()) lo = std::max(lo, *data->GetMinRangeX());
+                    if (data->GetMaxRangeX()) hi = std::min(hi, *data->GetMaxRangeX());
+                    if (axisHist_ptr && (!std::isfinite(lo) || !std::isfinite(hi))) {
+                      if (!std::isfinite(lo)) lo = axisHist_ptr->GetXaxis()->GetXmin();
+                      if (!std::isfinite(hi)) hi = axisHist_ptr->GetXaxis()->GetXmax();
+                    }
+                    if (!std::isfinite(lo) || !std::isfinite(hi)) {
+                      logger::error("Ratio {}: two formulas of the plot definition have no range to be divided in: set one with SetRangeX.", data->GetName());
+                    } else if (lo >= hi) {
+                      logger::error("Ratio {}: the ranges of the functions do not overlap.", data->GetName());
+                    } else {
+                      const int32_t npx = std::max((*func)->GetNpx(), 2);
+                      for (int32_t i = 0; i < npx; ++i) {
+                        const double_t x = lo + (hi - lo) * i / (npx - 1);
+                        sampled->AddPoint(x, (*func)->Eval(x));
+                      }
+                    }
                   }
                   delete ptr;
                 },
@@ -5822,6 +5890,17 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
     if (nOutside) {
       if (verbose) logger::warning("{} of {} points of {} are outside the range [{}, {}] of {} (up to {} beyond); the denominator is extrapolated there.", nOutside, numN, numerator->GetName(), xMin, xMax, denominator->GetName(), maxDistance);
     }
+    // the cubic spline can overshoot between steep points: a denominator of one sign interpolated to zero or the other sign
+    const double_t* knotY = denominator->GetY();
+    const bool allPositive = std::all_of(knotY, knotY + denomN, [](double_t y) { return y > 0.; });
+    const bool allNegative = !allPositive && std::all_of(knotY, knotY + denomN, [](double_t y) { return y < 0.; });
+    if (verbose && (allPositive || allNegative)) {
+      const auto nFlipped = std::count_if(denomY, denomY + numN, [&](double_t y) { return (allPositive) ? y <= 0. : y >= 0.; });
+      if (nFlipped) {
+        logger::warning("The interpolation of {} for {} of {} points of {} has the wrong sign (the spline overshoots): the ratio there is not meaningful.",
+                        denominator->GetName(), nFlipped, numN, numerator->GetName());
+      }
+    }
   }
 
   // compute ratio and errors
@@ -5855,6 +5934,9 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
     }
   }
   ScaleMultiErrors(numerator, multiErrors);
+  if (verbose && !undefined.empty() && static_cast<int32_t>(undefined.size()) == numN) {
+    logger::warning("{} is zero at every point of {}: the ratio has no values.", denominator->GetName(), numerator->GetName());
+  }
   for (auto it = undefined.rbegin(); it != undefined.rend(); ++it) {
     numerator->RemovePoint(*it);
   }
@@ -5909,6 +5991,13 @@ bool PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialError
 }
 bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, bool verbose)
 {
+  if (verbose) {
+    bool empty = true;
+    for (int32_t bin = 0; empty && bin < denominator->GetNcells(); ++bin) {
+      empty = !denominator->GetBinContent(bin);
+    }
+    if (empty) logger::warning("{} is empty: the ratio {} has no values.", denominator->GetName(), numerator->GetName());
+  }
   // edges are compared with the tolerance of ROOT's own consistency check in TH1::Divide (TH1::CheckBinLimits)
   auto sameAxisBinning = [](TAxis* a, TAxis* b) -> bool {
     if (a->GetNbins() != b->GetNbins()) return false;
@@ -6039,8 +6128,10 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
   double_t* eyLow = numerator->GetEYlow();    // asymmetric and bent errors
   double_t* eyHigh = numerator->GetEYhigh();  // (nullptr for symmetric errors)
   auto multiErrors = MultiErrorSums(numerator);
+  vector<int32_t> undefined;  // points where the function is zero: removed (see Divide(TGraph*, TGraph*))
   for (int32_t i = 0; i < numerator->GetN(); ++i) {
     const double_t denom = denominator->Eval(x[i]);
+    if (!denom) undefined.push_back(i);
     const double_t absDenom = std::abs(denom);  // errors must stay positive
     y[i] = (denom) ? y[i] / denom : 0.;
     if (ey) {
@@ -6055,6 +6146,9 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
     }
   }
   ScaleMultiErrors(numerator, multiErrors);
+  for (auto it = undefined.rbegin(); it != undefined.rend(); ++it) {
+    numerator->RemovePoint(*it);
+  }
   if (binomialErrors && verbose) {
     logger::warning("Binomial errors are not supported for the division of {} by function {}.", numerator->GetName(), denominator->GetName());
   }
@@ -6926,10 +7020,17 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
       try {
         if (str_contains(matchStr, "entries")) {
           replaceStr = formatValue(static_cast<double_t>(graph->GetN()));  // as double like the histogram entries, so the same formats apply
-        } else if (str_contains(matchStr, "maximum")) {
-          replaceStr = formatValue(TMath::MaxElement(graph->GetN(), graph->GetY()));
-        } else if (str_contains(matchStr, "minimum")) {
-          replaceStr = formatValue(TMath::MinElement(graph->GetN(), graph->GetY()));
+        } else if (str_contains(matchStr, "maximum") || str_contains(matchStr, "minimum")) {
+          // the points inside the frame (outside of it they are not drawn)
+          const bool isMax = str_contains(matchStr, "maximum");
+          const auto range = mGraphFrameRangeX.find(graph);
+          double_t extreme = (isMax) ? -std::numeric_limits<double_t>::infinity() : std::numeric_limits<double_t>::infinity();
+          for (int32_t i = 0; i < graph->GetN(); ++i) {
+            const double_t x = graph->GetX()[i];
+            if (range != mGraphFrameRangeX.end() && (x < range->second.first || x > range->second.second)) continue;
+            extreme = (isMax) ? std::max(extreme, graph->GetY()[i]) : std::min(extreme, graph->GetY()[i]);
+          }
+          replaceStr = formatValue(std::isfinite(extreme) ? extreme : 0.);
         }
       } catch (const fmt::format_error& e) {
         logger::error("Incompatible format string in {}: {}.", matchStr, e.what());
