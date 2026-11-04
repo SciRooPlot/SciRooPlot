@@ -1098,7 +1098,21 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               const TAxis* axis = (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis();
               const optional<double_t> rangeMin = userMin, rangeMax = userMax;  // the user's range, before the reset below
               constexpr double_t relTol = 1e-12;
-              if (userMin && !(*userMin < axis->GetXmin() && !TMath::AreEqualRel(*userMin, axis->GetXmin(), relTol))) userMin.reset();
+              // a log axis shows the bins from the first positive edge on: a positive minimum below it is beyond the shown axis as well
+              // (ExtendFrameAxis drops the bins up to it), whether the bins start at 0.5, 0 or -0.5
+              optional<bool> logAxis;
+              const char logLabel = (IsHBarFrame(pad_ptr, axisHist_ptr)) ? ((axisLabel == 'X') ? 'Y' : 'X') : axisLabel;  // the pad axis showing it
+              for (const auto* settings : AxisSettings(pad, padDefaults, logLabel)) {
+                if (settings->GetLog()) logAxis = settings->GetLog();
+              }
+              double_t shownMin = axis->GetXmin();
+              if (logAxis.value_or(false) && shownMin <= 0. && userMin && *userMin > 0. && !axis->GetLabels()) {
+                int32_t bin = 1;
+                while (bin <= axis->GetNbins() && axis->GetBinLowEdge(bin) <= 0.)
+                  ++bin;
+                shownMin = axis->GetBinLowEdge(bin);
+              }
+              if (userMin && !(*userMin < shownMin && !TMath::AreEqualRel(*userMin, shownMin, relTol))) userMin.reset();
               if (userMax && !(*userMax > axis->GetXmax() && !TMath::AreEqualRel(*userMax, axis->GetXmax(), relTol))) userMax.reset();
               if (!userMin && !userMax) continue;
               // the y range of a 1d frame is taken from the pad below, and ROOT computes it differently for a log scale (margins in decades):
@@ -3695,7 +3709,9 @@ void PlotPainter::ApplyScale(TObject* obj, std::set<TObject*>& done, const std::
 //**************************************************************************************************
 /**
  * Returns a copy of the frame histogram with the given axis extended to newMin and / or newMax (bin contents and errors copied).
- * The lengths of the other axes and the attributes are kept; the result replaces the frame in the pad and has to be drawn by the caller.
+ * A newMin inside the axis comes from a log axis extended below its first positive edge: the bins with edges at or below zero, which
+ * a log axis cannot show, are then left out. The lengths of the other axes and the attributes are kept; the result replaces the frame
+ * in the pad and has to be drawn by the caller.
  */
 //**************************************************************************************************
 TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<double_t> newMin, optional<double_t> newMax,
@@ -3707,9 +3723,13 @@ TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<dou
   // a range wholly outside the frame (20 to 30 for data from 0 to 10) also needs an edge at its inner end: a range is shown
   // in whole bins, so with the one added bin from 10 to 30 the axis would start at 10
   const TAxis* extendedAxis = axes[extendedDim];
-  const bool innerLow = newMin && rangeMax && *rangeMax > *newMin && *rangeMax < extendedAxis->GetXmin();
+  int32_t droppedBins = 0;
+  while (newMin && *newMin >= extendedAxis->GetXmin() && droppedBins < extendedAxis->GetNbins() && extendedAxis->GetBinLowEdge(droppedBins + 1) <= 0.)
+    ++droppedBins;
+  const double_t keptMin = extendedAxis->GetBinLowEdge(droppedBins + 1);
+  const bool innerLow = newMin && rangeMax && *rangeMax > *newMin && *rangeMax < keptMin;
   const bool innerHigh = newMax && rangeMin && *rangeMin < *newMax && *rangeMin > extendedAxis->GetXmax();
-  const int32_t shift = (newMin ? 1 : 0) + (innerLow ? 1 : 0);  // the bins move up by the number of bins added below
+  const int32_t shift = (newMin ? 1 : 0) + (innerLow ? 1 : 0) - droppedBins;  // the bins move by the number of bins added (dropped) below
   // the edges added to the extended axis, collected before the loop (GCC 13 reports optionals read in it as maybe uninitialized)
   vector<double_t> below, above;
   if (newMin) below.push_back(*newMin);
@@ -3719,7 +3739,7 @@ TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<dou
   array<vector<double_t>, 3> edges;
   for (int32_t i = 0; i < dim; ++i) {
     if (i == extendedDim) edges[i] = below;
-    for (int32_t bin = 1; bin <= axes[i]->GetNbins() + 1; ++bin)
+    for (int32_t bin = (i == extendedDim) ? droppedBins + 1 : 1; bin <= axes[i]->GetNbins() + 1; ++bin)
       edges[i].push_back(axes[i]->GetBinLowEdge(bin));
     if (i == extendedDim) edges[i].insert(edges[i].end(), above.begin(), above.end());
   }
@@ -3738,6 +3758,7 @@ TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<dou
   for (int32_t binZ = 1; binZ <= axes[2]->GetNbins(); ++binZ) {
     for (int32_t binY = 1; binY <= axes[1]->GetNbins(); ++binY) {
       for (int32_t binX = 1; binX <= axes[0]->GetNbins(); ++binX) {
+        if (binX + shiftX < 1 || binY + shiftY < 1) continue;  // a dropped bin
         const int32_t bin = frame->GetBin(binX, binY, binZ);
         const int32_t newBin = extended->GetBin(binX + shiftX, binY + shiftY, binZ);
         extended->SetBinContent(newBin, frame->GetBinContent(bin));
@@ -3758,7 +3779,7 @@ TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<dou
     if (i != extendedDim) continue;
     newAxes[i]->Set(edges[i].size() - 1, edges[i].data());
     if (hadRange) {
-      newAxes[i]->SetRange(axes[i]->GetFirst() + shift, axes[i]->GetLast() + shift);
+      newAxes[i]->SetRange(std::max(axes[i]->GetFirst() + shift, 1), axes[i]->GetLast() + shift);
     } else {
       newAxes[i]->SetRange(0, 0);  // full new axis
     }
