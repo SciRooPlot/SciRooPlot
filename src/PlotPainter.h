@@ -336,7 +336,15 @@ class PlotPainter
   void DrawCommonTitle(TCanvas* canvas, char axisLabel, const std::vector<uint8_t>& pads, size_t index);
   // rowData: the data of a legend row; findData (for texts): the data a placeholder names (<mean:2>, <mean:1@4>), by number and pad
   void ReplacePlaceholders(std::string& str, TNamed* rowData, const std::function<TNamed*(uint16_t, const std::optional<uint8_t>&)>& findData = {});
-  static std::string LegendSymbolElements(TObject* obj, std::string option);
+  // the outline of a fill symbol: the line of the data (as TLegend draws it), none, or thin and solid in the line colour (boxes)
+  enum class Outline { line,
+                       none,
+                       thin };
+  struct LegendSymbol {
+    std::string elements;
+    Outline outline = Outline::line;
+  };
+  static LegendSymbol GetLegendSymbol(TObject* obj, std::string option);
   // parts of a drawing option that contain the letters of markers, lines, fills and error bars but draw nothing of that kind
   static constexpr std::array<const char*, 7> kNonSymbolTokens{"SAME", "TEXT", "PFC", "PLC", "PMC", "X0", "]["};
   static bool HasErrors(const TObject* obj);

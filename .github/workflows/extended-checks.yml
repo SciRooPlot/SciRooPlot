@@ -107,6 +107,58 @@ jobs:
             plot '.+' '.+' "${mode}"
           done
 
+  # consistency of what SciRooPlot draws over all data types, drawing options and styles
+  consistency:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+
+    name: consistency
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install dependencies
+        run: ./.github/scripts/install-linux.sh
+
+      - name: Install ROOT
+        uses: mamba-org/setup-micromamba@v3
+        with:
+          environment-name: build
+          create-args: >-
+            root_base
+            -c conda-forge
+          cache-environment: true
+
+      - name: Configure
+        shell: bash -el {0}
+        run: |
+          cmake \
+            -S . \
+            -B build \
+            -G Ninja \
+            -DCMAKE_PREFIX_PATH="${CONDA_PREFIX}" \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        shell: bash -el {0}
+        run: |
+          cmake --build build --parallel
+
+      - name: Install
+        shell: bash -el {0}
+        run: |
+          cmake --install build --prefix install
+
+      - name: Legend symbols match the drawn data
+        shell: bash -el {0}
+        env:
+          SRP_TEST_INSTALL: ${{ github.workspace }}/install
+        run: ./.github/scripts/test-legend-symbols.sh
+
   # all dependencies at the minimum versions required in CMakeLists.txt
   floor:
     needs: changes

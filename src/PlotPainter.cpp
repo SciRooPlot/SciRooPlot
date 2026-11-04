@@ -3837,12 +3837,18 @@ bool PlotPainter::HasErrors(const TObject* obj)
 
 //**************************************************************************************************
 /**
- * Determines which of the legend symbols (P marker, L line, F fill, E error bar) show what ROOT actually draws for an object with the given drawing option.
- * (verified with ROOT 6.40: histograms with errors are drawn as markers with error bars unless HIST is given, the E2 boxes always have markers,
- * E3-E6 are fill areas, bars without a fill colour are drawn as lines, graphs draw nothing without P, L, C, B, F or 2-5, polar graphs draw error bars only with E)
+ * Determines which of the legend symbols (P marker, L line, F fill, E error bar) show what ROOT actually draws for an object with the given
+ * drawing option and its attributes, and how the outline of a fill symbol must look (TLegend surrounds an F without L by the entry's line).
+ * (verified with ROOT 6.40 by comparing the painted plot and legend for all aliases and the common ROOT options:
+ * lines of width 0 are not drawn; hollow fill areas are outlined thin in the fill colour (as TLegend does), hollow boxes and bars
+ * thin and solid in the line colour (not with line width 0), filled ones have no outline except graph 5 boxes (thin);
+ * histograms with Sumw2 or E draw the errors with markers (skipping markers of size 0) and no line unless HIST is given; if all errors are zero,
+ * ROOT drops them and draws the histogram as steps unless P, L, C or * is given; graphs draw error boxes and bands only with errors;
+ * graph brackets mark x and y errors; polar graphs draw error bars only with E;
+ * 2d drawings coloured by the palette have no symbol, surfaces their mesh lines)
  */
 //**************************************************************************************************
-string PlotPainter::LegendSymbolElements(TObject* obj, string option)
+PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string option)
 {
   option = str_upper(option);
   auto takeToken = [&option](const string& token) {
@@ -3853,43 +3859,98 @@ string PlotPainter::LegendSymbolElements(TObject* obj, string option)
   };
   for (const char* ignored : kNonSymbolTokens)
     takeToken(ignored);
-  auto fill = dynamic_cast<TAttFill*>(obj);
-  const bool hasFill = fill && fill->GetFillStyle() != 0 && fill->GetFillColor() != 0;
   auto has = [&option](char c) { return option.find(c) != string::npos; };
+  auto fill = dynamic_cast<TAttFill*>(obj);
+  auto line = dynamic_cast<TAttLine*>(obj);
+  auto marker = dynamic_cast<TAttMarker*>(obj);
+  const bool hasFill = fill && fill->GetFillStyle() != 0 && fill->GetFillColor() != 0;
+  const bool hasLine = line && line->GetLineWidth() > 0;
+  const string L = (hasLine) ? "L" : "";
+  const string E = (hasLine) ? "E" : "";
+  // a fill area (a hollow one is outlined thin in the fill colour, as the symbol of TLegend) and a box (a hollow one in the line colour);
+  // hollow ones are not outlined with line width 0
+  auto area = [&](Outline outline) -> LegendSymbol {
+    if (!hasFill) return (hasLine) ? LegendSymbol{"F", Outline::none} : LegendSymbol{};
+    return {"F", outline};
+  };
+  auto box = [&](Outline outline = Outline::none) -> LegendSymbol {
+    if (!hasFill) return (hasLine) ? LegendSymbol{"F", Outline::thin} : LegendSymbol{};
+    return {"F", outline};
+  };
+  auto join = [](LegendSymbol symbol, const string& more) {
+    symbol.elements += more;
+    return symbol;
+  };
 
-  if (obj->InheritsFrom(TF2::Class())) return (takeToken("FC") && hasFill) ? "F" : "L";
+  if (obj->InheritsFrom(TF2::Class())) return (takeToken("FC") && hasFill) ? LegendSymbol{"F", Outline::none} : LegendSymbol{L};
   if (obj->InheritsFrom(TF1::Class())) {
     // a function is drawn with markers at its sampling points with P, otherwise as a curve that a fill colours down to zero
-    if (has('P')) return "P";
-    return (hasFill) ? "F" : "L";
+    if (has('P')) return {"P"};
+    return (hasFill) ? area(Outline::line) : LegendSymbol{L};
   }
   if (auto graph = dynamic_cast<TGraph*>(obj)) {
     // a polar graph draws its error bars only with E (TGraphPainter::PaintGraphPolar)
-    const bool hasErrors = HasErrors(graph) && !has('X') && (has('E') || !graph->InheritsFrom(TGraphPolar::Class()));
-    string style;
-    if (has('2') || has('3') || has('4') || has('5')) {  // error boxes and bands
-      style += "F";
-    } else if (hasErrors) {
-      style += "E";
+    const bool hasErrors = HasErrors(graph) && (has('E') || !graph->InheritsFrom(TGraphPolar::Class()));
+    const bool lineDrawn = has('L') || has('C');
+    LegendSymbol symbol;
+    if (str_contains(option, "[]")) {  // brackets at the ends of the x and y errors
+      for (int32_t i = 0; i < graph->GetN(); ++i) {
+        if (graph->GetErrorXlow(i) > 0. || graph->GetErrorXhigh(i) > 0. || graph->GetErrorYlow(i) > 0. || graph->GetErrorYhigh(i) > 0.) {
+          symbol.elements = E;
+          break;
+        }
+      }
+      return symbol;
     }
-    if (has('P')) style += "P";
-    if (has('L') || has('C')) style += "L";
-    if (has('F') || (has('B') && hasFill)) style += "F";
-    if (has('B') && !hasFill) style += "L";
-    return (style.empty()) ? "EP" : style;
+    if (has('2') || has('3') || has('4') || has('5')) {  // error boxes and bands, drawn only with errors
+      if (hasErrors) symbol = (has('3') || has('4')) ? area(Outline::none) : box((has('5')) ? Outline::thin : Outline::none);
+    } else if (hasErrors && !has('X')) {
+      symbol.elements = E;
+    }
+    if (has('F')) symbol = join(area((lineDrawn) ? Outline::line : Outline::none), symbol.elements);
+    if (has('B')) symbol = join(box(), symbol.elements);
+    if (has('P') || has('*')) symbol.elements += "P";
+    if (lineDrawn) symbol.elements += L;
+    return symbol;
   }
   if (auto hist = dynamic_cast<TH1*>(obj)) {
-    if (hist->InheritsFrom(TH2::Class()) || hist->InheritsFrom(TH3::Class())) return hasFill ? "F" : "L";
+    if (hist->InheritsFrom(TH2::Class()) || hist->InheritsFrom(TH3::Class())) {
+      // coloured by the palette (also LEGO2, SURF1-4, the filled contours and the boxes of 3d histograms coloured by the content)
+      for (const char* token : {"COL", "Z", "LEGO2", "SURF1", "SURF2", "SURF3", "SURF4", "CONT0", "CONT1", "CONT4", "BOX2", "ISO"}) {
+        if (str_contains(option, token)) return {};
+      }
+      if (str_contains(option, "CANDLE") || str_contains(option, "VIOLIN")) return (hasFill) ? area(Outline::line) : LegendSymbol{L};
+      if (str_contains(option, "BOX")) return box();
+      if (str_contains(option, "CONT") || str_contains(option, "SURF")) return {L};  // contour lines, mesh
+      return (hasFill) ? area(Outline::line) : LegendSymbol{L};
+    }
     const bool noErrors = takeToken("HIST");
-    // the error bars are drawn when the option asks for them or the histogram has errors (as ROOT decides without an option)
-    const bool errorsDrawn = !noErrors && (has('E') || HasErrors(hist));
-    if (!noErrors && (has('3') || has('4') || has('5') || has('6'))) return "F";   // E3 - E6: fill areas
-    if (!noErrors && has('2')) return "FP";                                        // E2: filled boxes with markers
-    if (errorsDrawn) return (HasErrors(hist)) ? "EP" : "P";                        // error bars of zero length are not visible
-    if (has('P') && !has('L') && !has('C') && !has('B') && !has('F')) return "P";  // markers only
-    return hasFill ? "F" : "L";                                                    // steps, lines or bars (also HIST L and HIST C fill the histogram if it has a fill colour)
+    // E0 - E6 (the digits of other options, as in LF2, are no error types)
+    char errorType = '\0';
+    for (size_t pos = option.find('E'); pos != string::npos; pos = option.find('E', pos + 1)) {
+      if (pos + 1 < option.size() && std::isdigit(static_cast<unsigned char>(option[pos + 1]))) errorType = option[pos + 1];
+    }
+    bool nonZeroErrors = false;
+    for (int32_t bin = 1; bin <= hist->GetNbinsX() && !nonZeroErrors; ++bin)
+      nonZeroErrors = hist->GetBinError(bin) > 0.;
+    const bool markers = has('P') || has('*');
+    const bool lineDrawn = has('L') || has('C');
+    // ROOT draws the errors with Sumw2 (a profile has them) or E; if all are zero it drops them and draws steps unless P, L, C or * is given
+    const bool errorsAsked = !noErrors && (has('E') || hist->GetSumw2N() > 0 || hist->InheritsFrom(TProfile::Class()));
+    if (errorsAsked && nonZeroErrors) {  // markers with the errors (no line, also with L or C), markers of size 0 are skipped
+      const string P = (marker && marker->GetMarkerSize() > 0) ? "P" : "";
+      if (errorType >= '3' && errorType <= '6') return join(area(Outline::none), P);  // fill areas
+      if (errorType == '2') return join(box(), P);                                    // boxes
+      return {E + P};
+    }
+    const bool drawnAsSteps = errorsAsked && !markers && !lineDrawn;
+    if (!drawnAsSteps && markers && !lineDrawn && !has('B') && !has('F')) return {"P"};  // markers only
+    if (has('B')) return box();                                                          // bars
+    LegendSymbol symbol = (hasFill) ? area(Outline::line) : LegendSymbol{L};             // steps, lines or curves (HIST L and C fill the histogram if it has a fill colour)
+    if (markers) symbol.elements += "P";
+    return symbol;
   }
-  return "EP";
+  return {E + "P"};
 }
 
 //**************************************************************************************************
@@ -4360,12 +4421,30 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         TAttFill fillAttr;
         const auto [data_ptr, drawnWith] = (entry.GetRefDataID()) ? findDrawn(*entry.GetRefDataID(), entry.GetRefPadID()) : std::pair<TObject*, string>{nullptr, ""};
         if (data_ptr) {
-          if (symbolElements.empty()) symbolElements = LegendSymbolElements(data_ptr, drawnWith);
-          curEntry = legend->AddEntry(data_ptr, label.data(), symbolElements.data());
-          curEntry->SetObject(static_cast<TObject*>(nullptr));
+          const LegendSymbol drawn = GetLegendSymbol(data_ptr, drawnWith);
+          if (symbolElements.empty()) symbolElements = drawn.elements;
           if (auto ptr = dynamic_cast<TAttMarker*>(data_ptr)) ptr->Copy(markerAttr);
           if (auto ptr = dynamic_cast<TAttLine*>(data_ptr)) ptr->Copy(lineAttr);
           if (auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(fillAttr);
+          // what is not drawn is not shown (TLegend would draw lines of width 0 as hairlines, hollow fills as outlines)
+          symbolElements = str_upper(symbolElements);
+          auto drop = [&symbolElements](char element) { symbolElements.erase(std::remove(symbolElements.begin(), symbolElements.end(), element), symbolElements.end()); };
+          if (lineAttr.GetLineWidth() <= 0) {
+            drop('L');
+            drop('E');
+          }
+          const bool hollow = fillAttr.GetFillStyle() == 0 || fillAttr.GetFillColor() == 0;
+          // the outline TLegend draws around a fill symbol without line
+          if (str_contains(symbolElements, "F") && !str_contains(symbolElements, "L")) {
+            if (drawn.outline == Outline::thin && lineAttr.GetLineWidth() > 0) {  // outlined thin and solid in the line colour
+              lineAttr.SetLineWidth(1);
+              lineAttr.SetLineStyle(kSolid);
+              if (hollow) fillAttr.SetFillColor(lineAttr.GetLineColor());
+            }
+            if (drawn.outline == Outline::none || lineAttr.GetLineWidth() <= 0) lineAttr.SetLineColor(TColor::GetColorTransparent(lineAttr.GetLineColor(), 0.f));
+          }
+          curEntry = legend->AddEntry(data_ptr, label.data(), symbolElements.data());
+          curEntry->SetObject(static_cast<TObject*>(nullptr));
         } else {
           curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), symbolElements.data());
         }
@@ -4723,8 +4802,8 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       return;
     }
     if (hist->GetDimension() != 1) return;
-    // error bars as ROOT draws them (the same rule as for the legend entries in LegendSymbolElements): with an E in the option or stored errors,
-    // unless HIST is given; SAME, TEXT etc. contain an E but are no error option
+    // error bars as ROOT draws them: with an E in the option or stored errors, unless HIST is given; SAME, TEXT etc. contain an E
+    // but are no error option
     TString option = hist->GetDrawOption();
     option.ToUpper();
     for (const char* ignored : kNonSymbolTokens)
