@@ -1616,15 +1616,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // the defaults of the pad apply to what the data does not set, unless the style stored with the input is kept
             const bool keep = data->GetKeepInputStyle();
             auto fromPad = [keep](auto value) { return (keep) ? decltype(value){} : value; };
-            // a marker or line colour set for the data colours both, and a fill without a colour of its own: one colour per data item
-            // (a fill colour alone keeps the default outline and text, often darker than the fill); data without one takes the next default
-            const auto ownColor = (keep) ? decltype(data->GetMarkerColor()){} : get_first(data->GetMarkerColor(), data->GetLineColor());
-            const auto ownFill = (keep) ? decltype(data->GetFillColor()){} : get_first(data->GetFillColor(), data->GetLineColor(), data->GetMarkerColor());
-            bool tookColor{};  // a default colour was used: the next data gets the next one
-            if (auto markerColor = get_first(ownColor,
+            // marker, line and fill colours not set for the data take the same entry of the default lists (SetColor sets all three);
+            // data that takes any of them moves the next data on to the next entry
+            bool tookColor{};
+            if (auto markerColor = get_first(data->GetMarkerColor(),
                                              fromPad(pick(usedDefaults.color, pad.GetDefaultMarkerColors())),
                                              fromPad(pick(usedDefaults.color, padDefaults.GetDefaultMarkerColors())))) {
-              if (!ownColor) tookColor = true;
+              if (!data->GetMarkerColor()) tookColor = true;
               data_ptr->SetMarkerColor(markerColor->ToIndex());
             }
             if (auto markerAlpha = get_first(data->GetMarkerAlpha(),
@@ -1646,10 +1644,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if constexpr (is_hist_1d<data_type>()) {
               if (alias == boxes_nomarkers || alias == band || alias == band_smooth) data_ptr->SetMarkerSize(0.);  // E2, E5 and E6 always draw the markers
             }
-            if (auto lineColor = get_first(data->GetLineColor(), ownColor,
+            if (auto lineColor = get_first(data->GetLineColor(),
                                            fromPad(pick(usedDefaults.color, pad.GetDefaultLineColors())),
                                            fromPad(pick(usedDefaults.color, padDefaults.GetDefaultLineColors())))) {
-              if (!ownColor) tookColor = true;
+              if (!data->GetLineColor()) tookColor = true;
               data_ptr->SetLineColor(lineColor->ToIndex());
             }
             if (auto lineAlpha = get_first(data->GetLineAlpha(),
@@ -1679,10 +1677,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                                   fromPad(padDefaults.GetDefaultLineWidth()))) {
               data_ptr->SetLineWidth(*lineWidth);
             }
-            if (auto fillColor = get_first(ownFill,
+            if (auto fillColor = get_first(data->GetFillColor(),
                                            fromPad(pick(usedDefaults.color, pad.GetDefaultFillColors())),
                                            fromPad(pick(usedDefaults.color, fillDefaults(pad, *data))))) {
-              if (!ownFill) tookColor = true;
+              if (!data->GetFillColor()) tookColor = true;
               data_ptr->SetFillColor(fillColor->ToIndex());
             }
             if (tookColor) usedDefaults.color++;
@@ -2701,7 +2699,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               return inputValue;
             };
             const int16_t fillStyle = drawnFill(data->GetFillStyle(), usedDefaults.fillStyle, pad.GetDefaultFillStyles(), padDefaults.GetDefaultFillStyles(), data_ptr->GetFillStyle());
-            const color_t fillColor = drawnFill((data->GetKeepInputStyle()) ? data->GetFillColor() : get_first(data->GetFillColor(), data->GetLineColor(), data->GetMarkerColor()), usedDefaults.color, pad.GetDefaultFillColors(), fillDefaults(pad, *data), data_ptr->GetFillColor());
+            const color_t fillColor = drawnFill(data->GetFillColor(), usedDefaults.color, pad.GetDefaultFillColors(), fillDefaults(pad, *data), data_ptr->GetFillColor());
             bool singlePoint{};  // a line through a single point draws nothing
             if constexpr (!isHist) singlePoint = (data_ptr->GetN() == 1);
             if (fillStyle != 0 && fillColor != 0) {

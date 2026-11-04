@@ -135,7 +135,7 @@ plot[1].AddFunction("[](double* x, double* p) { return std::exp(-x[0] * x[1]); }
 // any callable (with captures, also from python): TF1 f("f", callable, xmin, xmax, 0); f.SetNpx(n); pm.AddDataSource("src", &f); then AddData("f", "src")
 plot[1].AddData(myTemplate("hist"), "label");               // Data template: Data().SetDrawOption(curve).SetColor(kRed) then template("name"[, "src"])
 .SetDrawOption(points | "HIST C")     // alias (preferred) or raw ROOT option string
-.SetColor(c).SetAlpha(a)           // all of marker, line, fill at once
+.SetColor(c).SetAlpha(a)           // all of marker, line, fill at once; the setters below set only their part, the rest takes the data's default colour
 .SetMarker(style, size, color).SetLine(style, width, color).SetFill(style, color)  // optional alpha last, default 1 (+ SetMarkerColor, SetLineStyle, ... SetFillAlpha)
 .SetRangeX(a, b).SetMaxRangeX(b).SetRangeY(a, b)             // visible range of this data, independent of the axis
 .SetLegend(2).SetLegendLabel("l").SetDefinesFrame().SetShowOverflowBins().SetContours(n).SetTextFormat("4.2f")
