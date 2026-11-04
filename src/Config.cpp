@@ -444,21 +444,33 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
     }
   }
   // the inputs of in-memory data sources are the UserData.root of the project's folder: they move with it
+  // (compared as resolved paths: the program may have spelled the configuration path differently, e.g. through a symlink)
   if (const string dataSources = DataSourcesFile(newProjectName); std::filesystem::exists(dataSources, existsError)) {
-    std::ifstream in(dataSources);
-    string content((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-    in.close();
-    const string oldUserData = (projectPath / "UserData.root").string();
+    Lock lock(mPath);
+    ptree tree;
+    try {
+      read_info(dataSources, tree);
+    } catch (const std::exception& e) {
+      logger::warning("Could not update the in-memory data sources in {} ({}): run the program of {} again.", dataSources, e.what(), newProjectName);
+      tree.clear();
+    }
+    std::error_code ec;
+    const auto oldUserData = std::filesystem::weakly_canonical(projectPath / "UserData.root", ec);
     const string newUserData = (newProjectPath / "UserData.root").string();
     bool changed = false;
-    for (size_t pos = content.find(oldUserData); pos != string::npos; pos = content.find(oldUserData, pos + newUserData.size())) {
-      content.replace(pos, oldUserData.size(), newUserData);
-      changed = true;
+    for (auto& [dataSource, inputs] : tree) {
+      for (auto& [key, input] : inputs) {
+        if (key != "INPUT") continue;
+        const string value = input.get_value<string>();
+        const size_t split = value.find(".root:");
+        const string file = value.substr(0, (split == string::npos) ? value.size() : split + 5);
+        if (std::filesystem::weakly_canonical(file, ec) != oldUserData || ec) continue;
+        input.put_value(newUserData + value.substr(file.size()));
+        changed = true;
+      }
     }
-    if (changed) {
-      std::ofstream out(dataSources, std::ios::trunc);
-      out << content;
-      if (!out) logger::warning("Could not update the in-memory data sources in {}: run the program of {} again.", dataSources, newProjectName);
+    if (changed && !WriteInfoFile(dataSources, tree)) {
+      logger::warning("Could not update the in-memory data sources in {}: run the program of {} again.", dataSources, newProjectName);
     }
   }
   logger::print("Renamed project {} to {}. User code should be adjusted accordingly.", projectName, newProjectName);

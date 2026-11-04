@@ -2040,9 +2040,9 @@ void DefineAnimations(PlotManager& pm)
       const string label = std::to_string(low) + " #leq #it{N}_{ch} #leq " + std::to_string(high);
       plot[1].AddData("ptVsMult", "data", label).ProjectY(low, high, true).Normalize().SetColor(kRed + 1);
       plot[1].AddData("ptVsMult", "data", "all #it{N}_{ch}").ProjectY(1, 60, true).Normalize().SetDrawOption(hist_open).SetLine(kSolid, 3.0, kBlack);
-      plot[1].AddLegend(0.5, 0.88);
-      plot[1].AddText(0.2, 0.3, {kExperiment, kCollisions});
-      plot[1]['Y'].SetLog().SetRange(1e-5, 1.0).SetTitle("normalised counts");
+      plot[1].AddLegend(0.6, 0.88);
+      plot[1].AddText(0.2, 0.88, {kExperiment, kCollisions});
+      plot[1]['Y'].SetLog().SetRange(1e-5, 100.0).SetTitle("normalised counts");
       plot[2].AddRatio({"ptVsMult", "data"}, {"ptVsMult"}).Numer().ProjectY(low, high, true).Denom().ProjectY(1, 60, true).Both().Normalize().SetColor(kRed + 1);
       plot[2]['Y'].SetRange(0.0, 4.0).SetTitle("class / all");
       plot[0]['X'].SetRange(0.0, 4.0);  // fixed ranges: the frames differ only in the data
