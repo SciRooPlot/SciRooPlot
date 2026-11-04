@@ -3,6 +3,7 @@
 
 The file lists every public method of the user-facing classes, one per line, as declared in the headers.
 It is committed to the repository; the CI compares it with a freshly generated version so that it cannot drift.
+Also writes the drawing options (drawing-options.md) and the version of CMakeLists.txt into SKILL.md.
 """
 
 import re
@@ -13,6 +14,7 @@ ROOT = Path(__file__).resolve().parent.parent
 HEADERS = ["Plot.h", "PlotManager.h", "PanelLayout.h"]
 OUTPUT = ROOT / "docs/skill/scirooplot/reference/api.md"
 OPTIONS_OUTPUT = ROOT / "docs/skill/scirooplot/reference/drawing-options.md"
+SKILL = ROOT / "docs/skill/scirooplot/SKILL.md"
 
 # classes in the order they are listed; (header, declaration, title, remark)
 CLASSES = [
@@ -192,8 +194,11 @@ def main():
     block = texts["Plot.h"][texts["Plot.h"].index("#define DRAW_OPTIONS") : texts["Plot.h"].index("enum draw_option_t")]
     aliases = re.findall(r"OPT\((\w+)", block)
     out += ["## Enumerations", "", "- `draw_option_t`: " + ", ".join(f"`{a}`" for a in aliases), "- `box_placement_t`: `best_corner`, `top_left`, `top_right`, `bottom_right`, `bottom_left`", ""]
+    # the skill names the version it describes, so agents can compare it with the installed one
+    version = re.search(r"project\(\s*SciRooPlot\s+VERSION\s+([\d.]+)", (ROOT / "CMakeLists.txt").read_text())[1]
+    skill = re.sub(r"^Describes SciRooPlot \S+", f"Describes SciRooPlot {version}", SKILL.read_text(), count=1, flags=re.M)
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
-    for path, content in ((OUTPUT, "\n".join(out)), (OPTIONS_OUTPUT, drawing_options(aliases))):
+    for path, content in ((OUTPUT, "\n".join(out)), (OPTIONS_OUTPUT, drawing_options(aliases)), (SKILL, skill)):
         if "--check" in sys.argv:
             if not path.exists() or path.read_text() != content:
                 sys.exit(f"{path.relative_to(ROOT)} is outdated: run scripts/generate-api-reference.py")

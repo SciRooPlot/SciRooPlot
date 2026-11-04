@@ -118,6 +118,8 @@ s = s.replace("/*NUMPY*/", json.dumps({**blocks(f"{SITE}/numpy/DefinePlots.py"),
 s = s.replace("/*MESSAGES*/", subprocess.run([sys.executable, f"{SITE}/extract_messages.py", REPO], capture_output=True, text=True, check=True).stdout)
 s = s.replace("/*MSG_HELP*/", open(f"{SITE}/messages_help.js").read())
 s = s.replace("/*EXDATA*/", open(f"{GEN}/data.json").read())
+# the version the page describes, as in the skill
+s = s.replace("/*VERSION*/", re.search(r"project\(\s*SciRooPlot\s+VERSION\s+([\d.]+)", open(f"{REPO}/CMakeLists.txt").read())[1])
 s = "<!doctype html>\n<meta charset=\"utf-8\">\n" + s
 open(f"{OUT}/index.html", "w").write(s)
 

@@ -51,6 +51,7 @@
 #show raw: set text(top-edge: "cap-height")
 
 #let lang = sys.inputs.lang
+#let version = sys.inputs.at("version", default: none)  // the docs CI passes the version of CMakeLists.txt
 
 #let plot-def-file = {
   if lang == "py" {
@@ -261,6 +262,10 @@
       #v(1.6em)
       #box(fill: main-color, radius: 6pt, inset: (x: 14pt, y: 9pt),
         text(size: 18pt, weight: "bold", fill: white)[#if lang == "py" { "Python Version" } else { "C++ Version" }])
+      #if version != none [
+        #v(0.8em)
+        #text(size: 18pt, fill: rgb("B8C2D0"))[SciRooPlot #version]
+      ]
     ],
     image("logo.png", width: 6in),
   )
