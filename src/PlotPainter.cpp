@@ -686,8 +686,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     uint16_t dataIndex{};
     bool mapDrawn{};  // a 2d or 3d histogram of the pad is drawn (the first one gives the frame its colour levels)
     struct {
-      uint16_t markerColor, markerStyle, lineColor, lineStyle, fillColor, fillStyle;
-    } usedDefaults{};  // entries of the pad's default lists taken so far
+      uint16_t color, markerStyle, lineStyle, fillStyle;  // one colour entry per data item for marker, line and fill alike
+    } usedDefaults{};                                     // entries of the pad's default lists taken so far
     for (const auto& data : drawData) {
       if (fail) break;
       // data 0 is the copy of the first data that gives the frame: ROOT's messages about it come again with the data itself
@@ -1616,10 +1616,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // the defaults of the pad apply to what the data does not set, unless the style stored with the input is kept
             const bool keep = data->GetKeepInputStyle();
             auto fromPad = [keep](auto value) { return (keep) ? decltype(value){} : value; };
-            if (auto markerColor = get_first(data->GetMarkerColor(),
-                                             fromPad(pick(usedDefaults.markerColor, pad.GetDefaultMarkerColors())),
-                                             fromPad(pick(usedDefaults.markerColor, padDefaults.GetDefaultMarkerColors())))) {
-              if (!data->GetMarkerColor()) usedDefaults.markerColor++;
+            // a marker or line colour set for the data colours both, and a fill without a colour of its own: one colour per data item
+            // (a fill colour alone keeps the default outline and text, often darker than the fill); data without one takes the next default
+            const auto ownColor = (keep) ? decltype(data->GetMarkerColor()){} : get_first(data->GetMarkerColor(), data->GetLineColor());
+            const auto ownFill = (keep) ? decltype(data->GetFillColor()){} : get_first(data->GetFillColor(), data->GetLineColor(), data->GetMarkerColor());
+            bool tookColor{};  // a default colour was used: the next data gets the next one
+            if (auto markerColor = get_first(ownColor,
+                                             fromPad(pick(usedDefaults.color, pad.GetDefaultMarkerColors())),
+                                             fromPad(pick(usedDefaults.color, padDefaults.GetDefaultMarkerColors())))) {
+              if (!ownColor) tookColor = true;
               data_ptr->SetMarkerColor(markerColor->ToIndex());
             }
             if (auto markerAlpha = get_first(data->GetMarkerAlpha(),
@@ -1641,10 +1646,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if constexpr (is_hist_1d<data_type>()) {
               if (alias == boxes_nomarkers || alias == band || alias == band_smooth) data_ptr->SetMarkerSize(0.);  // E2, E5 and E6 always draw the markers
             }
-            if (auto lineColor = get_first(data->GetLineColor(),
-                                           fromPad(pick(usedDefaults.lineColor, pad.GetDefaultLineColors())),
-                                           fromPad(pick(usedDefaults.lineColor, padDefaults.GetDefaultLineColors())))) {
-              if (!data->GetLineColor()) usedDefaults.lineColor++;
+            if (auto lineColor = get_first(data->GetLineColor(), ownColor,
+                                           fromPad(pick(usedDefaults.color, pad.GetDefaultLineColors())),
+                                           fromPad(pick(usedDefaults.color, padDefaults.GetDefaultLineColors())))) {
+              if (!ownColor) tookColor = true;
               data_ptr->SetLineColor(lineColor->ToIndex());
             }
             if (auto lineAlpha = get_first(data->GetLineAlpha(),
@@ -1674,12 +1679,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                                   fromPad(padDefaults.GetDefaultLineWidth()))) {
               data_ptr->SetLineWidth(*lineWidth);
             }
-            if (auto fillColor = get_first(data->GetFillColor(),
-                                           fromPad(pick(usedDefaults.fillColor, pad.GetDefaultFillColors())),
-                                           fromPad(pick(usedDefaults.fillColor, fillDefaults(pad, *data))))) {
-              if (!data->GetFillColor()) usedDefaults.fillColor++;
+            if (auto fillColor = get_first(ownFill,
+                                           fromPad(pick(usedDefaults.color, pad.GetDefaultFillColors())),
+                                           fromPad(pick(usedDefaults.color, fillDefaults(pad, *data))))) {
+              if (!ownFill) tookColor = true;
               data_ptr->SetFillColor(fillColor->ToIndex());
             }
+            if (tookColor) usedDefaults.color++;
             if (auto fillAlpha = get_first(data->GetFillAlpha(),
                                            fromPad(pad.GetDefaultFillAlpha()),
                                            fromPad(padDefaults.GetDefaultFillAlpha()))) {
@@ -2656,7 +2662,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               ++nInvalid;
             }
           }
-          if (nInvalid) warn("{} has {} with NaN or infinite values, which are drawn as zero.", data_ptr->GetName(), plural(nInvalid, "bin"));
+          if (nInvalid) warn("{} has {} with NaN or infinite values, which are drawn as zero.", data->GetName(), plural(nInvalid, "bin"));
         } else if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
           int32_t nInvalid{};
           for (int32_t i = data_ptr->GetN() - 1; i >= 0; --i) {
@@ -2673,7 +2679,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               ++nInvalid;
             }
           }
-          if (nInvalid) warn("{} has {} with NaN or infinite values, which are not drawn.", data_ptr->GetName(), plural(nInvalid, "point"));
+          if (nInvalid) warn("{} has {} with NaN or infinite values, which are not drawn.", data->GetName(), plural(nInvalid, "point"));
         }
 
         applyModifiers(data_ptr, *data);
@@ -2695,10 +2701,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               return inputValue;
             };
             const int16_t fillStyle = drawnFill(data->GetFillStyle(), usedDefaults.fillStyle, pad.GetDefaultFillStyles(), padDefaults.GetDefaultFillStyles(), data_ptr->GetFillStyle());
-            const color_t fillColor = drawnFill(data->GetFillColor(), usedDefaults.fillColor, pad.GetDefaultFillColors(), fillDefaults(pad, *data), data_ptr->GetFillColor());
+            const color_t fillColor = drawnFill((data->GetKeepInputStyle()) ? data->GetFillColor() : get_first(data->GetFillColor(), data->GetLineColor(), data->GetMarkerColor()), usedDefaults.color, pad.GetDefaultFillColors(), fillDefaults(pad, *data), data_ptr->GetFillColor());
+            bool singlePoint{};  // a line through a single point draws nothing
+            if constexpr (!isHist) singlePoint = (data_ptr->GetN() == 1);
             if (fillStyle != 0 && fillColor != 0) {
               optionAlias = (isHist) ? hist : area;
-            } else if (data->GetMarkerStyle() || data->GetMarkerSize() || HasErrors(data_ptr)) {
+            } else if (data->GetMarkerStyle() || data->GetMarkerSize() || HasErrors(data_ptr) || singlePoint) {
               optionAlias = points;
             } else {
               optionAlias = (isHist) ? hist : line;
@@ -5448,17 +5456,25 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
   // so an end on a bin edge does not include the neighbouring bin (FindFixBin, since FindBin would extend an extendable axis);
   // "on a bin edge" with a tolerance, since ROOT computes the edges of fixed bins (e.g. 3 * 0.1 = 0.30000000000000004)
   const bool isUserCoord = projInfo.isUserCoord && *projInfo.isUserCoord;
-  auto setRange = [isUserCoord](TAxis* axis, double_t start, double_t end) {
+  // bin numbers follow ROOT (e.g. 0, -1 for the whole axis); a range in axis units outside of the axis or reversed would make ROOT
+  // reset it to the whole axis: the data is then left out
+  auto setRange = [isUserCoord, obj](TAxis* axis, double_t start, double_t end) {
     if (!isUserCoord) {
       axis->SetRange(static_cast<int32_t>(start), static_cast<int32_t>(end));
-      return;
+      return true;
     }
     constexpr double_t relTol = 1e-9;
     int32_t first = axis->FindFixBin(start);
     int32_t last = axis->FindFixBin(end);
     if (axis->GetBinUpEdge(first) - relTol * axis->GetBinWidth(first) <= start) ++first;
     if (axis->GetBinLowEdge(last) + relTol * axis->GetBinWidth(last) >= end && last > first) --last;  // a range of zero width keeps the bin containing it
+    if (first > last || last < 1 || first > axis->GetNbins()) {
+      logger::warning("The projection range [{}, {}] of {} selects no bins of an axis with {} bins from {} to {}: data left out.", start, end, obj->GetName(),
+                      axis->GetNbins(), axis->GetXmin(), axis->GetXmax());
+      return false;
+    }
     axis->SetRange(first, last);
+    return true;
   };
 
   if (obj->InheritsFrom(THnBase::Class()) && !isProfile) {
@@ -5469,7 +5485,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
         logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
         return nullopt;
       }
-      setRange(histPtr->GetAxis(rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple));
+      if (!setRange(histPtr->GetAxis(rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple))) return nullopt;
     }
     if (projInfo.dims.size() == 2) {
       return histPtr->Projection(projInfo.dims[1], projInfo.dims[0]);
@@ -5484,7 +5500,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
         logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
         return nullopt;
       }
-      setRange(GetAxis(histPtr, rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple));
+      if (!setRange(GetAxis(histPtr, rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple))) return nullopt;
     }
     if (auto* profile = dynamic_cast<TProfile3D*>(histPtr)) {
       // a projection of a profile is the profile of the merged bins (TH3::Project3D would add up their means); Profile alike
@@ -5525,7 +5541,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
         logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
         return nullopt;
       }
-      setRange(GetAxis(histPtr, rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple));
+      if (!setRange(GetAxis(histPtr, rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple))) return nullopt;
     }
     if (auto* profile = dynamic_cast<TProfile2D*>(histPtr)) {
       // a projection of a profile is the profile of the merged bins (TH2::ProjectionX would add up their means); Profile alike
