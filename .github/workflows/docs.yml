@@ -36,11 +36,19 @@ jobs:
         uses: typst-community/setup-typst@v5
 
       # the web page renders its plots with SciRooPlot itself: build and install it as in the build workflow
+      - name: Cache Linux packages
+        uses: actions/cache@v6
+        with:
+          path: ~/apt-archives
+          key: apt-docs-${{ hashFiles('.github/scripts/install-linux.sh', '.github/workflows/docs.yml') }}
+          restore-keys: apt-docs-
+
       - name: Install Linux dependencies
         run: |
-          ./.github/scripts/install-linux.sh
+          APT_ARCHIVES=~/apt-archives ./.github/scripts/install-linux.sh
           # for recording the terminal demo of the start page (docs/site/record-demo.sh); DejaVu Sans is also the font of the slides
-          sudo apt-get install -y openbox xterm xdotool nano imagemagick bc ffmpeg fonts-dejavu-core
+          sudo apt-get install -y --no-install-recommends -o Dir::Cache::Archives="${HOME}/apt-archives" openbox xterm xdotool nano imagemagick bc ffmpeg fonts-dejavu-core
+          sudo chown -R "$(id -u):$(id -g)" ~/apt-archives
 
       - name: Install ROOT
         uses: mamba-org/setup-micromamba@v3

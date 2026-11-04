@@ -42,9 +42,16 @@ jobs:
       # Linux
       ###########################################################
 
+      - name: Cache Linux packages
+        if: runner.os == 'Linux'
+        uses: actions/cache@v6
+        with:
+          path: ~/apt-archives
+          key: apt-build-${{ hashFiles('.github/scripts/install-linux.sh') }}
+
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
-        run: ./.github/scripts/install-linux.sh
+        run: APT_ARCHIVES=~/apt-archives ./.github/scripts/install-linux.sh
 
       - name: Install ROOT (Linux)
         if: runner.os == 'Linux'
