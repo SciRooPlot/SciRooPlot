@@ -1732,7 +1732,10 @@ void Plot::Pad::operator+=(const Pad& pad)
       }
       clonedData->SetLegend(static_cast<uint8_t>(shiftedLegendID));
     }
-    if (clonedData && clonedData->mLegend.entry) clonedData->mLegend.entry->ShiftPosition(dataOffset);
+    if (clonedData && clonedData->mLegend.entry) {
+      clonedData->mLegend.entry->ShiftPosition(dataOffset);
+      clonedData->mLegend.entry->ShiftSymbolOf(dataOffset);
+    }
     mData.push_back(clonedData);
   }
 }
@@ -2484,6 +2487,23 @@ auto Plot::Pad::Data::SetLegendEntry(const LegendEntry& legendEntry) -> decltype
     mLegend.entry->mRefPadID.reset();
   }
   return *this;
+}
+auto Plot::Pad::Data::GetLegendEntry() -> LegendEntry&
+{
+  if (!mLegend.entry) mLegend.entry.emplace();
+  return *mLegend.entry;
+}
+optional<Plot::Pad::LegendEntry> Plot::Pad::Data::GetLegendEntryIfSet() const
+{
+  if (!mLegend.entry) return {};
+  LegendEntry entry = *mLegend.entry;
+  if (entry.mLabel || entry.mRefDataID || entry.mRefPadID) {  // set on the entry from GetLegendEntry
+    logger::warning("The legend entry of {} cannot set its label (use SetLegendLabel) or refer to other data: ignored.", mName);
+    entry.mLabel.reset();
+    entry.mRefDataID.reset();
+    entry.mRefPadID.reset();
+  }
+  return entry;
 }
 auto Plot::Pad::Data::SetDrawOption(const string& drawOption) -> decltype(*this)
 {
@@ -4397,16 +4417,21 @@ void Plot::Pad::LegendBox::AddDataRow(const string& label, uint16_t dataID, cons
 void Plot::Pad::LegendBox::ShiftDataIDs(uint16_t offset)
 {
   for (auto& entry : mLegendEntriesUser) {
-    if (entry.mRefDataID && !entry.mRefPadID) *entry.mRefDataID += offset;  // rows for the data of another pad keep their number
+    if (!entry.mRefPadID) {  // rows for the data of another pad keep their numbers
+      if (entry.mRefDataID) *entry.mRefDataID += offset;
+      entry.ShiftSymbolOf(offset);
+    }
     entry.ShiftPosition(offset);
   }
 }
 void Plot::Pad::LegendBox::ShiftDataIDsOfPads(const std::map<uint8_t, uint16_t>& offsets)
 {
   for (auto& entry : mLegendEntriesUser) {
-    if (!entry.mRefDataID || !entry.mRefPadID) continue;
+    if (!entry.mRefPadID) continue;
     const auto offset = offsets.find(*entry.mRefPadID);
-    if (offset != offsets.end()) *entry.mRefDataID += offset->second;
+    if (offset == offsets.end()) continue;
+    if (entry.mRefDataID) *entry.mRefDataID += offset->second;
+    entry.ShiftSymbolOf(offset->second);
   }
 }
 
@@ -4466,6 +4491,11 @@ Plot::Pad::LegendEntry::LegendEntry(const ptree& legendEntryTree)
   read_from_tree(legendEntryTree, mRefDataID, "ref_data_id");
   read_from_tree(legendEntryTree, mRefPadID, "ref_pad_id");
   read_from_tree(legendEntryTree, mSymbolElements, "symbol_elements");
+  if (const auto symbolOf = get_from_tree<string>(legendEntryTree, "symbol_of")) {
+    std::istringstream stream(*symbolOf);
+    for (uint16_t dataID{}; stream >> dataID;)
+      mSymbolOf.push_back(dataID);
+  }
   if (const auto position = get_from_tree<string>(legendEntryTree, "position")) {
     if (*position == "top") {
       AtTop();
@@ -4495,6 +4525,12 @@ ptree Plot::Pad::LegendEntry::GetPropertyTree() const
   put_in_tree(legendEntryTree, mRefDataID, "ref_data_id");
   put_in_tree(legendEntryTree, mRefPadID, "ref_pad_id");
   put_in_tree(legendEntryTree, mSymbolElements, "symbol_elements");
+  if (!mSymbolOf.empty()) {
+    string symbolOf;
+    for (uint16_t dataID : mSymbolOf)
+      symbolOf += (symbolOf.empty() ? "" : " ") + std::to_string(dataID);
+    legendEntryTree.put("symbol_of", symbolOf);
+  }
   if (mPosition) {
     legendEntryTree.put("position", (mPosition == position_t::top) ? "top" : ((mPosition == position_t::before) ? "before" : "after"));
     if (mPosition != position_t::top) legendEntryTree.put("position_data", mPositionDataID);
@@ -4515,6 +4551,7 @@ void Plot::Pad::LegendEntry::operator+=(
   const Plot::Pad::LegendEntry& legendEntry)
 {
   if (legendEntry.mSymbolElements) this->mSymbolElements = legendEntry.mSymbolElements;
+  if (!legendEntry.mSymbolOf.empty()) this->mSymbolOf = legendEntry.mSymbolOf;
   if (legendEntry.mLabel) this->mLabel = legendEntry.mLabel;
   if (legendEntry.mRefDataID) this->mRefDataID = legendEntry.mRefDataID;
   if (legendEntry.mRefPadID) this->mRefPadID = legendEntry.mRefPadID;
@@ -4533,6 +4570,12 @@ void Plot::Pad::LegendEntry::ShiftPosition(uint16_t offset)
 {
   if (mPosition && mPosition != position_t::top) mPositionDataID += offset;
 }
+// the data whose symbols are added are in the pad of the row's data
+void Plot::Pad::LegendEntry::ShiftSymbolOf(uint16_t offset)
+{
+  for (auto& dataID : mSymbolOf)
+    dataID += offset;
+}
 
 //**************************************************************************************************
 /**
@@ -4548,6 +4591,21 @@ auto Plot::Pad::LegendEntry::SetLabel(const string& label) -> decltype(*this)
 auto Plot::Pad::LegendEntry::SetRefData(uint16_t refDataID) -> decltype(*this)
 {
   mRefDataID = refDataID;
+  return *this;
+}
+auto Plot::Pad::LegendEntry::AddSymbolOf(uint16_t dataID) -> decltype(*this)
+{
+  if (dataID == 0) {
+    logger::warning("AddSymbolOf: data are numbered from 1, 0 is ignored.");
+    return *this;
+  }
+  mSymbolOf.push_back(dataID);
+  return *this;
+}
+auto Plot::Pad::LegendEntry::AddSymbolOf(const vector<uint16_t>& dataIDs) -> decltype(*this)
+{
+  for (uint16_t dataID : dataIDs)
+    AddSymbolOf(dataID);
   return *this;
 }
 

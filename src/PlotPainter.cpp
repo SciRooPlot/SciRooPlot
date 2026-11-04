@@ -2038,7 +2038,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (data->GetLegendID()) legendID = *data->GetLegendID();
 
             if (legendID > 0u && legendID <= legendBoxVector.size()) {
-              optional<Plot::Pad::LegendEntry> legendEntry = data->GetLegendEntry();
+              optional<Plot::Pad::LegendEntry> legendEntry = data->GetLegendEntryIfSet();
               if (hasFilledSteps && !(legendEntry && legendEntry->GetSymbolElements())) {  // the row of filled steps shows the fill, as for hist
                 if (!legendEntry) legendEntry.emplace();
                 legendEntry->SetSymbolElements("F");
@@ -3039,7 +3039,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           continue;
         }
         const auto& data = *source->second.GetData()[refData - 1];
-        Plot::Pad::LegendEntry merged = data.GetLegendEntry().value_or(Plot::Pad::LegendEntry{});
+        Plot::Pad::LegendEntry merged = data.GetLegendEntryIfSet().value_or(Plot::Pad::LegendEntry{});
         merged += *row;
         if (!merged.mLabel) merged.mLabel = data.GetLegendLabel().value_or("");
         *row = merged;
@@ -4419,35 +4419,73 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         TAttMarker markerAttr;
         TAttLine lineAttr;
         TAttFill fillAttr;
-        const auto [data_ptr, drawnWith] = (entry.GetRefDataID()) ? findDrawn(*entry.GetRefDataID(), entry.GetRefPadID()) : std::pair<TObject*, string>{nullptr, ""};
-        if (data_ptr) {
+        // the symbol a drawn data gives the row (elements: those set for the row, else what the data draws) in the look of the data
+        struct SymbolPart {
+          uint16_t dataID;
+          string elements;
+          TAttMarker marker;
+          TAttLine line;
+          TAttFill fill;
+        };
+        auto symbolPart = [](uint16_t dataID, TObject* data_ptr, const string& drawnWith, const string& elements) {
           const LegendSymbol drawn = GetLegendSymbol(data_ptr, drawnWith);
-          if (symbolElements.empty()) symbolElements = drawn.elements;
-          if (auto ptr = dynamic_cast<TAttMarker*>(data_ptr)) ptr->Copy(markerAttr);
-          if (auto ptr = dynamic_cast<TAttLine*>(data_ptr)) ptr->Copy(lineAttr);
-          if (auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(fillAttr);
+          SymbolPart part{dataID, str_upper((elements.empty()) ? drawn.elements : elements), {}, {}, {}};
+          if (auto ptr = dynamic_cast<TAttMarker*>(data_ptr)) ptr->Copy(part.marker);
+          if (auto ptr = dynamic_cast<TAttLine*>(data_ptr)) ptr->Copy(part.line);
+          if (auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(part.fill);
           // what is not drawn is not shown (TLegend would draw lines of width 0 as hairlines, hollow fills as outlines)
-          symbolElements = str_upper(symbolElements);
-          auto drop = [&symbolElements](char element) { symbolElements.erase(std::remove(symbolElements.begin(), symbolElements.end(), element), symbolElements.end()); };
-          if (lineAttr.GetLineWidth() <= 0) {
+          auto drop = [&part](char element) { part.elements.erase(std::remove(part.elements.begin(), part.elements.end(), element), part.elements.end()); };
+          if (part.line.GetLineWidth() <= 0) {
             drop('L');
             drop('E');
           }
-          const bool hollow = fillAttr.GetFillStyle() == 0 || fillAttr.GetFillColor() == 0;
+          const bool hollow = part.fill.GetFillStyle() == 0 || part.fill.GetFillColor() == 0;
           // the outline TLegend draws around a fill symbol without line
-          if (str_contains(symbolElements, "F") && !str_contains(symbolElements, "L")) {
-            if (drawn.outline == Outline::thin && lineAttr.GetLineWidth() > 0) {  // outlined thin and solid in the line colour
-              lineAttr.SetLineWidth(1);
-              lineAttr.SetLineStyle(kSolid);
-              if (hollow) fillAttr.SetFillColor(lineAttr.GetLineColor());
+          if (str_contains(part.elements, "F") && !str_contains(part.elements, "L")) {
+            if (drawn.outline == Outline::thin && part.line.GetLineWidth() > 0) {  // outlined thin and solid in the line colour
+              part.line.SetLineWidth(1);
+              part.line.SetLineStyle(kSolid);
+              if (hollow) part.fill.SetFillColor(part.line.GetLineColor());
             }
-            if (drawn.outline == Outline::none || lineAttr.GetLineWidth() <= 0) lineAttr.SetLineColor(TColor::GetColorTransparent(lineAttr.GetLineColor(), 0.f));
+            if (drawn.outline == Outline::none || part.line.GetLineWidth() <= 0) part.line.SetLineColor(TColor::GetColorTransparent(part.line.GetLineColor(), 0.f));
           }
-          curEntry = legend->AddEntry(data_ptr, label.data(), symbolElements.data());
-          curEntry->SetObject(static_cast<TObject*>(nullptr));
-        } else {
-          curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), symbolElements.data());
+          return part;
+        };
+        // the parts of the row's data and of the data added with AddSymbolOf, in the order they are drawn
+        std::vector<SymbolPart> parts;
+        const auto [data_ptr, drawnWith] = (entry.GetRefDataID()) ? findDrawn(*entry.GetRefDataID(), entry.GetRefPadID()) : std::pair<TObject*, string>{nullptr, ""};
+        if (data_ptr) parts.push_back(symbolPart(*entry.GetRefDataID(), data_ptr, drawnWith, symbolElements));
+        for (uint16_t dataID : entry.GetSymbolOf()) {
+          const auto [other_ptr, otherDrawnWith] = findDrawn(dataID, entry.GetRefPadID());
+          if (!other_ptr) {
+            logger::warning("Legend row \"{}\": there is no data {} whose symbol could be added.", label, dataID);
+            continue;
+          }
+          parts.push_back(symbolPart(dataID, other_ptr, otherDrawnWith, ""));
         }
+        std::stable_sort(parts.begin(), parts.end(), [](const SymbolPart& a, const SymbolPart& b) { return a.dataID < b.dataID; });
+        if (!parts.empty()) {
+          // each element in the look of the data giving it, the one drawn later where two give the same (as in the plot); the line of the row
+          // is that of the L element, without one the outline of the fill (TLegend draws no error bar with a fill), else that of the error bars
+          symbolElements.clear();
+          const SymbolPart* lineFrom = nullptr;
+          const SymbolPart* outlineFrom = nullptr;
+          const SymbolPart* errorsFrom = nullptr;
+          for (const auto& part : parts) {
+            for (char element : part.elements) {
+              if (!str_contains(symbolElements, string(1, element))) symbolElements += element;
+              if (element == 'P') part.marker.Copy(markerAttr);
+              if (element == 'F') {
+                part.fill.Copy(fillAttr);
+                outlineFrom = &part;
+              }
+              if (element == 'L') lineFrom = &part;
+              if (element == 'E') errorsFrom = &part;
+            }
+          }
+          if (const SymbolPart* from = (lineFrom) ? lineFrom : ((outlineFrom) ? outlineFrom : errorsFrom)) from->line.Copy(lineAttr);
+        }
+        curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), symbolElements.data());
 
         // the attributes of the data, overridden by the defaults of the box and by those of the entry
         curEntry->SetMarkerColor(markerAttr.GetMarkerColor());

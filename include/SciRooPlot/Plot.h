@@ -727,7 +727,7 @@ class Plot::Pad : public FillSetters<Pad>
 
 //**************************************************************************************************
 /**
- * Representation of a legend row: the row of a data item (styled with Data::SetLegendEntry) or a row added with LegendBox::AddEntry.
+ * Representation of a legend row: the row of a data item (styled with Data::GetLegendEntry or SetLegendEntry) or a row added with LegendBox::AddEntry.
  */
 //**************************************************************************************************
 class Plot::Pad::LegendEntry : public MarkerSetters<LegendEntry>, public LineSetters<LegendEntry>, public FillSetters<LegendEntry>, public TextSetters<LegendEntry>
@@ -740,10 +740,14 @@ class Plot::Pad::LegendEntry : public MarkerSetters<LegendEntry>, public LineSet
   LegendEntry& SetLabel(const std::string& label);
   LegendEntry& SetRefData(uint16_t refDataID);
   LegendEntry& SetSymbolElements(const std::string& symbolElements);
+  // the symbol also shows what other data of the pad draw (each element in the look of the data giving it, the data drawn later where two
+  // give the same), e.g. a line over a band drawn as an item of its own: plot[1](2).GetLegendEntry().AddSymbolOf(1)
+  LegendEntry& AddSymbolOf(uint16_t dataID);
+  LegendEntry& AddSymbolOf(const std::vector<uint16_t>& dataIDs);
   // position of a row added with LegendBox::AddEntry (by default after all other rows) or of the row of a data item (Data::SetLegendEntry,
   // by default at the place of the data), relative to the places of the data of the pad, which are in the order of the data
   // (dataID as in plot[padID](dataID)), whether or not that data has a row in this legend; e.g. a model drawn before the data
-  // (under it) listed after it: plot[1](1).SetLegendEntry(LegendEntry().AfterData(2))
+  // (under it) listed after it: plot[1](1).GetLegendEntry().AfterData(2)
   LegendEntry& AtTop();
   LegendEntry& BeforeData(uint16_t dataID);
   LegendEntry& AfterData(uint16_t dataID);
@@ -763,18 +767,21 @@ class Plot::Pad::LegendEntry : public MarkerSetters<LegendEntry>, public LineSet
   explicit LegendEntry(const std::optional<std::string>& label, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& symbolElements = {});
   void operator+=(const LegendEntry& legendEntry);
   void ShiftPosition(uint16_t offset);  // the data numbers grow by offset (the pad is added to one whose data come first)
+  void ShiftSymbolOf(uint16_t offset);
 
   boost::property_tree::ptree GetPropertyTree() const;
   const auto& GetRefDataID() const { return mRefDataID; }
   const auto& GetRefPadID() const { return mRefPadID; }
   const auto& GetLabel() const { return mLabel; }
   const auto& GetSymbolElements() const { return mSymbolElements; }
+  const auto& GetSymbolOf() const { return mSymbolOf; }
 
  private:
   std::optional<std::string> mLabel;
   std::optional<uint16_t> mRefDataID;
   std::optional<uint8_t> mRefPadID;  // the data of the row is drawn in another pad
   std::optional<std::string> mSymbolElements;
+  std::vector<uint16_t> mSymbolOf;  // the data (in the pad of the row's data) whose symbols are added
   std::optional<position_t> mPosition;
   uint16_t mPositionDataID{};  // the data the position is relative to (for before and after)
 };
@@ -822,6 +829,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   Data& SetLegendLabel(const std::string& legendLabel);
   Data& SetLegend(uint8_t legendID);
   Data& SetLegendEntry(const LegendEntry& legendEntry);
+  LegendEntry& GetLegendEntry();  // the look of the data's legend row (made if not set yet): plot[1](2).GetLegendEntry().AddSymbolOf(1)
   Data& SetDrawOption(const std::string& drawOption);
   Data& SetDrawOption(draw_option_t optionAlias);
   Data& SetDrawOption();
@@ -931,7 +939,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   const auto& GetName() const { return mName; }
   const auto& GetLegendLabel() const { return mLegend.label; }
   const auto& GetLegendID() const { return mLegend.id; }
-  const auto& GetLegendEntry() const { return mLegend.entry; }
+  std::optional<LegendEntry> GetLegendEntryIfSet() const;  // without a label or data reference set on it (the data decides those)
   const auto& GetDrawOption() const { return mDrawOption; }
   const auto& GetDrawOptionAlias() const { return mDrawOptionAlias; }
   const auto& GetTextFormat() const { return mTextFormat; }

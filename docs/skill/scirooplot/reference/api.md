@@ -205,6 +205,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& SetLegendLabel(const std::string& legendLabel)`
 - `Data& SetLegend(uint8_t legendID)`
 - `Data& SetLegendEntry(const LegendEntry& legendEntry)`
+- `LegendEntry& GetLegendEntry()` — the look of the data's legend row (made if not set yet): plot[1](2).GetLegendEntry().AddSymbolOf(1)
 - `Data& SetDrawOption(const std::string& drawOption)`
 - `Data& SetDrawOption(draw_option_t optionAlias)`
 - `Data& SetDrawOption()`
@@ -369,12 +370,14 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Shape& SetRotation(double_t theta)` — rotation of an ellipse, in degrees
 
 ## Plot::Pad::LegendEntry
-*a legend row: the appearance of the row of a data item (Data::SetLegendEntry) or a row added with LegendBox::AddEntry; also has the marker, line, fill and text setters*
+*a legend row: the appearance of the row of a data item (Data::GetLegendEntry, SetLegendEntry) or a row added with LegendBox::AddEntry; also has the marker, line, fill and text setters*
 
 - `LegendEntry()`
 - `LegendEntry& SetLabel(const std::string& label)`
 - `LegendEntry& SetRefData(uint16_t refDataID)`
 - `LegendEntry& SetSymbolElements(const std::string& symbolElements)`
+- `LegendEntry& AddSymbolOf(uint16_t dataID)`
+- `LegendEntry& AddSymbolOf(const std::vector<uint16_t>& dataIDs)`
 - `LegendEntry& AtTop()`
 - `LegendEntry& BeforeData(uint16_t dataID)`
 - `LegendEntry& AfterData(uint16_t dataID)`

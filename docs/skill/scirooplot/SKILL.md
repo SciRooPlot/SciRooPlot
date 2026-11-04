@@ -208,8 +208,9 @@ Column expressions and filters are C++ expressions over the column/leaf names (e
 ```cpp
 plot[1].AddLegend();  AddLegend(top_right);  AddLegend(0.5, 0.8[, "title"]);   // corners: best_corner, top_left, top_right, bottom_right, bottom_left
 plot[1].GetLegend(2).SetNumColumns(2).SetColumnSpacing(1.5).SetOrderTopDown().SetDefaultLineWidth(5.0).SetNoBox().SetTransparent();   // spacing in text heights; top down: fill a column first
-plot[1].AddData("band", "src", "unc.").SetLegendEntry(LegendEntry().SetSymbolElements("F"));   // style of a data's row (label stays on the data); symbol element letters: L line, P marker, F fill, E error bar
+plot[1].AddData("band", "src", "unc.").GetLegendEntry().SetSymbolElements("F");   // style of a data's row (label stays on the data; SetLegendEntry(entry) applies a prepared one); symbol element letters: L line, P marker, F fill, E error bar
 plot[1].GetLegend(1).AddEntry("custom").SetSymbolElements("L").SetLine(kSolid, 2.0, kRed);   // row of its own (AddEntry(): empty line); SetRefData(n): symbol of data n
+plot[1].AddData("line", "src", "model").GetLegendEntry().AddSymbolOf(1);   // the row also shows the symbol of data 1 (e.g. its band) in that data's look; AddSymbolOf({1, 4}) for several
 plot[1].GetLegend(1).AddEntry("#bf{group}").BeforeData(4);   // placed relative to data n of the pad (as in plot[1](n)): AtTop(), BeforeData(n), AfterData(n); default: at the end
 plot[1](1).SetLegendEntry(LegendEntry().AfterData(2));       // the row of a data item placed the same way (a model drawn under the data, listed after it)
 plot[1].AddText({"line one", "line two"});  AddText(top_left, "text");  AddText(0.2, 0.9, "text").SetTextFont(43).SetTextSize(20).SetTextAlign(13);   // font 43: size in pixels

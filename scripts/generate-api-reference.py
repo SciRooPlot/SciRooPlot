@@ -28,7 +28,7 @@ CLASSES = [
     ("Plot.h", "class Plot::Pad::StatsBox", "Plot::Pad::StatsBox", "placement and appearance of the statistics box of a data item (Data::SetStatsBox); has the setters of Box"),
     ("Plot.h", "class Plot::Pad::LegendBox", "Plot::Pad::LegendBox", ""),
     ("Plot.h", "class Plot::Pad::Shape", "Plot::Pad::Shape", "a line, arrow, region, ellipse or polygon that is not data (Pad::AddLine, AddArrow, AddVerticalLine, AddRegionX, ...); also has the line and fill setters"),
-    ("Plot.h", "class Plot::Pad::LegendEntry", "Plot::Pad::LegendEntry", "a legend row: the appearance of the row of a data item (Data::SetLegendEntry) or a row added with LegendBox::AddEntry; also has the marker, line, fill and text setters"),
+    ("Plot.h", "class Plot::Pad::LegendEntry", "Plot::Pad::LegendEntry", "a legend row: the appearance of the row of a data item (Data::GetLegendEntry, SetLegendEntry) or a row added with LegendBox::AddEntry; also has the marker, line, fill and text setters"),
     ("Plot.h", "class MarkerSetters", "marker setters", "Data, Ratio, LegendEntry; Derived is the class itself, so calls can be chained"),
     ("Plot.h", "class LineSetters", "line setters", "Data, Ratio, LegendEntry, Shape"),
     ("Plot.h", "class FillSetters", "fill setters", "Plot, Pad, Data, Ratio, LegendEntry, TextBox, LegendBox, StatsBox, Shape"),
@@ -99,7 +99,7 @@ def methods(section: str, class_name: str):
         if not match:
             continue
         name = match["name"]
-        if name in SKIP_NAMES or name.startswith("Get") and name not in {"GetAxis", "GetData", "GetLegend", "GetText", "GetImage", "GetProjectProperty", "GetPad"}:
+        if name in SKIP_NAMES or name.startswith("Get") and name not in {"GetAxis", "GetData", "GetLegend", "GetLegendEntry", "GetText", "GetImage", "GetProjectProperty", "GetPad"}:
             continue  # plain getters are not part of the user interface
         ret = (match["ret"] or "").strip()
         if re.match(r"\s*static\s", decl):
