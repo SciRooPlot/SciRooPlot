@@ -337,6 +337,7 @@ bool Config::SaveProjects()
       }
     } catch (const std::exception& e) {
       logger::error("Cannot save the configuration: {} could not be read ({}). Fix or remove it.", mProjectsFile, e.what());
+      mProjectsUnreadable = true;  // reported once: not repeated at exit, later changes fail (ProjectsReadable)
       return false;
     }
   }

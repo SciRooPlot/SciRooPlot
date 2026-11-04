@@ -739,7 +739,7 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
         </div>
         <details class="fair"><summary>How the comparison is kept fair</summary>
           <ul>
-            <li>Both sides make the same figure from the same files; the SciRooPlot code shown is the complete definition of the figure.</li>
+            <li>Both sides make the same figure from the same files; the SciRooPlot code shown is the complete definition of the figure inside the project of <code>srp init-cpp</code> or <code>srp init-py</code>, which brings the includes and <code>using</code> lines.</li>
             <li>The ROOT macros are written the way a ROOT user would: one output file, one check that the inputs were found, no helper libraries.</li>
             <li>Lines are counted without empty lines, comments and the frame of the macro function, the same way on both sides.</li>
             <li>Most of the ROOT lines go into matching the look: margins, pixel text sizes, tick lengths. A group style file can take part of that, but it still has to be written and kept in sync once.</li>

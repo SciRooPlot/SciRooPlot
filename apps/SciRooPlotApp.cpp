@@ -53,6 +53,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "Config.h"
@@ -584,6 +585,12 @@ bool PrintRootFileContents(const string& inputPath)
         return;
       }
       bool printedPath = false;
+      auto printPath = [&]() {
+        if (!printedPath && !path.empty()) logger::print("{}/", path);
+        printedPath = true;
+      };
+      // the objects of this level first, then the containers: listed after a container, they would look as if inside it
+      vector<std::tuple<TObject*, string, bool>> containers;
       TIter next(itemList);
       TObject* obj = nullptr;
       while ((obj = next())) {
@@ -592,6 +599,13 @@ bool PrintRootFileContents(const string& inputPath)
         if (obj->IsA() == TKey::Class()) {
           auto* key = static_cast<TKey*>(obj);
           name = key->GetName();
+          // a key of a class that is no TObject (an RNTuple, a std::vector) cannot be read as one
+          const TClass* keyClass = TClass::GetClass(key->GetClassName());
+          if (keyClass && !keyClass->IsTObject()) {
+            printPath();
+            logger::print("- [{}] {}", key->GetClassName(), name);
+            continue;
+          }
           obj = key->ReadObj();
           if (!obj) {
             logger::warning("Skipping key {} of type {}; the class is not available.", name, key->GetClassName());
@@ -600,16 +614,17 @@ bool PrintRootFileContents(const string& inputPath)
           ownsObj = true;
         }
         if (isContainer(obj)) {
-          loopData(obj, path.empty() ? name : path + "/" + name);
-        } else {
-          if (!printedPath) {
-            if (!path.empty()) logger::print("{}/", path);
-            printedPath = true;
-          }
-          logger::print("- [{}] {}", obj->ClassName(), name);
+          containers.emplace_back(obj, name, ownsObj);
+          continue;
         }
+        printPath();
+        logger::print("- [{}] {}", obj->ClassName(), name);
         printBranches(obj);
         if (ownsObj) delete obj;
+      }
+      for (auto& [container, name, ownsContainer] : containers) {
+        loopData(container, path.empty() ? name : path + "/" + name);
+        if (ownsContainer) delete container;
       }
     };
   loopData(root, startPath);

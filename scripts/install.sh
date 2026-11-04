@@ -239,7 +239,8 @@ mkdir -p "${BUILD_DIR}"
 LOG_FILE="${BUILD_DIR}/install.log"
 : >"${LOG_FILE}"
 
-if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+# only a clone of SciRooPlot itself: a copy of the sources inside another repository must not update that one
+if git rev-parse --is-inside-work-tree >/dev/null 2>&1 && [[ "$(git rev-parse --show-toplevel)" -ef "${SOURCE_DIR}" ]]; then
   if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
     if ! run_step "Updating the repository" git pull; then
       echo "  Could not update the repository: building the current checkout (see ${LOG_FILE})." >&2

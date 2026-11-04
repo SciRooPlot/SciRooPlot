@@ -66,6 +66,43 @@ def public_section(text: str, declaration: str) -> str:
     return body[: end.start()] if end else body
 
 
+def split_args(args: str):
+    """the arguments of a declaration, split at the top-level commas"""
+    parts, depth, current = [], 0, ""
+    for char in args:
+        depth += (char in "<({[") - (char in ">)}]")
+        if char == "," and depth == 0:
+            parts.append(current)
+            current = ""
+        else:
+            current += char
+    return [part.strip() for part in parts + [current] if part.strip()]
+
+
+def type_key(types):
+    return tuple(re.sub(r"\bconst\b|&|std::|\s", "", t) for t in types)
+
+
+def python_constructors():
+    """argument types of the constructors bound in python/PythonBindings.cpp, per class"""
+    text = (ROOT / "python/PythonBindings.cpp").read_text()
+    result = {}
+    for block in re.split(r"(?=py::class_<)", text)[1:]:
+        name = re.match(r"py::class_<(\w+)", block)[1]
+        for args in re.findall(r"py::init<([^()]*)>\(\)", block):
+            result.setdefault(name, set()).add(type_key(split_args(args)))
+    return result
+
+
+def ctor_key(args: str):
+    """argument types of a constructor declaration (defaults and names removed)"""
+    types = []
+    for arg in split_args(args):
+        arg = arg.split("=", 1)[0].strip()
+        types.append(re.sub(r"\s*\b\w+$", "", arg))
+    return type_key(types)
+
+
 def methods(section: str, class_name: str):
     result = []
     # macro definitions (with their continuation lines) and macro invocations like FORWARD_TO_DATA(SetColor)
@@ -113,11 +150,16 @@ def methods(section: str, class_name: str):
         comment = ""
         if "//" in line:
             comment = line.split("//", 1)[1].strip()
-        if ret == "" and name == class_name.split("::")[-1].split("<")[0]:
+        if ret == "" and name == short:
+            if ctor_key(args) not in PY_CTORS.get(short, set()):
+                comment = f"{comment}; C++ only" if comment else "C++ only"
             result.append((f"{name}({args})", comment, True))
         else:
             result.append((f"{ret} {name}({args})", comment, False))
     return result
+
+
+PY_CTORS = python_constructors()
 
 
 def main():

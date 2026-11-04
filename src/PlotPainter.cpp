@@ -175,10 +175,11 @@ void PlotPainter::CopyFuncAttributes(FuncT* from, FuncT* to)
  * Bin range of a histogram axis for a user range: the bins reaching into it, as TAxis::SetRangeUser selects them.
  */
 //**************************************************************************************************
-void PlotPainter::SetBinRange(TAxis* axis, const optional<double_t>& min, const optional<double_t>& max)
+bool PlotPainter::SetBinRange(TAxis* axis, const optional<double_t>& min, const optional<double_t>& max)
 {
   const auto [first, last] = BinRange(axis, min, max);
   axis->SetRange(first, last);
+  return std::max(first, 1) <= std::min(last, axis->GetNbins());  // false: no bin in the range, ROOT then selects all bins
 }
 std::pair<int32_t, int32_t> PlotPainter::BinRange(const TAxis* axis, const optional<double_t>& min, const optional<double_t>& max)
 {
@@ -301,7 +302,7 @@ double_t PlotPainter::ClippedBase(const TGraph* graph, bool logY)
   return minY - 1e6 * (maxAbsY + 1.);
 }
 
-TH1* PlotPainter::ToHist(TGraph* graph, bool warn)
+TH1* PlotPainter::ToHist(TGraph* graph, bool warn, bool warnAsymmetric)
 {
   graph->Sort();
   const int32_t n = graph->GetN();
@@ -372,7 +373,7 @@ TH1* PlotPainter::ToHist(TGraph* graph, bool warn)
     hist->SetBinError(binOfPoint[i], 0.5 * (errorLow + errorHigh));
     asymmetricErrors |= (errorLow != errorHigh);
   }
-  if (asymmetricErrors && warn) logger::warning("Graph {} has asymmetric y errors: it is drawn with their mean, since histograms have symmetric errors.", graph->GetName());
+  if (asymmetricErrors && warn && warnAsymmetric) logger::warning("Graph {} has asymmetric y errors: it is drawn with their mean, since histograms have symmetric errors.", graph->GetName());
   CopyStyle(*graph, *hist);
   hist->SetBit(kCanDelete);
   delete graph;
@@ -1329,6 +1330,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 // the dependent axis (y of 1d, z of 2d) has no bins: its range is the minimum and maximum of the histogram
                 if (userRangeMin) axisHist_ptr->SetMinimum(*userRangeMin);
                 if (userRangeMax) axisHist_ptr->SetMaximum(*userRangeMax);
+                // one side set beyond the other end of the data (SetMinRange(50) for contents up to 10): ROOT would draw an inverted range
+                if (userRangeMin.has_value() != userRangeMax.has_value()) {
+                  const double_t min = userRangeMin.value_or(axisHist_ptr->GetMinimum());
+                  const double_t max = userRangeMax.value_or(axisHist_ptr->GetMaximum());
+                  if (min >= max) {
+                    logger::warning("The range {} to {} of the {} axis in pad {} is empty: the automatic range is used.", min, max, axisLabel, padID);
+                    (userRangeMin) ? axisHist_ptr->SetMinimum() : axisHist_ptr->SetMaximum();
+                  }
+                }
               }
             }
 
@@ -1415,6 +1425,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     axis_ptr->SetRange(std::min(bin, lastBin), lastBin);
                   }
                 }
+              }
+              // a lower end at or below zero cannot be shown on a log scale: the axis starts where it would without it (as in ROOT)
+              const bool stillLog = (axisLabel == 'X') ? pad_ptr->GetLogx() : ((axisLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
+              if (stillLog && userRangeMin && *userRangeMin <= 0. && !(axisLabel == 'Z' && frameDim == 1)) {
+                logger::warning("The lower range {} of the {} axis in pad {} is not positive and cannot be shown on a log scale: the axis starts at its automatic minimum.", *userRangeMin, axisLabel, padID);
               }
             }
 
@@ -1678,6 +1693,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                                   fromPad(padDefaults.GetDefaultLineWidth()))) {
               data_ptr->SetLineWidth(*lineWidth);
             }
+            // an input without a visible fill (ROOT's default fill colour 0 with a solid style) keeps none when the style is kept and the data
+            // sets a fill colour (SetColor sets all three) but no fill style, for drawing options that draw no area (points, lines): their
+            // fill would otherwise show (as the area of a graph drawn with a line); options that fill (band, area, hist, ...) keep it
+            static const std::set<draw_option_t> fillingAliases{hist, hist_clipped, bars, hbars, area, area_smooth, band, band_smooth, boxes, boxes_nomarkers};
+            const bool keptWithoutFill = keep && !data->GetFillStyle() && data_ptr->GetFillColor() == 0 && alias != static_cast<draw_option_t>(255) && !fillingAliases.count(alias);
             if (auto fillColor = get_first(data->GetFillColor(),
                                            fromPad(pick(usedDefaults.color, pad.GetDefaultFillColors())),
                                            fromPad(pick(usedDefaults.color, fillDefaults(pad, *data))))) {
@@ -1696,6 +1716,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (!data->GetFillStyle()) usedDefaults.fillStyle++;
               data_ptr->SetFillStyle(*fillStyle);
             }
+            if (keptWithoutFill) data_ptr->SetFillStyle(0);
             if constexpr (is_hist_1d<data_type>() || is_func_1d<data_type>()) {
               if (alias == line || alias == curve) data_ptr->SetFillStyle(0);  // HIST L and HIST C would also fill the histogram, L and C the area below a function
             }
@@ -1766,7 +1787,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (upper.Contains("COL")) logger::warning("{}: ROOT paints COL with a map projection twice, unprojected below the projected map. For a colour scale add Z to the projection alone.", data->GetName());
             }
             if (!pad_ptr->GetView() || projected) {
-              if (hasRangeX && !projected) SetBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
+              if (hasRangeX && !projected && !SetBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX())) {
+                logger::warning("The x range of {} contains none of its bins: all bins are drawn.", data->GetName());
+              }
               if (cutXAtFrame) LimitToFrame(data_ptr->GetXaxis(), axisHist_ptr->GetXaxis());
             }
             if constexpr (is_hist_1d<data_type>()) {
@@ -1785,7 +1808,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
           if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
             if (!pad_ptr->GetView() || projected) {
-              if (hasRangeY && !projected) SetBinRange(data_ptr->GetYaxis(), data->GetMinRangeY(), data->GetMaxRangeY());
+              if (hasRangeY && !projected && !SetBinRange(data_ptr->GetYaxis(), data->GetMinRangeY(), data->GetMaxRangeY())) {
+                logger::warning("The y range of {} contains none of its bins: all bins are drawn.", data->GetName());
+              }
               if (cutYAtFrame) LimitToFrame(data_ptr->GetYaxis(), axisHist_ptr->GetYaxis());
             }
             if (projected) {
@@ -2195,36 +2220,51 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           warnLabelled(ptr->GetXaxis(), mods.GetRebinGroupX(), "RebinX");
           warnLabelled(ptr->GetYaxis(), mods.GetRebinGroupY(), "RebinY");
           warnLabelled(ptr->GetZaxis(), mods.GetRebinGroupZ(), "RebinZ");
-          if constexpr (is_hist_2d<ptr_type>()) {
-            if (poly) {
-              // a TH2Poly has no bins along its axes (ROOT aborts)
-              warnUnsupported(mods.GetRebinGroupX().has_value(), "RebinX");
-              warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
-            } else if (mods.GetRebinGroupX() && mods.GetRebinGroupY()) {
-              ptr->Rebin2D(*mods.GetRebinGroupX(), *mods.GetRebinGroupY());
-            } else if (mods.GetRebinGroupX()) {
-              ptr->RebinX(*mods.GetRebinGroupX());
-            } else if (mods.GetRebinGroupY()) {
-              ptr->RebinY(*mods.GetRebinGroupY());
+          // ROOT moves the bins that make no complete group into the overflow (its warning does not say so): said here, ROOT's is silenced
+          auto warnIncomplete = [&](const TAxis* axis, const optional<uint16_t>& group, const char* what) {
+            // not where rebinning is refused below (TH2Poly, TProfile3D)
+            if (group && *group > 0 && *group <= axis->GetNbins() && axis->GetNbins() % *group && !ptr->InheritsFrom(TH2Poly::Class()) &&
+                !ptr->InheritsFrom(TProfile3D::Class())) {
+              warn("{}({}): the {} bins of {} are no multiple of it, the last {} are left out (the axis ends at {:g}).", what, *group,
+                   axis->GetNbins(), ptr->GetName(), axis->GetNbins() % *group, axis->GetBinUpEdge(axis->GetNbins() / *group * *group));
             }
-            warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
-          } else if constexpr (is_hist_3d<ptr_type>()) {
-            if (dynamic_cast<TProfile3D*>(ptr)) {
-              // TProfile3D has no rebinning of its own: the one of TH3 leaves every bin empty (ROOT bug)
-              warnUnsupported(mods.GetRebinGroupX() || mods.GetRebinGroupY() || mods.GetRebinGroupZ(), "Rebinning");
+          };
+          warnIncomplete(ptr->GetXaxis(), mods.GetRebinGroupX(), "RebinX");
+          warnIncomplete(ptr->GetYaxis(), mods.GetRebinGroupY(), "RebinY");
+          warnIncomplete(ptr->GetZaxis(), mods.GetRebinGroupZ(), "RebinZ");
+          {  // ROOT's warnings silenced for the rebinning only
+            auto quietRebin = ignore_root_messages_below(kError);
+            if constexpr (is_hist_2d<ptr_type>()) {
+              if (poly) {
+                // a TH2Poly has no bins along its axes (ROOT aborts)
+                warnUnsupported(mods.GetRebinGroupX().has_value(), "RebinX");
+                warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
+              } else if (mods.GetRebinGroupX() && mods.GetRebinGroupY()) {
+                ptr->Rebin2D(*mods.GetRebinGroupX(), *mods.GetRebinGroupY());
+              } else if (mods.GetRebinGroupX()) {
+                ptr->RebinX(*mods.GetRebinGroupX());
+              } else if (mods.GetRebinGroupY()) {
+                ptr->RebinY(*mods.GetRebinGroupY());
+              }
+              warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
+            } else if constexpr (is_hist_3d<ptr_type>()) {
+              if (dynamic_cast<TProfile3D*>(ptr)) {
+                // TProfile3D has no rebinning of its own: the one of TH3 leaves every bin empty (ROOT bug)
+                warnUnsupported(mods.GetRebinGroupX() || mods.GetRebinGroupY() || mods.GetRebinGroupZ(), "Rebinning");
+              } else {
+                if (mods.GetRebinGroupX()) ptr->RebinX(*mods.GetRebinGroupX());
+                if (mods.GetRebinGroupY()) ptr->RebinY(*mods.GetRebinGroupY());
+                if (mods.GetRebinGroupZ()) ptr->RebinZ(*mods.GetRebinGroupZ());
+              }
             } else {
-              if (mods.GetRebinGroupX()) ptr->RebinX(*mods.GetRebinGroupX());
-              if (mods.GetRebinGroupY()) ptr->RebinY(*mods.GetRebinGroupY());
-              if (mods.GetRebinGroupZ()) ptr->RebinZ(*mods.GetRebinGroupZ());
+              if (mods.GetRebinGroupX() && *mods.GetRebinGroupX() > ptr->GetNbinsX()) {
+                warn("RebinX({}) needs at least as many bins, {} has {}, ignoring.", *mods.GetRebinGroupX(), ptr->GetName(), ptr->GetNbinsX());
+              } else if (mods.GetRebinGroupX()) {
+                ptr->RebinX(*mods.GetRebinGroupX());
+              }
+              warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
+              warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
             }
-          } else {
-            if (mods.GetRebinGroupX() && *mods.GetRebinGroupX() > ptr->GetNbinsX()) {
-              warn("RebinX({}) needs at least as many bins, {} has {}, ignoring.", *mods.GetRebinGroupX(), ptr->GetName(), ptr->GetNbinsX());
-            } else if (mods.GetRebinGroupX()) {
-              ptr->RebinX(*mods.GetRebinGroupX());
-            }
-            warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
-            warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
           }
           bool isDensity = mods.GetScaleBinWidthNorm() && *mods.GetScaleBinWidthNorm();
           if (isProfile) {
@@ -2708,7 +2748,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
               return inputValue;
             };
-            const int16_t fillStyle = drawnFill(data->GetFillStyle(), usedDefaults.fillStyle, pad.GetDefaultFillStyles(), padDefaults.GetDefaultFillStyles(), data_ptr->GetFillStyle());
+            // the input's fill is visible only with a colour (ROOT's default is colour 0 with a solid style): see keptWithoutFill
+            const int16_t inputFillStyle = (data->GetKeepInputStyle() && !data->GetFillStyle() && data_ptr->GetFillColor() == 0) ? 0 : data_ptr->GetFillStyle();
+            const int16_t fillStyle = drawnFill(data->GetFillStyle(), usedDefaults.fillStyle, pad.GetDefaultFillStyles(), padDefaults.GetDefaultFillStyles(), inputFillStyle);
             const color_t fillColor = drawnFill(data->GetFillColor(), usedDefaults.color, pad.GetDefaultFillColors(), fillDefaults(pad, *data), data_ptr->GetFillColor());
             bool singlePoint{};  // a line through a single point draws nothing
             if constexpr (!isHist) singlePoint = (data_ptr->GetN() == 1);
@@ -2749,7 +2791,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           } else if constexpr (is_graph_1d<data_type>()) {
             // a graph is cut at the frame anyway: only the steps need its bins
             if (*optionAlias != curve_clipped) {
-              if (TH1* histogram = ToHist(data_ptr, dataIndex != 0)) {
+              // steps show no errors: no warning about asymmetric ones
+              if (TH1* histogram = ToHist(data_ptr, dataIndex != 0, false)) {
                 mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
                 drawClipped(histogram, *optionAlias);
                 return;
@@ -2770,7 +2813,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         } else if constexpr (is_graph_1d<data_type>()) {
           if (optionAlias && !defaultDrawOptions_Graph.count(*optionAlias) && defaultDrawOptions_Hist.count(*optionAlias)) {
-            if (TH1* hist = ToHist(data_ptr, dataIndex != 0)) {
+            // the warning about asymmetric errors (drawn with their mean) only where the option shows errors
+            static const std::set<draw_option_t> withoutErrors{hist, hist_open, hbars, area_smooth};
+            if (TH1* hist = ToHist(data_ptr, dataIndex != 0, !withoutErrors.count(*optionAlias))) {
               mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
               drawItem(hist, optionAlias);
               return;
@@ -4153,7 +4198,10 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
       case kind_t::horizontal_line: {
         const bool isVertical = (kind == kind_t::vertical_line);
         const double_t pos = (isVertical) ? valueX(c[0]) : valueY(c[0]);
-        if (!std::isfinite(pos) || pos < ((isVertical) ? xMin : yMin) || pos > ((isVertical) ? xMax : yMax)) {
+        // compared in pad coordinates: 10^log10(limit) is not always the limit, so a line at a limit of a log axis would count as outside
+        const bool logAxis = (isVertical) ? pad->GetLogx() : pad->GetLogy();
+        const double_t padPos = (!logAxis) ? pos : ((pos > 0.) ? std::log10(pos) : nan);
+        if (!std::isfinite(padPos) || padPos < ((isVertical) ? pad->GetUxmin() : pad->GetUymin()) || padPos > ((isVertical) ? pad->GetUxmax() : pad->GetUymax())) {
           skip("its position is outside of the frame");
           continue;
         }
@@ -4703,6 +4751,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       returnBox->SetLineWidth(0);
       returnBox->SetFillStyle(0);
       ApplyBoxStyle(*box, returnBox);
+      // without a border also no border size: TLegend draws the outline of the first hollow fill symbol with the line width of the box
+      // (0, invisible), so the row of a band with a transparent line had no symbol
+      if (returnBox->GetLineWidth() == 0) returnBox->SetBorderSize(0);
     }
   };
   std::visit(processBox, boxVariant);
@@ -5774,12 +5825,10 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   }
 
   // compute ratio and errors
+  vector<int32_t> undefined;  // points where the denominator is zero: removed, as ROOT does not draw the empty bins of TH1::Divide
   for (int32_t i = 0; i < numN; ++i) {
     if (!denomY[i]) {
-      numY[i] = 0;
-      if (numEy) numEy[i] = 0.;
-      if (numEyLow) numEyLow[i] = 0.;
-      if (numEyHigh) numEyHigh[i] = 0.;
+      undefined.push_back(i);
     } else {
       // the ratio decreases with the denominator if numerator and denominator have the same sign: the lower error of the numerator
       // then goes with the upper error of the denominator (before the swap for a negative denominator below), else with the lower one
@@ -5806,6 +5855,9 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
     }
   }
   ScaleMultiErrors(numerator, multiErrors);
+  for (auto it = undefined.rbegin(); it != undefined.rend(); ++it) {
+    numerator->RemovePoint(*it);
+  }
   if (doInterpol) {
     if (denomY) delete[] denomY;
     if (denomEy) delete[] denomEy;
@@ -5832,9 +5884,11 @@ bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialError
   if (!Divide(&numeratorGraph, denominator, binomialErrors, verbose)) return false;
   const double_t entries = numerator->GetEntries();  // SetBinContent counts one entry per bin
   numerator->Reset();
+  // by position: the points of bins with a zero denominator were removed, those bins stay empty
   for (int32_t i = 0; i < numeratorGraph.GetN(); ++i) {
-    numerator->SetBinContent(i + 1, numeratorGraph.GetY()[i]);
-    numerator->SetBinError(i + 1, numeratorGraph.GetEY()[i]);
+    const int32_t bin = numerator->FindFixBin(numeratorGraph.GetX()[i]);
+    numerator->SetBinContent(bin, numeratorGraph.GetY()[i]);
+    numerator->SetBinError(bin, numeratorGraph.GetEY()[i]);
   }
   numerator->SetEntries(entries);
   return true;

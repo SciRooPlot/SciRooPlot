@@ -72,7 +72,7 @@ int main() {
 }
 ```
 Python is the same API: `from SciRooPlot import *`, `PlotManager("myProject")`, `plot[1]['X']`, `pm.AddPlot(plot)`, `pm.SaveProject()` (see "C++ vs Python").
-Scripts can make plots without the `plot` app: `pm.GeneratePlots("pdf", "name", "group")` (a mode of `plot` other than `list`, then the name and the group pattern: the reverse order of `plot <group> <name>`) on the plots added so far, `pm.LoadPlots(name, group)` to read saved definitions back first, `pm.ListPlots()`.
+Scripts can make plots without the `plot` app: `pm.SetOutputDirectory("/path/out")` (a registered project has one already), then `pm.GeneratePlots("pdf", "name", "group")` (a mode of `plot` other than `list`, then the name and the group pattern: the reverse order of `plot <group> <name>`) on the plots added so far, `pm.LoadPlots(name, group)` to read saved definitions back first, `pm.ListPlots()`.
 
 ## Data sources
 
@@ -89,7 +89,7 @@ Scripts can make plots without the `plot` app: `pm.GeneratePlots("pdf", "name", 
 ```cpp
 Plot plot("name", "group/sub", "basePlot");  Plot copy(plot, "name2", "group2");   // copy keeps everything
 plot.SetDimensions(710, 710[, fixAspect]).SetTransparent().AppendGroup("QA");
-plot[0]...        // defaults for all pads (text font/size, margins, colour lists, ref function)
+plot[0]...        // defaults for all pads (text font/size, margins, colour lists, ref function); a pad's own value wins
 plot[1].SetPosition(x1,y1,x2,y2).SetMargins(t,b,l,r).SetFrameFill(1001, 10).SetPalette(kBird).SetView(theta, phi)   // 3D view in degrees (ROOT: 30, 30)
 plot[1].SetDefaultMarkerColors({kBlack, kRed+1}).SetDefaultLineStyles({kSolid, kDashed})   // cycled over the data
 // without a colour list data takes kBlack, kP10Blue, kP10Red, kP10Violet, kP8Orange, kP10Ash, kP10Brown, kTeal + 3 (every plot; fills only with a fill style set)
@@ -109,7 +109,7 @@ plot[1]['Y'].SetRoomAboveMax(0.3).SetRoomBelowMin(0.1)    // 30 % / 10 % of the 
 ```
 Pads count from 1; data in a pad from 1 (`plot[1](2)` or `plot[1].GetData(2)` modifies the second data later). The first data drawn defines the axis frame unless another one calls `.SetDefinesFrame()`; an input that should only give the frame (bin labels, a binning) is set with `plot[1].SetFrame("name", "source")`: it is not drawn and not numbered. A pad without data needs no dummy input: its X and Y ranges (`plot[1]['X'].SetRange(0.0, 10.0)`) give an empty frame.
 
-Text sizes, three levels: for a whole class of plots change the base plot (`MakeBasePlot("1d", PanelLayout().SetTextSize(24).SetTitleSize(30))`, see below: the only way that keeps all panels consistent); for one plot set the pad (`plot[1].SetDefaultTextSize(s)`: labels, legends and texts of that pad; `plot[0]` for all pads) or the axis (`plot[1]['Y'].SetTitleSize(s).SetLabelSize(s)`); for one box `AddText(...).SetTextSize(s)`, `GetLegend(1).SetTextSize(s)`. With the default font 42 a size is a fraction of the pad, so the same number is smaller in a smaller pad; font 43 (`SetDefaultTextFont(43)`, `SetTitleFont(43)`, `SetTextFont(43)`) takes pixels of the plot.
+Text sizes, three levels: for a whole class of plots change the base plot (`MakeBasePlot("1d", PanelLayout().SetTextSize(24).SetTitleSize(30))`, see below: the only way that keeps all panels consistent); for one plot set the pad (`plot[1].SetDefaultTextSize(s)`: labels, legends and texts of that pad; `plot[0]` for all pads, except in base plots with several panels (`1d_ratio`, `1d_2x1`, …), whose pads carry their own text sizes, margins and tick lengths, which win over `plot[0]`: set those per pad) or the axis (`plot[1]['Y'].SetTitleSize(s).SetLabelSize(s)`); for one box `AddText(...).SetTextSize(s)`, `GetLegend(1).SetTextSize(s)`. With the default font 42 a size is a fraction of the pad, so the same number is smaller in a smaller pad; font 43 (`SetDefaultTextFont(43)`, `SetTitleFont(43)`, `SetTextFont(43)`) takes pixels of the plot.
 
 Inset (a zoom inside the frame): an extra pad placed with `SetPosition` in fractions of the plot; pads are drawn in the order of their numbers, so the inset covers what is below it, and its text sizes are fractions of the small pad:
 ```cpp

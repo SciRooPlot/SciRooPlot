@@ -35,7 +35,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 ## Plot
 *plot[padID] gives the Pad (padID 0: defaults for all pads); also has the fill setters*
 
-- `Plot()`
+- `Plot()` — C++ only
 - `Plot(const std::string& name, const std::string& group = "", const std::optional<std::string>& basePlot = {})`
 - `Plot(const std::string& name, const PanelLayout& layout)` — a base plot with the panels and lengths of the layout and the look of the shipped plots (see PanelLayout.h)
 - `Pad& GetPad(uint8_t padID)`
@@ -54,7 +54,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 ## Plot::Pad
 *pad[axis] gives the Axis ('X', 'Y', 'Z', and 'C' for the content of a 3d histogram: its colour scale); pad(dataID) the Data (counting from 1); also has the fill setters*
 
-- `Pad()`
+- `Pad()` — C++ only
 - `Data& operator()(uint16_t dataID)`
 - `Data& AddData(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = {})`
 - `Data& AddData(const Data& data, const std::optional<std::string>& label = {})`
@@ -147,7 +147,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 
 ## Plot::Pad::Axis
 
-- `Axis()`
+- `Axis()` — C++ only
 - `Axis& SetTitle(const std::string& title)`
 - `Axis& SetRange(double_t min, double_t max)`
 - `Axis& SetMaxRange(double_t max)`
@@ -308,10 +308,10 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 
 ## Plot::Pad::TextBox
 
-- `TextBox(const std::string& text)`
-- `TextBox(const std::vector<std::string>& lines)`
-- `TextBox(double_t xPos, double_t yPos, const std::string& text)`
-- `TextBox(double_t xPos, double_t yPos, const std::vector<std::string>& lines)`
+- `TextBox(const std::string& text)` — C++ only
+- `TextBox(const std::vector<std::string>& lines)` — C++ only
+- `TextBox(double_t xPos, double_t yPos, const std::string& text)` — C++ only
+- `TextBox(double_t xPos, double_t yPos, const std::vector<std::string>& lines)` — C++ only
 - `TextBox& SetText(const std::string& text)` — lines separated by newlines
 - `TextBox& SetText(const std::vector<std::string>& lines)`
 - `TextBox& SetTextAlign(int16_t align)` — 11 to 33 (default 12) for the lines in the box; a single line at (x, y) is aligned at that point (21: centred above it)
@@ -319,8 +319,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 ## Plot::Pad::ImageBox
 *an image file (e.g. a logo); in pdf files only with ROOT 6.42 or newer*
 
-- `ImageBox(double_t xPos, double_t yPos, const std::string& path)`
-- `ImageBox(const std::string& path)`
+- `ImageBox(double_t xPos, double_t yPos, const std::string& path)` — C++ only
+- `ImageBox(const std::string& path)` — C++ only
 - `ImageBox& SetPosition(double_t x, double_t y)`
 - `ImageBox& SetWidth(double_t width)` — fraction of the pad width (no SetSize: one side may follow from the aspect ratio)
 - `ImageBox& SetHeight(double_t height)` — fraction of the pad height
@@ -334,8 +334,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 
 ## Plot::Pad::LegendBox
 
-- `LegendBox(const std::optional<std::string>& title = {})`
-- `LegendBox(double_t xPos, double_t yPos, const std::optional<std::string>& title = {})`
+- `LegendBox(const std::optional<std::string>& title = {})` — C++ only
+- `LegendBox(double_t xPos, double_t yPos, const std::optional<std::string>& title = {})` — C++ only
 - `LegendEntry& AddEntry(const std::string& label = "")` — a row of its own (with an empty label: an empty line)
 - `LegendEntry& AddDataEntry(uint8_t padID, uint16_t dataID)`
 - `LegendBox& SetTitle(const std::string& title)`

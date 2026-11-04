@@ -518,7 +518,8 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     }
     target->cd();
     // a tree read from a file keeps its entries in that file, writing it would only store the header: store a copy of all entries
-    if (auto* tree = dynamic_cast<TTree*>(object); tree && tree->GetDirectory() && tree->GetDirectory()->GetFile()) {
+    // (GetDirectory()->GetFile() of a tree in memory is the file opened last, here the one written to)
+    if (auto* tree = dynamic_cast<TTree*>(object); tree && tree->GetCurrentFile()) {
       TTree* copy = tree->CloneTree(-1, "fast");  // created in the current directory, i.e. in the target folder
       copy->Write(name.data(), TObject::kWriteDelete);
       delete copy;
@@ -2242,8 +2243,12 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     if (!s.empty() && std::isdigit(static_cast<unsigned char>(s.front()))) s = "_" + s;
     static const set<string> keywords = {
       "alignas", "alignof", "and", "and_eq", "asm", "auto", "bitand", "bitor", "bool", "break", "case", "catch", "char", "char8_t", "char16_t", "char32_t", "class", "compl", "concept", "const", "consteval", "constexpr", "constinit", "const_cast", "continue", "co_await", "co_return", "co_yield", "decltype", "default", "delete", "do", "double", "dynamic_cast", "else", "enum", "explicit", "export", "extern", "false", "float", "for", "friend", "goto", "if", "inline", "int", "long", "mutable", "namespace", "new", "noexcept", "not", "not_eq", "nullptr", "operator", "or", "or_eq", "private", "protected", "public", "register", "reinterpret_cast", "requires", "return", "short", "signed", "sizeof", "static", "static_assert", "static_cast", "struct", "switch", "template", "this", "thread_local", "throw", "true", "try", "typedef", "typeid", "typename", "union", "unsigned", "using", "virtual", "void", "volatile", "wchar_t", "while", "xor", "xor_eq"};
-    // nor names ROOT's interpreter knows as a type (std::ratio, std::vector, TH1, ...): the macro function would be ambiguous
-    if (keywords.count(s) || gInterpreter->CheckClassInfo(s.data(), false, false) || gInterpreter->CheckClassTemplate(s.data())) s += "_";
+    // nor names ROOT's interpreter knows as a type (std::ratio, std::vector, TH1, ...) or a function of the C library (rand, abort, ...):
+    // the macro function would be ambiguous; nor main, which must return int
+    if (keywords.count(s) || s == "main" || gInterpreter->CheckClassInfo(s.data(), false, false) || gInterpreter->CheckClassTemplate(s.data()) ||
+        gROOT->GetGlobalFunction(s.data(), nullptr, false)) {
+      s += "_";
+    }
     return s;
   };
 
@@ -3534,6 +3539,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   processGroup = [&](const vector<const data_info_t*>& infos, bool sequential) {
     OutputCapture rootOutput;
     vector<DataFrameRequest<data_info_t>> requests;  // successfully booked requests
+    vector<const data_info_t*> rejected;             // requests already reported as invalid while preparing them
     try {
       auto* cerrBuffer = std::cerr.rdbuf(&rootOutput);  // capture ROOT output, only shown if something goes wrong
       auto cerrGuard = make_scope_guard([cerrBuffer]() { std::cerr.rdbuf(cerrBuffer); });
@@ -3570,9 +3576,14 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           // the requests share the filter on the matching rows (evaluated once per row), except those with an entry range:
           // their range refers to all rows of the tree, so they apply the filter after it
           const bool hasEntryRange = info->entries.max.has_value();
-          if (request.Prepare((hasEntryRange) ? base : matched, (hasEntryRange) ? joinKeyColumns : vector<string>{})) requests.push_back(std::move(request));
+          if (request.Prepare((hasEntryRange) ? base : matched, (hasEntryRange) ? joinKeyColumns : vector<string>{})) {
+            requests.push_back(std::move(request));
+          } else {
+            rejected.push_back(info);
+          }
         } catch (const std::exception& e) {
           if (type == "table" && dynamic_cast<const std::invalid_argument*>(&e)) throw;  // the csv reader or an expression: handled below
+          rejected.push_back(info);
           logger::error("Invalid query for {} {} ({}): {}.", type, DataLocation(dataSource, name), info->GetDescription(), getErrorReason(e, rootOutput.Text().substr(outputStart)));
         }
       }
@@ -3612,7 +3623,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
         // expression of a request (e.g. std::stod): only one by one the requests that are fine are kept
         if (infos.size() > 1) {
           for (auto info : infos) {
-            processGroup({info}, sequential);
+            if (std::find(rejected.begin(), rejected.end(), info) == rejected.end()) processGroup({info}, sequential);
           }
         } else {
           logger::error("Cannot read {} {} ({}): it contains a value that does not match the type of its column, or an expression failed ({}).", type, DataLocation(dataSource, name), infos[0]->GetDescription(), e.what());

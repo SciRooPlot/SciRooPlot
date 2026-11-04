@@ -245,10 +245,9 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
   // from a column that nothing evaluates (an unused column costs no time in the event loop). Collections keep their type (see below).
   auto defineValue = [&](const std::string& colName, const std::string& expression, std::string& columnType) {
     // a plain column of a basic type is converted with compiled code, so that such requests do not involve the interpreter at all
-    // (its first use in a process costs about half a second, every further compilation a tenth)
-    const bool isIdentifier = !expression.empty() && !std::isdigit(static_cast<unsigned char>(expression[0])) &&
-                              std::all_of(expression.begin(), expression.end(), [](unsigned char c) { return std::isalnum(c) || c == '_'; });
-    if (isIdentifier && node.HasColumn(expression)) {
+    // (its first use in a process costs about half a second, every further compilation a tenth); this also takes columns whose names are
+    // no C++ identifiers (CSV headers like "pT [GeV]"), which an expression cannot name
+    if (node.HasColumn(expression)) {
       columnType = node.GetColumnType(expression);
       auto defineTyped = [&](auto value) {
         using value_t = decltype(value);

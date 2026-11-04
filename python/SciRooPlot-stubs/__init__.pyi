@@ -14,6 +14,7 @@
         plot[1].AddData("histo", "dataSource", "my label")
 
         pm.AddPlot(plot)
+        pm.SetOutputDirectory("/path/to/output")
         pm.GeneratePlots(mode="pdf")
 
 """
@@ -1520,15 +1521,15 @@ def Hole(width: float, height: float) -> Panel:
     """
 def graph(name: str, x: typing.Any, y: typing.Any, xerr: typing.Any = None, yerr: typing.Any = None) -> typing.Any:
     """
-    A TGraphErrors through the points (x, y), with optional errors, like matplotlib's errorbar.
+    A TGraphErrors through the points (x, y), with optional symmetric errors (one per point), like matplotlib's errorbar.
     """
 def histo(name: str, values: typing.Any, bins: typing.Any = 100, range: typing.Any = None, weights: typing.Any = None) -> typing.Any:
     """
-    A TH1D filled with the values, like numpy.histogram: bins is a number (with the range taken from the values if not given) or the bin edges; with weights the errors come from the sum of the squared weights.
+    A TH1D filled with the values, like numpy.histogram: bins is a number (with the range taken from the values if not given, widened by 1% on each side) or the bin edges; with weights the errors come from the sum of the squared weights.
     """
 def histo2d(name: str, x: typing.Any, y: typing.Any, bins: typing.Any = None, range: typing.Any = None, weights: typing.Any = None) -> typing.Any:
     """
-    A TH2D filled with the pairs (x, y), like numpy.histogram2d: bins is one number for both axes, (nx, ny) or (x edges, y edges), where a number and edges can be mixed; range is ((x0, x1), (y0, y1)); optional weights.
+    A TH2D filled with the pairs (x, y), like numpy.histogram2d (but 50 x 50 bins by default, a range from the values widened by 1%): bins is one number for both axes, (nx, ny) or (x edges, y edges), where a number and edges can be mixed; range is ((x0, x1), (y0, y1)); optional weights.
     """
 def table(name: str, data: typing.Any, columns: typing.Any = None) -> typing.Any:
     """

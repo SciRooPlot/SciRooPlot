@@ -200,6 +200,7 @@ PYBIND11_MODULE(SciRooPlot, m)
         plot[1].AddData("histo", "dataSource", "my label")
 
         pm.AddPlot(plot)
+        pm.SetOutputDirectory("/path/to/output")
         pm.GeneratePlots(mode="pdf")
   )pbdoc";
 
@@ -993,7 +994,9 @@ void exportPythonDataInterfaces(py::module_& m)
     py::object binsX = py::int_(50);
     py::object binsY = py::int_(50);
     if (!bins.is_none()) {
-      if (py::isinstance<py::sequence>(bins) && !py::isinstance<py::str>(bins)) {
+      // a 0-d array (np.array(4)) is one number for both axes, as in binning
+      const bool isScalarArray = py::hasattr(bins, "ndim") && bins.attr("ndim").cast<int>() == 0;
+      if (py::isinstance<py::sequence>(bins) && !py::isinstance<py::str>(bins) && !isScalarArray) {
         auto perAxis = py::reinterpret_borrow<py::sequence>(bins);
         if (perAxis.size() != 2) {
           throw py::value_error("The bins must be a number, (nx, ny) or (x edges, y edges).");
@@ -1189,14 +1192,14 @@ void exportPythonDataInterfaces(py::module_& m)
     return bind_owned(reinterpret_cast<std::uintptr_t>(tree.release()), "TTree");
   };
 
-  m.def("graph", graph, "A TGraphErrors through the points (x, y), with optional errors, like matplotlib's errorbar.",
+  m.def("graph", graph, "A TGraphErrors through the points (x, y), with optional symmetric errors (one per point), like matplotlib's errorbar.",
         arg("name"), arg("x"), arg("y"), arg("xerr") = py::none(), arg("yerr") = py::none());
   m.def("histo", histo,
-        "A TH1D filled with the values, like numpy.histogram: bins is a number (with the range taken from the values if not given) or the bin edges; "
+        "A TH1D filled with the values, like numpy.histogram: bins is a number (with the range taken from the values if not given, widened by 1% on each side) or the bin edges; "
         "with weights the errors come from the sum of the squared weights.",
         arg("name"), arg("values"), arg("bins") = 100, arg("range") = py::none(), arg("weights") = py::none());
   m.def("histo2d", histo2d,
-        "A TH2D filled with the pairs (x, y), like numpy.histogram2d: bins is one number for both axes, (nx, ny) or (x edges, y edges), "
+        "A TH2D filled with the pairs (x, y), like numpy.histogram2d (but 50 x 50 bins by default, a range from the values widened by 1%): bins is one number for both axes, (nx, ny) or (x edges, y edges), "
         "where a number and edges can be mixed; range is ((x0, x1), (y0, y1)); optional weights.",
         arg("name"), arg("x"), arg("y"), arg("bins") = py::none(), arg("range") = py::none(), arg("weights") = py::none());
   m.def("table", table,
