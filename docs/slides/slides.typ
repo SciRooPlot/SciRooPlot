@@ -38,11 +38,11 @@
   },
 )
 #set text(
-  font: ("Arial", "Liberation Sans", "DejaVu Sans"),
-  size: 18pt,
+  // DejaVu Sans: on nearly every Linux system (and the CI runners) without an extra download
+  font: "DejaVu Sans",
+  size: 16pt,
   fill: rgb("1F2933"),
-  // fixed top edge of the lines (the cap height of Arial): Arial 2.82 (Microsoft core fonts, used to build the
-  // slides in CI) has no cap height in its OS/2 table, so Typst would use its ascender and every line would get taller
+  // lines as tall as before with Arial: the cap height of DejaVu Sans (0.73em) would make every line taller
   top-edge: 0.688em,
 )
 #set list(marker: text(fill: main-color)[•])
@@ -76,7 +76,7 @@
 #let slide-title(title) = {
   text(
     fill: ink,
-    size: 28pt,
+    size: 26pt,
     weight: "bold",
   )[ = #title ]
   // zero height like the stroke of a line, so the content area of the slides is unchanged
@@ -205,7 +205,7 @@
   #text(size: 40pt, fill: accent-color, weight: "bold")[→]
 ]
 
-#let api-table(rows, col-widths: (44%, 56%), text-size: 13pt) = block(
+#let api-table(rows, col-widths: (44%, 56%), text-size: 11.5pt) = block(
   fill: white,
   stroke: 1pt + hairline,
   radius: 10pt,
@@ -224,7 +224,7 @@
   )
 ]
 
-#let api-section(title, rows, col-widths: (44%, 56%), text-size: 13pt) = [
+#let api-section(title, rows, col-widths: (44%, 56%), text-size: 11.5pt) = [
   #box(width: 9pt, height: 9pt, fill: accent-color, radius: 2pt) #h(0.3em) #text(size: 18pt, weight: "bold", fill: ink)[#title]
   #v(0.3em)
   #api-table(rows, col-widths: col-widths, text-size: text-size)
@@ -589,7 +589,7 @@
 #slide[
   #slide-title("Managing Projects")
   #let cmd-table(..rows) = {
-    set text(size: 14pt)
+    set text(size: 13pt)
     table(
       columns: (auto, 1fr),
       stroke: none,
@@ -1946,7 +1946,7 @@
         [#names("SetPlotsRootFile(fileName)", "SetDataRootFile(fileName)")], [Names of the ROOT files written in the modes `file` and `data` (default: `Plots.root`, `Data.root`).],
         [`GetProjectProperty(property)`], [Read a project variable set via `srp set <project> <property> <value>`.],
         [`SaveProject()`], [Persist the current project to disk.],
-      ), text-size: 12pt)
+      ), text-size: 11.5pt)
     ],
     [
       #api-section("Plot", (
@@ -1960,7 +1960,7 @@
         [`ShareAxis(axis, pads)`], [The pads share range, log scale and time format of the axis (touching panels do by default).],
         [#names("SetFill(style, color, alpha = 1)", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Configure plot background fill, all at once or individually.],
         [`SetTransparent()`], [Make the plot background transparent.],
-      ), text-size: 12pt)
+      ), text-size: 11.5pt)
     ],
   )
 ]
@@ -1977,13 +1977,13 @@
         [`Plot(name, layout)`], [Base plot from a `PanelLayout`, its lengths kept equal in every panel.],
         [#names(if lang == "py" { "PanelLayout(rows = [[Panel()]])" } else { "PanelLayout(rows = {{Panel()}})" }, "PanelLayout(sizes, rows)")], [Panels in rows (top to bottom), or the same lengths with other panels.],
         [#names("Panel(width = 1, height = 1)", "Panel().ColorScale()", "ColorScale()", "Gap()", "Empty()", "Hole()")], [A panel (in units of the standard panel), with room for a colour scale; a cell with one colour scale for the panels sharing z; a gap between independent panels; a cell without axes (a pad for texts); a blank cell without a pad.],
-      ), text-size: 12pt)
+      ), text-size: 11.5pt)
     ],
     [
       #api-section("PanelLayout lengths (pixels of the plot at scale 1)", (
         [#names("SetPanelSize(px)", "SetMargins(top, bottom, left, right)", "SetColorScaleMargin(px)", "SetPanelSpacing(px)")], [Standard panel (638), space around the panels (32, 118, 118, 32), for the colour scale (268), between touching panels (0).],
         [#names("SetTextSize(px)", "SetTitleSize(px)", "SetTickLength(px)", "SetLabelOffset(px)", "SetXTitleOffset(px)", "SetYTitleOffset(px)", "SetZTitleOffset(px)", "SetLineWidth(w)", "SetMarkerSize(s)")], [Text (31.52), axis titles (39.4), ticks (19.15), labels from the axis (3.94), titles from the axis (x 63.04, y and z automatic), ROOT line width (5) and marker size (1.4).],
-      ), text-size: 12pt)
+      ), text-size: 11.5pt)
     ],
   )
 ]
@@ -2144,7 +2144,7 @@
         [#names("SetDrawOption(option) / SetDrawOption(alias)", "SetDrawOption()")], [Set a ROOT draw-option string or one of the #link(<appx-drawing-options>)[#text(fill: main-color)[predefined aliases]], or remove it.],
         [`SetTextFormat(fmt)`], [Number format of bin contents drawn with the `TEXT` option, e.g. `".0f"`.],
         [`SetTextAngle(angle)`], [Angle of those values, 0 to 90 degrees.],
-      ), text-size: 12pt)
+      ), text-size: 11.5pt)
     ],
     [
       #api-section("Appearance & statistics box", (
@@ -2157,7 +2157,7 @@
         [`SetContours(contours)` / `SetContours(nContours)`], [Set explicit contour levels or their count.],
         [`SetShowStats(format = "emr", title = {})`], [Statistics box of a histogram: ROOT's letters (`TStyle::SetOptStat`, e.g. `"eMR"`), the title as its first line.],
         [`SetStatsBox(statsBox)`], [Placement and appearance of the statistics box: a `StatsBox()` with the setters of `Box`.],
-      ), text-size: 12pt)
+      ), text-size: 11.5pt)
     ],
   )
 ]
@@ -2178,14 +2178,14 @@
         [`RebinXY(nx, ny)` / `RebinXYZ(nx, ny, nz)`], [Rebin two or three axes at once.],
         [`Smooth(nIterSmooth = 1)`], [Apply smoothing.],
         [`ScaleX(factor)` / `ScaleY(factor)` / `ScaleZ(factor)`], [Rescale an axis itself (e.g. a unit conversion) -- unlike `Scale()`, which rescales the values.],
-      ), text-size: 12pt)
+      ), text-size: 11.5pt)
       #v(0.6em)
       #api-section("Projections & profiles", (
         [`Project(dims, ranges = {}, isUserCoord = {})`], [Generic N-dimensional projection.],
         [`ProjectX(...)` / `ProjectY(...)`], [Standard projection of a 2D histogram.],
         [`Profile(dims, ranges = {}, isUserCoord = {})`], [Generic multi-dimensional profile.],
         [`ProfileX(...)` / `ProfileY(...)`], [Standard profile of a 2D histogram.],
-      ), text-size: 12pt)
+      ), text-size: 11.5pt)
     ],
     [
       #api-section("Tree & table data", (
@@ -2199,7 +2199,7 @@
         [`Filter(filter)`], [Apply a row-selection expression, e.g. `"eta > 0"`. Chainable.],
         [`Join(tree, keys, alias)`], [Add the columns of another tree, e.g. `Join("scores")` row by row or #if lang == "py" [`Join(["events", "src"], ["run", "event"])`] else [`Join({"events", "src"}, {"run", "event"})`] by key (rows without a match are skipped); columns as `"scores.col"`. Chainable.],
         [`Entries(n)` / `Entries(min, max)`], [Limit processing to the first N entries or a range.],
-      ), text-size: 12pt)
+      ), text-size: 11.5pt)
     ],
   )
 ]
@@ -2219,25 +2219,25 @@
         [#names("SetFill(style, color, alpha = 1)", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Background fill, all at once or individually.],
         [`SetTransparent()` / `SetNoBox()`], [Transparent background, or remove border and fill.],
         [`SetMargin(m)` / `SetLineSpacing(s)`], [Internal margin, or spacing between lines/entries.],
-      ), col-widths: (52%, 48%), text-size: 12pt)
+      ), col-widths: (52%, 48%), text-size: 11.5pt)
     ],
     [
       #api-section("TextBox", (
         [`SetText(text)`], [Set the displayed text (a list of lines, or one string with newlines).],
         [`SetTextAlign(align)`], [ROOT alignment code, e.g. `kHAlignCenter + kVAlignTop` (default `kHAlignLeft + kVAlignCenter`).],
-      ), col-widths: (52%, 48%), text-size: 12pt)
+      ), col-widths: (52%, 48%), text-size: 11.5pt)
       #v(0.6em)
       #api-section("LegendBox", (
         [`SetTitle(title)` / `SetNumColumns(n)`], [Legend title, or number of columns.],
         [#names("AddEntry(label = \"\")", "AddDataEntry(padID, dataID)")], [Add a row of its own (no label: an empty line), see the next slide; or the row of data of another pad.],
         [`SetSymbolColScale(scale)`], [Scale the width of the symbol column.],
-      ), col-widths: (52%, 48%), text-size: 12pt)
+      ), col-widths: (52%, 48%), text-size: 11.5pt)
       #v(0.6em)
       #api-section("LegendEntry: content and place", (
         [`SetLabel(label)` / `SetSymbolElements(elements)`], [Label text, or symbol elements of this entry (e.g. `"L"`, `"EP"`, `"F"`).],
         [`SetRefData(refDataID)`], [Take the style from data number `refDataID` of the pad.],
         [`AtTop()` / `BeforeData(n)` / `AfterData(n)`], [Place a row added with `AddEntry`.],
-      ), col-widths: (52%, 48%), text-size: 12pt)
+      ), col-widths: (52%, 48%), text-size: 11.5pt)
       #if lang == "py" [
         #v(0.4em)
         #text(size: 12pt)[In Python, boxes are created via `pad.AddText()` and `pad.AddLegend()`.]
@@ -2261,7 +2261,7 @@
         [#names("SetDefaultMarkerColor(color)", "SetDefaultMarkerAlpha(alpha)", "SetDefaultMarkerStyle(style)", "SetDefaultMarkerSize(size)")], [Marker appearance.],
         [#names("SetDefaultLineColor(color)", "SetDefaultLineAlpha(alpha)", "SetDefaultLineStyle(style)", "SetDefaultLineWidth(width)")], [Line appearance.],
         [#names("SetDefaultFillColor(color)", "SetDefaultFillAlpha(alpha)", "SetDefaultFillStyle(style)")], [Fill appearance.],
-      ), col-widths: (52%, 48%), text-size: 12pt)
+      ), col-widths: (52%, 48%), text-size: 11.5pt)
     ],
     [
       #api-section("LegendEntry: appearance", (
@@ -2271,7 +2271,7 @@
         [#names("SetLineColor(color)", "SetLineAlpha(alpha)", "SetLineStyle(style)", "SetLineWidth(width)")], [Line appearance.],
         [#names("SetFillColor(color)", "SetFillAlpha(alpha)", "SetFillStyle(style)")], [Fill appearance.],
         [#names("SetTextColor(color)", "SetTextAlpha(alpha)", "SetTextFont(font)", "SetTextSize(size)")], [Label text appearance.],
-      ), col-widths: (52%, 48%), text-size: 12pt)
+      ), col-widths: (52%, 48%), text-size: 11.5pt)
     ],
   )
 ]
@@ -2357,7 +2357,7 @@
 ]
 
 #slide[
-  #slide-title("Appendix: Drawing Options – Functions and 2D Graphs")
+  #slide-title("Appendix: Drawing Options – Functions & 2D Graphs")
   - Functions (`TF1`) are drawn from their values at `SetNpx` points: `points` (`P`), `line` (`L`), `curve` (`C`), `area` (`L`), `area_smooth` (`C`). With a fill set, the area between the curve and zero is filled (`line` and `curve` drop the fill).
   - 2D graphs and 2D functions take the colour map, lego, surface and contour aliases of 2D histograms (drawn from an interpolated grid, so no `box`, `text`, candles or violins).
   - Only 2D graphs have their points and Delaunay triangles, drawn in 3D: as the first data of a pad they get an empty lego frame, later data needs such a 3D frame.

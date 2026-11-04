@@ -32,14 +32,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Install Arial font
-        run: |
-          sudo apt-get update
-          echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | sudo debconf-set-selections
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ttf-mscorefonts-installer
-          sudo fc-cache -f -v
-          fc-match Arial
-
       - name: Install Typst
         uses: typst-community/setup-typst@v5
 
@@ -47,7 +39,7 @@ jobs:
       - name: Install Linux dependencies
         run: |
           ./.github/scripts/install-linux.sh
-          # for recording the terminal demo of the start page (docs/site/record-demo.sh)
+          # for recording the terminal demo of the start page (docs/site/record-demo.sh); DejaVu Sans is also the font of the slides
           sudo apt-get install -y openbox xterm xdotool x11-xserver-utils ffmpeg gifsicle fonts-dejavu-core
 
       - name: Install ROOT
