@@ -385,12 +385,18 @@ bool PlotManager::IsValidDataSourceName(const string& dataSource)
   }
   return true;
 }
-// an input file.root:folder/sub is split after the .root ending (a directory in the path may contain ':', e.g. a time stamp)
+// an input file.root:folder/sub is split after the .root ending (a directory in the path may contain ':', e.g. a time stamp, or
+// even '.root:': split after an existing file, an existing path is not split, otherwise after the first .root)
 vector<string> PlotManager::SplitInputPath(const string& input)
 {
-  const size_t pos = input.find(".root:");
-  if (pos == string::npos) return {input};
-  return {input.substr(0, pos + 5), input.substr(pos + 6)};
+  const size_t first = input.find(".root:");
+  if (first == string::npos) return {input};
+  std::error_code ec;
+  for (size_t pos = first; pos != string::npos; pos = input.find(".root:", pos + 1)) {
+    if (std::filesystem::is_regular_file(input.substr(0, pos + 5), ec)) return {input.substr(0, pos + 5), input.substr(pos + 6)};
+  }
+  if (std::filesystem::exists(input, ec)) return {input};
+  return {input.substr(0, first + 5), input.substr(first + 6)};
 }
 void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputs, bool replace)
 {
@@ -428,7 +434,9 @@ void PlotManager::AddDataSource(const string& dataSource, const string& input, b
 void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>& inputs, bool replace)
 {
   if (!IsValidDataSourceName(dataSource)) return;
-  string mode = mUserDataFileInitialized ? "UPDATE" : "RECREATE";
+  // started fresh once per process: a second PlotManager of the same project keeps the data the first one stored
+  static std::set<string> startedFiles;
+  string mode = (mUserDataFileInitialized || startedFiles.count(mUserDataFile)) ? "UPDATE" : "RECREATE";
   // the folder of the file: the project's folder, or without a project the config path, which does not exist before srp first ran
   std::error_code dirError;
   std::filesystem::create_directories(std::filesystem::path(mUserDataFile).parent_path(), dirError);
@@ -440,6 +448,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     return;
   }
   mUserDataFileInitialized = true;
+  startedFiles.insert(mUserDataFile);
 
   TDirectory* dir = file.GetDirectory(dataSource.data());
   if (dir && replace) {
@@ -807,6 +816,19 @@ void PlotManager::AddPlot(Plot plot)
   // pad 0 only holds the defaults for all pads, nothing added to it is drawn
   if (auto pad0 = plot.GetPads().find(0); pad0 != plot.GetPads().end() && (!pad0->second.GetData().empty() || pad0->second.GetFrame() || !pad0->second.GetLegendBoxes().empty() || !pad0->second.GetTextBoxes().empty() || !pad0->second.GetImageBoxes().empty())) {
     logger::warning("Plot {} in {}: data, frames, legends, texts and images added to pad 0 are not drawn (pad 0 holds the defaults for all pads, the pads are counted from 1).", plot.GetName(), plot.GetGroup());
+  }
+  // Filter, Define, Join and Entries select the rows of a tree or table: without Project*, Profile* or Scatter nothing is requested from it
+  auto warnUnusedRequest = [&plot](const Plot::Pad::Data::data_info_t& info, const string& name) {
+    if (!info.dataDims.empty()) return;
+    if (info.filters || info.definitions.keys || info.joins || info.entries.min || info.entries.max) {
+      logger::warning("Plot {} in {}: Filter, Define, Join and Entries of {} have no effect without Project, Profile or Scatter.", plot.GetName(), plot.GetGroup(), name);
+    }
+  };
+  for (auto& [padID, pad] : plot.GetPads()) {
+    for (const auto& data : pad.GetData()) {
+      warnUnusedRequest(data->GetDataInfo(), data->GetName());
+      if (auto ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)) warnUnusedRequest(ratio->GetDenomDataInfo(), ratio->GetDenomName());
+    }
   }
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [&plot](const Plot& curPlot) {

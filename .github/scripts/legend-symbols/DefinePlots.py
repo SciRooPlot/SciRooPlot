@@ -7,8 +7,8 @@ from SciRooPlot import *
 
 H1 = ["default", "points", "points_xerr", "points_endcaps", "points_xerr_endcaps", "points_line", "points_arrows", "line", "curve", "curve_clipped",
       "hist", "hist_open", "hist_clipped", "hist_open_clipped", "bars", "hbars", "area", "area_smooth", "band", "band_smooth", "boxes", "boxes_nomarkers", "brackets"]
-RAW_HIST = ["E", "E0", "E1", "E3", "E4", "HIST", "L", "C", "P", "B", "BAR", "LF2", "HIST F", "HIST P", "E P", "E2 P", "*H", "HIST LP", "HIST E", "HIST E1", "HIST E2", "HIST E3"]
-RAW_GRAPH = ["P", "L", "C", "B", "F", "LP", "CP", "PZ", "2", "3", "4", "5", "AP", "LF", "E", "E1", "||", "[]", "0", "X P", "*"]
+RAW_HIST = ["E", "E0", "E1", "E3", "E4", "HIST", "L", "C", "P", "B", "BAR", "HBAR", "LF2", "HIST F", "HIST P", "E P", "E2 P", "*H", "HIST LP", "HIST E", "HIST E1", "HIST E2", "HIST E3"]
+RAW_GRAPH = ["P", "L", "C", "B", "F", "LP", "CP", "PZ", "2", "3", "4", "5", "3L", "4C", "3PL", "AP", "LF", "E", "E1", "||", "[]", "0", "X P", "*"]
 FUNC = ["default", "points", "line", "curve", "area", "area_smooth"]
 H2 = ["default", "col", "colz", "box", "lego", "surf", "cont", "cont_col", "cont_fill", "candle", "violin"]
 # marker red, line blue and fill green where they differ, so the colour shows which attribute the legend took

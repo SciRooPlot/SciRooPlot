@@ -26,6 +26,7 @@ EXPECTED = [
     (r"^h_(err|noerr)__(starH|B|BAR)__", "the *H, B and BAR options of histograms (star markers, bar fill rules) are not followed"),
     (r"^h2__(lego|surf|candle|violin)__", "3d shading and the parts of candles and violins are shown by a fill or line"),
     (r"^ga__points_arrows__.*dashed", "ROOT draws arrowed asymmetric error bars solid (symmetric ones dashed)"),
+    (r"^(ge|ga)__(3L|3PL|4C)__", "an opaque band hides the line and markers ROOT paints before it (in the SVG, not visible)"),
     (r"^h_err__HIST_E2__hollow_split", "TLegend outlines a hollow fill symbol in the fill colour, HIST E2 its hollow error boxes in the line colour"),
 ]
 

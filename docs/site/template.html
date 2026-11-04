@@ -1757,7 +1757,7 @@ const REF = [
 <tr><td><a href="https://scirooplot.github.io/SciRooPlot/skill/scirooplot/SKILL.md">SKILL.md</a></td><td>the skill as text, readable for people as well</td></tr>
 </tbody></table></div>
 <p>When an agent adapts code written for an older version, point it to <a href="#updating">Updating</a> (the same list as <code>api-changes.md</code>).</p>` },
-  { id: "sources", g: "data", t: "Data sources and finding data", body: `<p>A data source is one data set made of its inputs. Within it, the first input containing a requested name wins; trees and RNTuples found in several inputs are chained. Train and test samples therefore belong in separate sources.</p>
+  { id: "sources", g: "data", t: "Data sources and finding data", body: `<p>A data source is one data set made of its inputs. Within it, the first input containing a requested name wins; trees and RNTuples found in several inputs are chained. The files of a directory or wildcard are taken in alphabetical order (<code>run10.root</code> before <code>run2.root</code>). Train and test samples therefore belong in separate sources.</p>
 <div class="code"><pre data-snip="sources"></pre></div>
 <h3>What it reads</h3>
 <div class="tablewrap"><table><tbody><tr><td>Histograms</td><td><code>TH1</code>, <code>TH2</code>, <code>TH3</code>, <code>TProfile</code>, <code>TProfile2D</code>, <code>TProfile3D</code>, <code>TH2Poly</code>; <code>THn</code> and <code>THnSparse</code> through projections</td></tr>
@@ -1966,7 +1966,7 @@ plot[1].AddData("h", "src").SetKeepInputStyle()               # keep line, marke
 plot[1].AddData("h2", "src").SetDrawOption(cont_fillz).SetContours(12)
 plot[0].SetDefaultColors([kBlack, kRed + 1, kBlue + 1])      # colour sequence for all pads
 plot[1].SetPalette(kViridis)                                  # colour scale of 2D data
-plot[1].AddData("h", "src").SetShowOverflowBins()             # under- and overflow as extra bins
+plot[1].AddData("h", "src").SetShowOverflowBins()             # keep under- and overflow (stats box)
 pm.AddColorOverview("colors", "overview")                     # plot overview colors: the colour sequence
 pm.AddColorOverview("mine", "overview", "1d_mine")            # the colours pad 1 of base plot 1d_mine gives its data`, cpp: `plot[1].AddData("h", "src").SetDrawOption(points);            // alias, see Draw options
 plot[1].AddData("h", "src").SetDrawOption("E1");              // or a raw ROOT option string
@@ -1978,7 +1978,7 @@ plot[1].AddData("h", "src").SetKeepInputStyle();              // keep line, mark
 plot[1].AddData("h2", "src").SetDrawOption(cont_fillz).SetContours(12);
 plot[0].SetDefaultColors({kBlack, kRed + 1, kBlue + 1});     // colour sequence for all pads
 plot[1].SetPalette(kViridis);                                 // colour scale of 2D data
-plot[1].AddData("h", "src").SetShowOverflowBins();            // under- and overflow as extra bins
+plot[1].AddData("h", "src").SetShowOverflowBins();            // keep under- and overflow (stats box)
 pm.AddColorOverview("colors", "overview");                    // plot overview colors: the colour sequence
 pm.AddColorOverview("mine", "overview", "1d_mine");           // the colours pad 1 of base plot 1d_mine gives its data` },
   labels: { py: `plot[1].AddData("h", "src", "data, mean = <mean[.2f]> GeV")

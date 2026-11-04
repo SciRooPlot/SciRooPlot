@@ -584,7 +584,7 @@ Plot::Plot(const ptree& plotTree)
   };
   for (const auto& [key, child] : plotTree) {
     if (str_starts_with(key, "PAD_")) {
-      const uint8_t padID = checkedPadID(std::stoll(key.substr(4)));
+      const uint8_t padID = checkedPadID(util::string_to_type<int32_t>(key.substr(4)));  // a key that is no PAD_<number> names its number
       mPads[padID] = Pad(child);
     } else if (str_starts_with(key, "SHARED_AXIS_")) {
       mSharedAxes.push_back({child.get<char>("axis"), readPads(child.get<string>("pads", "")), child.get<bool>("layout", false)});

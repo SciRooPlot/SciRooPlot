@@ -404,6 +404,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     mSourceHists.clear();
     mDataDefinitions.clear();
     mProjectionAxisTitles.clear();
+    mUndrawn.clear();
   });
 
   // ROOT reads some absolute sizes from gStyle only at paint time (see end of this function): undo the scale of a previous plot before drawing
@@ -1960,6 +1961,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // ROOT reports an empty graph as an error at every paint
             if (data_ptr->GetN() == 0) {
               logger::warning("Graph {} has no points: it is not drawn.", data->GetName());
+              mUndrawn.emplace_back(data_ptr);
             } else {
               data_ptr->Draw(drawOption.data());
             }
@@ -2202,7 +2204,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (mods.GetRebinGroupZ()) ptr->RebinZ(*mods.GetRebinGroupZ());
             }
           } else {
-            if (mods.GetRebinGroupX()) {
+            if (mods.GetRebinGroupX() && *mods.GetRebinGroupX() > ptr->GetNbinsX()) {
+              warn("RebinX({}) needs at least as many bins, {} has {}, ignoring.", *mods.GetRebinGroupX(), ptr->GetName(), ptr->GetNbinsX());
+            } else if (mods.GetRebinGroupX()) {
               ptr->RebinX(*mods.GetRebinGroupX());
             }
             warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
@@ -2283,6 +2287,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   setMean(bin, means->GetBinContent(bin) / filled->GetBinContent(bin));
                 }
               }
+            } else if (ptr->GetDimension() == 1 && ptr->GetNbinsX() < 3) {
+              warn("Smooth needs at least three bins in histogram {}, ignoring.", ptr->GetName());
             } else {
               ptr->Smooth(*mods.GetNiterSmooth());
             }
@@ -3985,6 +3991,10 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
     }
     if (has('F')) symbol = join(area((lineDrawn) ? Outline::line : Outline::none), symbol.elements);
     if (has('B')) symbol = join(box(), symbol.elements);
+    // ROOT paints line and markers before the error band (TGraphPainter::PaintGraphErrors): an opaque band hides them
+    const TColor* fillColor = (hasFill) ? gROOT->GetColor(fill->GetFillColor()) : nullptr;
+    const bool hiddenByBand = hasErrors && (has('3') || has('4')) && fill->GetFillStyle() == 1001 && fillColor && fillColor->GetAlpha() == 1.f;
+    if (hiddenByBand) return symbol;
     if (has('P') || has('*')) symbol.elements += "P";
     if (lineDrawn) symbol.elements += L;
     return symbol;

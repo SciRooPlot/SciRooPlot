@@ -391,6 +391,7 @@ class PlotPainter
   std::set<std::pair<const TObject*, size_t>> mReportedStoredRanges;  // input axes whose stored range a projection of this plot does not apply (reported once)
   // histograms drawn as graphs (by an alias only graphs have), with the graph they are drawn as: their statistics box and placeholders refer to the histogram
   std::unordered_map<const TObject*, std::unique_ptr<TH1>> mSourceHists;
+  std::vector<std::unique_ptr<TObject>> mUndrawn;  // data that is not drawn (an empty graph): deleted with the plot's temporaries
   // definition of the drawn data (also for the histogram a graph is drawn from): for <name>, <source>, <projection> and <selection>
   std::unordered_map<const TObject*, std::shared_ptr<const Plot::Pad::Data>> mDataDefinitions;
   // axis titles of the input a projection was made from, keyed by the projection: <projection> and <selection> name the axes by them

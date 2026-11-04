@@ -120,8 +120,9 @@ class Config
 
   // what this process changed, the only parts written back (the files are read again first)
   std::set<std::string> mChangedSettings;
-  bool mRewriteSettings{false};            // settings.info had bad entries
-  std::set<std::string> mTouchedProjects;  // added, changed or removed
+  bool mRewriteSettings{false};                                     // settings.info had bad entries
+  std::set<std::string> mTouchedProjects;                           // added, renamed or removed: written as a whole
+  std::map<std::string, std::set<std::string>> mTouchedProperties;  // set by SetProperty: only these properties are written
   bool mCurrentTouched{false};
   bool mProjectsUnreadable{false};  // projects.info exists but could not be read
   int mLogLevel{LogLevel::debug};

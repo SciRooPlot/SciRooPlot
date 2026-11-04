@@ -167,11 +167,16 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A labelled x axis extended by a range beyond the data (`SetRange(-2, 6)`) shrank back to its labelled bins | Extended as other axes | behaviour | none |
 | Raw option `HBAR` of a histogram with errors: the legend row showed markers and error bars | A box, as drawn | behaviour | none |
 | `GeneratePlots` after `gROOT->SetBatch(true)` in a session with a display crashed | Works; `show`, `spread` and `macro` then report that ROOT runs in batch mode | behaviour | none |
+| Legend row of a graph drawn with an error band and a line or markers (`3L`, `4C`, `3PL`): showed band and line | An opaque band (fill style 1001, no transparency) shows only the band, since ROOT paints line and markers below it | behaviour | none |
+| `RebinX(n)` with more than the bins of a 1d histogram and `Smooth` of fewer than three bins: ROOT's error, the histogram drawn unmodified | A SciRooPlot warning, drawn unmodified | behaviour | none |
+| A second `PlotManager` of the same project in one process cleared the in-memory data sources (`AddDataSource` with objects) of the first | Both are kept | behaviour | none |
+| An input path below a directory whose name contains `.root:` was split there | Split after an existing file; an existing path is not split | behaviour | none |
 
 ### Input validation
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| `Filter`, `Define`, `Join`, `Entries` on data without `Project`, `Profile` or `Scatter` (a histogram, a graph) were ignored silently | A warning when the plot is added | input validation | Remove them, or add the projection. |
 | Python `histo`, `histo2d` with NaN or infinite values and neither range nor bin edges (an empty histogram on [0, 1]), an infinite range, a NaN or infinite bin edge | `ValueError`, as in numpy | input validation | Give a finite range or bin edges. |
 | Python `AddDataSource` with a null ROOT object (`file.Get` of a missing name) was ignored | `ValueError` | input validation | Check the name. |
 | `AddDataSource` adding inputs to a data source already read by an earlier `GeneratePlots` of the same program: the data read before was used again | The data source is read again from all its inputs (a tree chained over the added files too) | behaviour | none |
@@ -220,6 +225,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| `srp set <project> <property>` while a program of the project ran: undone when the program saved its project | Kept: a program writes back only the properties it set | CLI | none |
 | `srp remove`, `srp reset` only unregistered projects | Also delete the files SciRooPlot writes into each project's configuration directory (`plots.info`, `dataSources.info`, …; never user code or output), and the directory if nothing else is in it | CLI | Re-run the plotting program to recreate them; back them up before `srp reset` if needed. |
 | `srp reset`, `srp clean` ended with exit code 0 when `projects.info` could not be read or a project could not be removed | Exit code 1, as `srp remove` | CLI | Scripts checking the exit code: none. |
 | `srp rename` moved the configuration directory of a project whatever it held | Refuses if the directory holds files SciRooPlot did not write (e.g. `SCIROOPLOT_CONFIG_PATH=$HOME` and a project named `Documents`) | CLI | Point `SCIROOPLOT_CONFIG_PATH` at a folder of its own. |

@@ -268,7 +268,7 @@ bool Config::WriteInfoFile(const string& file, const ptree& tree)
 bool Config::Save()
 {
   const bool settingsChanged = !mChangedSettings.empty() || mRewriteSettings;
-  if (!settingsChanged && mTouchedProjects.empty() && !mCurrentTouched) return true;
+  if (!settingsChanged && mTouchedProjects.empty() && mTouchedProperties.empty() && !mCurrentTouched) return true;
   if (mPath.empty()) {
     logger::error("No valid config path; cannot save the configuration.");
     return false;
@@ -314,7 +314,7 @@ bool Config::ProjectsReadable() const
 bool Config::SaveProjects()
 {
   if (mProjectsUnreadable) return true;  // nothing was changed (ProjectsReadable)
-  if (mTouchedProjects.empty() && !mCurrentTouched) return true;
+  if (mTouchedProjects.empty() && mTouchedProperties.empty() && !mCurrentTouched) return true;
   if (mPath.empty()) {
     logger::error("No valid config path; cannot save the configuration.");
     return false;
@@ -347,11 +347,22 @@ bool Config::SaveProjects()
       projects.erase(name);
     }
   }
+  // a property set here replaces only that property: another process may have set others of the same project meanwhile
+  for (const auto& [name, properties] : mTouchedProperties) {
+    auto it = mProjects.find(name);
+    if (mTouchedProjects.count(name) || it == mProjects.end()) continue;
+    auto [target, added] = projects.try_emplace(name, it->second);  // removed meanwhile: written as known here
+    if (added) continue;
+    for (const auto& property : properties) {
+      target->second.mProperties[property] = it->second.Property(property);
+    }
+  }
   if (mCurrentTouched || !projects.count(current)) current = (mCurrentTouched || projects.count(mCurrentProject)) ? mCurrentProject : "";
   if (!current.empty() && !projects.count(current)) current = projects.empty() ? "" : projects.begin()->first;
   mProjects = std::move(projects);
   mCurrentProject = current;
   mTouchedProjects.clear();
+  mTouchedProperties.clear();
   mCurrentTouched = false;
 
   ptree projectsTree;
@@ -785,7 +796,7 @@ bool Config::SetProperty(const string& projectName, const string& property, cons
   if ((property == "program" || property == "outdir") && !value.empty() && !CheckPath(value)) return false;
   auto& properties = mProjects[projectName].mProperties;
   properties[property] = value;
-  mTouchedProjects.insert(projectName);
+  mTouchedProperties[projectName].insert(property);
   return true;
 }
 
