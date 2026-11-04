@@ -2420,7 +2420,12 @@ auto Plot::Pad::Data::SetLayout(const Data& dataLayout) -> decltype(*this)
   mDrawOptionAlias = dataLayout.mDrawOptionAlias;
   mTextFormat = dataLayout.mTextFormat;
   mTextAngle = dataLayout.mTextAngle;
-  mLegend.entry = dataLayout.mLegend.entry;
+  // an entry handed out by GetLegendEntry (also to Python) stays valid: replaced in place, emptied instead of removed
+  if (mLegend.entry) {
+    *mLegend.entry = dataLayout.mLegend.entry.value_or(LegendEntry{});
+  } else {
+    mLegend.entry = dataLayout.mLegend.entry;
+  }
   mRangeX.min = dataLayout.mRangeX.min;
   mRangeX.max = dataLayout.mRangeX.max;
   mRangeY.min = dataLayout.mRangeY.min;
@@ -2447,6 +2452,11 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   if (dataLayout.mLegend.entry) {  // merged like the styles: what the data's own entry sets and the layout does not is kept
     if (mLegend.entry) {
       *mLegend.entry += *dataLayout.mLegend.entry;
+      // += leaves the place of the row out (AddDataRow sets it apart): the layout's place counts as well
+      if (dataLayout.mLegend.entry->mPosition) {
+        mLegend.entry->mPosition = dataLayout.mLegend.entry->mPosition;
+        mLegend.entry->mPositionDataID = dataLayout.mLegend.entry->mPositionDataID;
+      }
     } else {
       mLegend.entry = dataLayout.mLegend.entry;
     }

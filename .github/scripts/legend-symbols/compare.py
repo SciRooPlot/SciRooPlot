@@ -124,7 +124,11 @@ def Format(style):
 def main():
     nDifferent = 0
     expected = collections.Counter()
-    for fileName in sorted(glob.glob(os.path.join(sys.argv[1], "**", "*.root"), recursive=True)):
+    fileNames = sorted(glob.glob(os.path.join(sys.argv[1], "**", "*.root"), recursive=True))
+    if not fileNames:  # nothing written: the check would pass without comparing anything
+        print(f"No plots found in {sys.argv[1]}.")
+        return 1
+    for fileName in fileNames:
         name = os.path.basename(fileName)[:-5]
         frame = Paint(fileName, IsFrame)[0]
         dataElements = Paint(fileName, lambda o: not o.InheritsFrom("TLegend"))[0] - frame

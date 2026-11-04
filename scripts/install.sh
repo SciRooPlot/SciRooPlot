@@ -186,7 +186,8 @@ if [[ "${REINSTALL}" -eq 1 ]]; then
     INSTALL_PREFIX="${CACHED_PREFIX:-${INSTALL_PREFIX}}"
     [[ -f "${INSTALL_PREFIX}/share/scirooplot/env.sh" ]] || REINSTALL_DEV_BUILD=1
   fi
-  rm -f "${CACHE_FILE}"
+  # kept aside until configuring succeeds: without any cache the env.sh of the build directory would take it for an installation
+  [[ -f "${CACHE_FILE}" ]] && mv -f "${CACHE_FILE}" "${CACHE_FILE}.reinstall"
 fi
 
 DO_INSTALL=1
@@ -251,10 +252,12 @@ fi
 if [[ ! -f "${CACHE_FILE}" ]]; then
   if ! run_step "Configuring" cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" -DCMAKE_INSTALL_PREFIX="${INSTALL_PREFIX}"; then
     rm -f "${CACHE_FILE}"
+    [[ -f "${CACHE_FILE}.reinstall" ]] && mv -f "${CACHE_FILE}.reinstall" "${CACHE_FILE}"
     show_log
     exit 1
   fi
 fi
+rm -f "${CACHE_FILE}.reinstall"
 
 build || {
   show_log

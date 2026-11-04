@@ -547,13 +547,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                                   get_first_or(0.5, pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange()),
                                   get_first_or(1., pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange()));
 
-    // a colour gradient gets one colour per data item that will actually take a colour from the defaults
-    auto nDefaultColors = [&pad](auto hasOwnColor) {
-      return static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [&](const auto& data) { return !hasOwnColor(*data); }));
-    };
-    const int32_t nMarkerColors = nDefaultColors([](const auto& data) { return data.GetMarkerColor().has_value(); });
-    const int32_t nLineColors = nDefaultColors([](const auto& data) { return data.GetLineColor().has_value(); });
-    const int32_t nFillColors = nDefaultColors([](const auto& data) { return data.GetFillColor().has_value(); });
+    // a colour gradient gets one colour per data item that will actually take a colour from the defaults: the marker, line and fill
+    // lists share one index (a data item taking any of the three moves it on), so all three are as long as the number of such items
+    // (sized each by its own count, a shorter list would wrap around and give the marker and line of one item different shades)
+    const int32_t nTakingColors = static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [](const auto& data) {
+      return !data->GetKeepInputStyle() && (!data->GetMarkerColor() || !data->GetLineColor() || !data->GetFillColor());
+    }));
+    const int32_t nMarkerColors = nTakingColors, nLineColors = nTakingColors, nFillColors = nTakingColors;
     // a gradient is generated only if a data item takes colours from it, or if its number of colours is given explicitly
     // a gradient of pad 0 is turned into colours of this pad: written into pad 0, it would be replaced by the colours sized for the first pad
     auto applyGradient = [](const auto& gradient, int32_t nTaking, auto&& setColors) {
@@ -897,8 +897,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             for (double_t* ex : {data_ptr->GetEX(), data_ptr->GetEXlow(), data_ptr->GetEXhigh()}) {  // symmetric or asymmetric errors
               if (ex) std::fill(ex, ex + data_ptr->GetN(), 0.);
             }
-          } else if (alias == area && data_ptr->GetN() > 0) {
-            // the data range applies to the points, not to the polygon closed at zero below (its corners would be removed with them)
+          } else if (alias == area && data_ptr->GetN() > 0 && dataIndex != 0) {
+            // the data range applies to the points, not to the polygon closed at zero below (its corners would be removed with them);
+            // not to the copy that draws the frame, as for all other aliases
             if (!pad_ptr->GetView()) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
           }
           if (alias == area && data_ptr->GetN() > 0) {
@@ -1966,6 +1967,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (data_ptr->GetN() == 0) {
               logger::warning("Graph {} has no points: it is not drawn.", data->GetName());
               mUndrawn.emplace_back(data_ptr);
+              // no legend row and no statistics box either, as for other data that is not drawn (TH2Poly in 3d)
+              ++dataIndex;  // the next data keeps its number
+              drawOption = "SAME ";
+              return;
             } else {
               data_ptr->Draw(drawOption.data());
             }
@@ -2109,8 +2114,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           if (requested) warn("{} is not supported for {} ({}), ignoring.", what, ptr->GetName(), ptr->ClassName());
         };
         const auto& m = mods.Modify();
-        if (m.scaleBinWidthNorm || m.normMaximum || m.scaleFactor || m.divideBinWidth || m.rebinGroupX || m.rebinGroupY || m.rebinGroupZ ||
-            m.scaleAxisX || m.scaleAxisY || m.scaleAxisZ || m.cumulative || m.nIterSmooth)
+        // only modifiers that change something keep the stored fits (not DivideBinWidth(false), Scale(1), Rebin(1), Smooth(0), nor a
+        // scale factor that is not positive, which is ignored below)
+        auto changes = [](const auto& value, auto neutral) { return value && *value != neutral; };
+        auto scales = [](const optional<double_t>& factor) { return factor && *factor > 0. && *factor != 1.; };
+        if (m.scaleBinWidthNorm || m.normMaximum || m.cumulative || m.divideBinWidth.value_or(false) || scales(m.scaleFactor) ||
+            changes(m.rebinGroupX, 1) || changes(m.rebinGroupY, 1) || changes(m.rebinGroupZ, 1) || scales(m.scaleAxisX) ||
+            scales(m.scaleAxisY) || scales(m.scaleAxisZ) || changes(m.nIterSmooth, 0))
           dropStoredFunctions(ptr, "modifiers of the data");
         // multiplies a factor of Scale (axis 0) or ScaleX/Y/Z into product; a factor that is not positive is ignored
         auto multiplyFactor = [&](optional<double_t>& product, const optional<double_t>& factor, char axis = 0) {
@@ -2785,7 +2795,48 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       if (rawData) {
         if (data->GetType() == "ratio") {
           std::visit([&](auto* ptr) { dropStoredFunctions(ptr, "division"); }, *rawData);
-          numeratorMeans = prepareOperand(*rawData, std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)->GetNumModify());
+          auto ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
+          numeratorMeans = prepareOperand(*rawData, ratio->GetNumModify());
+          // a function as numerator (e.g. model / data) is sampled where the denominator has its values (the points of a graph, the bin
+          // centres of a histogram, after the modifiers of the denominator): the division is then that of a graph without errors, which
+          // takes the errors of the denominator; a function of the inputs only within its range, a formula of the plot definition everywhere
+          if (auto* func = std::get_if<TF1*>(&*rawData)) {
+            optional<data_ptr_t> denom;
+            try {
+              denom = GetDataClone(dataBuffer.at(ratio->GetDenomDataSource()).at(ratio->GetDenomName() + ratio->GetDenomDataInfo().GetNameSuffix()).get(), ratio->GetDenomProjInfo());
+            } catch (std::out_of_range&) {
+              denom = nullopt;
+            }
+            if (denom) {
+              prepareOperand(*denom, ratio->GetDenomModify());
+              const bool fullRange = (data->GetDataSource() == kUserFunctions);
+              auto* sampled = new TGraph();
+              auto sample = [&](double_t x) {
+                if (fullRange || ((*func)->GetXmin() <= x && x <= (*func)->GetXmax())) sampled->AddPoint(x, (*func)->Eval(x));
+              };
+              std::visit(
+                [&](auto* ptr) {
+                  using denom_type = std::decay_t<decltype(ptr)>;
+                  if constexpr (is_graph_1d<denom_type>()) {
+                    for (int32_t i = 0; i < ptr->GetN(); ++i)
+                      sample(ptr->GetX()[i]);
+                  } else if constexpr (is_hist_1d<denom_type>()) {
+                    for (int32_t bin = 1; bin <= ptr->GetNbinsX(); ++bin)
+                      sample(ptr->GetXaxis()->GetBinCenter(bin));
+                  }
+                  delete ptr;
+                },
+                *denom);
+              if (sampled->GetN() > 0) {
+                sampled->SetName((*func)->GetName());
+                sampled->SetTitle((*func)->GetTitle());
+                delete *func;
+                rawData = sampled;
+              } else {
+                delete sampled;  // a denominator of another kind: reported as unsupported division below
+              }
+            }
+          }
         }
         std::visit(processData, *rawData);
       } else {
@@ -5467,8 +5518,9 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     if (axis->GetBinUpEdge(first) - relTol * axis->GetBinWidth(first) <= start) ++first;
     if (axis->GetBinLowEdge(last) + relTol * axis->GetBinWidth(last) >= end && last > first) --last;  // a range of zero width keeps the bin containing it
     if (first > last || last < 1 || first > axis->GetNbins()) {
-      logger::warning("The projection range [{}, {}] of {} selects no bins of an axis with {} bins from {} to {}: data left out.", start, end, obj->GetName(),
-                      axis->GetNbins(), axis->GetXmin(), axis->GetXmax());
+      // the projection fails, and with it the plot (as for missing data)
+      logger::error("The projection range [{}, {}] of {} selects no bins of an axis with {} bins from {} to {}.", start, end, obj->GetName(),
+                    axis->GetNbins(), axis->GetXmin(), axis->GetXmax());
       return false;
     }
     axis->SetRange(first, last);

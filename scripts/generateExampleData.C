@@ -1,4 +1,4 @@
-// Generates the pseudo-data used by the project template (srp init-cpp / srp init-py).
+// Generates the pseudo-data of the example project (srp example-cpp / srp example-py).
 // It runs at build time in <build>/share/scirooplot and is installed to ${SCIROOPLOT_DATA_DIR}/ExampleData.
 // The random seed is fixed, so every build produces identical files.
 //
@@ -11,6 +11,7 @@
 //   spectra.root                      charged-particle spectra, data and simulation
 //     data/        ptSpec, multDist, ptVsMult (TH2)
 //     mc/          ptSpec, multDist
+//     energyScan/  model_<sqrt(s)> (TF1, 12 energies), data_<sqrt(s)> (TGraphErrors, 5 of them), key (TH2: labelled cells)
 //   AnalysisResults_data.root         typical grid-analysis output: a directory per task,
 //   AnalysisResults_mc.root           each holding one TList called "output"
 //     EventQA/output     hVtxZ, hEventSelection (labelled bins), hNPV (pile-up vertices)
@@ -26,6 +27,7 @@
 //     cent_0-10/, cent_10-30/, cent_30-50/   ptSpec (per event), v2 (TGraphErrors)
 //     flow/        v2_{pi,K,p} (v2 vs. pT, 30-40%), v2ncq_{pi,K,p} (v2/n_q vs. KET/n_q), v2, v3, v4 (vs. centrality)
 //     meanPt/      pp_{2.76,5,7,8,13}TeV, pPb_{5,8.16}TeV, XeXe_5.44TeV, PbPb_{2.76,5}TeV (TGraphErrors: mean pT vs. N_ch), <system>_syst
+//     strangeness/ <hadron>_<system> (TGraphErrors: yield ratio to pions vs. multiplicity, 6 hadrons in 6 collision systems)
 //     correlations/ ridge (TH2: pair yield vs. Delta phi, Delta eta; high multiplicity), ridge_lowMult, ridge_midMult (the same in lower
 //                   multiplicity classes), fourier_longRange (TF1, V_2Delta in the title)
 //     femtoscopy/  cf_{0-5,20-30,50-60} (TGraphErrors: pion correlation functions), fit_... (TF1, the radius in the title),
@@ -60,6 +62,7 @@
 //     dijet/       spectrum (TH1, log bins), fit (TF1, chi2/ndf in the title), significance (TH1), sigPlusBkg_{3,5}TeV (TGraph: fit
 //                  plus an excited quark), significance_{3,5}TeV (TH1: the significance of that signal per bin)
 //   astronomy.root                    rotation/ measured (TGraphErrors), bulge, disk, halo, total (TGraph: galaxy rotation curve)
+//                                     sky/      gammaRays (TH2: the gamma-ray sky in galactic coordinates)
 //                                     cmb/      measured (TGraphErrors), model (TGraph: CMB temperature power spectrum)
 //   trigger.root                      muon trigger efficiencies: eta_2023, eta_2024 (TEfficiency), etaPhi_2023 (2D TEfficiency)
 //   timeline.root                     TTree "diphoton": mass, lumi (diphoton candidates with the luminosity at which they came)
@@ -90,6 +93,9 @@
 //                  gainModel_..., phaseModel_... (TGraph: ideal CR-RC^2 shaper)
 //     link/        eye_{1..10}m (TH2F: eye diagrams of a 2.56 Gb/s link after 1 to 10 m of cable)
 //     antenna/     broadside, steered30 (TGraphPolar: radiation patterns of a patch array), ..._model (TGraphPolar)
+//   climate.root                      warmingMap (TH2: warming 2015-2024 vs. 1951-1980), landFraction (TH2), lightningEurope (TH2Poly)
+//   detector.root                     calo/cellStatus (TH2: good, dead and bad cells), conversions/vertexXY (TH2: photon conversion
+//                                     vertices), v0/{cowboy,sailor}_{pos,neg} (TGraph: the daughter tracks of a V0 decay)
 //   co2.csv                           monthly atmospheric CO2: year (decimal), co2, deseasonalized
 //   stars.csv                         a star catalogue for a Hertzsprung-Russell diagram: bv (colour index), logL
 //   spikes.csv                        spike times of a neuron in 40 trials around a stimulus: trial, time (ms)

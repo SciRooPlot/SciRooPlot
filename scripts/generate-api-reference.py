@@ -99,7 +99,7 @@ def methods(section: str, class_name: str):
         if not match:
             continue
         name = match["name"]
-        if name in SKIP_NAMES or name.startswith("Get") and name not in {"GetAxis", "GetData", "GetLegend", "GetLegendEntry", "GetText", "GetImage", "GetProjectProperty", "GetPad"}:
+        if name in SKIP_NAMES or name.startswith("Get") and name not in {"GetAxis", "GetData", "GetLegend", "GetLegendEntry", "GetText", "GetShape", "GetImage", "GetProjectProperty", "GetPad"}:
             continue  # plain getters are not part of the user interface
         ret = (match["ret"] or "").strip()
         if re.match(r"\s*static\s", decl):
@@ -176,7 +176,7 @@ def drawing_options(aliases):
         "Histograms and graphs share all 1D aliases: where ROOT has no option for one of them, the data is converted and drawn as the other type",
         "(*as graph* / *as histogram*). An alias a type cannot draw at all gives a WARNING and ROOT's default.",
         "Without a drawing option the same rule applies to histograms and graphs: data with a fill is drawn as `hist` (graphs: `area`),",
-        "data with a marker style or size set or with non-zero errors as `points`, other data as `hist` (graphs: `line`); 2D histograms, graphs and functions, and 3D histograms as `colz`.",
+        "data with a marker style or size set, with non-zero errors or a graph of a single point as `points`, other data as `hist` (graphs: `line`); 2D histograms, graphs and functions, and 3D histograms as `colz`.",
         "",
         "| alias | 1D histogram | graph | function | 2D histogram | 2D graph | 2D function | 3D histogram | 3D function |",
         "|---|---|---|---|---|---|---|---|---|",

@@ -49,7 +49,8 @@ h3 { font-size: 1.15rem }
 .title { display: grid; gap: 10px }
 .title::after { content: ""; height: 4px; border-radius: 2px; width: 100%;
   background: linear-gradient(var(--amber), var(--amber)) left center / min(140px, 30%) 4px no-repeat, linear-gradient(var(--hairline), var(--hairline)) left center / 100% 1px no-repeat }
-p { margin: 0; max-width: 68ch }
+p { margin: 0; max-width: 68ch; text-wrap: pretty }
+li, td, dd, figcaption { text-wrap: pretty }
 code, pre, kbd { font-family: var(--mono); font-size: 0.86em }
 code.nw, span.nw { white-space: nowrap }
 :not(pre) > code { background: var(--grid); padding: 0.05em 0.22em; border-radius: 4px; color: var(--ink); overflow-wrap: anywhere; box-decoration-break: clone; -webkit-box-decoration-break: clone }
@@ -152,20 +153,26 @@ html, body { overflow-x: clip }
 .path:hover { background: rgba(255, 255, 255, 0.11) }
 .path strong { font-size: 1.05rem }
 .path span { color: var(--hero-muted); font-size: 0.875rem }
-.demo { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.55fr); gap: 28px; align-items: center }
-.demo figure { margin: 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--hairline); background: #16233a }
-.demo figure img { display: block; width: 100%; height: auto }
-.demo figcaption { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #1b2b45; color: #e8edf4; font-size: 0.875rem }
-.demo figcaption b { white-space: nowrap }
-.demo figcaption span { flex: 1; color: #b9c4d3 }
-.demo .dots { display: flex; gap: 6px }
-.demo .dots button { width: 10px; height: 10px; padding: 0; border-radius: 50%; border: 1px solid #e8edf4; background: transparent; cursor: pointer }
-.demo .dots button[aria-current="true"] { background: #e0a526; border-color: #e0a526 }
-.demo .side { display: grid; gap: 12px }
-/* workflow steps: white cards with an amber top edge, arrows between */
+.demo { display: grid; gap: 16px }
+.demo .head { display: grid; gap: 6px }
+.demo .screen { margin: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--hairline); background: #101a2b; aspect-ratio: 16 / 9; box-shadow: 0 18px 40px -24px rgba(10, 20, 40, 0.55) }
+.demo .screen video { display: block; width: 100%; height: 100%; object-fit: cover }
+/* the scenes below the video: all four always shown with a fixed size, the one playing highlighted with its progress */
+.scenes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px }
+.scenes button { width: 100%; height: 100%; text-align: left; font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 12px 14px 14px; cursor: pointer; display: grid; grid-template-rows: auto auto 1fr auto; gap: 6px; position: relative; overflow: hidden }
+.scenes button:hover { border-color: var(--teal) }
+.scenes .n { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--grid); color: var(--muted); font-size: 0.8rem; font-weight: 700 }
+.scenes b { color: var(--ink); font-size: 1rem }
+.scenes span.t { color: var(--muted); font-size: 0.875rem; text-wrap: pretty }
+.scenes > li > button > code { font-size: 0.78rem; display: block; overflow-wrap: anywhere }
+.scenes .sceneprog { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--teal) }
+.scenes button[aria-current="true"] { border-color: var(--teal); background: var(--tint) }
+.scenes button[aria-current="true"] .n { background: var(--teal); color: var(--teal-ink) }
+/* workflow steps: numbered cards, arrows between */
 .flow { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch }
-.flow .box { background: var(--panel); border: 1px solid var(--hairline); border-top: 5px solid var(--amber); border-radius: 10px; padding: 16px; display: grid; gap: 6px; align-content: start; text-align: center; min-width: 0 }
-.flow .box p { font-size: 0.9rem; color: var(--muted); margin: 0 auto }
+.flow .box { background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 16px; display: grid; gap: 6px; align-content: start; justify-items: center; text-align: center; min-width: 0 }
+.flow .box .n { display: grid; place-items: center; width: 1.8em; height: 1.8em; border-radius: 50%; background: var(--teal); color: var(--teal-ink); font-weight: 700; font-size: 0.85rem }
+.flow .box p { font-size: 0.9rem; color: var(--muted); margin: 0 auto; text-wrap: balance }
 .flow .arrow { align-self: center; color: var(--amber); font-weight: 700; font-size: 1.8rem }
 
 /* ROOT vs SciRooPlot */
@@ -550,6 +557,7 @@ footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 22px }
 @media (max-width: 1180px) { .bar .wrap { row-gap: 6px } .search { flex: 1 1 200px } }
 @media (max-width: 960px) {
   .hero .wrap, .step, .lab, .dlg, .tour, .ref, .demo, .compare, .teaser { grid-template-columns: minmax(0, 1fr) }
+  .scenes { grid-template-columns: repeat(2, minmax(0, 1fr)) }
   .hero .logo-big { width: min(300px, 80%); order: -1 }
   .steps, .toc, .step .side, .preview { position: static }
   .steps { grid-auto-flow: column; grid-auto-columns: max-content; overflow-x: auto; padding-bottom: 4px }
@@ -645,13 +653,12 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
   </div>
 
   <div class="demo">
-    <figure><img id="demoimg" src="img/demo/demo-1.gif" alt="A terminal session: typing plot sp and pressing tab completes the group spectra, two more tabs list its plots, ptSpectrum is completed and its plot opens in a window." width="960" height="540" loading="eager">
-      <figcaption><b id="demottl">Find a plot</b><span id="democap"></span><span class="dots" id="demodots"></span></figcaption></figure>
-    <div class="side">
+    <div class="head">
       <h2 class="title">Plots from the command line</h2>
-      <p>Each plot of a project is drawn with one command. <kbd>Tab</kbd> completes groups and plot names in bash and zsh, and the plot opens in a window. Group and name are regular expressions: one command can pick several plots, and <kbd>s</kbd> and <kbd>a</kbd> browse through them.</p>
-      <div class="term-line"><span class="p">$ </span>plot spectra ptSpectrum<br><span class="p">$ </span>plot spectra multiplicity.*<br><span class="p">$ </span>plot spectra .+ pdf<br><span class="p">$ </span>srp print file.root</div>
+      <p>Every plot of a project is one command away: <code>plot</code>, the group and the name of the plot. Four short scenes show what that looks like.</p>
     </div>
+    <figure class="screen"><video id="demovid" muted playsinline preload="auto" poster="img/demo/demo-1.png" src="img/demo/demo-1.mp4" aria-label="A terminal session with SciRooPlot: plots found by tab completion, browsed, changed and saved as files."></video></figure>
+    <ol class="scenes" id="demoscenes" aria-label="Scenes of the demo"></ol>
   </div>
 
   <div class="res" aria-label="Documents and links">
@@ -664,13 +671,13 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
   <div style="display:grid;gap:18px">
     <h2 class="title">SciRooPlot workflow</h2>
     <div class="flow" aria-label="How SciRooPlot works">
-      <div class="box"><h3>Store</h3><p>Keep your analysis results in <button class="term" data-term="rootfile">ROOT</button> or CSV files.</p></div>
+      <div class="box"><span class="n">1</span><h3>Store</h3><p>Keep your analysis results in <button class="term" data-term="rootfile">ROOT</button> or CSV files.</p></div>
       <div class="arrow" aria-hidden="true">→</div>
-      <div class="box"><h3>Define</h3><p>Describe the plots you want,<br>in C++ or Python.</p></div>
+      <div class="box"><span class="n">2</span><h3>Define</h3><p>Describe the plots you want in C++ or Python.</p></div>
       <div class="arrow" aria-hidden="true">→</div>
-      <div class="box"><h3>Generate</h3><p>Browse and export plots with the <code>plot</code> command.</p></div>
+      <div class="box"><span class="n">3</span><h3>Generate</h3><p>Browse and export plots with the <code>plot</code> command.</p></div>
       <div class="arrow" aria-hidden="true">→</div>
-      <div class="box"><h3>Organize</h3><p>Manage projects and settings with <code>srp</code>.</p></div>
+      <div class="box"><span class="n">4</span><h3>Organize</h3><p>Manage projects and settings with the <code>srp</code> command.</p></div>
     </div>
     <div class="reads"><h3>Reads what your analysis writes</h3>
       <div class="chips-static"><span>TH1</span><span>TH2</span><span>TH3</span><span>TProfile</span><span>TProfile2D</span><span>TProfile3D</span><span>THn</span><span>THnSparse</span><span>TH2Poly</span><span>TGraph</span><span>TGraphErrors</span><span>TGraphAsymmErrors</span><span>TGraphBentErrors</span><span>TGraph2D</span><span>TEfficiency</span><span>TF1</span><span>TF2</span><span>TF3</span><span>TTree</span><span>RNTuple</span><span>.csv</span><span>.tsv</span><span>.txt</span><span>.dat</span><span>.tab</span></div>
@@ -783,7 +790,7 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
         <tr><td>compute error bars yourself, e.g. <code>np.sqrt(counts)</code>, and adapt them for weights and for <code>density=True</code></td><td>histograms carry their errors: √N, or the sum of the squared weights with <code>weights=</code>, kept right through normalising, rebinning and ratios.</td></tr>
         <tr><td>build a ratio or residual panel with <code>gridspec</code>, shared axes and your own error propagation</td><td><code>plot[2].AddRatio(data, model)</code> in the ratio pad of a <code>_ratio</code> base plot: one line, errors propagated.</td></tr>
         <tr><td>select the rows of the DataFrame for each curve in each figure</td><td>hand it over once with <code>table("events", df)</code>; each curve is a <code>Filter('label == 1 &amp;&amp; pt &gt; 2')</code> on it, run when the plot is drawn.</td></tr>
-        <tr><td>position legends per figure, or rely on <code>loc="best"</code></td><td><code>AddLegend()</code> finds a free corner; <code>SetRoomAboveMax(0.3)</code> keeps space free above the data.</td></tr>
+        <tr><td>position legends per figure, or rely on <code>loc="best"</code></td><td><code>AddLegend()</code> finds a free corner; <code>['Y'].SetRoomAboveMax(0.3)</code> keeps space free above the data.</td></tr>
         <tr><td>call <code>savefig</code> for every figure and format, and re-run the notebook to recreate a figure</td><td><code>plot ml .+ pdf</code> writes all plots of a group. Every plot has a name: <code>plot ml roc</code> opens it in a window from any folder, <kbd>Tab</kbd> completes the names.</td></tr>
       </tbody>
     </table></div>
@@ -1129,7 +1136,7 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
 
 <script>
 // the top bar wraps on narrow screens: sticky elements below it take its height from --barh
-(() => { const bar = document.querySelector(".bar"); if (!bar) return;
+(() => { const bar = document.querySelector(".prog"); if (!bar) return;
   const set = () => document.documentElement.style.setProperty("--barh", (getComputedStyle(bar).position === "static" ? 0 : bar.offsetHeight) + "px");
   set(); if (window.ResizeObserver) new ResizeObserver(set).observe(bar) })();
 const COLORS = /*COLORS*/;
@@ -1666,16 +1673,19 @@ function renderExamples() {
   const root = document.documentElement, btn = document.getElementById("themebtn"); if (!btn) return;
   const dark = () => root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
   btn.onclick = () => { root.dataset.theme = dark() ? "light" : "dark"; store.set("theme", root.dataset.theme) } })();
-(function demoScenes() { // the terminal demos of the start page, one after the other (each gif plays once)
-  const img = document.getElementById("demoimg"), dots = document.getElementById("demodots"); let scenes = [], current = 0, timer = null;
-  const show = i => { current = (i + scenes.length) % scenes.length; const sc = scenes[current];
-    img.src = `img/demo/${sc.file}?play=${Date.now()}`; img.alt = `${sc.title}: ${sc.caption}`;  // a new URL restarts the gif
-    document.getElementById("demottl").textContent = sc.title; document.getElementById("democap").textContent = sc.caption;
-    dots.querySelectorAll("button").forEach((b, k) => b.setAttribute("aria-current", k === current));
-    clearTimeout(timer); timer = setTimeout(() => show(current + 1), (sc.seconds + 1.5) * 1000) };
-  fetch("img/demo/demos.json").then(r => r.json()).then(list => { scenes = list; if (!scenes.length) return;
-    dots.innerHTML = scenes.map((sc, k) => `<button aria-label="${sc.title}" title="${sc.title}"></button>`).join("");
-    dots.querySelectorAll("button").forEach((b, k) => b.onclick = () => show(k)); show(0) }).catch(() => {}) })();
+(function demoScenes() { // the terminal demos of the start page: one video per scene, played one after the other
+  const vid = document.getElementById("demovid"), list = document.getElementById("demoscenes"); let scenes = [], current = 0;
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;  // then nothing starts by itself
+  const show = (i, play) => { current = (i + scenes.length) % scenes.length;
+    list.querySelectorAll("button").forEach((b, k) => { b.setAttribute("aria-current", k === current); b.querySelector(".sceneprog").style.width = "0" });
+    vid.src = `img/demo/${scenes[current].file}`; if (play) vid.play().catch(() => {}) };
+  vid.addEventListener("timeupdate", () => { const bar = list.querySelectorAll(".sceneprog")[current]; if (bar && vid.duration) bar.style.width = `${100 * vid.currentTime / vid.duration}%` });
+  vid.addEventListener("ended", () => setTimeout(() => show(current + 1, true), 1200));
+  fetch("img/demo/demos.json").then(r => r.json()).then(list_ => { scenes = list_; if (!scenes.length) return;
+    list.innerHTML = scenes.map((sc, k) => `<li><button type="button"><span class="n">${k + 1}</span><b>${esc(sc.title)}</b><span class="t">${esc(sc.text).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\{(\w+)\}/g, "<kbd>$1</kbd>")}</span><code>$ ${esc(sc.command)}</code><span class="sceneprog"></span></button></li>`).join("");
+    list.querySelectorAll("button").forEach((b, k) => b.onclick = () => show(k, true));
+    show(0, false);
+    if (!still) new IntersectionObserver((es, ob) => { if (es[0].isIntersecting) { vid.play().catch(() => {}); ob.disconnect() } }, { threshold: 0.4 }).observe(vid) }).catch(() => {}) })();
 (function renderShowcase() { // the start page: a few examples from different fields; a click opens the example on its page
   const picks = ["higgs/limits/brazilPlot", "heavyion/correlations/ridge", "atomic/orbitals", "animations/eyeClosing",
     "astronomy/hertzsprungRussell", "neutronStars/merger/gwSpectrogram", "biophysics/ramachandran", "animations/tpcSector"].filter(k => EXAMPLES[k]);
@@ -1737,7 +1747,7 @@ const REF = [
 </tbody></table></div>
 <h3>Output modes</h3>
 <div class="tablewrap"><table class="cmd"><thead><tr><th>Mode</th><th>Result</th></tr></thead><tbody>
-<tr><td><code>show</code> (default)</td><td>One window to browse all matching plots: <kbd>s</kbd> next, <kbd>a</kbd> previous, <kbd>d</kbd> keeps the current plot in a window of its own, <kbd>q</kbd> closes a window, <kbd>x</kbd> all. The keys also work in the terminal. Double-click a legend, text, image or shape to print its name and coordinates.</td></tr>
+<tr><td><code>show</code> (default)</td><td>One window to browse all matching plots: <kbd>s</kbd> next, <kbd>a</kbd> previous, <kbd>d</kbd> keeps the current plot in a window of its own, <kbd>q</kbd> closes a window, <kbd>x</kbd> all. The keys also work in the terminal (there <kbd>q</kbd> closes all). Double-click a legend, text, image or shape to print its name and coordinates.</td></tr>
 <tr><td><code>spread</code></td><td>All matching plots at once, one window each</td></tr>
 <tr><td><code>pdf</code> <code>png</code> <code>svg</code> <code>eps</code> <code>ps</code> <code>jpg</code></td><td>Files in the project's output folder, one subfolder per group</td></tr>
 <tr><td><code>gif</code>, <code>gif+8++</code></td><td>All matching plots as one animation (see above)</td></tr>
@@ -1828,7 +1838,7 @@ const REF = [
 <p>Data is drawn in the order it is added and numbered from 1 in each pad: <code>plot[1](2)</code> is the second data of pad 1. The first data decides the axis frame, unless another one is marked <code>SetDefinesFrame()</code> or the pad gets a frame of its own with <code>SetFrame</code>; a pad without data draws an empty frame from its axis ranges.</p>` },
   { id: "appearance", g: "data", t: "Appearance and drawing options", body: `<div class="code"><pre data-snip="appearance"></pre></div>
 <p>Colours: <code>SetColor</code> sets marker, line and fill; <code>SetMarker</code>, <code>SetLine</code>, <code>SetFill</code> (and <code>SetMarkerColor</code> …) set only their own part. Whatever is not set takes the data's entry of the default colours, the same for all three: black markers with error bars in another colour need <code>SetMarker(…, kBlack)</code>, black markers and error bars <code>SetColor(kBlack)</code>.</p>
-<p>Without a drawing option: data with a fill is drawn as <code>hist</code> (graphs: <code>area</code>), data with markers set or with errors as <code>points</code>, everything else as <code>hist</code> (graphs: <code>line</code>), 2D data as <code>colz</code>. All aliases with pictures are under <a href="#options">Draw options</a>, every colour and style under <a href="#styles">Styles</a>. Line widths are whole pixels: a fractional width is rounded, with a warning. A graph drawn as <code>line</code> or <code>curve</code> with a width of 100 × zone + width, e.g. <code>SetLine(kSolid, 1503.0, kBlack).SetFill(3354, kBlack)</code>, hatches a zone of width 15 on one side of it in its fill, as ROOT's exclusion graphs do (a negative width hatches the other side).</p>` },
+<p>Without a drawing option: data with a fill is drawn as <code>hist</code> (graphs: <code>area</code>), data with markers set, with errors or a graph of a single point as <code>points</code>, everything else as <code>hist</code> (graphs: <code>line</code>), 2D data as <code>colz</code>. All aliases with pictures are under <a href="#options">Draw options</a>, every colour and style under <a href="#styles">Styles</a>. Line widths are whole pixels: a fractional width is rounded, with a warning. A graph drawn as <code>line</code> or <code>curve</code> with a width of 100 × zone + width, e.g. <code>SetLine(kSolid, 1503.0, kBlack).SetFill(3354, kBlack)</code>, hatches a zone of width 15 on one side of it in its fill, as ROOT's exclusion graphs do (a negative width hatches the other side).</p>` },
   { id: "labels", g: "data", t: "Labels, numbers and the statistics box", body: `<div class="code"><pre data-snip="labels"></pre></div>
 <p>Placeholders: <code>&lt;name&gt; &lt;title&gt; &lt;entries&gt; &lt;integral&gt; &lt;maximum&gt; &lt;minimum&gt; &lt;mean&gt; &lt;stddev&gt;</code> (numbers cover the drawn range, <code>&lt;entries&gt;</code> the stored total) and from the definition <code>&lt;source&gt; &lt;projection&gt; &lt;selection&gt;</code>, with printf formats in brackets. A text names its data by number: <code>AddText("#sigma = &lt;stddev[.1f]:2&gt; mm")</code> for data 2 of the pad, <code>&lt;stddev[.1f]:1@4&gt;</code> for data 1 of pad 4. All texts take ROOT's TLatex syntax: <code>#it{p}_{T}</code>, <code>#sqrt{s}</code>, <code>#gamma</code>.</p>` },
   { id: "modifiers", g: "data", t: "Modifiers and projections", body: `<p>Applied in this fixed order before drawing, whatever order you write them in:</p>
@@ -1842,7 +1852,7 @@ const REF = [
 </div>
 <div class="code"><pre data-snip="modifiers"></pre></div>
 <p><code>Density()</code> is <code>DivideBinWidth().Normalize()</code>: a probability density from counts; <code>Normalize(True)</code> is for data that already is a density. <code>Normalize().Cumulative()</code> gives a CDF, <code>Cumulative().NormalizeToMaximum()</code> ends at 1.</p>` },
-  { id: "ratios", g: "data", t: "Ratios", body: `<div class="code"><pre data-snip="ratios"></pre></div><p class="small muted">Where the modifiers act on a ratio: <a href="#ref-modifiers">Modifiers and projections</a>.</p><p>Incompatible binnings are divided via spline interpolation; a profile is divided as the histogram of its means. Settings on the ratio itself act on the result; write <code>Numer()</code>, <code>Denom()</code> or <code>Both()</code> before modifiers that belong to the inputs.</p>` },
+  { id: "ratios", g: "data", t: "Ratios", body: `<div class="code"><pre data-snip="ratios"></pre></div><p class="small muted">Where the modifiers act on a ratio: <a href="#ref-modifiers">Modifiers and projections</a>.</p><p>Incompatible binnings are divided via spline interpolation; a profile is divided as the histogram of its means. A function as numerator is evaluated where the denominator has its values (graph points, bin centres) and takes its errors; a formula written in the plot definition is addressed with <code>Function(formula)</code> or the data source <code>kUserFunctions</code>. Settings on the ratio itself act on the result; write <code>Numer()</code>, <code>Denom()</code> or <code>Both()</code> before modifiers that belong to the inputs.</p>` },
   { id: "trees", g: "data", t: "Trees and tables", body: `<div class="code"><pre data-snip="trees"></pre></div><p>Expressions and filters are C++ over the column names, evaluated with RDataFrame when the plot is drawn. Without explicit bins, 100 bins over the observed range are used. CSV and other text tables work the same way, and so do RNTuples, ROOT's newer format for tables (written e.g. by uproot); RNTuples cannot be joined, and ROOT chains them only when they have the same path in every file.</p>` },
   { id: "plots", g: "layout", t: "Plots, pads and axes", body: `<div class="code"><pre data-snip="plots"></pre></div>
 <p>Axis ranges belong to the pad (<code>plot[1]['X'].SetRange</code>), visible data ranges to the data (<code>SetRangeX</code>). Ranges stored with input histograms are ignored, except for the data that defines the frame.</p>
@@ -2096,10 +2106,14 @@ plot[2]['X'].SetRange(120, 130).SetHideClippedLabels(false);` },
   ratios: { py: `plot[2].AddRatio(["num", "src"], ["den", "src"], "label").SetCorrelated()   # binomial errors
 plot[2].AddRatio(["num", "src"], ["den"])   # a denominator without data source is taken from the numerator's
 plot[2].AddRatio(["num", "src"], ["den", "src"]).Both().Normalize().Result().SetColor(kRed + 1)
-plot[2].AddRatio(["h2", "src"], ["h2"]).Numer().ProjectY(10, 20, True).Denom().ProjectY(1, 10, True)`, cpp: `plot[2].AddRatio({"num", "src"}, {"den", "src"}, "label").SetCorrelated();   // binomial errors
+plot[2].AddRatio(["h2", "src"], ["h2"]).Numer().ProjectY(10, 20, True).Denom().ProjectY(1, 10, True)
+plot[2].AddRatio(["data", "src"], Function("1250*exp(-x)"))   # by a formula; or ["1250*exp(-x)", kUserFunctions]
+plot[2].AddRatio(["model", "src"], ["data", "src"])   # model / data: a function as numerator takes the errors of the data`, cpp: `plot[2].AddRatio({"num", "src"}, {"den", "src"}, "label").SetCorrelated();   // binomial errors
 plot[2].AddRatio({"num", "src"}, {"den"});   // a denominator without data source is taken from the numerator's
 plot[2].AddRatio({"num", "src"}, {"den", "src"}).Both().Normalize().Result().SetColor(kRed + 1);
-plot[2].AddRatio({"h2", "src"}, {"h2"}).Numer().ProjectY(10, 20, true).Denom().ProjectY(1, 10, true);` },
+plot[2].AddRatio({"h2", "src"}, {"h2"}).Numer().ProjectY(10, 20, true).Denom().ProjectY(1, 10, true);
+plot[2].AddRatio({"data", "src"}, Function("1250*exp(-x)"));   // by a formula; or {"1250*exp(-x)", kUserFunctions}
+plot[2].AddRatio({"model", "src"}, {"data", "src"});   // model / data: a function as numerator takes the errors of the data` },
   trees: { py: `plot[1].AddData("tracks", "src").Project1D(("pt", 100, [0.0, 10.0])).Filter("abs(eta) < 0.8")
 plot[1].AddData("tracks", "src").Project2D(("pt", 50), ("eta", 50))
 plot[1].AddData("tracks", "src").Profile1D(("eta", 70), "pt")          # <pt> vs eta

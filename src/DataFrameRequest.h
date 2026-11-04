@@ -341,12 +341,16 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
           const bool isCollection = columnType.find("RVec") != std::string::npos || columnType.find("vector") != std::string::npos;
           const std::string finiteName = colName + "_FINITE";
           const std::string nonFiniteName = colName + "_NONFINITE";
-          // the explicit return is needed, since ROOT takes code containing a return (here the one of the lambda) as a function body
-          auto finiteNode = (isCollection) ? node.Define(finiteName, fmt::format("return ROOT::VecOps::Filter({}, [](double x) {{ return std::isfinite(x); }});", colName))
+          // the explicit return is needed, since ROOT takes code containing a return (here the one of the lambda) as a function body;
+          // a std::vector (only from a Define: branches are read as RVecs) is copied into an RVecD, since Filter and Map take RVecs only;
+          // the lambda parameter has a name no column has (RDataFrame replaces column names in jitted code, also a parameter x by a column x)
+          const bool isStdVector = columnType.find("RVec") == std::string::npos && columnType.find("vector") != std::string::npos;
+          const std::string asRVec = (isStdVector) ? fmt::format("ROOT::RVecD({0}.begin(), {0}.end())", colName) : colName;
+          auto finiteNode = (isCollection) ? node.Define(finiteName, fmt::format("return ROOT::VecOps::Filter({}, [](double SRP_value) {{ return std::isfinite(SRP_value); }});", asRVec))
                                            : node.Define(finiteName, colName).Filter(fmt::format("std::isfinite({})", finiteName));
           auto min = finiteNode.Min(finiteName);
           auto max = finiteNode.Max(finiteName);
-          auto nNonFinite = node.Define(nonFiniteName, (isCollection) ? fmt::format("return static_cast<ULong64_t>(ROOT::VecOps::Sum(!ROOT::VecOps::Map({}, [](double x) {{ return std::isfinite(x); }})));", colName)
+          auto nNonFinite = node.Define(nonFiniteName, (isCollection) ? fmt::format("return static_cast<ULong64_t>(ROOT::VecOps::Sum(!ROOT::VecOps::Map({}, [](double SRP_value) {{ return std::isfinite(SRP_value); }})));", asRVec)
                                                                       : fmt::format("static_cast<ULong64_t>(!std::isfinite({}))", colName))
                               .Sum<ULong64_t>(nonFiniteName);
           mAutoRanges[axisID - 1] = [min, max, nNonFinite]() mutable { return auto_range_t{*min, *max, *nNonFinite}; };
@@ -360,7 +364,8 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     }
     ++axisID;
   }
-  if (!mIsProfile && !mIsScatter) {
+  // a THn (more than 3 dimensions) has no axis for the counts: ROOT reports a title for it as an error
+  if (!mIsProfile && !mIsScatter && mDims.size() <= 3) {
     mHistTitle += (dataInfo.weight) ? ";weighted counts" : ";counts";
   }
   if (dataInfo.weight && !mIsScatter) {

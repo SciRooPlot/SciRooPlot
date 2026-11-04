@@ -664,6 +664,9 @@ void exportRatio(py::module_& m)
   defDataSetters(ratio);
   // only here, after Ratio is registered
   py::class_<Data>(m.attr("Data")).def("AsRatio", &Data::AsRatio, ref_int);
+  // functions given in the plot definition as data, e.g. in a ratio
+  m.attr("kUserFunctions") = kUserFunctions;
+  m.def("Function", &Function, arg("formula"), arg("label") = nullopt, "A function given by its formula as data, e.g. as numerator or denominator of a ratio.");
 }
 
 void exportAxis(py::module_& m)
@@ -884,7 +887,10 @@ void exportPythonDataInterfaces(py::module_& m)
 
   // bins as for numpy.histogram: a number of bins or the bin edges
   auto binning = [values](py::handle bins, const string& what) -> std::variant<int32_t, vector<double>> {
-    if (py::isinstance<py::sequence>(bins) && !py::isinstance<py::str>(bins)) {
+    // as numpy: a 0-d array (np.array(4)) is a number of bins; True is no number of bins (pybind11 would take it as 1)
+    if (py::isinstance<py::bool_>(bins)) throw py::type_error("The " + what + " must be a number of bins or a sequence of bin edges.");
+    const bool isScalarArray = py::hasattr(bins, "ndim") && bins.attr("ndim").cast<int>() == 0;
+    if (py::isinstance<py::sequence>(bins) && !py::isinstance<py::str>(bins) && !isScalarArray) {
       const Values v = values(bins, what);
       vector<double> edges(v.data(), v.data() + v.size());
       if (edges.size() < 2 || std::adjacent_find(edges.begin(), edges.end(), std::greater_equal<>()) != edges.end() ||
@@ -913,9 +919,7 @@ void exportPythonDataInterfaces(py::module_& m)
       }
       return *range;
     }
-    if (v.size() == 0) {
-      throw py::value_error("No " + what + " values to take the range from: give a range or bin edges.");
-    }
+    if (v.size() == 0) return pair<double, double>{0., 1.};  // as numpy: empty values give empty bins on [0, 1]
     // as numpy: no range from NaN or infinite values
     const bool allFinite = std::all_of(v.data(), v.data() + v.size(), [](double value) { return std::isfinite(value); });
     if (!allFinite) throw py::value_error("The " + what + " values contain NaN or infinite values: give a range or bin edges.");
@@ -1002,7 +1006,12 @@ void exportPythonDataInterfaces(py::module_& m)
     }
     optional<pair<double, double>> rangeX, rangeY;
     if (!range.is_none()) {
-      std::tie(rangeX, rangeY) = range.cast<pair<pair<double, double>, pair<double, double>>>();
+      // as numpy: ((xmin, xmax), (ymin, ymax)), where an axis may be None (its range from the values)
+      try {
+        std::tie(rangeX, rangeY) = range.cast<pair<optional<pair<double, double>>, optional<pair<double, double>>>>();
+      } catch (const py::cast_error&) {
+        throw py::value_error("The range must be ((xmin, xmax), (ymin, ymax)), an axis may be None.");
+      }
     }
     const auto specX = binning(binsX, "x bins");
     const auto specY = binning(binsY, "y bins");

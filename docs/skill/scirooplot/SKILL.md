@@ -47,7 +47,7 @@ Modes: `show` (interactive, the default unless `srp plotmode` sets another; `s`/
 
 ## Program skeleton
 
-C++ (`using namespace SciRooPlot; using Data = Plot::Pad::Data; using LegendEntry = Plot::Pad::LegendEntry; using StatsBox = Plot::Pad::StatsBox;`):
+C++ (`using namespace SciRooPlot; using std::vector; using std::string; using Data = Plot::Pad::Data; using LegendEntry = Plot::Pad::LegendEntry; using StatsBox = Plot::Pad::StatsBox;`):
 ```cpp
 #include "SciRooPlot/PlotManager.h"
 using namespace SciRooPlot;
@@ -72,7 +72,7 @@ int main() {
 }
 ```
 Python is the same API: `from SciRooPlot import *`, `PlotManager("myProject")`, `plot[1]['X']`, `pm.AddPlot(plot)`, `pm.SaveProject()` (see "C++ vs Python").
-Scripts can make plots without the `plot` app: `pm.GeneratePlots("pdf", "name", "group")` (a mode of `plot` other than `list`, then name and group patterns as for `plot`) on the plots added so far, `pm.LoadPlots(name, group)` to read saved definitions back first, `pm.ListPlots()`.
+Scripts can make plots without the `plot` app: `pm.GeneratePlots("pdf", "name", "group")` (a mode of `plot` other than `list`, then the name and the group pattern: the reverse order of `plot <group> <name>`) on the plots added so far, `pm.LoadPlots(name, group)` to read saved definitions back first, `pm.ListPlots()`.
 
 ## Data sources
 
@@ -147,7 +147,7 @@ plot[1].AddData(myTemplate("hist"), "label");               // Data template: Da
 ```
 Labels may contain `<name> <title> <entries> <integral> <maximum> <minimum> <mean> <stddev>` with printf formats: `"avg = <mean[.2f]>"` (graphs: `<entries>` points, `<maximum>`/`<minimum>` of y; `<integral>`, `<mean>`, `<stddev>`, `<maximum>`, `<minimum>` cover the drawn range, `<entries>` is the stored total), and from the definition `<source>`, `<projection>` (`x`, `y:x`, `prof. y:x`, weight in parentheses) and `<selection>` (filters joined with `&&`, entries range, projection ranges); histogram projections name the axes by the axis titles of the input (`x`, `y`, `z` where a title is empty), tree requests by the variables; an empty placeholder takes one separating space with it, so `"<name> <projection> <selection>"` never ends in a space. `"<name> <selection>"` tells apart requests differing only in the filter. Texts name their data by number: `AddText("#sigma = <stddev[.1f]:2> mm")` (data 2 of the pad), `<stddev[.1f]:1@4>` (data 1 of pad 4). ROOT TLatex syntax works in all texts (`#it{p}_{T}`, `#sqrt{s}`).
 
-Without `SetDrawOption` the same rule holds for histograms and graphs: a fill set → `hist` (graph: `area`); a marker style or size set on the data, or non-zero errors → `points`; otherwise `hist` (graph: `line`); 2D histograms, graphs and functions → `colz` (one colour axis covering all 2D data of the pad). The legend row follows what is drawn.
+Without `SetDrawOption` the same rule holds for histograms and graphs: a fill set → `hist` (graph: `area`); a marker style or size set on the data, non-zero errors or a graph of a single point → `points`; otherwise `hist` (graph: `line`); 2D histograms, graphs and functions → `colz` (one colour axis covering all 2D data of the pad). The legend row follows what is drawn.
 Drawing option aliases (one appearance for every type; histograms and graphs are interchangeable, the data is converted when ROOT lacks the option):
 
 | 1D alias | look | 2D alias | look |
@@ -171,7 +171,7 @@ Polar: the `_polar` aliases take x as the angle (one full turn) and y as the rad
 
 ## Modifiers (applied in this order, before drawing)
 
-`ScaleX/Y/Z(f)` → `RebinX/Y/Z(n)`, `RebinXY`, `RebinXYZ` → `DivideBinWidth()` → `Smooth(n)` → `Normalize([isDensity], [min, max])` (to integral) → `Cumulative([forward])` → `NormalizeToMaximum([min, max])`, `Scale(f)` → then the range cuts `SetRangeX/Y`.
+`ScaleX/Y/Z(f)` (on the value axis, i.e. `ScaleY` of 1D data and `ScaleZ` of 2D data, they act as `Scale(f)` at the end) → `RebinX/Y/Z(n)`, `RebinXY`, `RebinXYZ` → `DivideBinWidth()` → `Smooth(n)` → `Normalize([isDensity], [min, max])` (to integral) → `Cumulative([forward])` → `NormalizeToMaximum([min, max])`, `Scale(f)` → then the range cuts `SetRangeX/Y`.
 With `min, max` the integral or maximum is taken only in that x range (the bins reaching into it; graphs: the points within it), e.g. `Normalize(false, 0.6, 0.9)` to compare shapes in a peak region while showing everything.
 `Density()` = `DivideBinWidth().Normalize()`: a probability density from counts. `Normalize(true)` is only for data that already is a density (e.g. dN/dpT); `Density()` on such data would divide by the bin widths twice.
 So `Normalize().Cumulative()` is a CDF and `Cumulative().NormalizeToMaximum()` ends at 1.0
@@ -185,6 +185,8 @@ plot[2].AddRatio({"num", "src"}, {"den", "src"}, "label").SetCorrelated();   // 
 plot[2].AddRatio(templ("num"), Data("den", "src"));                           // from Data objects (ratio keeps the numerator's look)
 plot[2].AddRatio({"num", "src"}, {"den"});                                   // denominator without data source: the numerator's
 plot[2].AddRatio(...).Both().Normalize().Result().SetColor(kRed);            // modifier scope: Numer() / Denom() / Both() / Result() (default)
+plot[2].AddRatio({"data", "src"}, Function("1250*exp(-x)"));                // by a formula of the plot definition (= {"1250*exp(-x)", kUserFunctions})
+plot[2].AddRatio({"model", "src"}, {"data", "src"});                         // model / data: a function numerator is evaluated at the data points, errors from the data
 ```
 Incompatible binnings are divided via spline interpolation; a profile is divided as the histogram of its means (after its `Numer()`/`Denom()` modifiers). Modifiers in `Result()` mode (the default) act on the ratio itself; Rebin, Cumulative, DivideBinWidth and Normalize there warn. Data selections (projections, profiles, `Scatter`, `Define`, `Filter`, `Entries`) always act on the inputs: in `Result()` mode they are taken as `Numer()` with a warning — write `Numer()`, `Denom()` or `Both()` explicitly.
 
@@ -274,6 +276,8 @@ Identical names and chains. Differences:
 - Line widths are whole pixels: ROOT stores them as integers, so a fractional width (`SetLine(s, 3.5, c)`, `SetLineWidth(2.5)`, `SetBorder(s, 1.5, c)`, `SetDefaultLineWidth`, `PanelLayout::SetLineWidth`) is rounded to the nearest integer, with a warning. Write whole numbers (`3.`); marker sizes, text sizes and alpha may be fractional. Exclusion contours: a graph drawn `line`/`curve` with width 100 × zone + width (`SetLine(kSolid, 1503., kBlack).SetFill(3354, kBlack)`) hatches a zone of width 15 on one side in its fill, as in ROOT (negative width: the other side).
 - Rebin/Scale/Normalize on a ratio act on the result — use `.Both().Normalize()` etc. to act on the inputs.
 - In C++ `AddData({"h", "src"}, "label")` is ambiguous (the brace list also converts to a `std::string`): write `AddData("h", "src", "label")` or `AddData(Data("h", "src"), "label")`. Without a label, `AddData({"h", "src"})` is fine.
+- Input paths must be absolute (or start with an environment variable such as `${HOME}`): a relative path is skipped with a warning.
+- `from SciRooPlot import *` also brings the drawing option aliases (`line`, `text`, `box`, `col`, …) and the helpers `graph`, `histo`, `table`: a user variable of the same name hides them.
 - In bash, quote patterns containing `(`, `)` or `|`.
 - Verify by generating: `plot <group> <name> png` and look at the file, or `plot ... list`. Warnings in the output name the plot and data.
 

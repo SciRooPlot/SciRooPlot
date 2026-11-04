@@ -36,7 +36,7 @@ For convenience, you can add the source command to your shell startup file (for 
 ### Homebrew
 ```bash
 brew tap SciRooPlot/scirooplot
-brew install SciRooPlot
+brew install scirooplot
 source "$(brew --prefix scirooplot)/share/scirooplot/env.sh"
 ```
 

@@ -40,7 +40,7 @@ jobs:
         run: |
           ./.github/scripts/install-linux.sh
           # for recording the terminal demo of the start page (docs/site/record-demo.sh); DejaVu Sans is also the font of the slides
-          sudo apt-get install -y openbox xterm xdotool x11-xserver-utils ffmpeg gifsicle fonts-dejavu-core
+          sudo apt-get install -y openbox xterm xdotool nano imagemagick bc ffmpeg fonts-dejavu-core
 
       - name: Install ROOT
         uses: mamba-org/setup-micromamba@v3

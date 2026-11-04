@@ -1743,5 +1743,15 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
   void MergeLegendEntries(uint16_t nData);
 };
 
+// the data source of the functions given in the plot definition (AddFunction, SetRefFunc) and of the graphs given by their points
+// (AddPoints): with it a formula is addressed like stored data, e.g. in a ratio: AddRatio({"h", "src"}, {"2*exp(-x)", kUserFunctions})
+inline const std::string kUserFunctions{"USER_FUNCTIONS"};
+inline const std::string kUserGraphs{"USER_GRAPHS"};
+// a function given by its formula (or C++ lambda as text) as data, e.g. as numerator or denominator of a ratio: AddRatio(Function("2*exp(-x)"), {"h", "src"})
+inline Plot::Pad::Data Function(const std::string& formula, const std::optional<std::string>& label = {})
+{
+  return Plot::Pad::Data(formula, kUserFunctions, label);
+}
+
 }  // end namespace SciRooPlot
 #endif  // INCLUDE_SCIROOPLOT_PLOT_H_

@@ -58,6 +58,12 @@ namespace SciRooPlot
 {
 
 // supported input data types
+// data defined in the plots (functions, also reference functions, and graphs given by their points): nothing to read from inputs
+inline bool is_user_defined(const std::string& dataSource)
+{
+  return dataSource == kUserFunctions || dataSource == kUserGraphs;
+}
+
 using data_ptr_t = std::variant<TH1*, TH2*, TH3*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF3*, TF2*, TF1*>;
 
 // ROOT drawing options behind the aliases, per data type (an alias missing here cannot be drawn for that type)

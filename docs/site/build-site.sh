@@ -29,10 +29,10 @@ grep -o "plot [A-Za-z0-9_/]* '\.+' gif+[0-9]*\(++[0-9]*\)\?" "${REPO}/templates/
 done
 cp -r ex/output "${OUT}/img/ex"
 
-# the terminal demos of the start page, recorded on a virtual screen (needs Xvfb, openbox, xterm, xdotool, ffmpeg and gifsicle)
-bash "${SITE}/record-demo.sh" "$(cd "${SCIROOPLOT_DATA_DIR}/../.." && pwd)" "${SCIROOPLOT_CONFIG_PATH}" "${WORK}/ex" "${WORK}/demo"
+# the terminal demos of the start page, recorded on a virtual screen (needs Xvfb, openbox, xterm, xdotool, nano, imagemagick, ffmpeg, bc)
+bash "${SITE}/record-demo.sh" "$(cd "${SCIROOPLOT_DATA_DIR}/../.." && pwd)" "${SCIROOPLOT_CONFIG_PATH}" "${WORK}/demo"
 mkdir -p "${OUT}/img/demo"
-cp demo/demo-*.gif demo/demos.json "${OUT}/img/demo/"
+cp demo/demo-*.mp4 demo/demo-1.png demo/demos.json "${OUT}/img/demo/"
 
 # the plots of the tour and the drawing option gallery
 srp add site "${SITE}/DefineSitePlots.py" "${WORK}/site-out"

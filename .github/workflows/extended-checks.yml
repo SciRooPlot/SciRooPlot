@@ -212,7 +212,8 @@ jobs:
             required=$(sed -n "s/^set(REQUIRED_${dependency}_VERSION \(.*\))$/\1/p" CMakeLists.txt)
             grep -iE "^-- ${dependency} +version: ${required//./\\.}(\.0)*$" configure.log
           done
-          ! grep 'fetching it now' configure.log
+          # no dependency fetched (CMake prints "<name> not found or too old -- fetching ..." or "... -- using ..., fetched before")
+          ! grep -E 'not found or too old' configure.log
 
       - name: Build
         shell: bash -el {0}

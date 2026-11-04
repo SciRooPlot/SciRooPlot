@@ -120,7 +120,7 @@ def DefinePlots(pm: PlotManager):
     plot[1].AddFunction(model, "exponential fit").SetLine(kSolid, 2.0, kRed + 1)
     plot[1].AddLegend()
     plot[1]['Y'].SetTitle("counts").SetLog().SetRoomAboveMax(0.1)
-    plot[2].AddRatio(["measurement", "ml"], [model, "USER_FUNCTIONS"]).SetColor(kBlack)  # residuals: data / fit
+    plot[2].AddRatio(["measurement", "ml"], Function(model)).SetColor(kBlack)  # residuals: data / fit
     plot[2]['Y'].SetTitle("data / fit").SetRange(0.85, 1.15)
     plot[0]['X'].SetTitle("time (s)").SetRange(0.0, 10.0)
     pm.AddPlot(plot)

@@ -537,8 +537,18 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
 void PlotManager::ForgetBufferedData(const string& dataSource)
 {
   auto isPart = [&](const string& source) { return source == dataSource || source.rfind(dataSource + ":", 0) == 0; };
+  // tree requests of other data sources joining a tree of this one: the join is in the name suffix as {...@join=tree|source|keys|alias}
+  auto joinsIt = [&](const string& name) {
+    return name.find("join=") != string::npos && (name.find("|" + dataSource + "|") != string::npos || name.find("|" + dataSource + ":") != string::npos);
+  };
   for (auto it = mDataBuffer.begin(); it != mDataBuffer.end();) {
-    it = (isPart(it->first)) ? mDataBuffer.erase(it) : std::next(it);
+    if (isPart(it->first)) {
+      it = mDataBuffer.erase(it);
+      continue;
+    }
+    for (auto data = it->second.begin(); data != it->second.end();)
+      data = joinsIt(data->first) ? it->second.erase(data) : std::next(data);
+    ++it;
   }
   for (auto it = mDataInfoBuffer.begin(); it != mDataInfoBuffer.end();) {
     it = (isPart(it->first)) ? mDataInfoBuffer.erase(it) : std::next(it);
