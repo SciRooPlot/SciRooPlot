@@ -823,7 +823,7 @@ void PlotManager::AddPlot(Plot plot)
 BasePlotShape& BasePlotShape::SetAspectRatio(double_t ratio)
 {
   if (!std::isfinite(ratio) || ratio <= 0.) {
-    logger::error("BasePlotShape::SetAspectRatio({}) needs a positive finite value, keeping {}.", ratio, mAspectRatio);
+    logger::warning("BasePlotShape::SetAspectRatio({}) needs a positive finite value, ignoring it.", ratio);
     return *this;
   }
   mAspectRatio = ratio;
@@ -833,7 +833,7 @@ BasePlotShape& BasePlotShape::SetAspectRatio(double_t ratio)
 BasePlotShape& BasePlotShape::SetRatioHeight(double_t height)
 {
   if (!std::isfinite(height) || height <= 0.) {
-    logger::error("BasePlotShape::SetRatioHeight({}) needs a positive finite value, keeping {}.", height, mRatioHeight);
+    logger::warning("BasePlotShape::SetRatioHeight({}) needs a positive finite value, ignoring it.", height);
     return *this;
   }
   mRatioHeight = height;
@@ -843,7 +843,7 @@ BasePlotShape& BasePlotShape::SetRatioHeight(double_t height)
 BasePlotShape& BasePlotShape::SetPullHeight(double_t height)
 {
   if (!std::isfinite(height) || height <= 0.) {
-    logger::error("BasePlotShape::SetPullHeight({}) needs a positive finite value, keeping {}.", height, mPullHeight);
+    logger::warning("BasePlotShape::SetPullHeight({}) needs a positive finite value, ignoring it.", height);
     return *this;
   }
   mPullHeight = height;
@@ -3535,7 +3535,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           const bool hasEntryRange = info->entries.max.has_value();
           if (request.Prepare((hasEntryRange) ? base : matched, (hasEntryRange) ? joinKeyColumns : vector<string>{})) requests.push_back(std::move(request));
         } catch (const std::exception& e) {
-          if (type == "table" && dynamic_cast<const std::invalid_argument*>(&e)) throw;  // the csv reader: a value not matching its column type
+          if (type == "table" && dynamic_cast<const std::invalid_argument*>(&e)) throw;  // the csv reader or an expression: handled below
           logger::error("Invalid query for {} {} ({}): {}.", type, DataLocation(dataSource, name), info->GetDescription(), getErrorReason(e, rootOutput.Text().substr(outputStart)));
         }
       }
@@ -3571,8 +3571,15 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       }
     } catch (const std::exception& e) {
       if (type == "table" && dynamic_cast<const std::invalid_argument*>(&e)) {
-        // thrown by the csv reader if a value does not match the column type deduced from the first lines
-        logger::error("Cannot read {} {}: it contains a value that does not match the type of its column.", type, DataLocation(dataSource, name));
+        // thrown by the csv reader if a value does not match the column type deduced from the first lines, but just as well by an
+        // expression of a request (e.g. std::stod): only one by one the requests that are fine are kept
+        if (infos.size() > 1) {
+          for (auto info : infos) {
+            processGroup({info}, sequential);
+          }
+        } else {
+          logger::error("Cannot read {} {} ({}): it contains a value that does not match the type of its column, or an expression failed ({}).", type, DataLocation(dataSource, name), infos[0]->GetDescription(), e.what());
+        }
       } else if (requests.size() > 1) {
         // an invalid expression only shows up when the event loop starts and then spoils all requests of this data frame: process them one by one
         for (auto& request : requests) {

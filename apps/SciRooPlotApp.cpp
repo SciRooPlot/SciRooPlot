@@ -353,7 +353,8 @@ int main(int argc, char* argv[])
     row("compiler", SCIROOPLOT_CXX_COMPILER);
   } else if (command == "confdir") {
     // also the folder of a project saved by its program but not yet added (env.sh reads plots.info there)
-    if (!project.empty() && !Config::Get().Exists(project) && !std::filesystem::is_directory(Config::Get().ProjectPath(project))) {
+    const bool unknown = find_illegal_name_char(project) || (!Config::Get().Exists(project) && !std::filesystem::is_directory(Config::Get().ProjectPath(project)));
+    if (!project.empty() && unknown) {
       logger::error("Cannot find project {}.", project);
       return 1;
     }

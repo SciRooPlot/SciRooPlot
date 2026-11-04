@@ -72,7 +72,7 @@ int main() {
 }
 ```
 Python is the same API: `from SciRooPlot import *`, `PlotManager("myProject")`, `plot[1]['X']`, `pm.AddPlot(plot)`, `pm.SaveProject()` (see "C++ vs Python").
-Scripts can make plots without the `plot` app: `pm.GeneratePlots("pdf", "name", "group")` (mode, then name and group patterns as for `plot`) on the plots added so far, `pm.LoadPlots(name, group)` to read saved definitions back first, `pm.ListPlots()`.
+Scripts can make plots without the `plot` app: `pm.GeneratePlots("pdf", "name", "group")` (a mode of `plot` other than `list`, then name and group patterns as for `plot`) on the plots added so far, `pm.LoadPlots(name, group)` to read saved definitions back first, `pm.ListPlots()`.
 
 ## Data sources
 
@@ -191,7 +191,7 @@ Incompatible binnings are divided via spline interpolation; a profile is divided
 ## Trees and tables (TTree, RNTuple, CSV)
 
 ```cpp
-.Project1D("pt")                                  // 100 automatic bins; {"pt", 200}, {"pt", 200, {0.1, 20.0}}, {"pt", {edges...}}
+.Project1D("pt")                                  // 100 automatic bins (integer columns: bins of whole-number width); {"pt", 200}, {"pt", 200, {0.1, 20.0}}, {"pt", {edges...}}
 .Project2D({"pt", 50}, {"eta", 50})  .Project({dims...}[, "weight"])   // up to 3D
 .Profile1D({"eta", 70}, "pt")  .Profile2D(x, y, "pt")                   // <pt> vs eta
 .Scatter("x", "y"[, "ex", "ey"])  .Scatter(x, y, exl, exh, eyl, eyh)    // graph from columns
@@ -201,7 +201,7 @@ Incompatible binnings are divided via spline interpolation; a profile is divided
 .Join("truth/events", {}, "truth")               // tree in another folder, with alias
 .Join({"events", "otherSource"}, {"run", "event"})   // from another data source, matched by up to two integer keys
 ```
-Column expressions and filters are C++ expressions over the column/leaf names (evaluated with RDataFrame when the plot is generated). Without explicit bins, 100 bins over the observed range are used. RNTuples (ROOT's newer table format, e.g. written by uproot's `f["t"] = df`) work like trees, but cannot be joined and are chained only when they have the same path in every file.
+Column expressions and filters are C++ expressions over the column/leaf names (evaluated with RDataFrame when the plot is generated). Without explicit bins, 100 bins over the observed range are used (integer columns: bins of whole-number width). RNTuples (ROOT's newer table format, e.g. written by uproot's `f["t"] = df`) work like trees, but cannot be joined and are chained only when they have the same path in every file.
 
 ## Legends and texts
 
@@ -247,7 +247,7 @@ Cells: `Panel(w, h)` scales a panel; `Gap()` between panels makes them independe
 
 **Keep inputs out of the code.** Machine-specific paths go into project variables (`srp set <project> inputDir /path`, `pm.GetProjectProperty("inputDir")`) or environment variables in the data source strings (`${HOME}/...`); the data source names stay stable across machines. In-memory objects (a graph computed in the program) are registered with `pm.AddDataSource("glauber", &graph)` and used like file data.
 
-**Let the plot show numbers.** Label placeholders (`"<mean[.2f]>"`, `"<entries>"`, `"<integral[.2e]>"`) and `points_text` save hand-copied values; `AddColorOverview("colors", "overview")` renders SciRooPlot's default colour sequence with names and indices (`AddColorOverview("colors", "overview", "1d_mine", padID = 1)`: the colours that pad of a base plot gives its data) (`plot overview colors`), `srp colorwheel` shows all of ROOT's named colours.
+**Let the plot show numbers.** Label placeholders (`"<mean[.2f]>"`, `"<entries>"`, `"<integral[.2e]>"`) and `points_text` save hand-copied values; `AddColorOverview("colors", "overview")` renders SciRooPlot's default colour sequence with names and indices (`AddColorOverview("colors", "overview", "1d_mine", 1)`: the colours that pad of a base plot gives its data) (`plot overview colors`), `srp colorwheel` shows all of ROOT's named colours.
 
 ## C++ vs Python
 
@@ -259,7 +259,7 @@ Identical names and chains. Differences:
 - No `SRC_DIR` macro: use `Path(__file__).resolve().parent`. The program is plain Python; `plot` runs it with the interpreter from the environment script.
 - Python projects are created with `srp init-py` / `srp example-py` and otherwise behave identically.
 - numpy/pandas data in memory (Python only): `histo(name, values, bins=100, range=None, weights=None)`, `histo2d(name, x, y, bins=None, range=None, weights=None)`, `graph(name, x, y, xerr=None, yerr=None)` and `table(name, data, columns=None)` (dict of arrays, structured array, DataFrame) return ROOT objects for `pm.AddDataSource("src", [...])`; tables work with `Project1D`/`Filter`/`Define`.
-- Text, legend and image boxes are made only with `AddText`/`AddLegend`/`AddImage`; `StatsBox()` and `LegendEntry()` take no arguments in Python (use their setters).
+- Text, legend and image boxes are made only with `AddText`/`AddLegend`/`AddImage`; `StatsBox()` and `LegendEntry()` take no arguments, as in C++ (use their setters).
 
 ## Pitfalls that cost time
 

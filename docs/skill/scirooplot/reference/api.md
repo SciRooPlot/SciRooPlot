@@ -17,7 +17,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `void LoadDataSources(const std::optional<std::string>& file = {}, bool replace = false)`
 - `void AddPlot(Plot plot)`
 - `void AddBasePlot(Plot basePlot)`
-- `Plot MakeBasePlot(const std::string& name = "1d", const PanelLayout& sizes = PanelLayout(), const BasePlotShape& shape = BasePlotShape())`
+- `static Plot MakeBasePlot(const std::string& name = "1d", const PanelLayout& sizes = PanelLayout(), const BasePlotShape& shape = BasePlotShape())`
 - `void AddColorOverview(const std::string& name, const std::string& group, const std::vector<color_t>& colors = {})`
 - `void AddColorOverview(const std::string& name, const std::string& group, const std::string& basePlot, uint8_t padID = 1)`
 - `void SavePlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {})`
@@ -256,29 +256,15 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& Entries(uint32_t nEntries)`
 - `Data& Entries(uint32_t entryMin, uint32_t entryMax)`
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
-- `data_dim_t`: `"var"` (100 automatic bins), `{"var", nBins}`, `{"var", nBins, {min, max}}` or `{"var", {edges...}}` (Python: tuples)
+- `data_dim_t`: `"var"` (100 automatic bins; integer columns: bins of whole-number width), `{"var", nBins}`, `{"var", nBins, {min, max}}` or `{"var", {edges...}}` (Python: tuples)
 - `join_tree_t`: `"tree"` (same data source) or `{"tree", "dataSource"}` (Python: list)
 
 ## Plot::Pad::Ratio
-*has all setters, modifiers and selections of Data (returning the Ratio) plus the following*
+*has all setters, modifiers and selections of Data (returning the Ratio) except Scatter(x, y, z), plus the following*
 
 - `Ratio(const Data& numerator, const Data& denominator)` — inputs from numerator and denominator, appearance from numerator; a denominator without data source takes the numerator's
 - `Ratio(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName, const std::string& denominatorDataSource, const std::optional<std::string>& label = {})`
 - `Ratio& SetCorrelated(bool correlated = true)`
-- `Ratio& SetLegendEntry(const LegendEntry& legendEntry)`
-- `Ratio& SetShowStats(const std::string& format, const std::optional<std::string>& title)`
-- `Ratio& SetStatsBox(const StatsBox& statsBox)`
-- `Ratio& SetColor(color_t color)`
-- `Ratio& SetMarker(int16_t style, float_t size, color_t color, float_t alpha = 1.f)`
-- `Ratio& SetMarkerColor(color_t color)`
-- `Ratio& SetLine(int16_t style, float_t width, color_t color, float_t alpha = 1.f)`
-- `Ratio& SetLineColor(color_t color)`
-- `Ratio& SetFill(int16_t style, color_t color, float_t alpha = 1.f)`
-- `Ratio& SetFillColor(color_t color)`
-- `Ratio& SetContours(const std::vector<double>& contours)`
-- `Ratio& SetNpx(int32_t nx, std::optional<int32_t> ny)`
-- `Ratio& Normalize(bool isDensity, std::optional<double_t> min, std::optional<double_t> max)`
-- `Ratio& NormalizeToMaximum(std::optional<double_t> min, std::optional<double_t> max)`
 - `Ratio& Numer()` — following modifiers act on the numerator, before the division
 - `Ratio& Denom()` — following modifiers act on the denominator, before the division
 - `Ratio& Both()` — following modifiers act on numerator and denominator, before the division
@@ -303,8 +289,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Ratio& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "")`
 - `Ratio& Entries(uint32_t nEntries)`
 - `Ratio& Entries(uint32_t entryMin, uint32_t entryMax)`
-- `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
-- `data_dim_t`: `"var"` (100 automatic bins), `{"var", nBins}`, `{"var", nBins, {min, max}}` or `{"var", {edges...}}` (Python: tuples)
+- `data_dim_t`: `"var"` (100 automatic bins; integer columns: bins of whole-number width), `{"var", nBins}`, `{"var", nBins, {min, max}}` or `{"var", {edges...}}` (Python: tuples)
 - `join_tree_t`: `"tree"` (same data source) or `{"tree", "dataSource"}` (Python: list)
 
 ## Plot::Pad::Box<BoxType>

@@ -21,7 +21,7 @@ CLASSES = [
     ("Plot.h", "class Plot::Pad", "Plot::Pad", "pad[axis] gives the Axis ('X', 'Y', 'Z', and 'C' for the content of a 3d histogram: its colour scale); pad(dataID) the Data (counting from 1); also has the fill setters"),
     ("Plot.h", "class Plot::Pad::Axis", "Plot::Pad::Axis", ""),
     ("Plot.h", "class Plot::Pad::Data", "Plot::Pad::Data", "every setter returns the Data, so calls can be chained; also has the marker, line and fill setters"),
-    ("Plot.h", "class Plot::Pad::Ratio", "Plot::Pad::Ratio", "has all setters, modifiers and selections of Data (returning the Ratio) plus the following"),
+    ("Plot.h", "class Plot::Pad::Ratio", "Plot::Pad::Ratio", "has all setters, modifiers and selections of Data (returning the Ratio) except Scatter(x, y, z), plus the following"),
     ("Plot.h", "class Plot::Pad::Box", "Plot::Pad::Box<BoxType>", "common to TextBox, LegendBox and StatsBox, which also have the border, text and fill setters"),
     ("Plot.h", "class Plot::Pad::TextBox", "Plot::Pad::TextBox", ""),
     ("Plot.h", "class Plot::Pad::ImageBox", "Plot::Pad::ImageBox", "an image file (e.g. a logo); in pdf files only with ROOT 6.42 or newer"),
@@ -48,7 +48,7 @@ METHOD = re.compile(r"^\s*(?:virtual\s+|static\s+|explicit\s+)*(?:(?P<ret>[\w:<>
 SKIP_NAMES = {"Print", "GetPropertyTree", "GetTree", "SetTree", "operator=", "Clone"}
 # argument types that are built from literals in user code
 TYPES = {
-    "data_dim_t": '`"var"` (100 automatic bins), `{"var", nBins}`, `{"var", nBins, {min, max}}` or `{"var", {edges...}}` (Python: tuples)',
+    "data_dim_t": '`"var"` (100 automatic bins; integer columns: bins of whole-number width), `{"var", nBins}`, `{"var", nBins, {min, max}}` or `{"var", {edges...}}` (Python: tuples)',
     "join_tree_t": '`"tree"` (same data source) or `{"tree", "dataSource"}` (Python: list)',
     "color_t": 'a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters',
 }
@@ -92,6 +92,8 @@ def methods(section: str, class_name: str):
         if not stripped or stripped.startswith(("//", "#", "friend", "using", "template", "class", "struct", "enum")):
             continue
         decl = line.split("//", 1)[0]  # a comment may hold parentheses too
+        if re.search(r"\{\s*return\s+\w+<", decl):
+            continue  # Ratio's forwards to the templates taking the arguments of the Data setters: covered by the remark of the class
         decl = re.sub(r"\)\s*(const\s*)?\{.*\}\s*;?\s*$", r") \1;", decl)  # an inline body may hold parentheses too
         match = METHOD.match(decl)
         if not match:
@@ -100,6 +102,8 @@ def methods(section: str, class_name: str):
         if name in SKIP_NAMES or name.startswith("Get") and name not in {"GetAxis", "GetData", "GetLegend", "GetText", "GetImage", "GetProjectProperty", "GetPad"}:
             continue  # plain getters are not part of the user interface
         ret = (match["ret"] or "").strip()
+        if re.match(r"\s*static\s", decl):
+            ret = "static " + ret
         args = re.sub(r"\s+", " ", match["args"].strip())
         short = class_name.split("::")[-1].split("<")[0]
         if "ptree" in args or args in (f"const {short}& other", f"{short}&&") or name.endswith("_t"):

@@ -157,7 +157,10 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | An empty graph was painted with ROOT's "illegal number of points" error; an empty `TGraphPolar` as first data of a pad failed the plot | Not drawn, with a warning; the polar grid then has radius 1 | behaviour | none |
 | `LegendBox::SetNumColumns(n)` with fewer entries than `n` kept the empty columns (a wide box) | They are dropped, as with `SetOrderTopDown()` | behaviour | none |
 | `PanelLayout`: a panel with its own colour scale (`Panel().ColorScale()`) right before a `ColorScale()` cell got no room for its scale | It gets its room; the cell follows it | behaviour | none |
-| An exception thrown by a user expression of a tree request (e.g. `std::stod` in a `Define`) was reported as a value not matching its column type, and all requests of that tree were lost | Reported as an invalid query of that request; the other requests are drawn | behaviour | none |
+| An exception thrown by a user expression of a tree or table request (e.g. `std::stod` in a `Define`) was reported as a value not matching its column type, and all requests of that tree or table were lost | Reported for that request alone; the other requests are drawn | behaviour | none |
+| `TGraphMultiErrors` in a `Ratio` or scaled (`Scale`, `ScaleY`, `Normalize`): only the summed y errors changed, the errors drawn per dimension kept their values | Every dimension is scaled with the values (low and high swapped for a negative denominator) | behaviour | none |
+| NaN or infinite values: a `TGraph2D` point with such a coordinate or error, and a `TGraph` point with such an error, reached ROOT; such bins of profiles were set to a content of 0 with their entries kept | The points are removed and the profile bins emptied, with the warning given for histograms and graphs | behaviour | none |
+| A data source path with `:` in a folder name (`/data/2026-11-04T10:00/file.root`) was split at the first `:` | Split after `.root:` only | behaviour | none |
 
 ### Input validation
 
@@ -185,8 +188,10 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Placeholders: a format containing `>` (`<mean:1[>8.2f]>`) was cut there; an unknown word with a data number (`<meen:1>`) stayed as text silently | Formats may contain `>`; a warning names an invalid placeholder | input validation | none |
 | Alpha values outside 0 to 1, `TextBox::SetTextAlign` with tens or units above 3, `Data::SetContours` with non-increasing levels or a count below 1, `Data::Smooth(0)`, `SetSymbolElements`/`SetDefaultSymbolElements` with letters other than `L`, `P`, `F`, `E` were stored silently | A warning (value kept) | input validation | Fix the values. |
 | `Axis::SetRange`, `Data::SetRangeX`, `Data::SetRangeY` with min ≥ max: a warning, then the range was applied | A warning, the call is ignored | input validation | Fix the range. |
-| `BasePlotShape::SetAspectRatio`, `SetRatioHeight`, `SetPullHeight` with 0, a negative or a non-finite value: `MakeBasePlot` threw | An error, the value is ignored | input validation | Fix the value. |
+| `BasePlotShape::SetAspectRatio`, `SetRatioHeight`, `SetPullHeight` with 0, a negative or a non-finite value: `MakeBasePlot` threw | A warning, the value is ignored | input validation | Fix the value. |
 | `PlotManager(name)` accepted any project name (`"../x"` saved the project outside the configuration path) | Throws `std::invalid_argument` (Python `ValueError`) for the characters `srp add` rejects (anything but letters, digits, `_` and `-`) | input validation | Rename the project. |
+| Axis ranges that are empty or contain no bins of the data (e.g. `Axis::SetMinRange(20)` for data up to 10) showed the whole axis without a message | A warning, the whole axis is shown | input validation | Fix the range. |
+| Boxes in user coordinates (`SetUserCoordinates`) at a position ≤ 0 on a log axis were put at the frame edge without a message | A warning | input validation | Give a positive position. |
 
 ### Files
 
