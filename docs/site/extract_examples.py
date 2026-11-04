@@ -1,5 +1,5 @@
 """Cuts the example programs into one snippet per plot: {"group/name": {"py": code, "cpp": code}}; an animation (a loop of frames
-in a subgroup of animations/) is one snippet under the name of its group, with "gif": the mode that makes it.
+in a group of its own, whose gif command is given in a comment) is one snippet under the name of its group, with "gif": the mode that makes it.
 Usage: extract_examples.py <DefinePlots.py> <DefinePlots.cpp> > examples.json"""
 import json
 import re
@@ -9,9 +9,8 @@ import textwrap
 # Plot(name, group, ...) or the copy Plot(plot, name, group): the first argument is a variable only for a copy, or for a name
 # taken from a loop over a family of plots, Plot(name, group, base plot), which is shown as its first plot
 NAME = re.compile(r'Plot(?:\s+\w+)?\s*\(\s*(?:(\w+)\s*,\s*)?"([^"]+)"\s*,\s*"([^"]+)"')
-# an animation: frames named in a loop, in a subgroup of animations/, with the command making the gif in a comment
-ANIM = re.compile(r'Plot(?:\s+\w+)?\s*\([^;\n]*?,\s*"(animations/[^"]+)"')
-GIF = re.compile(r"plot (animations/\S+) '\.\+' (gif\+\d+(?:\+\+\d*)?)")
+# an animation: frames named in a loop, in a group of their own, with the command making the gif in a comment
+GIF = re.compile(r"plot (\S+) '\.\+' (gif\+\d+(?:\+\+\d*)?)")
 
 
 def snippets(path, lang):
@@ -28,7 +27,7 @@ def snippets(path, lang):
         seg.append(line)
         if "pm.AddPlot(" in s:
             code = "\n".join(seg)
-            anim, m = ANIM.search(code), NAME.search(code)
+            anim, m = GIF.search(code), NAME.search(code)
             loop = m and m.group(1) and re.search(rf'\bfor\b[^\n]*\b{m.group(1)}\b[^\n]*?"([^"]+)"', code[: m.start()])
             key = anim.group(1) if anim else f"{m.group(2)}/{loop.group(1)}" if loop else f"{m.group(3)}/{m.group(2)}" if m else None
             if key:

@@ -11,6 +11,7 @@
    everything interactive, white cards with hairlines; the start page opens with the dark title slide and the logo.
    Plots stay white printouts in both themes. */
 :root {
+  --barh: 64px;  /* height of the top bar, measured by a script (it wraps on narrow screens) */
   --paper: #fbfaf7; --panel: #ffffff; --text: #1f2933; --ink: #16233a; --muted: #6b7686; --hairline: #dce1e7; --grid: #eef0f3;
   --teal: #1c94a5; --teal-ink: #ffffff; --amber: #e0a526; --tint: #eef6f7; --shell: #f3f5f8; --shell-fg: #1f2933;
   --hero: #121921; --hero-fg: #ffffff; --hero-muted: #b8c2d0; --term: #137483; --new: #e3f2f4;
@@ -79,6 +80,7 @@ nav.views a[aria-current="page"] { color: #ffffff; background: #16233a; border-c
 .seg button[aria-pressed="true"] { background: var(--teal); color: var(--teal-ink) }
 .gh { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: 0.8rem; font-weight: 700; color: var(--muted); background: none; border: 1px solid transparent; border-radius: 8px; padding: 4px 8px }
 .gh:hover { color: var(--ink); border-color: var(--hairline) }  /* a quiet link like the sections, not a button: the start page has the big one */
+button.gh { cursor: pointer; font: inherit }
 .hero-links { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 18px 0 0 }
 .hero-links span { color: var(--hero-muted); font-size: 0.875rem }
 .gh-hero { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 700; color: #16233a; background: #ffffff; border-radius: 10px; padding: 9px 16px }
@@ -153,6 +155,12 @@ html, body { overflow-x: clip }
 .demo { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 0.55fr); gap: 28px; align-items: center }
 .demo figure { margin: 0; border-radius: 10px; overflow: hidden; border: 1px solid var(--hairline); background: #16233a }
 .demo figure img { display: block; width: 100%; height: auto }
+.demo figcaption { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #1b2b45; color: #e8edf4; font-size: 0.875rem }
+.demo figcaption b { white-space: nowrap }
+.demo figcaption span { flex: 1; color: #b9c4d3 }
+.demo .dots { display: flex; gap: 6px }
+.demo .dots button { width: 10px; height: 10px; padding: 0; border-radius: 50%; border: 1px solid #e8edf4; background: transparent; cursor: pointer }
+.demo .dots button[aria-current="true"] { background: #e0a526; border-color: #e0a526 }
 .demo .side { display: grid; gap: 12px }
 /* workflow steps: white cards with an amber top edge, arrows between */
 .flow { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch }
@@ -194,7 +202,7 @@ html, body { overflow-x: clip }
 
 /* tour */
 .tour { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 36px; align-items: start }
-.steps { position: sticky; top: 76px; display: grid; gap: 2px; counter-reset: s }
+.steps { position: sticky; top: calc(var(--barh) + 12px); display: grid; gap: 2px; counter-reset: s }
 .steps button { font: inherit; text-align: left; background: none; border: 0; color: var(--muted); padding: 7px 10px 7px 40px; border-radius: 8px; cursor: pointer; position: relative; counter-increment: s; font-size: 0.9rem }
 .steps button::before { content: counter(s); position: absolute; left: 8px; top: 5px; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--hairline); display: grid; place-items: center; font-weight: 700; font-size: 0.8rem }
 .steps button[aria-current="step"] { color: var(--ink); background: var(--panel); font-weight: 700 }
@@ -202,7 +210,7 @@ html, body { overflow-x: clip }
 .steps button.done::before { border-color: var(--amber); color: var(--amber) }
 .step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 0.82fr); gap: 28px; align-items: start }
 .step .text { display: grid; gap: 16px; min-width: 0 }
-.step .side { display: grid; gap: 10px; position: sticky; top: 76px }
+.step .side { display: grid; gap: 10px; position: sticky; top: calc(var(--barh) + 12px) }
 .step .cap { font-size: 0.875rem; color: var(--muted); font-family: var(--mono) }
 .stepnav { display: flex; gap: 10px; flex-wrap: wrap }
 .btn { font: inherit; font-size: 0.9rem; font-weight: 700; border-radius: 8px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--hairline); background: var(--panel); color: var(--ink); text-decoration: none; display: inline-block }
@@ -287,7 +295,7 @@ h3.sub { font-size: 0.95rem; margin: 6px 0 0 }
 .segs a[aria-current="page"] { background: #16233a; color: #fff }
 .databrowser { display: grid; grid-template-columns: minmax(230px, 0.75fr) minmax(0, 2fr); gap: 18px; align-items: start }
 @media (max-width: 860px) { .databrowser { grid-template-columns: minmax(0, 1fr) } }
-.dtree { background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 8px; max-height: 78vh; overflow: auto; position: sticky; top: 76px }
+.dtree { background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 8px; max-height: 78vh; overflow: auto; position: sticky; top: calc(var(--barh) + 12px) }
 .dtree details { margin: 2px 0 }
 .dtree summary { cursor: pointer; padding: 4px 6px; display: flex; gap: 8px; align-items: baseline; font-size: 0.85rem }
 .dtree summary small { color: var(--muted) }
@@ -354,7 +362,7 @@ h3.sub { font-size: 0.95rem; margin: 6px 0 0 }
 .row label { display: inline-flex; gap: 8px; align-items: center }
 .lab input[type="text"] { font-family: var(--mono); font-size: 0.85rem; padding: 6px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--paper); color: var(--text); width: 13em }
 .lab input[type="range"] { accent-color: var(--teal) }
-.preview { position: sticky; top: 76px; display: grid; gap: 12px }
+.preview { position: sticky; top: calc(var(--barh) + 12px); display: grid; gap: 12px }
 .preview .canvas { background: #ffffff; border: 1px solid var(--hairline); border-radius: 8px }
 .facts { font-size: 0.875rem; color: var(--muted); display: grid; gap: 2px; font-variant-numeric: tabular-nums }
 
@@ -386,12 +394,12 @@ dialog::backdrop { background: rgba(8, 14, 26, 0.55) }
 /* reference */
 .ref { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 36px; align-items: start }
 /* the topic list scrolls on its own, so every topic stays reachable wherever the text is */
-.toc { position: sticky; top: 76px; max-height: calc(100vh - 92px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; display: grid; align-content: start; gap: 2px; font-size: 0.875rem; padding-right: 4px }
+.toc { position: sticky; top: calc(var(--barh) + 12px); max-height: calc(100vh - var(--barh) - 28px); max-height: calc(100dvh - var(--barh) - 28px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; display: grid; align-content: start; gap: 2px; font-size: 0.875rem; padding-right: 4px }
 .toc a { text-decoration: none; color: var(--muted); padding: 4px 8px; border-radius: 6px; border-left: 3px solid transparent }
 .toc a:hover { color: var(--ink); background: var(--grid) }
 .toc a[aria-current="location"] { color: var(--ink); background: var(--tint); border-left-color: var(--amber) }
 .toc input { font: inherit; padding: 6px 10px; border: 1px solid var(--hairline); border-radius: 8px; background: var(--panel); color: var(--text); margin-bottom: 8px; width: 100% }
-.refsec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding-bottom: 28px; scroll-margin-top: 80px }
+.refsec { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; padding-bottom: 28px; scroll-margin-top: calc(var(--barh) + 16px) }
 .refsec h2 { font-size: 1.45rem }
 .pipeline { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-family: var(--mono); font-size: 0.78rem }
 .pipeline span { background: var(--panel); border: 1px solid var(--hairline); border-radius: 6px; padding: 4px 8px }
@@ -448,10 +456,10 @@ tr:last-child td { border-bottom: 0 }
 .refsec h3 { font-size: 1.05rem; margin-top: 6px }
 table.cmd td:first-child { white-space: nowrap }
 table.cmd code { white-space: nowrap }
-.apicls { display: grid; gap: 6px; margin-top: 18px; scroll-margin-top: 80px }
+.apicls { display: grid; gap: 6px; margin-top: 18px; scroll-margin-top: calc(var(--barh) + 16px) }
 .apicls h3 small { font-weight: 400; font-family: var(--mono); font-size: 0.75rem }
 .apicls ul { list-style: none; margin: 0; padding: 0; border: 1px solid var(--hairline); border-radius: 10px; background: var(--panel); overflow-x: auto }
-.apicls li { padding: 6px 12px; border-bottom: 1px solid var(--grid); display: grid; gap: 2px; scroll-margin-top: 90px }
+.apicls li { padding: 6px 12px; border-bottom: 1px solid var(--grid); display: grid; gap: 2px; scroll-margin-top: calc(var(--barh) + 26px) }
 .apicls li:last-child { border-bottom: 0 }
 .apicls li code { background: none; padding: 0; font-size: 0.78rem; white-space: pre-wrap; word-break: break-word }
 .apicls li .note { font-size: 0.82rem; color: var(--muted) }
@@ -592,6 +600,8 @@ figure.plot figcaption { color: #5b6b80 }
   .code:has(.copy) pre { padding-top: 34px }
 }
 </style>
+<script>/* the theme chosen with the switch in the top bar, set before the page is drawn (without one: the system setting) */
+try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t } catch (e) {}</script>
 
 <header class="bar">
   <div class="wrap">
@@ -607,6 +617,7 @@ figure.plot figcaption { color: #5b6b80 }
     <div class="switches">
       <div class="seg" role="group" aria-label="Level of detail"><button id="lvl-b" data-level="beginner">Beginner</button><button id="lvl-e" data-level="expert">Expert</button></div>
       <div class="seg" role="group" aria-label="Language"><button id="lang-py" data-lang="py">Python</button><button id="lang-cpp" data-lang="cpp">C++</button></div>
+      <button class="gh" id="themebtn" type="button" title="Switch between light and dark" aria-label="Switch between light and dark"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 1.5v11a5.5 5.5 0 0 1 0-11z"/></svg></button>
       <a class="gh" href="https://github.com/SciRooPlot/SciRooPlot" title="SciRooPlot on GitHub"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path id="gh-mark" fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span>GitHub</span></a>
     </div>
   </div>
@@ -634,11 +645,12 @@ figure.plot figcaption { color: #5b6b80 }
   </div>
 
   <div class="demo">
-    <figure><img src="img/demo.gif" alt="A terminal session: typing plot sp and pressing tab completes the group spectra, two more tabs list its plots, ptSpectrum is completed and its plot opens in a window. Then plot spectra multiplicity.* matches three plots, and the key s browses from one to the next." width="960" height="540" loading="eager"></figure>
+    <figure><img id="demoimg" src="img/demo/demo-1.gif" alt="A terminal session: typing plot sp and pressing tab completes the group spectra, two more tabs list its plots, ptSpectrum is completed and its plot opens in a window." width="960" height="540" loading="eager">
+      <figcaption><b id="demottl">Find a plot</b><span id="democap"></span><span class="dots" id="demodots"></span></figcaption></figure>
     <div class="side">
       <h2 class="title">Plots from the command line</h2>
       <p>Each plot of a project is drawn with one command. <kbd>Tab</kbd> completes groups and plot names in bash and zsh, and the plot opens in a window. Group and name are regular expressions: one command can pick several plots, and <kbd>s</kbd> and <kbd>a</kbd> browse through them.</p>
-      <div class="term-line"><span class="p">$ </span>plot spectra ptSpectrum<br><span class="p">$ </span>plot spectra multiplicity.*<br><span class="p">$ </span>plot spectra .+ pdf</div>
+      <div class="term-line"><span class="p">$ </span>plot spectra ptSpectrum<br><span class="p">$ </span>plot spectra multiplicity.*<br><span class="p">$ </span>plot spectra .+ pdf<br><span class="p">$ </span>srp print file.root</div>
     </div>
   </div>
 
@@ -661,7 +673,7 @@ figure.plot figcaption { color: #5b6b80 }
       <div class="box"><h3>Organize</h3><p>Manage projects and settings with <code>srp</code>.</p></div>
     </div>
     <div class="reads"><h3>Reads what your analysis writes</h3>
-      <div class="chips-static"><span>TH1</span><span>TH2</span><span>TH3</span><span>TProfile</span><span>TProfile2D</span><span>TProfile3D</span><span>THn</span><span>THnSparse</span><span>TH2Poly</span><span>TGraph</span><span>TGraphErrors</span><span>TGraphAsymmErrors</span><span>TGraphBentErrors</span><span>TGraph2D</span><span>TEfficiency</span><span>TF1</span><span>TF2</span><span>TF3</span><span>TTree</span><span>RNTuple</span><span>CSV and text tables</span></div>
+      <div class="chips-static"><span>TH1</span><span>TH2</span><span>TH3</span><span>TProfile</span><span>TProfile2D</span><span>TProfile3D</span><span>THn</span><span>THnSparse</span><span>TH2Poly</span><span>TGraph</span><span>TGraphErrors</span><span>TGraphAsymmErrors</span><span>TGraphBentErrors</span><span>TGraph2D</span><span>TEfficiency</span><span>TF1</span><span>TF2</span><span>TF3</span><span>TTree</span><span>RNTuple</span><span>.csv</span><span>.tsv</span><span>.txt</span><span>.dat</span><span>.tab</span></div>
       <p class="small muted">Wherever they are stored: directories, <code>TList</code>s and folders at any depth, many files at once, or objects your program makes. <a href="#ref-sources">Data sources and finding data</a></p></div>
     <p class="key"><b>Key idea</b>You describe <i>what</i> a figure shows, once. SciRooPlot finds the data by name, in one file or in hundreds, draws it with ROOT, and keeps every plot of your project in one place.</p>
   </div>
@@ -1116,6 +1128,10 @@ figure.plot figcaption { color: #5b6b80 }
 <div id="pop" role="dialog" aria-live="polite" popover="manual" hidden></div>
 
 <script>
+// the top bar wraps on narrow screens: sticky elements below it take its height from --barh
+(() => { const bar = document.querySelector(".bar"); if (!bar) return;
+  const set = () => document.documentElement.style.setProperty("--barh", (getComputedStyle(bar).position === "static" ? 0 : bar.offsetHeight) + "px");
+  set(); if (window.ResizeObserver) new ResizeObserver(set).observe(bar) })();
 const COLORS = /*COLORS*/;
 const PALETTES = /*PALETTES*/; // ROOT's palettes, 17 colours sampled from each: [name, number, colours]
 const EXAMPLES = /*EXAMPLES*/;
@@ -1627,11 +1643,11 @@ const EX_TAGS = [
   ["table", "table (CSV)", /Scatter\(/, "trees"], ["modifiers", "modifiers", /Normalize|Rebin|\.Scale\(|ScaleX|Cumulative|DivideBinWidth|Smooth/, "modifiers"],
   ["projection", "projection", /ProjectX|ProjectY|ProfileX/, "modifiers"], ["uncertainty", "uncertainties", /\bboxes\b|\bband\b|brackets|SetCorrelated/, "appearance"],
   ["function", "functions, lines and shapes", /AddFunction|AddLine|AddArrow|AddVerticalLine|AddHorizontalLine|AddRegion|AddEllipse|SetRefFunc/, "adding"], ["numbers", "numbers in labels", /"[^"]*<(mean|entries|integral|name|title|stddev|maximum|minimum|source|projection|selection)[^"]*"/, "labels"],
-  ["log", "log scale", /SetLog\(/, "plots"], ["text", "texts", /AddText\(/, "legends"], ["loop", "plot families", /\bfor\b/, "templates"]];
+  ["animation", "animations", /'\.\+' gif\+/, "cli"], ["log", "log scale", /SetLog\(/, "plots"], ["text", "texts", /AddText\(/, "legends"], ["loop", "plot families", /\bfor\b/, "templates"]];
 const exTags = k => EX_TAGS.filter(([, , re]) => re.test(EXAMPLES[k].py)).map(x => x[0]);
 let exTagSel = new Set();
 function renderExamples() {
-  const groups = ["all", ...new Set(Object.keys(EXAMPLES).map(k => k.split("/")[0]))];
+  const groups = ["all", ...new Set(Object.keys(EXAMPLES).map(k => k.split("/")[0]).filter(g => g !== "animations"))];  // animations: a filter of Shows
   document.getElementById("exfilters").innerHTML = groups.map(g => `<button class="chip" data-g="${g}" aria-pressed="${g === exGroup}">${g === "all" ? "All" : groupLabel(g)}</button>`).join("");
   document.querySelectorAll("[data-g]").forEach(b => b.onclick = () => { exGroup = b.dataset.g; renderExamples() });
   const keys = Object.keys(EXAMPLES).filter(k => exGroup === "all" || k.startsWith(exGroup + "/"));
@@ -1643,16 +1659,30 @@ function renderExamples() {
   document.querySelectorAll("[data-tag]").forEach(b => b.onclick = () => { const id = b.dataset.tag; if (!id) exTagSel.clear(); else if (exTagSel.has(id)) exTagSel.delete(id); else exTagSel.add(id); renderExamples() });
   document.getElementById("exgrid").innerHTML = shown.length ? shown.map(k => {
     const parts = k.split("/"), name = parts.pop();
-    return `<button class="card" data-ex="${k}"><span class="plot"><img loading="lazy" src="${exImage(k)}" alt="${name}"></span><b>${name}</b><small>${parts.join("/")}${EXAMPLES[k].gif ? " · animation" : ""}</small></button>` }).join("")
+    return `<button class="card" data-ex="${k}"><span class="plot"><img loading="lazy" src="${exImage(k)}" alt="${name}"></span><b>${name}</b><small>${parts[0] === "animations" ? "animation" : parts.join("/") + (EXAMPLES[k].gif ? " · animation" : "")}</small></button>` }).join("")
     : `<p class="muted">No example in this group shows all of these. Clear a feature or pick another group.</p>`;
   document.querySelectorAll("[data-ex]").forEach(b => b.onclick = () => openExample(b.dataset.ex)) }
+(function themeSwitch() { // light or dark against the system setting; the choice is kept for the next visit
+  const root = document.documentElement, btn = document.getElementById("themebtn"); if (!btn) return;
+  const dark = () => root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  btn.onclick = () => { root.dataset.theme = dark() ? "light" : "dark"; store.set("theme", root.dataset.theme) } })();
+(function demoScenes() { // the terminal demos of the start page, one after the other (each gif plays once)
+  const img = document.getElementById("demoimg"), dots = document.getElementById("demodots"); let scenes = [], current = 0, timer = null;
+  const show = i => { current = (i + scenes.length) % scenes.length; const sc = scenes[current];
+    img.src = `img/demo/${sc.file}?play=${Date.now()}`; img.alt = `${sc.title}: ${sc.caption}`;  // a new URL restarts the gif
+    document.getElementById("demottl").textContent = sc.title; document.getElementById("democap").textContent = sc.caption;
+    dots.querySelectorAll("button").forEach((b, k) => b.setAttribute("aria-current", k === current));
+    clearTimeout(timer); timer = setTimeout(() => show(current + 1), (sc.seconds + 1.5) * 1000) };
+  fetch("img/demo/demos.json").then(r => r.json()).then(list => { scenes = list; if (!scenes.length) return;
+    dots.innerHTML = scenes.map((sc, k) => `<button aria-label="${sc.title}" title="${sc.title}"></button>`).join("");
+    dots.querySelectorAll("button").forEach((b, k) => b.onclick = () => show(k)); show(0) }).catch(() => {}) })();
 (function renderShowcase() { // the start page: a few examples from different fields; a click opens the example on its page
-  const picks = ["higgs/limits/brazilPlot", "heavyion/correlations/ridge", "atomic/orbitals", "electronics/link/eyeDiagram",
-    "astronomy/hertzsprungRussell", "neutronStars/merger/gwSpectrogram", "biophysics/ramachandran", "animations/legoRotation"].filter(k => EXAMPLES[k]);
+  const picks = ["higgs/limits/brazilPlot", "heavyion/correlations/ridge", "atomic/orbitals", "animations/eyeClosing",
+    "astronomy/hertzsprungRussell", "neutronStars/merger/gwSpectrogram", "biophysics/ramachandran", "animations/tpcSector"].filter(k => EXAMPLES[k]);
   document.getElementById("showcasecount").textContent = Object.keys(EXAMPLES).length;
   document.getElementById("showcase").innerHTML = picks.map(k => {
     const parts = k.split("/"), name = parts.pop();
-    return `<button class="card" data-exopen="${k}"><span class="plot"><img loading="lazy" src="${exImage(k)}" alt="${name}"></span><b>${name}</b><small>${groupLabel(parts[0])}${EXAMPLES[k].gif ? " · animation" : ""}</small></button>` }).join("");
+    return `<button class="card" data-exopen="${k}"><span class="plot"><img loading="lazy" src="${exImage(k)}" alt="${name}"></span><b>${name}</b><small>${parts[0] === "animations" ? "animation" : groupLabel(parts[0]) + (EXAMPLES[k].gif ? " · animation" : "")}</small></button>` }).join("");
   document.querySelectorAll("#showcase [data-exopen]").forEach(b => b.onclick = () => { location.hash = "examples"; setTimeout(() => openExample(b.dataset.exopen), 60) }) })();
 let exOpen = null;
 function openExample(k) { exOpen = k; const parts = k.split("/"), name = parts.pop(), grp = parts.join("/");

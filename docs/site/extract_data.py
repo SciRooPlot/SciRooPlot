@@ -124,12 +124,16 @@ for name, entries in read_info(f"{CFG}/dataSources.info"):
         file, _, entry = rel.partition(":")
         sources.setdefault(name, []).append((file, entry))
 
+# the groups of the animations: their frames, made into one gif by the command in a comment of the example program
+EXAMPLE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "templates", "example", "DefinePlots.py")
+ANIMATIONS = set(re.findall(r"plot (\S+) '\.\+' gif\+", open(EXAMPLE).read()))
+
 # objects used by the example plots: (data source, name) -> plots
 uses = {}
 for plot_key, plot in read_info(f"{CFG}/plots.info"):
     plot_name = plot_key.replace(":", " in ")
     name, group = plot_key.split(":", 1)
-    plot_ref = group if group.startswith("animations/") else f"{group}/{name}"  # an animation is one example, not one per frame
+    plot_ref = group if group in ANIMATIONS else f"{group}/{name}"  # an animation is one example, not one per frame
 
     def scan(items):
         for key, value in items:

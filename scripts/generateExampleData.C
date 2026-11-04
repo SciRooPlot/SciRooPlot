@@ -3256,6 +3256,155 @@ void WriteElectronics()
 }
 
 // --------------------------------------------------------------------------------------------------
+// detector.root: the status of the cells of a calorimeter, the vertices of photon conversions and the two topologies of a V0 decay
+// --------------------------------------------------------------------------------------------------
+void WriteDetectorMaps()
+{
+  TFile file((kFolder + "detector.root").data(), "RECREATE");
+  TRandom3 random(51);  // an own generator keeps all other example data unchanged
+
+  // calorimeter cells, 96 columns along eta and 208 rows along phi: 1 good, 2 dead (no signal), 3 bad (noisy or off in energy)
+  file.mkdir("calo")->cd();
+  TH2F cells("cellStatus", ";cell column (#eta direction);cell row (#varphi direction)", 96, -0.5, 95.5, 208, -0.5, 207.5);
+  for (int col = 1; col <= 96; ++col) {
+    for (int row = 1; row <= 208; ++row) cells.SetBinContent(col, row, 1.);
+  }
+  auto block = [&](int col, int row, int width, int height, double status) {
+    for (int c = col; c < std::min(col + width, 96); ++c) {
+      for (int r = row; r < std::min(row + height, 208); ++r) cells.SetBinContent(c + 1, r + 1, status);
+    }
+  };
+  for (int i = 0; i < 560; ++i) block(random.Integer(96), random.Integer(208), (random.Uniform() < 0.3) ? 2 : 1, 1, 3.);  // single bad cells and pairs
+  for (int i = 0; i < 16; ++i) block(random.Integer(94), random.Integer(204), 2 + random.Integer(3), 2 + random.Integer(4), 3.);  // groups on one board
+  for (int i = 0; i < 9; ++i) block(4 * random.Integer(24), 8 * random.Integer(26), 4, 8, 2.);  // readout boards without signal (4 x 8 cells)
+  for (int i = 0; i < 30; ++i) block(random.Integer(96), random.Integer(208), 1, 1, 2.);
+  cells.Write();
+
+  // photon conversions: e+e- pairs whose vertex marks the material in the transverse plane, smeared by the vertex resolution
+  file.mkdir("conversions")->cd();
+  TH2F vertices("vertexXY", ";#it{V}_{x} (cm);#it{V}_{y} (cm);conversions", 400, -100., 100., 400, -100., 100.);
+  auto fill = [&](double x, double y, double sigma) {
+    const double vx = x + random.Gaus(0., sigma), vy = y + random.Gaus(0., sigma);
+    if (std::hypot(vx, vy) < 90.) vertices.Fill(vx, vy);  // the acceptance of the conversion finder
+  };
+  auto ring = [&](double radius, double halfThickness, int n, double sigma) {
+    for (int i = 0; i < n; ++i) {
+      const double phi = random.Uniform(TMath::TwoPi()), r = radius + random.Uniform(-halfThickness, halfThickness);
+      fill(r * std::cos(phi), r * std::sin(phi), sigma);
+    }
+  };
+  auto staves = [&](double radius, int nStaves, double width, int n, double sigma) {  // flat ladders around the beam, tilted by 0.2 rad
+    for (int i = 0; i < n; ++i) {
+      const double phi = random.Integer(nStaves) * TMath::TwoPi() / nStaves, along = random.Uniform(-0.5, 0.5) * width;
+      fill(radius * std::cos(phi) - along * std::sin(phi + 0.2), radius * std::sin(phi) + along * std::cos(phi + 0.2), sigma);
+    }
+  };
+  for (int i = 0; i < 1000000; ++i) {  // the gas: a few conversions everywhere
+    const double r = 90. * std::sqrt(random.Uniform()), phi = random.Uniform(TMath::TwoPi());
+    fill(r * std::cos(phi), r * std::sin(phi), 0.);
+  }
+  ring(1.9, 0.05, 300000, 0.3);  // beam pipe
+  for (const auto& [radius, nStaves] : std::vector<std::pair<double, int>>{{2.3, 12}, {3.1, 16}, {3.9, 20}}) staves(radius, nStaves, 1.5, 100000, 0.3);  // inner layers
+  for (const auto& [radius, nStaves] : std::vector<std::pair<double, int>>{{19.6, 24}, {24.5, 30}, {34.4, 42}, {39.3, 48}}) staves(radius, nStaves, 5.5, 200000, 0.6);  // outer layers
+  ring(45.5, 0.3, 150000, 0.8);  // the cylinder holding the outer layers
+  for (int i = 0; i < 60000; ++i) fill(((random.Uniform() < 0.5) ? -1. : 1.) * random.Uniform(47.5, 49.), random.Uniform(-22., 22.), 0.6);  // its support rails
+  ring(61., 0.4, 150000, 1.);  // field cage of the inner tracker
+  ring(78., 1.2, 450000, 1.2);  // inner containment vessel of the TPC
+  for (int rod = 0; rod < 18; ++rod) {  // its field cage rods, one per sector
+    const double phi = (rod + 0.5) * 20. * TMath::DegToRad();
+    for (int i = 0; i < 6000; ++i) fill(82.5 * std::cos(phi), 82.5 * std::sin(phi), 1.2);
+  }
+  ring(85.5, 0.5, 120000, 1.2);  // the inner field cage of the TPC
+  vertices.Write();
+
+  // a V0 decaying 27 cm from the primary vertex; its daughters bend in the magnetic field (radius 70 cm), the positive one clockwise:
+  // a cowboy has them bending towards each other (they cross again), a sailor away from each other
+  file.mkdir("v0")->cd();
+  const double decayX = 24., decayY = 12., flight = std::atan2(decayY, decayX), opening = 25. * TMath::DegToRad(), radius = 70.;
+  auto daughter = [&](const char* name, double charge, double angle) {
+    TGraph track;
+    for (double s = 0.; s <= 90.; s += 1.) {
+      const double phi = angle - charge * s / radius;
+      track.AddPoint(decayX + radius / charge * (std::sin(angle) - std::sin(phi)), decayY + radius / charge * (std::cos(phi) - std::cos(angle)));
+    }
+    track.Write(name);
+  };
+  daughter("cowboy_pos", 1., flight + opening);
+  daughter("cowboy_neg", -1., flight - opening);
+  daughter("sailor_pos", 1., flight - opening);
+  daughter("sailor_neg", -1., flight + opening);
+}
+
+// --------------------------------------------------------------------------------------------------
+// spectra.root (energyScan/): charged-particle spectra at many collision energies, a model and measurements at some of them
+// --------------------------------------------------------------------------------------------------
+void WriteEnergyScan()
+{
+  TFile file((kFolder + "spectra.root").data(), "UPDATE");
+  TRandom3 random(52);
+  file.mkdir("energyScan")->cd();
+  const std::vector<std::pair<std::string, double>> energies = {{"1.5", 1.5}, {"2.76", 2.76}, {"5.02", 5.02}, {"5.36", 5.36}, {"7", 7.}, {"8", 8.},
+                                                                {"9.62", 9.62}, {"13", 13.}, {"13.6", 13.6}, {"14", 14.}, {"20", 20.}, {"27", 27.}};
+  const std::set<std::string> measured = {"2.76", "5.02", "7", "8", "13"};
+  for (const auto& [tag, sqrtS] : energies) {
+    // a Tsallis spectrum, harder and higher at higher energy: dN / (dpT deta) per event
+    TF1 model(("model_" + tag).data(), "[0] * x * pow(1 + (sqrt(x * x + 0.0195) - 0.1396) / ([1] * [2]), -[1])", 0.08, 50.);
+    const double n = 7.6 - 0.55 * std::log(sqrtS);
+    model.SetParameters(1.6 * std::pow(sqrtS, 0.11) * (n - 1.) * (n - 2.) / (n * 0.105 * (n * 0.105 + (n - 2.) * 0.14)), n, 0.105);
+    model.SetNpx(200);
+    model.Write();
+    if (!measured.count(tag)) continue;
+    TGraphErrors data;
+    data.SetName(("data_" + tag).data());
+    for (double pt = 0.17; pt < 10.; pt *= 1.12) {
+      const double relError = 0.02 + 0.006 * pt;  // grows with pT, where the statistics run out
+      const int i = data.GetN();
+      data.SetPoint(i, pt, model.Eval(pt) * (1. + random.Gaus(0., relError)));
+      data.SetPointError(i, 0., model.Eval(pt) * relError);
+    }
+    data.Write();
+  }
+  // the key of the colours: one cell per energy, labelled with it
+  TH2F key("key", ";;#sqrt{#it{s}} (TeV)", 1, 0., 1., energies.size(), 0., energies.size());
+  for (size_t i = 0; i < energies.size(); ++i) {
+    key.SetBinContent(1, i + 1, i + 1.);
+    key.GetYaxis()->SetBinLabel(i + 1, energies[i].first.data());
+  }
+  key.Write();
+}
+
+// --------------------------------------------------------------------------------------------------
+// heavyion.root (strangeness/): yields of identified hadrons relative to pions against the multiplicity, in six collision systems
+// --------------------------------------------------------------------------------------------------
+void WriteStrangeness()
+{
+  TFile file((kFolder + "heavyion.root").data(), "UPDATE");
+  TRandom3 random(53);
+  file.mkdir("strangeness")->cd();
+  // the systems and the range of their mean charged-particle multiplicity per unit of pseudorapidity
+  const std::vector<std::tuple<std::string, double, double, int>> systems = {{"pp7", 3., 21., 10}, {"pp13", 2.5, 26., 10}, {"pPb5", 4.5, 45., 7},
+                                                                             {"pPb8", 5., 60., 7}, {"XeXe", 30., 1150., 9}, {"PbPb", 18., 1900., 10}};
+  // the ratio at high multiplicity and the fraction of it at low multiplicity: strangeness is enhanced with the multiplicity, the
+  // more strange quarks the hadron has the more; the phi (hidden strangeness) and the proton stay nearly flat
+  const std::vector<std::tuple<std::string, double, double>> species = {{"proton", 0.047, 0.95}, {"K0S", 0.067, 0.85}, {"Lambda", 0.026, 0.6},
+                                                                       {"phi", 0.0185, 0.8}, {"Xi", 0.0045, 0.45}, {"Omega", 0.0007, 0.3}};
+  for (const auto& [name, saturation, lowFraction] : species) {
+    for (const auto& [system, low, high, n] : systems) {
+      TGraphErrors ratio;
+      ratio.SetName((name + "_" + system).data());
+      for (int i = 0; i < n; ++i) {
+        const double mult = low * std::pow(high / low, i / (n - 1.));
+        const double value = saturation * (1. - (1. - lowFraction) * std::exp(-mult / 14.));
+        const double relError = 0.04 + ((name == "Omega" || name == "Xi") ? 0.04 : 0.) + ((i == 0) ? 0.03 : 0.);
+        ratio.SetPoint(i, mult, value * (1. + random.Gaus(0., 0.5 * relError)));
+        ratio.SetPointError(i, 0., value * relError);
+      }
+      ratio.Write();
+    }
+  }
+}
+
+// --------------------------------------------------------------------------------------------------
 // logo.png
 // --------------------------------------------------------------------------------------------------
 void WriteLogo()
@@ -3326,5 +3475,8 @@ void generateExampleData()
   WriteClustering();
   WriteMixtureDensity();
   WriteElectronics();
+  WriteDetectorMaps();
+  WriteEnergyScan();
+  WriteStrangeness();
   WriteLogo();
 }
