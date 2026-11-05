@@ -270,7 +270,7 @@ Identical names and chains. Differences:
 
 ## Pitfalls that cost time
 
-- bash: `plot` is an alias that turns off file-name expansion for its patterns; after `||`, `!` or `time` it needs braces (`make || { plot g '.+'; }`, `time { plot g p png; }`), otherwise it runs with the wrong condition or unprotected patterns.
+- bash: `plot` is an alias that turns off file-name expansion for its patterns; after `||`, `!` or `time` it needs braces (`make || { plot g .+; }`, `time { plot g p png; }`), otherwise it runs with the wrong condition or unprotected patterns.
 - Nothing shows up / "Found no plots matching": the wrong project is selected (`srp projects`, `srp select`), or the program did not run `pm.SaveProject()`, or the group/name regex does not match whole names (`srp matchmode contains` relaxes this).
 - `plot` uses the program registered for the project (`srp projects @current`), not the file in the current directory.
 - Data not found: check the data source name and that the object name (or path) exists in one of the inputs; `plot ... print` shows the definition; the error of `plot` names the missing data and its data source. For sub-folders use `"src:folder"` or a path in the name, never both for the same folder.

@@ -4,10 +4,13 @@
 #   2 all plots of a group at once, browsed with s
 #   3 the plot definition changed in an editor: plot runs the program again and shows the change
 #   4 the plots of a group written as pdf files
-# Needs: Xvfb openbox xterm xdotool nano imagemagick ffmpeg bc and the DejaVu fonts, and an installed SciRooPlot (env.sh).
+# Needs: Xvfb openbox xcompmgr hsetroot xterm xdotool nano imagemagick ffmpeg bc and the DejaVu fonts, and an installed SciRooPlot (env.sh).
 # usage: bash record-demo.sh <srp prefix> <config dir> <out dir>
-# The scenes use the example project, made as ~/my-analysis for the recording (paths in the output look like a user's) and removed after.
-# Writes <out dir>/demo-<n>.mp4, demo-1.png (shown before the first video plays) and demos.json (file, title, text, command per scene).
+# The scenes use a short program of three plots (demo/DefinePlots.py, the example data of higgs) as ~/my-analysis, made for the recording
+# (paths in the output look like a user's) and removed after. The terminal stays in ~: plot works from every folder.
+# Scene 3 is recorded a second time with the same program in C++ (demo/DefinePlots.cpp), shown when the page is set to C++.
+# Writes <out dir>/demo-<n>.mp4, demo-3-cpp.mp4, demo-1.png (shown before the first video plays) and demos.json (file, title, text,
+# command per scene; scene 3 also cpp with the file and text of the C++ version).
 # Run by build-site.sh, so the videos always show the current plots.
 set -euo pipefail
 PREFIX=$1 CFG=$2 OUT=$3
@@ -18,10 +21,16 @@ W=1600 H=900  # the screen; the page shows it at about 1150 px
 WORK=$(mktemp -d)
 # on any exit, also a failed step: stop Xvfb, openbox, xterm and ffmpeg, or the next run finds display :55 taken
 trap 'kill $(jobs -p) 2>/dev/null || true; rm -rf "${WORK}" "${EXDIR}"; SCIROOPLOT_CONFIG_PATH=$CFG "$PREFIX/bin/srp" remove my-analysis >/dev/null 2>&1 || true' EXIT  # kill fails when nothing is left to stop
+DEMO=$(cd "$(dirname "$0")/demo" && pwd)
+mkdir "$EXDIR"
+cp "$DEMO/DefinePlots.py" "$EXDIR/"
+export SCIROOPLOT_CONFIG_PATH=$CFG SCIROOPLOT_DATA_DIR=$PREFIX/share/scirooplot
 # shellcheck disable=SC1091  # env.sh of the installation
-( source "$PREFIX/share/scirooplot/env.sh"; export SCIROOPLOT_CONFIG_PATH=$CFG SCIROOPLOT_DATA_DIR=$PREFIX/share/scirooplot; srp example-py my-analysis "$EXDIR" >/dev/null )
+( source "$PREFIX/share/scirooplot/env.sh"
+  srp add my-analysis "$EXDIR/DefinePlots.py" "$EXDIR/output" >/dev/null && "$SCIROOPLOT_PYTHON_EXECUTABLE" "$EXDIR/DefinePlots.py" )  # the definitions for tab completion
 
-# the look of the desktop: a dark blue gradient, windows with a flat title bar and three round buttons on the left
+# the look of the desktop: a blue gradient a little lighter than the terminal, windows with a flat title bar, three round buttons on the
+# left and a soft shadow (xcompmgr)
 THEME=$WORK/home/.themes/srp/openbox-3
 mkdir -p "$THEME" "$WORK/home/.config/openbox"
 for b in close iconify max; do
@@ -65,41 +74,46 @@ cat > "$WORK/home/.config/openbox/rc.xml" <<'XML'
   <margins><top>36</top><left>36</left><right>36</right><bottom>36</bottom></margins>
 </openbox_config>
 XML
-convert -size "${W}x${H}" radial-gradient:'#2a4166'-'#101a2b' "$WORK/desktop.png"
+convert -size "${W}x${H}" radial-gradient:'#3b5683'-'#1b2a44' "$WORK/desktop.png"
 
 cat > "$WORK/rc.sh" <<RC
 source $PREFIX/share/scirooplot/env.sh
 export SCIROOPLOT_CONFIG_PATH=$CFG SCIROOPLOT_DATA_DIR=$PREFIX/share/scirooplot EDITOR=nano
 srp select my-analysis >/dev/null 2>&1
-cd $EXDIR
-PS1='\[\e[38;2;94;196;214m\]~/my-analysis\[\e[0m\] \[\e[38;2;224;165;38;1m\]\$\[\e[0m\] '
+cd $HOME
+PS1='\[\e[38;2;94;196;214m\]~\[\e[0m\] \[\e[38;2;224;165;38;1m\]\$\[\e[0m\] '
 clear
 RC
-# nano as a plain editor: calm colours (comments grey, strings green, keywords cyan), long lines wrapped at blanks (the edited line stays
-# readable), no line numbers and no help lines
+# nano as a plain editor: calm colours (comments grey, strings green, keywords cyan), no line numbers and no help lines; the
+# lines of the demo programs fit the terminal. Later rules win in nano: keywords first, so none are coloured inside strings or comments
 cat > "$WORK/nanorc" <<'NANORC'
 set nohelp
-set softwrap
-set atblanks
 set titlecolor bold,white,black
 syntax python "\.py$"
 # comments: whole lines, or after two blanks (a # inside a string, as in Z#rightarrow4l, is no comment)
-color lightblack "^[[:space:]]*#.*$" "[[:space:]]{2}#.*$"
-color green ""([^"\\]|\\.)*""
 color cyan "\<(def|for|in|if|else|elif|return|import|from|as|with|not|and|or)\>"
+color green ""([^"\\]|\\.)*""
+color lightblack "^[[:space:]]*#.*$" "[[:space:]]{2}#.*$"
+syntax cpp "\.cpp$"
+color cyan "\<(auto|const|for|if|else|int|return|using|namespace)\>" "^#include"
+color green ""([^"\\]|\\.)*""
+color lightblack "//.*$"
 NANORC
 cat >> "$WORK/rc.sh" <<RC
 alias nano='nano --rcfile $WORK/nanorc'
 RC
 
-SCIROOPLOT_CONFIG_PATH=$CFG "$PREFIX/bin/srp" screenscale 0.85 >/dev/null
+SCIROOPLOT_CONFIG_PATH=$CFG "$PREFIX/bin/srp" screenscale 0.75 >/dev/null
 Xvfb $D -screen 0 ${W}x${H}x24 -nolisten tcp >/dev/null 2>&1 &
 XV=$!
 sleep 1.5
-HOME=$WORK/home openbox --sm-disable >/dev/null 2>&1 &
+# XDG_* too: the CI runners set XDG_CONFIG_HOME, and openbox then took its default theme
+HOME=$WORK/home XDG_CONFIG_HOME=$WORK/home/.config XDG_DATA_HOME=$WORK/home/.local/share openbox --sm-disable >/dev/null 2>&1 &
 sleep 1.5
-display -window root "$WORK/desktop.png" || true  # sets the background, but exits with 1
-COLS=64 ROWS=36
+hsetroot -fill "$WORK/desktop.png" >/dev/null  # also as _XROOTPMAP_ID, which xcompmgr paints (else the desktop is black)
+xcompmgr -c -r 16 -o 0.55 -l -20 -t -14 >/dev/null 2>&1 &
+sleep 0.5
+COLS=64 ROWS=32  # the terminal ends above the bottom of the screen, with room for its shadow
 # -l: a log of everything shown in the terminal, to check that no line is longer than the terminal is wide
 xterm -geometry ${COLS}x${ROWS}-36+36 -fa "DejaVu Sans Mono" -fs 14 -bg '#16233A' -fg '#E8EDF4' -cr '#E0A526' -b 16 -bw 0 \
   -T "Terminal" -xrm 'XTerm*cursorBlink: false' -xrm 'XTerm*allowTitleOps: false' -xrm 'XTerm*allowSendEvents: true' -l -lf "$WORK/terminal.log" -e bash --rcfile "$WORK/rc.sh" -i >/dev/null 2>&1 &
@@ -117,12 +131,13 @@ start() { SCENE=$1; ffmpeg -y -loglevel error -f x11grab -draw_mouse 0 -framerat
 # the start-up of plot (ROOT, reading the inputs) is cut from the video to 0.4 s: Return, then the window or the output
 now() { echo "$(date +%s.%N) - $T0" | bc; }
 # (the video starts a moment after T0: the end of the cut is taken a little earlier, so nothing of the window is lost)
-run() { key Return; local from to; from=$(echo "$(now) + 0.4" | bc); "$@"; to=$(echo "$(now) - 0.3" | bc); (( $(echo "$to > $from" | bc) )) && echo "between(t,$from,$to)" >> "$WORK/cut-$SCENE"; return 0; }
+# (the window is drawn a moment after it appears: the cut ends 0.1 s after that, or an empty white window flashes)
+run() { key Return; local from to; from=$(echo "$(now) + 0.4" | bc); "$@"; sleep 0.4; to=$(echo "$(now) - 0.3" | bc); (( $(echo "$to > $from" | bc) )) && echo "between(t,$from,$to)" >> "$WORK/cut-$SCENE"; return 0; }
 stop() { kill -INT $FF; wait $FF || true; }
 
 # the browse keys are pressed in the terminal (they work there as in the plot window)
 start 1  # one plot, found by tab completion
-t 'plot hi'; sleep 0.6; key Tab; sleep 1.2   # the group higgs (with its subgroups)
+t 'plot hi'; sleep 0.6; key Tab; sleep 1.2   # the group higgs
 key Tab; sleep 0.2; key Tab; sleep 2.5       # its plots
 t 'br'; sleep 0.5; key Tab; sleep 1.2
 run waitwin 'brazilPlot:higgs'; sleep 4.5
@@ -130,34 +145,51 @@ key q; sleep 0.8; sleep 1.0
 stop; clean
 
 start 2  # all plots of a group, browsed with s
-t "plot higgs '.+'"; sleep 0.8
-run waitwin 'massSpectrum:higgs'; sleep 3.0
-for _ in 1 2 3; do key s; sleep 0.6; sleep 2.6; done
+t 'plot higgs mass'; sleep 0.6; key Tab; sleep 0.2; key Tab; sleep 2.5  # the plots whose names start with mass
+t '.*'; sleep 1.2
+run waitwin ':higgs'; sleep 3.0
+key s; sleep 0.6; sleep 2.6
 key q; sleep 0.8; sleep 1.0
 stop; clean
 
-start 3  # the definition changed in an editor: plot runs the program again
-line=$(grep -n '"massSpectrum", "higgs/fourLepton"' "$EXDIR/DefinePlots.py" | cut -d: -f1)
-code=$(sed -n "$((line + 2))p" "$EXDIR/DefinePlots.py")
-GAP=${code#*kAzure - 9}; GAP=${GAP%%kAzure - 9*}  # text between the two colours
-t "nano +$((line + 2)),$(( $(sed -n "$((line + 2))p" "$EXDIR/DefinePlots.py" | grep -bo 'kAzure - 9' | head -1 | cut -d: -f1) + 1 )) DefinePlots.py"; sleep 0.6
-key Return; sleep 2.5
-# the fill and the outline of the background: kAzure - 9 becomes kOrange - 4 in both places
-for k in 1 2; do
-  [[ $k == 2 ]] && for _ in $(seq ${#GAP}); do key Right; sleep 0.04; done
+# the definition changed in an editor: plot runs (and builds) the program again; the background kAzure - 9 becomes kOrange - 4
+edit_scene() {
+  local file=$1 line col
+  line=$(grep -n 'kAzure - 9' "$EXDIR/$file" | head -1 | cut -d: -f1)
+  col=$(sed -n "${line}p" "$EXDIR/$file" | grep -bo 'kAzure - 9' | head -1 | cut -d: -f1)
+  t "nano my-analysis/$file"; sleep 0.6
+  key Return; sleep 2.0
+  for _ in $(seq $((line - 1))); do key Down; sleep 0.05; done; sleep 0.4
+  key End; sleep 0.3
+  for _ in $(seq $(( $(sed -n "${line}p" "$EXDIR/$file" | wc -m) - 1 - col ))); do key Left; sleep 0.04; done; sleep 0.3  # in front of kAzure
   for _ in $(seq 10); do key Delete; done; sleep 0.3
-  t 'kOrange - 4'; sleep 0.8
-done
-sleep 0.6
-key ctrl+s; sleep 1.0; key ctrl+x; sleep 0.8
-t 'plot higgs/fourLepton massSpectrum'; sleep 0.6
-run waitwin 'massSpectrum:higgs'; sleep 4.5
-key q; sleep 0.8; sleep 1.0
+  t 'kOrange - 4'; sleep 1.2
+  key ctrl+s; sleep 1.0; key ctrl+x; sleep 0.8
+  t 'plot higgs massFourLepton'; sleep 0.6
+  run waitwin 'massFourLepton:higgs'; sleep 4.5
+  key q; sleep 0.8; sleep 1.0
+}
+start 3
+edit_scene DefinePlots.py
 stop; clean
 
 start 4  # files for a paper or slides
-t "plot higgs '.+' pdf"; sleep 0.6; run waitlog 'brazilPlot from group'; sleep 2.0
-t 'ls output/higgs/*'; sleep 0.5; key Return; sleep 4.5
+t 'plot higgs .* pdf'; sleep 0.6; run waitlog 'brazilPlot[^ ]* from group'; sleep 2.0  # the name is coloured
+t 'ls my-analysis/output/higgs'; sleep 0.5; key Return; sleep 4.5
+stop; clean
+
+# the same project in C++: built with CMake as by srp init-cpp, the program in build/
+SCIROOPLOT_CONFIG_PATH=$CFG "$PREFIX/bin/srp" remove my-analysis >/dev/null
+rm -r "${EXDIR:?}"/*
+mkdir "$EXDIR/build"
+cp "$DEMO/DefinePlots.cpp" "$EXDIR/"
+sed 's/PROJECT_NAME/my-analysis/' "$PREFIX/share/scirooplot/templates/CMakeLists.txt" > "$EXDIR/CMakeLists.txt"
+# shellcheck disable=SC1091
+( source "$PREFIX/share/scirooplot/env.sh"; cd "$EXDIR/build"
+  cmake -Wno-dev .. >/dev/null && cmake --build . >/dev/null && srp add my-analysis "$EXDIR/build/definePlots" "$EXDIR/output" >/dev/null && ./definePlots )
+SCIROOPLOT_CONFIG_PATH=$CFG "$PREFIX/bin/srp" select my-analysis >/dev/null
+start 3-cpp
+edit_scene DefinePlots.cpp
 stop
 
 kill $XV
@@ -172,17 +204,22 @@ mkdir -p "$OUT"
 titles=("Show a plot" "Browse a group" "Change a plot" "Save for a paper")
 # in the texts `...` is shown as code and {...} as a key
 texts=("Type \`plot\`, then the group and the name of a plot. {Tab} completes both, so you never need to remember the exact names."
-  "Group and name are patterns: \`.+\` stands for every plot of the group. Press {s} for the next plot and {a} to go back."
-  "Plots are defined in a short program, here in Python. Change it, run \`plot\` again: the new version is drawn."
+  "Group and name are patterns: \`mass.*\` means every name starting with mass, \`.*\` every plot. Press {s} for the next plot, {a} to go back."
+  "Plots are defined in a short Python program. Edit it and just run \`plot\` again: it reruns the program by itself."
   "A mode as third word writes files instead: \`pdf\`, \`png\`, \`svg\`, a ROOT macro and more, one per plot, in folders by group.")
-commands=("plot higgs brazilPlot" "plot higgs '.+'" "plot higgs/fourLepton massSpectrum" "plot higgs '.+' pdf")
+commands=("plot higgs brazilPlot" "plot higgs mass.*" "plot higgs massFourLepton" "plot higgs .* pdf")
 echo "[" > "$OUT/demos.json"
-for n in 1 2 3 4; do
+text3cpp="Plots are defined in a short C++ program. Edit it and just run \`plot\` again: it rebuilds and reruns the program by itself."
+for n in 1 2 3 4 3-cpp; do
   # small files for the web: 1280 px wide, 4:2:0 colours (every browser), the moov atom first so playback starts at once
   cut=""
   [[ -f "$WORK/cut-$n" ]] && cut="select='not($(paste -sd+ "$WORK/cut-$n"))',setpts=N/FRAME_RATE/TB,"
   ffmpeg -y -loglevel error -i "$WORK/$n.mp4" -vf "${cut}scale=1280:-2:flags=lanczos" -c:v libx264 -preset slow -crf 22 -pix_fmt yuv420p -movflags +faststart -an "$OUT/demo-$n.mp4"
-  printf '  {"file": "demo-%d.mp4", "title": "%s", "text": "%s", "command": "%s"}%s\n' "$n" "${titles[n - 1]}" "${texts[n - 1]}" "${commands[n - 1]}" "$([[ $n -lt 4 ]] && echo ,)" >> "$OUT/demos.json"
+done
+for n in 1 2 3 4; do
+  cpp=""
+  [[ $n == 3 ]] && cpp=$(printf ', "cpp": {"file": "demo-3-cpp.mp4", "text": "%s"}' "$text3cpp")
+  printf '  {"file": "demo-%d.mp4", "title": "%s", "text": "%s", "command": "%s"%s}%s\n' "$n" "${titles[n - 1]}" "${texts[n - 1]}" "${commands[n - 1]}" "$cpp" "$([[ $n -lt 4 ]] && echo ,)" >> "$OUT/demos.json"
 done
 echo "]" >> "$OUT/demos.json"
 ffmpeg -y -loglevel error -sseof -4 -i "$OUT/demo-1.mp4" -frames:v 1 "$OUT/demo-1.png"  # before the first video plays: the plot of scene 1

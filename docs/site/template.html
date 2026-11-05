@@ -155,19 +155,20 @@ html, body { overflow-x: clip }
 .path span { color: var(--hero-muted); font-size: 0.875rem }
 .demo { display: grid; gap: 16px }
 .demo .head { display: grid; gap: 6px }
-.demo .screen { margin: 0; border-radius: 12px; overflow: hidden; border: 1px solid var(--hairline); background: #101a2b; aspect-ratio: 16 / 9; box-shadow: 0 18px 40px -24px rgba(10, 20, 40, 0.55) }
-.demo .screen video { display: block; width: 100%; height: 100%; object-fit: cover }
-/* the scenes below the video: all four always shown with a fixed size, the one playing highlighted with its progress */
-.scenes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px }
-.scenes button { width: 100%; height: 100%; text-align: left; font: inherit; color: var(--text); background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 12px 14px 14px; cursor: pointer; display: grid; grid-template-rows: auto auto 1fr auto; gap: 6px; position: relative; overflow: hidden }
-.scenes button:hover { border-color: var(--teal) }
-.scenes .n { display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--grid); color: var(--muted); font-size: 0.8rem; font-weight: 700 }
+/* the video and its scenes as one panel: the scenes are the tabs below the picture, lines between them from the gaps */
+.demo .player { border-radius: 12px; overflow: hidden; border: 1px solid var(--hairline); background: var(--hairline); box-shadow: 0 18px 40px -24px rgba(10, 20, 40, 0.55) }
+.demo .screen { margin: 0; background: #101a2b; aspect-ratio: 16 / 9 }
+.demo .screen video { display: block; width: 100%; height: 100%; object-fit: cover; transition: opacity 0.3s }
+/* the scenes below the video: all four always shown with a fixed size, the one playing highlighted with its progress along the video */
+.scenes { list-style: none; margin: 1px 0 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px }
+.scenes button { width: 100%; height: 100%; text-align: left; font: inherit; color: var(--text); background: var(--panel); border: 0; border-radius: 0; padding: 14px 16px 16px; cursor: pointer; display: grid; grid-template-rows: auto 1fr auto; gap: 6px; position: relative; overflow: hidden }
+.scenes button > * { min-width: 0 }  /* long code wraps inside the card instead of widening it */
+.scenes button:hover { background: var(--tint) }
 .scenes b { color: var(--ink); font-size: 1rem }
 .scenes span.t { color: var(--muted); font-size: 0.875rem; text-wrap: pretty }
 .scenes > li > button > code { font-size: 0.78rem; display: block; overflow-wrap: anywhere }
-.scenes .sceneprog { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--teal) }
-.scenes button[aria-current="true"] { border-color: var(--teal); background: var(--tint) }
-.scenes button[aria-current="true"] .n { background: var(--teal); color: var(--teal-ink) }
+.scenes .sceneprog { position: absolute; left: 0; top: 0; height: 3px; width: 0; background: var(--teal) }
+.scenes button[aria-current="true"] { background: var(--tint) }
 /* workflow steps: numbered cards, arrows between */
 .flow { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: stretch }
 .flow .box { background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 16px; display: grid; gap: 6px; align-content: start; justify-items: center; text-align: center; min-width: 0 }
@@ -657,8 +658,8 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
       <h2 class="title">Plots from the command line</h2>
       <p>Every plot of a project is one command away: <code>plot</code>, the group and the name of the plot. Four short scenes show what that looks like.</p>
     </div>
-    <figure class="screen"><video id="demovid" muted playsinline preload="auto" poster="img/demo/demo-1.png" src="img/demo/demo-1.mp4" aria-label="A terminal session with SciRooPlot: plots found by tab completion, browsed, changed and saved as files."></video></figure>
-    <ol class="scenes" id="demoscenes" aria-label="Scenes of the demo"></ol>
+    <div class="player"><figure class="screen"><video id="demovid" muted playsinline preload="auto" poster="img/demo/demo-1.png" src="img/demo/demo-1.mp4" aria-label="A terminal session with SciRooPlot: plots found by tab completion, browsed, changed and saved as files."></video></figure>
+    <ol class="scenes" id="demoscenes" aria-label="Scenes of the demo"></ol></div>
   </div>
 
   <div class="res" aria-label="Documents and links">
@@ -1158,7 +1159,8 @@ let level = store.get("srp-level") || "beginner", lang = store.get("srp-lang") |
 function setLevel(l) { level = l; document.documentElement.dataset.level = l; store.set("srp-level", l);
   document.querySelectorAll("[data-level]").forEach(b => { if (b.tagName === "BUTTON") b.setAttribute("aria-pressed", b.dataset.level === l) }) }
 function setLang(l) { lang = l; store.set("srp-lang", l);
-  document.querySelectorAll("[data-lang]").forEach(b => b.setAttribute("aria-pressed", b.dataset.lang === l)); renderCode() }
+  document.querySelectorAll("[data-lang]").forEach(b => b.setAttribute("aria-pressed", b.dataset.lang === l)); renderCode(); demoLang() }
+let demoLang = () => {};  // set by demoScenes: scene 3 has a C++ version
 document.querySelectorAll(".seg [data-level]").forEach(b => b.onclick = () => setLevel(b.dataset.level));
 document.querySelectorAll("[data-lang]").forEach(b => b.onclick = () => setLang(b.dataset.lang));
 
@@ -1471,7 +1473,7 @@ pm.AddPlot(plot);` },
   { title: "Writing files", img: null,
     text: `<p>All plots of the tour are now part of your project. Make them all at once, in any format. Files go into the project's output folder, one subfolder per group.</p>
 <div class="term-line"><span class="p">$ </span>srp set tour outdir ~/thesis/figures<br><span class="p">$ </span>plot tour .+ pdf<br><span class="p">$ </span>plot tour '(axes|ratio)' png</div>
-<p class="basics"><b>The patterns</b><code>.+</code> and <code>(axes|ratio)</code> are <button class="term" data-term="regex">regular expressions</button>. In bash, quote patterns that contain brackets or <code>|</code>, and write <code>plot</code> after <code>||</code>, <code>!</code> or <code>time</code> in braces (<code>make || { plot g '.+'; }</code>): only then does it keep its patterns from being expanded as file names.</p>
+<p class="basics"><b>The patterns</b><code>.+</code> and <code>(axes|ratio)</code> are <button class="term" data-term="regex">regular expressions</button>. In bash, quote patterns that contain brackets or <code>|</code>, and write <code>plot</code> after <code>||</code>, <code>!</code> or <code>time</code> in braces (<code>make || { plot g .+; }</code>): only then does it keep its patterns from being expanded as file names.</p>
 <p>Without a mode, <code>plot</code> opens a window. Browse with <kbd>s</kbd> and <kbd>a</kbd>, press <kbd>d</kbd> to keep the current plot in its own window for comparison, <kbd>q</kbd> to close one window, <kbd>x</kbd> to close all.</p>
 <div class="stepnav"><a class="btn primary" href="#examples">See the example plots</a><a class="btn" href="#reference">Browse the reference</a></div>`,
     py: null, cpp: null },
@@ -1676,15 +1678,23 @@ function renderExamples() {
   btn.onclick = () => { root.dataset.theme = dark() ? "light" : "dark"; store.set("theme", root.dataset.theme) } })();
 (function demoScenes() { // the terminal demos of the start page: one video per scene, played one after the other
   const vid = document.getElementById("demovid"), list = document.getElementById("demoscenes"); let scenes = [], current = 0;
+  const pick = sc => lang === "cpp" && sc.cpp ? { ...sc, ...sc.cpp } : sc;  // a scene in the language of the page
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;  // then nothing starts by itself
+  let started = false;  // after the first video played: scenes change with a short fade, and without the poster (the plot of scene 1) in between
   const show = (i, play) => { current = (i + scenes.length) % scenes.length;
     list.querySelectorAll("button").forEach((b, k) => { b.setAttribute("aria-current", k === current); b.querySelector(".sceneprog").style.width = "0" });
-    vid.src = `img/demo/${scenes[current].file}`; if (play) vid.play().catch(() => {}) };
+    const load = () => { if (play) vid.removeAttribute("poster"); vid.src = `img/demo/${pick(scenes[current]).file}`; if (play) vid.play().catch(() => {}) };
+    if (!started) return load();
+    vid.style.opacity = 0; setTimeout(load, 300) };
+  vid.addEventListener("playing", () => { started = true; vid.removeAttribute("poster"); vid.style.opacity = 1 });
   vid.addEventListener("timeupdate", () => { const bar = list.querySelectorAll(".sceneprog")[current]; if (bar && vid.duration) bar.style.width = `${100 * vid.currentTime / vid.duration}%` });
   vid.addEventListener("ended", () => setTimeout(() => show(current + 1, true), 1200));
+  const renderList = () => {
+    list.innerHTML = scenes.map(pick).map((sc, k) => `<li><button type="button"><b>${esc(sc.title)}</b><span class="t">${esc(sc.text).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\{(\w+)\}/g, "<kbd>$1</kbd>")}</span><code>$ ${esc(sc.command)}</code><span class="sceneprog"></span></button></li>`).join("");
+    list.querySelectorAll("button").forEach((b, k) => { b.onclick = () => show(k, true); b.setAttribute("aria-current", k === current) }) };
+  demoLang = () => { if (!scenes.length) return; renderList(); if (scenes[current].cpp) show(current, started) };
   fetch("img/demo/demos.json").then(r => r.json()).then(list_ => { scenes = list_; if (!scenes.length) return;
-    list.innerHTML = scenes.map((sc, k) => `<li><button type="button"><span class="n">${k + 1}</span><b>${esc(sc.title)}</b><span class="t">${esc(sc.text).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\{(\w+)\}/g, "<kbd>$1</kbd>")}</span><code>$ ${esc(sc.command)}</code><span class="sceneprog"></span></button></li>`).join("");
-    list.querySelectorAll("button").forEach((b, k) => b.onclick = () => show(k, true));
+    renderList();
     show(0, false);
     if (!still) new IntersectionObserver((es, ob) => { if (es[0].isIntersecting) { vid.play().catch(() => {}); ob.disconnect() } }, { threshold: 0.4 }).observe(vid) }).catch(() => {}) })();
 (function renderShowcase() { // the start page: a few examples from different fields; a click opens the example on its page
@@ -1698,7 +1708,7 @@ function renderExamples() {
 let exOpen = null;
 function openExample(k) { exOpen = k; const parts = k.split("/"), name = parts.pop(), grp = parts.join("/");
   document.getElementById("exttl").textContent = name; document.getElementById("eximg").src = exImage(k); document.getElementById("eximg").alt = name;
-  document.getElementById("excmd").innerHTML = `<span class="p">$ </span>` + (EXAMPLES[k].gif ? `plot ${k} '.+' ${EXAMPLES[k].gif}` : `plot ${grp} ${name}`);
+  document.getElementById("excmd").innerHTML = `<span class="p">$ </span>` + (EXAMPLES[k].gif ? `plot ${k} .+ ${EXAMPLES[k].gif}` : `plot ${grp} ${name}`);
   const ins = []; EXDATA.files.forEach(f => { const visit = ns => ns.forEach(x => { if (x.use && x.use.some(u => u.plots.includes(k))) ins.push([f.f, x.p, x.n]); if (x.ch) visit(x.ch) });
     if (f.k === "table") { if (f.use && f.use.some(u => u.plots.includes(k))) ins.push([f.f, "", f.f]) } else visit(f.ch) });
   const tg = exTags(k); document.getElementById("exinputs").innerHTML = ins.length ? `<span class="small muted">Input data:</span> ` + ins.map(([fl, p, nm]) => { const lb = p || nm; return `<a href="#data" data-din="${esc(fl)}|${esc(p)}" title="${esc(fl)}${p ? ":" + esc(p) : ""}">${esc(ins.filter(x => (x[1] || x[2]) === lb).length > 1 ? fl + ":" + lb : lb)}</a>` }).join(" · ") : "";
@@ -1743,7 +1753,7 @@ const REF = [
 <tr><td><code>plot higgs .+</code></td><td>every plot of the group <code>higgs</code> and its subgroups</td></tr>
 <tr><td><code>plot 'higgs$' .+</code></td><td>only the plots directly in <code>higgs</code>, not in its subgroups</td></tr>
 <tr><td><code>plot thesis 'fig_(a|b)' pdf</code></td><td><code>fig_a</code> and <code>fig_b</code> as PDF files (quote patterns with <code>( ) |</code> in bash)</td></tr>
-<tr><td><code>plot animations/legoRotation '.+' gif+8++</code></td><td>all matching plots as one animation, 80 ms per frame, in the order they were defined; <code>gif+8</code> plays it once, <code>gif+8++</code> endlessly, <code>gif+8++3</code> three times (ROOT's spelling for the last frame of a gif). One plot per frame, e.g. in a loop (<a href="#examples">examples</a>, group animations). The gif is named after the deepest group all frames are in and written next to its folder: <code>animations/legoRotation.gif</code> (<code>animation.gif</code> for frames without a common group)</td></tr>
+<tr><td><code>plot animations/legoRotation .+ gif+8++</code></td><td>all matching plots as one animation, 80 ms per frame, in the order they were defined; <code>gif+8</code> plays it once, <code>gif+8++</code> endlessly, <code>gif+8++3</code> three times (ROOT's spelling for the last frame of a gif). One plot per frame, e.g. in a loop (<a href="#examples">examples</a>, group animations). The gif is named after the deepest group all frames are in and written next to its folder: <code>animations/legoRotation.gif</code> (<code>animation.gif</code> for frames without a common group)</td></tr>
 <tr><td><code>plot higgs .+ list</code></td><td>the names of the matching plots, without drawing</td></tr>
 </tbody></table></div>
 <h3>Output modes</h3>

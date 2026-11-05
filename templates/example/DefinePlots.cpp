@@ -2070,7 +2070,7 @@ void DefineOtherSciencePlots(PlotManager& pm)
 void DefineAnimations(PlotManager& pm)
 {
   {  // a camera flight around a lego plot: the same plot seen from 36 angles ---------------
-    // plot animations/legoRotation '.+' gif+8++ makes them one gif, 8 centiseconds per frame, looping endlessly
+    // plot animations/legoRotation .+ gif+8++ makes them one gif, 8 centiseconds per frame, looping endlessly
     // the axes change sides while the view turns, so the base plot leaves the same room on both sides
     auto view3d = PlotManager::MakeBasePlot("1d", PanelLayout().SetMargins(60.0, 150.0, 190.0, 190.0));
     view3d.SetName("1d_3dview");
@@ -2087,7 +2087,7 @@ void DefineAnimations(PlotManager& pm)
   {  // a TPC read out continuously, in end view and side view: tracks appear with their collision and disappear as their
     // electrons drift to the endcaps (2.58 cm/us, the drifted position from a Define); Profile2D colours the cells by the mean age
     // of their clusters, so that each collision has its own colour
-    // plot animations/tpcDrift '.+' gif+20++ makes them one gif, 0.2 s per frame (10 us of drift), looping endlessly
+    // plot animations/tpcDrift .+ gif+20++ makes them one gif, 0.2 s per frame (10 us of drift), looping endlessly
     for (int time = 0; time < 200; time += 10) {
       Plot plot(Form("t%03dus", time), "animations/tpcDrift", "2d_2x1");
       uint8_t pad = 1;
@@ -2117,7 +2117,7 @@ void DefineAnimations(PlotManager& pm)
   {  // the same in one sector: sector 0 (0 to 20 deg, z > 0) in its own coordinates, across the sector and along the radius,
     // binned in the pad rows of its chambers (variable bin edges, the gaps between the chambers empty) and in 6 mm across;
     // the inner chamber and the three stacks of the outer chamber are black polygons behind the data, the rest of the frame stays clear
-    // plot animations/tpcSector '.+' gif+20++ makes them one gif, 0.2 s per frame (10 us of drift), looping endlessly
+    // plot animations/tpcSector .+ gif+20++ makes them one gif, 0.2 s per frame (10 us of drift), looping endlessly
     pm.AddBasePlot(PlotManager::MakeBasePlot("2d_tall"));
     const double tan10 = std::tan(10.0 * TMath::DegToRad());                                                                             // half the opening angle of a sector
     const vector<std::tuple<double, int, double>> chambers = {{84.85, 63, 0.75}, {134.7, 34, 1.0}, {170.8, 30, 1.2}, {208.9, 25, 1.5}};  // first radius (cm), pad rows, row length (cm)
@@ -2146,7 +2146,7 @@ void DefineAnimations(PlotManager& pm)
     }
   }  // -----------------------------------------------------------------------------------
   {  // the spectrum class by class, against all classes together: it gets harder with the multiplicity
-    // plot animations/multiplicityClasses '.+' gif+60++ makes them one gif, 0.6 s per frame, looping endlessly
+    // plot animations/multiplicityClasses .+ gif+60++ makes them one gif, 0.6 s per frame, looping endlessly
     for (int low = 1; low < 60; low += 4) {
       const int high = low + 3;
       Plot plot("nch" + std::to_string(low), "animations/multiplicityClasses", "1d_ratio");
@@ -2163,7 +2163,7 @@ void DefineAnimations(PlotManager& pm)
     }
   }  // -----------------------------------------------------------------------------------
   {  // the Higgs peak growing out of the background while the data come in: each frame takes the events up to a luminosity
-    // plot animations/higgsDiscovery '.+' gif+40++ makes them one gif, 0.4 s per frame, looping endlessly
+    // plot animations/higgsDiscovery .+ gif+40++ makes them one gif, 0.4 s per frame, looping endlessly
     for (int lumi = 10; lumi < 150; lumi += 10) {
       Plot plot(Form("lumi%03d", lumi), "animations/higgsDiscovery", "1d");
       plot[1].AddData("diphoton", "timeline", "data").Filter(Form("lumi < %d", lumi)).Project1D({"mass", 60, {100.0, 160.0}}).SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(1.0);
@@ -2180,7 +2180,7 @@ void DefineAnimations(PlotManager& pm)
   {  // an eye diagram: the waveform of a serial link cut into pieces of two bits, laid on top of each other; the receiver needs the eye
     // open around the mask (a polygon in the units of the axes); it closes with the length of the cable, which smears each bit into the
     // next ones
-    // plot animations/eyeClosing '.+' gif+50++ makes them one gif, 0.5 s per frame, looping endlessly
+    // plot animations/eyeClosing .+ gif+50++ makes them one gif, 0.5 s per frame, looping endlessly
     for (int length = 1; length <= 10; ++length) {
       Plot plot(Form("cable%02dm", length), "animations/eyeClosing", "2d_logz");
       plot[1].AddData(Form("link/eye_%dm", length), "electronics").SetDrawOption(colz);

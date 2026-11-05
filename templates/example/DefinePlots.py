@@ -1765,7 +1765,7 @@ def DefineOtherSciencePlots(pm: PlotManager):
 def DefineAnimations(pm: PlotManager):
     """Animations: one plot per frame, in a group of its own; mode gif writes all plots it is given as one animated gif."""
     # a camera flight around a lego plot: the same plot seen from 36 angles ---------------------------------------------
-    # plot animations/legoRotation '.+' gif+8++ makes them one gif, 8 centiseconds per frame, looping endlessly
+    # plot animations/legoRotation .+ gif+8++ makes them one gif, 8 centiseconds per frame, looping endlessly
     # the axes change sides while the view turns, so the base plot leaves the same room on both sides
     view3d = PlotManager.MakeBasePlot("1d", PanelLayout().SetMargins(60.0, 150.0, 190.0, 190.0))
     view3d.SetName("1d_3dview")
@@ -1781,7 +1781,7 @@ def DefineAnimations(pm: PlotManager):
     # a TPC read out continuously, in end view and side view: tracks appear with their collision and disappear as their
     # electrons drift to the endcaps (2.58 cm/us, the drifted position from a Define); Profile2D colours the cells by the mean age
     # of their clusters, so that each collision has its own colour
-    # plot animations/tpcDrift '.+' gif+20++ makes them one gif, 0.2 s per frame (10 us of drift), looping endlessly
+    # plot animations/tpcDrift .+ gif+20++ makes them one gif, 0.2 s per frame (10 us of drift), looping endlessly
     for time in range(0, 200, 10):
         plot = Plot(f"t{time:03d}us", "animations/tpcDrift", "2d_2x1")
         for pad, (horizontal, title) in enumerate([("x", "#it{x} (cm)"), ("zNow", "#it{z} (cm)")], 1):
@@ -1805,7 +1805,7 @@ def DefineAnimations(pm: PlotManager):
     # the same in one sector: sector 0 (0 to 20 deg, z > 0) in its own coordinates, across the sector and along the radius,
     # binned in the pad rows of its chambers (variable bin edges, the gaps between the chambers empty) and in 6 mm across;
     # the inner chamber and the three stacks of the outer chamber are black polygons behind the data, the rest of the frame stays clear
-    # plot animations/tpcSector '.+' gif+20++ makes them one gif, 0.2 s per frame (10 us of drift), looping endlessly
+    # plot animations/tpcSector .+ gif+20++ makes them one gif, 0.2 s per frame (10 us of drift), looping endlessly
     pm.AddBasePlot(PlotManager.MakeBasePlot("2d_tall"))
     tan10 = math.tan(10.0 * math.pi / 180.0)  # half the opening angle of a sector
     chambers = [(84.85, 63, 0.75), (134.7, 34, 1.0), (170.8, 30, 1.2), (208.9, 25, 1.5)]  # first radius (cm), pad rows, row length (cm)
@@ -1829,7 +1829,7 @@ def DefineAnimations(pm: PlotManager):
         pm.AddPlot(plot)
 
     # the spectrum class by class, against all classes together: it gets harder with the multiplicity ---------------
-    # plot animations/multiplicityClasses '.+' gif+60++ makes them one gif, 0.6 s per frame, looping endlessly
+    # plot animations/multiplicityClasses .+ gif+60++ makes them one gif, 0.6 s per frame, looping endlessly
     for low in range(1, 60, 4):
         high = low + 3
         plot = Plot(f"nch{low}", "animations/multiplicityClasses", "1d_ratio")
@@ -1844,7 +1844,7 @@ def DefineAnimations(pm: PlotManager):
         pm.AddPlot(plot)
 
     # the Higgs peak growing out of the background while the data come in: each frame takes the events up to a luminosity -----
-    # plot animations/higgsDiscovery '.+' gif+40++ makes them one gif, 0.4 s per frame, looping endlessly
+    # plot animations/higgsDiscovery .+ gif+40++ makes them one gif, 0.4 s per frame, looping endlessly
     for lumi in range(10, 150, 10):
         plot = Plot(f"lumi{lumi:03d}", "animations/higgsDiscovery", "1d")
         plot[1].AddData("diphoton", "timeline", "data").Filter(f"lumi < {lumi}").Project1D(("mass", 60, [100.0, 160.0])).SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(1.0)
@@ -1860,7 +1860,7 @@ def DefineAnimations(pm: PlotManager):
     # an eye diagram: the waveform of a serial link cut into pieces of two bits, laid on top of each other; the receiver needs the eye
     # open around the mask (a polygon in the units of the axes); it closes with the length of the cable, which smears each bit into the
     # next ones ---------------------------------------------------------------------------------------------------------------
-    # plot animations/eyeClosing '.+' gif+50++ makes them one gif, 0.5 s per frame, looping endlessly
+    # plot animations/eyeClosing .+ gif+50++ makes them one gif, 0.5 s per frame, looping endlessly
     for length in range(1, 11):
         plot = Plot(f"cable{length:02d}m", "animations/eyeClosing", "2d_logz")
         plot[1].AddData(f"link/eye_{length}m", "electronics").SetDrawOption(colz)
