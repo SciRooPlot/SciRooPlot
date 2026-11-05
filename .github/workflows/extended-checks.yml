@@ -107,7 +107,7 @@ jobs:
             plot '.+' '.+' "${mode}"
           done
 
-  # consistency of what SciRooPlot draws over all data types, drawing options and styles
+  # consistency of what SciRooPlot draws over all data types, drawing options and styles, and the tests in tests/
   consistency:
     needs: changes
     if: needs.changes.outputs.run == 'true'
@@ -141,7 +141,8 @@ jobs:
             -B build \
             -G Ninja \
             -DCMAKE_PREFIX_PATH="${CONDA_PREFIX}" \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_TESTING=ON
 
       - name: Build
         shell: bash -el {0}
@@ -152,6 +153,12 @@ jobs:
         shell: bash -el {0}
         run: |
           cmake --install build --prefix install
+
+      - name: Tests
+        shell: bash -el {0}
+        env:
+          SRP_TESTS_FULL: 1
+        run: xvfb-run -a ctest --test-dir build --output-on-failure --parallel 2
 
       - name: Legend symbols match the drawn data
         shell: bash -el {0}

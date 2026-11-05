@@ -431,6 +431,15 @@ install(CODE [[
   message(STATUS "---------------------------------------------------------------------------------------------")
 ]])
 
+# the tests in tests/ (ctest -L <folder>): they run the programs of the build directory through the Python bindings
+option(BUILD_TESTING "register the tests in tests/ with CTest" OFF)
+if(BUILD_TESTING AND BUILD_PYTHON_BINDINGS)
+  enable_testing()
+  add_subdirectory(tests)
+elseif(BUILD_TESTING)
+  message(WARNING "The tests need the Python bindings: none registered.")
+endif()
+
 # associate the remaining files for IDEs
 add_custom_target(ProjectFiles SOURCES
     README.md

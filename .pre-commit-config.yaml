@@ -27,9 +27,9 @@ repos:
     rev: v0.13.0
     hooks:
       - id: ruff
-        files: ^(templates|scripts)/.*\.py$
+        files: ^(templates|scripts|tests)/.*\.py$
       - id: ruff-format
-        files: ^(templates|scripts)/.*\.py$
+        files: ^(templates|scripts|tests)/.*\.py$
 
   - repo: local
     hooks:
