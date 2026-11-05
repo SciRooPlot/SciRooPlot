@@ -155,6 +155,16 @@ html, body { overflow-x: clip }
 .path span { color: var(--hero-muted); font-size: 0.875rem }
 .demo { display: grid; gap: 16px }
 .demo .head { display: grid; gap: 6px }
+/* the two commands at a glance, below the demo */
+.cmdglance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 4px }
+.cmdglance .cg { background: var(--panel); border: 1px solid var(--hairline); border-radius: 10px; padding: 14px 16px }
+.cmdglance h3 { margin: 0 0 10px; font-size: 1rem; color: var(--ink) }
+.cmdglance dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 7px 16px; margin: 0; font-size: 0.875rem; align-items: baseline }
+.cmdglance dt code { white-space: nowrap }
+.cmdglance dd { margin: 0; color: var(--muted) }
+.cmdglance .more { grid-column: 1 / -1; margin: 0; max-width: none; font-size: 0.875rem; color: var(--muted) }
+@media (max-width: 760px) { .cmdglance { grid-template-columns: minmax(0, 1fr) } }
+@media (max-width: 600px) { .cmdglance dl { grid-template-columns: minmax(0, 1fr); gap: 2px } .cmdglance dd { margin-bottom: 8px } }
 /* the video and its scenes as one panel: the scenes are the tabs below the picture, lines between them from the gaps */
 .demo .player { border-radius: 12px; overflow: hidden; border: 1px solid var(--hairline); background: var(--hairline); box-shadow: 0 18px 40px -24px rgba(10, 20, 40, 0.55) }
 .demo .screen { margin: 0; background: #101a2b; aspect-ratio: 16 / 9 }
@@ -678,6 +688,19 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
     </div>
     <div class="player"><figure class="screen"><video id="demovid" muted playsinline preload="auto" poster="img/demo/demo-1.png" src="img/demo/demo-1.mp4" aria-label="A terminal session with SciRooPlot: plots found by tab completion, browsed, changed and saved as files."></video></figure>
     <ol class="scenes" id="demoscenes" aria-label="Scenes of the demo"></ol></div>
+    <div class="cmdglance" aria-label="The commands at a glance">
+      <div class="cg"><h3><code>plot</code> makes plots</h3><dl>
+        <dt><code>plot higgs brazilPlot</code></dt><dd>one plot, in a window</dd>
+        <dt><code>plot higgs .*</code></dt><dd>every plot of a group, browsed with <kbd>s</kbd> and <kbd>a</kbd></dd>
+        <dt><code>plot higgs .* pdf</code></dt><dd>files instead: <code>pdf</code>, <code>png</code>, <code>svg</code>, a macro, a gif</dd>
+        <dt><code>plot higgs .* list</code></dt><dd>only the names of the matching plots</dd></dl></div>
+      <div class="cg"><h3><code>srp</code> manages projects</h3><dl>
+        <dt><code data-py="srp init-py thesis" data-cpp="srp init-cpp thesis">srp init-py thesis</code></dt><dd>a new project with a first program, <code data-py="DefinePlots.py" data-cpp="DefinePlots.cpp">DefinePlots.py</code></dd>
+        <dt><code>srp projects</code></dt><dd>your projects with their programs and folders</dd>
+        <dt><code>srp select thesis</code></dt><dd>the project <code>plot</code> works on, from any folder</dd>
+        <dt><code>srp settings</code></dt><dd>defaults such as the plot mode and the window size</dd></dl></div>
+      <p class="more">Every command and mode: <a href="#ref-cli">Command line</a>, <a href="#ref-projects">Projects</a>, <a href="#ref-settings">Settings</a>; <kbd>Tab</kbd> completes them in the terminal.</p>
+    </div>
   </div>
 
   <div class="res" aria-label="Documents and links">
@@ -1380,7 +1403,7 @@ int main() {
 const STEPS = [
   { title: "A project and a first plot", img: "img/tour/function.png", alt: "The function sin(x)/x",
     text: `<p>Create a project. SciRooPlot writes a small program, <code>DefinePlots.py</code> (or <code>.cpp</code>), with a first plot to try.</p>
-<div class="term-line"><span class="p">$ </span>srp init-py tour<br><span class="p">$ </span>plot myGroup myFirstPlot</div>
+<div class="term-line"><span class="p">$ </span><span data-py="srp init-py tour" data-cpp="srp init-cpp tour">srp init-py tour</span><br><span class="p">$ </span>plot myGroup myFirstPlot</div>
 <p>Plots go into its function <code>DefinePlots</code> (in Python indented inside it), data sources into <code>DefineDataSources</code>. Add the lines shown here and draw the new plot by its group and name:</p>
 <div class="term-line"><span class="p">$ </span>plot tour function</div>
 <p>Every plot has a <b>name</b>, a <button class="term" data-term="group">group</button> and a <button class="term" data-term="baseplot">base plot</button>. <code>plot[1]</code> is its first <button class="term" data-term="pad">pad</button>; everything you add to it is drawn there. Each setter returns the object again, so settings are chained with dots.</p>
@@ -1493,6 +1516,14 @@ pm.AddPlot(plot);` },
 <div class="term-line"><span class="p">$ </span>srp set tour outdir ~/thesis/figures<br><span class="p">$ </span>plot tour .+ pdf<br><span class="p">$ </span>plot tour '(axes|ratio)' png</div>
 <p class="basics"><b>The patterns</b><code>.+</code> and <code>(axes|ratio)</code> are <button class="term" data-term="regex">regular expressions</button>. In bash, quote patterns that contain brackets or <code>|</code>, and write <code>plot</code> after <code>||</code>, <code>!</code> or <code>time</code> in braces (<code>make || { plot g .+; }</code>): only then does it keep its patterns from being expanded as file names.</p>
 <p>Without a mode, <code>plot</code> opens a window. Browse with <kbd>s</kbd> and <kbd>a</kbd>, press <kbd>d</kbd> to keep the current plot in its own window for comparison, <kbd>q</kbd> to close one window, <kbd>x</kbd> to close all.</p>
+`,
+    py: null, cpp: null },
+  { title: "Projects and settings", img: null,
+    text: `<p><code>plot</code> always works on the <b>selected project</b>, whatever folder you are in. The second command, <code>srp</code>, manages the projects: list them, switch between them, change how <code>plot</code> behaves.</p>
+<div class="term-line"><span class="p">$ </span>srp projects<br><span class="p">$ </span>srp projects tour<br><span class="p">$ </span>srp select tour</div>
+<p><code>srp projects</code> lists all projects with their programs and output folders; with a name it also shows the plots and inputs of that project. <code>srp select</code> switches the project <code>plot</code> works on; a new project from <code data-py="srp init-py" data-cpp="srp init-cpp">srp init-py</code> is selected right away.</p>
+<div class="term-line"><span class="p">$ </span>srp plotmode pdf<br><span class="p">$ </span>srp screenscale 0.8<br><span class="p">$ </span>srp settings</div>
+<p>Settings hold for all projects on this computer: <code>srp plotmode pdf</code> makes <code>plot</code> write pdf files when no mode is given, <code>srp screenscale</code> sizes the windows, <code>srp settings</code> lists them all. <kbd>Tab</kbd> completes the <code>srp</code> commands as well, and <code>srp help</code> shows them with a line each.</p>
 <div class="stepnav"><a class="btn primary" href="#examples">See the example plots</a><a class="btn" href="#reference">Browse the reference</a></div>`,
     py: null, cpp: null },
 ];
@@ -1508,6 +1539,7 @@ function renderSteps() {
       <div class="stepnav">${cur > 0 ? `<button class="btn" data-mv="-1">Back</button>` : ""}${cur < STEPS.length - 1 ? `<button class="btn primary" data-mv="1">Next: ${STEPS[cur + 1].title}</button>` : ""}</div></div>
     ${s.img ? `<div class="side"><figure class="plot" style="margin:0"><img src="${s.img}" alt="${s.alt}" width="640" height="${s.img.includes("ratio") ? 832 : 640}"></figure><p class="cap">plot tour ${s.img.split("/").pop().replace(".png", "")}</p></div>` : ""}</div>`;
   if (s[lang]) fill(document.getElementById("stepcode"), s[lang], lang);
+  document.querySelectorAll("#stepbody [data-py]").forEach(c => c.textContent = c.dataset[lang]);  // the steps are drawn after renderCode set them
   document.querySelectorAll("[data-mv]").forEach(b => b.onclick = () => { cur += +b.dataset.mv; renderSteps(); document.getElementById("v-tour").scrollIntoView({ block: "start" }) });
   glueTerms() }
 
