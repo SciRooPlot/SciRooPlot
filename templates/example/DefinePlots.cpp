@@ -30,6 +30,7 @@ void DefineHiggsPlots(PlotManager& pm);
 void DefineSpectraPlots(PlotManager& pm);
 void DefineDetectorPlots(PlotManager& pm);
 void DefineCollisionPlots(PlotManager& pm);
+void DefineQCDPlots(PlotManager& pm);
 void DefineHeavyIonPlots(PlotManager& pm);
 void DefineMLPlots(PlotManager& pm);
 void DefineMedicalPlots(PlotManager& pm);
@@ -61,6 +62,7 @@ int main(int argc, char* argv[])
   DefineSpectraPlots(pm);
   DefineDetectorPlots(pm);
   DefineCollisionPlots(pm);
+  DefineQCDPlots(pm);
   DefineHeavyIonPlots(pm);
   DefineMLPlots(pm);
   DefineMedicalPlots(pm);
@@ -139,6 +141,7 @@ void DefineDataSources(PlotManager& pm)
   pm.AddDataSource("mdn", inputFolder + "/mdn.root");
   pm.AddDataSource("electronics", inputFolder + "/electronics.root");
   pm.AddDataSource("detector", inputFolder + "/detector.root");
+  pm.AddDataSource("qcd", inputFolder + "/qcd.root");
   pm.AddDataSource("energyScan", inputFolder + "/spectra.root:energyScan");
   // a directory: all files in it (and its subdirectories) form one data source
   pm.AddDataSource("jets", inputFolder + "/jets/");
@@ -176,8 +179,16 @@ void DefineDataSources(PlotManager& pm)
 //**************************************************************************************************
 void DefineBasePlots(PlotManager& pm)
 {
-  for (const string& name : {"1d", "1d_ratio", "1d_wide", "1d_2x1", "1d_2x1_ratio", "1d_2x2", "1d_3x1", "1d_2x1_gap", "1d_3x1_gap", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1", "2d_2x1_gap", "2d_3x1", "2d_2x2"}) {
+  for (const string& name : {"1d", "1d_wide", "1d_2x1", "1d_2x2", "1d_3x1", "1d_2x1_gap", "1d_3x1_gap", "1d_3x2_gap", "1d_wide_1x2", "2d", "2d_2x1", "2d_2x1_gap", "2d_3x1", "2d_2x2"}) {
     pm.AddBasePlot(PlotManager::MakeBasePlot(name));
+  }
+  // the ratio base plots with a thin dashed line at unity in their ratio pads
+  for (const auto& [name, ratioPads] : vector<std::pair<string, vector<uint8_t>>>{{"1d_ratio", {2}}, {"1d_2x1_ratio", {3, 4}}}) {
+    Plot ratioBase = PlotManager::MakeBasePlot(name);
+    for (uint8_t pad : ratioPads) {
+      ratioBase[pad].SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 2);
+    }
+    pm.AddBasePlot(ratioBase);
   }
   // a base plot can be adapted before adding it, e.g. for all 2d plots with a logarithmic z axis
   Plot logz = PlotManager::MakeBasePlot("2d");
@@ -209,8 +220,8 @@ void DefineHiggsPlots(PlotManager& pm)
   {  // data with fit functions, and a ratio pad dividing the data by the background fit ----
     Plot plot("massSpectrum", "higgs/diphoton", "1d_ratio");
     plot[1].AddData("diphoton/mgg_data", "higgs", "data");
-    plot[1].AddData("diphoton/mgg_sigBkgFit", "higgs", "fit: signal + bkg.").SetLine(kSolid, 3.0, kRed + 1);
-    plot[1].AddData("diphoton/mgg_bkgFit", "higgs", "fit: bkg. only").SetLine(kDashed, 3.0, kBlue + 1);
+    plot[1].AddData("diphoton/mgg_sigBkgFit", "higgs", "fit: signal + bkg.").SetLine(kSolid, 3.0, "#d6403a");
+    plot[1].AddData("diphoton/mgg_bkgFit", "higgs", "fit: bkg. only").SetLine(kDashed, 3.0, "#2f4fb0");
     plot[1].AddText(0.57, 0.9, {kExperiment, kCollisions, "140 fb^{-1}, H #rightarrow #gamma#gamma"});  // clear of the signal window
     plot[1].AddLegend(0.57, 0.62);                                                                      // upper left corner of the box in pad coordinates
     plot[2].AddRatio({"diphoton/mgg_data", "higgs"}, {"diphoton/mgg_bkgFit"});                          // histogram / function
@@ -222,15 +233,15 @@ void DefineHiggsPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // normalised shape; <mean> etc. in a label are replaced by properties of the data -----
     Plot plot("signalShape", "higgs/diphoton", "1d");
-    plot[1].AddData("diphoton/mgg_signalMC", "higgs", "simulation, mean = <mean[.2f]> GeV").Normalize().SetDrawOption(hist).SetColor(kRed + 1);
+    plot[1].AddData("diphoton/mgg_signalMC", "higgs", "simulation, mean = <mean[.2f]> GeV").Normalize().SetDrawOption(hist).SetColor("#d6403a");
     plot[1].AddLegend(0.18, 0.9);
     plot[1]['Y'].SetTitle("normalised counts").SetRange(0.0, 0.05);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // expectation as a filled area, data as points ----------------------------------------
     Plot plot("massSpectrum", "higgs/fourLepton", "1d");
-    plot[1].AddData("fourLepton/m4l_sigPlusBkg", "higgs", "background + H(125)").SetDrawOption(hist).SetLine(kSolid, 3.0, kRed + 1);
-    plot[1].AddData("fourLepton/m4l_background", "higgs", "background (Z#rightarrow4l, ZZ*, Z+jets)").SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineColor(kAzure - 9);
+    plot[1].AddData("fourLepton/m4l_sigPlusBkg", "higgs", "background + H(125)").SetDrawOption(hist).SetLine(kSolid, 3.0, "#d6403a");
+    plot[1].AddData("fourLepton/m4l_background", "higgs", "background (Z#rightarrow4l, ZZ*, Z+jets)").SetDrawOption(hist).SetFill(1001, "#b9d3ee").SetLineColor("#b9d3ee");
     plot[1].AddData("fourLepton/m4l_data", "higgs", "data").SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(1.2);
     plot[1].AddText(0.2, 0.9, {kExperiment, "H #rightarrow ZZ* #rightarrow 4l"});
     plot[1].AddLegend(0.2, 0.76);
@@ -240,11 +251,11 @@ void DefineHiggsPlots(PlotManager& pm)
   {  // "Brazil plot": uncertainty bands, a reference line, the first data defines the frame
     Plot plot("brazilPlot", "higgs/limits", "1d");
     // legend entries follow the data by default; here the bands should appear as filled boxes
-    plot[1].AddData("limits/band2sigma", "higgs", "expected #pm 2#sigma").SetDrawOption(band).SetFill(1001, kOrange).SetLineColor(kOrange).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
-    plot[1].AddData("limits/band1sigma", "higgs", "expected #pm 1#sigma").SetDrawOption(band).SetFill(1001, kGreen + 1).SetLineColor(kGreen + 1).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("limits/band2sigma", "higgs", "expected #pm 2#sigma").SetDrawOption(band).SetFill(1001, "#f5b041").SetLineColor("#f5b041").SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("limits/band1sigma", "higgs", "expected #pm 1#sigma").SetDrawOption(band).SetFill(1001, "#6bbf59").SetLineColor("#6bbf59").SetLegendEntry(LegendEntry().SetSymbolElements("F"));
     plot[1].AddData("limits/expected", "higgs", "expected").SetDrawOption(line).SetLine(kDashed, 3.0, kBlack);
     plot[1].AddData("limits/observed", "higgs", "observed").SetDrawOption(points_line).SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(0.8);
-    plot[1].SetRefFunc("1").SetLine(kSolid, 3.0, kRed + 1);  // SM expectation
+    plot[1].SetRefFunc("1").SetLine(kSolid, 3.0, "#d6403a");  // SM expectation
     plot[1].AddLegend(0.2, 0.9);
     plot[1]['Y'].SetLog().SetRange(0.08, 20.0);
     pm.AddPlot(plot);
@@ -261,7 +272,7 @@ void DefineSpectraPlots(PlotManager& pm)
   // templates: how each kind of data looks, said once; measured("ptSpec") is the data "ptSpec" of the source "data" in this look,
   // and changing a template here changes every plot that uses it
   const Data measured = Data().SetDataSource("data").SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(1.0);
-  const Data simulated = Data().SetDataSource("mc").SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1);
+  const Data simulated = Data().SetDataSource("mc").SetDrawOption(hist_open).SetLine(kSolid, 3.0, "#d6403a");
 
   {  // ---------------------------------------------------------------------------------------
     Plot plot("ptSpectrum", "spectra", "1d");
@@ -269,24 +280,24 @@ void DefineSpectraPlots(PlotManager& pm)
     plot[1].AddData(simulated("ptSpec"), "simulation");
     plot[1].AddLegend();
     plot[1].AddText({kExperiment, kCollisions, "|#eta| < 0.8"});
-    plot[1]['X'].SetLog();
+    plot[1]['X'].SetLog().SetRange(0.15, 10.0);
     plot[1]['Y'].SetLog();
     pm.AddPlot(plot);
 
     // a copy of the plot above, extended by a ratio pad
     Plot ratioPlot(plot, "ptSpectrumRatio", "spectra");
     ratioPlot.SetBasePlot("1d_ratio");
-    ratioPlot[2].AddRatio({"ptSpec", "data"}, {"ptSpec", "mc"});
+    ratioPlot[2].AddRatio({"ptSpec", "data"}, {"ptSpec", "mc"}).SetRangeX(0.15, 6.0);  // where the data still have statistics
     ratioPlot[2]['Y'].SetTitle("data / sim.").SetRange(0.7, 1.3);
-    ratioPlot[0]['X'].SetLog().SetRange(0.15, 15.0);  // pad 0 holds settings shared by all pads
+    ratioPlot[0]['X'].SetLog().SetRange(0.15, 10.0);  // pad 0 holds settings shared by all pads
     pm.AddPlot(ratioPlot);
   }  // -----------------------------------------------------------------------------------
   {  // table columns become a graph; any C++ expression of the columns can be used ---------
     Plot plot("ptSpectrumPublished", "spectra", "1d");
     plot[1].AddData(measured("ptSpec"), "this analysis");
-    plot[1].AddData("ptSpec_published", "published", "published (stat. #oplus syst.)").Scatter("pt", "value", "pt_err", "sqrt(stat*stat + syst*syst)").SetColor(kAzure + 2).SetMarkerStyle(kOpenSquare).SetMarkerSize(1.6);
+    plot[1].AddData("ptSpec_published", "published", "published (stat. #oplus syst.)").Scatter("pt", "value", "pt_err", "sqrt(stat*stat + syst*syst)").SetColor("#3a78c2").SetMarkerStyle(kOpenSquare).SetMarkerSize(1.6);
     plot[1].AddLegend();
-    plot[1]['X'].SetLog();
+    plot[1]['X'].SetLog().SetRange(0.15, 10.0);
     plot[1]['Y'].SetLog();
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
@@ -313,15 +324,16 @@ void DefineSpectraPlots(PlotManager& pm)
     for (const auto& [low, high] : classes) {
       const string label = std::to_string(static_cast<int>(low)) + " #leq #it{N}_{ch} #leq " + std::to_string(static_cast<int>(high));
       // ProjectY(from, to, true): project onto y for x in [from, to] (in axis units, not bins)
-      plot[1].AddData("ptVsMult", "data", label).ProjectY(low, high, true).Normalize();
+      plot[1].AddData("ptVsMult", "data", label).ProjectY(low, high, true).Normalize().SetRangeX(0.0, 2.6);
       if (low > 1) {
         // Numer() / Denom() / Both(): the following settings act on numerator, denominator or both
-        plot[2].AddRatio({"ptVsMult", "data"}, {"ptVsMult"}).Numer().ProjectY(low, high, true).Denom().ProjectY(1, 10, true).Both().Normalize();
+        plot[2].AddRatio({"ptVsMult", "data"}, {"ptVsMult"}).Numer().ProjectY(low, high, true).Denom().ProjectY(1, 10, true).Both().Normalize().Result().SetRangeX(0.0, 2.6);
       }
     }
     plot[1].AddLegend();
+    plot[0]['X'].SetRange(0.0, 2.6);
     plot[1]['Y'].SetLog().SetTitle("normalised counts");
-    plot[2]['Y'].SetTitle("ratio to lowest").SetRange(0.0, 6.0);
+    plot[2]['Y'].SetTitle("ratio to lowest").SetRange(0.0, 4.5);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // Normalize().Cumulative() sums the normalised distribution from the left: the probability to find at most N_ch particles,
@@ -336,8 +348,8 @@ void DefineSpectraPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // ProjectX(from, to, true): multiplicity of events with a track in a given pT range
     Plot plot("multiplicityForHighPt", "spectra", "1d");
-    plot[1].AddData("ptVsMult", "data", "#it{p}_{T} < 1 GeV/#it{c}").ProjectX(0.0, 1.0, true).Normalize();
-    plot[1].AddData("ptVsMult", "data", "2 < #it{p}_{T} < 5 GeV/#it{c}").ProjectX(2.0, 5.0, true).Normalize();
+    plot[1].AddData("ptVsMult", "data", "#it{p}_{T} < 1 GeV/#it{c}").RebinX(3).ProjectX(0.0, 1.0, true).Normalize();
+    plot[1].AddData("ptVsMult", "data", "2 < #it{p}_{T} < 5 GeV/#it{c}").RebinX(3).ProjectX(2.0, 5.0, true).Normalize();
     plot[1].AddLegend(0.45, 0.9);
     plot[1]['Y'].SetTitle("normalised counts");
     pm.AddPlot(plot);
@@ -383,7 +395,7 @@ void DefineSpectraPlots(PlotManager& pm)
     Plot plot("energyScanPanels", "spectra", "1d_2x2_corner");
     uint8_t pad = 1;
     for (const string energy : {"2.76", "7", "13"}) {
-      plot[pad].AddData("model_" + energy, "energyScan", "model").SetLine(kSolid, 3.0, kAzure + 2);
+      plot[pad].AddData("model_" + energy, "energyScan", "model").SetLine(kSolid, 3.0, "#3a78c2");
       plot[pad].AddData("data_" + energy, "energyScan", "data").SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(1.0);
       plot[pad].AddText(0.6, 0.9, "#sqrt{#it{s}} = " + energy + " TeV");
       ++pad;
@@ -429,17 +441,17 @@ void DefineDetectorPlots(PlotManager& pm)
   {  // data vs. simulation; Both() normalises numerator and denominator before dividing
     Plot plot("vertexZ", "detector/events", "1d_ratio");
     plot[1].AddData("hVtxZ", "EventQA", "data").Normalize();
-    plot[1].AddData("hVtxZ", "EventQA_MC", "simulation").Normalize().SetDrawOption(hist).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("hVtxZ", "EventQA_MC", "simulation").Normalize().SetDrawOption(hist).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(0.189, 0.898);
     // the first data defines the frame: leave room for the simulation, which peaks higher
     plot[1]['Y'].SetTitle("normalised counts").SetMaxRange(0.036);
-    plot[2].AddRatio({"hVtxZ", "EventQA"}, {"hVtxZ", "EventQA_MC"}).Both().Normalize();
-    plot[2]['Y'].SetTitle("data / sim.").SetRange(-1.0, 5.0);
+    plot[2].AddRatio({"hVtxZ", "EventQA"}, {"hVtxZ", "EventQA_MC"}).Both().Normalize().Result().SetRangeX(-20.0, 20.0);
+    plot[2]['Y'].SetTitle("data / sim.").SetRange(0.5, 2.5);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // labelled bins, with the bin contents printed on top -------------------------------
     Plot plot("eventSelection", "detector/events", "1d_wide");
-    plot[1].AddData("hEventSelection", "EventQA").SetDrawOption("HIST TEXT0").SetTextFormat(".0f").SetFill(1001, kAzure - 9);
+    plot[1].AddData("hEventSelection", "EventQA").SetDrawOption("HIST TEXT0").SetTextFormat(".0f").SetFill(1001, "#b9d3ee");
     plot[1]['Y'].SetRange(0.0, 1.2e6);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
@@ -464,8 +476,8 @@ void DefineDetectorPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // efficiency = reconstructed / generated; SetCorrelated() gives binomial errors -----
     Plot plot("trackingEfficiency", "detector/tracking", "1d");
-    plot[1].AddRatio({"hPt", "TrackQA_MC"}, {"hPtGen"}).SetCorrelated();
-    plot[1]['X'].SetLog().SetRange(0.1, 10.0);
+    plot[1].AddRatio({"hPt", "TrackQA_MC"}, {"hPtGen"}).SetCorrelated().SetRangeX(0.1, 3.0);  // the simulation runs out of tracks above
+    plot[1]['X'].SetLog().SetRange(0.1, 5.0);
     plot[1]['Y'].SetTitle("tracking efficiency").SetRange(0.0, 1.0).SetGrid();
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
@@ -476,8 +488,8 @@ void DefineDetectorPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // histograms from a tree: variables, binning and selections are chosen at plot time --
     Plot plot("dcaXY", "detector/tracking", "1d");
-    plot[1].AddData("tracks", "tracks", "secondaries").Project1D({"dcaXY", 50, {-0.5, 0.5}}).Filter("!isPrimary").SetDrawOption(hist).SetFill(1001, kRed - 9).SetLine(kSolid, 3.0, kRed + 1);
-    plot[1].AddData("tracks", "tracks", "primaries").Project1D({"dcaXY", 50, {-0.5, 0.5}}).Filter("isPrimary").SetDrawOption(hist).SetLine(kSolid, 3.0, kBlue + 1);
+    plot[1].AddData("tracks", "tracks", "secondaries").Project1D({"dcaXY", 50, {-0.5, 0.5}}).Filter("!isPrimary").SetDrawOption(hist).SetFill(1001, "#f6c1bb").SetLine(kSolid, 3.0, "#d6403a");
+    plot[1].AddData("tracks", "tracks", "primaries").Project1D({"dcaXY", 50, {-0.5, 0.5}}).Filter("isPrimary").SetDrawOption(hist).SetLine(kSolid, 3.0, "#2f4fb0");
     plot[1].AddData("tracks", "tracks", "all tracks").Project1D({"dcaXY", 50, {-0.5, 0.5}}).SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(1.2);
     plot[1].AddLegend(0.62, 0.9);
     plot[1]['X'].SetTitle("DCA_{#it{xy}} (cm)").SetNumDivisions(505);
@@ -498,7 +510,7 @@ void DefineDetectorPlots(PlotManager& pm)
     Plot plot("clustersVsEta", "detector/tracking", "1d");
     plot[1].AddData("tracks", "tracks").Profile1D({"eta", 18, {-0.9, 0.9}}, "nClustersTPC");
     plot[1]['X'].SetTitle("#eta");
-    plot[1]['Y'].SetTitle("#LT#it{N}_{cls}^{TPC}#GT").SetRange(100.0, 160.0);
+    plot[1]['Y'].SetTitle("#LT#it{N}_{cls}^{TPC}#GT").SetRange(115.0, 155.0);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // two different quantities side by side, each with its own palette and colour scale (_gap: the panels share no axis)
@@ -529,8 +541,8 @@ void DefineDetectorPlots(PlotManager& pm)
     Plot plot("v0Topologies", "detector/tracking", "1d_2x1");
     uint8_t pad = 1;
     for (const string topology : {"cowboy", "sailor"}) {
-      plot[pad].AddData("v0/" + topology + "_pos", "detector", "positive daughter").SetDrawOption(line).SetLine(kSolid, 4.0, kRed + 1);
-      plot[pad].AddData("v0/" + topology + "_neg", "detector", "negative daughter").SetDrawOption(line).SetLine(kSolid, 4.0, kAzure + 2);
+      plot[pad].AddData("v0/" + topology + "_pos", "detector", "positive daughter").SetDrawOption(line).SetLine(kSolid, 4.0, "#d6403a");
+      plot[pad].AddData("v0/" + topology + "_neg", "detector", "negative daughter").SetDrawOption(line).SetLine(kSolid, 4.0, "#3a78c2");
       plot[pad].AddLine({0.0, 0.0}, {24.0, 12.0}).SetLine(kDashed, 3.0, kGray + 2);  // the flight path of the V0
       plot[pad].AddPoints({0.0}, {0.0}, "primary vertex").SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(1.8);
       plot[pad].AddPoints({24.0}, {12.0}, "decay vertex").SetColor(kBlack).SetMarkerStyle(kOpenCircle).SetMarkerSize(2.2);
@@ -558,6 +570,28 @@ void DefineDetectorPlots(PlotManager& pm)
     plot[1]['X'].SetLog();
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
+  {  // pion efficiencies from tracking to identification; above them the momentum ranges in which each detector separates pions from kaons,
+    // as bars (regions between two corners, in axis units) labelled inside
+    Plot plot("pidEfficiency", "detector/pid", "1d");
+    const vector<std::tuple<double, double, double, string, string>> detectors = {
+      {0.1, 0.75, 1.24, "#f0a29a", "inner TOF"}, {0.3, 2.6, 1.155, "#d9574e", "outer TOF"}, {2.0, 11.0, 1.07, "#a8241d", "RICH"}};
+    for (const auto& [x1, x2, y, color, name] : detectors) {
+      plot[1].AddRegion({x1, y - 0.035}, {x2, y + 0.035}).SetFill(1001, color);
+      plot[1].AddText(std::sqrt(x1 * x2), y, name).SetUserCoordinates().SetTextAlign(22).SetText(42, 0.03, kWhite);
+    }
+    const vector<std::tuple<string, string, int16_t, float_t, string>> steps = {{"tracked", "#262626", kFullCircle, 1.3, "reconstructed"},
+                                                                                {"matched", "#3a78c2", kFullSquare, 1.2, "matched to TOF"},
+                                                                                {"identified", "#d9574e", kFullDiamond, 1.9, "identified (#pi/K, 3#it{#sigma})"}};
+    for (const auto& [name, color, marker, size, label] : steps) {
+      plot[1].AddData("pid/" + name, "detector", label).SetColor(color).SetMarker(marker, size, color);
+    }
+    plot[1].AddHorizontalLine(1.0).SetLine(kDashed, 2.0, kGray + 1).SetBehindData();
+    plot[1].AddLegend(0.42, 0.55);
+    plot[1].AddText(0.42, 0.3, {string(kExperiment) + " simulation", "#pi^{#pm}, |#it{#eta}| < 0.8"});
+    plot[1]['X'].SetLog().SetRange(0.04, 25.0).SetNoExponent().SetTitle("#it{p}_{T} (GeV/#it{c})");
+    plot[1]['Y'].SetRange(0.0, 1.3).SetTitle("efficiency");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
 
   // --------------------------------------------------------------------------------------
   // calorimetry
@@ -565,9 +599,9 @@ void DefineDetectorPlots(PlotManager& pm)
   {  // measured points from a table and a user-defined function ---------------------------
     Plot plot("energyResolution", "detector/calorimeter", "1d");
     plot[1].AddData("testbeam", "testbeam", "test beam").Scatter("energy", "resolution", "0.", "resolution_err");
-    plot[1].AddFunction("sqrt(pow(0.10/sqrt(x), 2) + pow(0.01, 2) + pow(0.05/x, 2))", "design: 10%/#sqrt{#it{E}} #oplus 1% #oplus 5%/#it{E}").SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddFunction("sqrt(pow(0.10/sqrt(x), 2) + pow(0.01, 2) + pow(0.05/x, 2))", "design: 10%/#sqrt{#it{E}} #oplus 1% #oplus 5%/#it{E}").SetLine(kSolid, 3.0, "#d6403a");
     // a few numbers typed in directly, e.g. from a logbook
-    plot[1].AddPoints({1.0, 5.0, 20.0}, {0.135, 0.062, 0.035}, "prototype 2022").SetColor(kAzure + 2).SetMarkerStyle(kOpenSquare).SetMarkerSize(1.6);
+    plot[1].AddPoints({1.0, 5.0, 20.0}, {0.135, 0.062, 0.035}, "prototype 2022").SetColor("#3a78c2").SetMarkerStyle(kOpenSquare).SetMarkerSize(1.6);
     plot[1].AddLegend();
     plot[1]['X'].SetLog().SetTitle("#it{E} (GeV)");
     plot[1]['Y'].SetTitle("#sigma_{#it{E}} / #it{E}").SetRange(0.0, 0.2);
@@ -577,7 +611,7 @@ void DefineDetectorPlots(PlotManager& pm)
     Plot plot("diphotonMass", "detector/calorimeter", "1d");
     // ScaleX(1000.0) converts the x axis from GeV to MeV; Smooth() reduces fluctuations of the simulation
     plot[1].AddData("hInvMassGG", "CaloQA", "data").ScaleX(1000.0);
-    plot[1].AddData("hInvMassGG", "CaloQA_MC", "simulation (smoothed)").ScaleX(1000.0).Smooth(2).SetDrawOption(hist).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("hInvMassGG", "CaloQA_MC", "simulation (smoothed)").ScaleX(1000.0).Smooth(2).SetDrawOption(hist).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(0.494, 0.902);
     plot[1].AddText(0.28, 0.93, "#pi^{0}");  // text at a fixed position (pad coordinates)
     plot[1].AddText(0.72, 0.32, "#eta");
@@ -593,9 +627,9 @@ void DefineDetectorPlots(PlotManager& pm)
     const vector<std::pair<double, double>> ptBins = {{1.0, 1.5}, {1.5, 2.0}, {2.0, 3.0}, {3.0, 4.0}, {4.0, 6.0}, {6.0, 10.0}};
     for (size_t i = 0; i < ptBins.size(); ++i) {
       const auto& [low, high] = ptBins[i];
-      plot[i + 1].AddData("hInvMassGGVsPtMixed", "CaloQA", "mixed event").ProjectX(low, high, true).ScaleX(1000.0).Normalize(false, 190.0, 240.0).SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineColor(kAzure - 9);
+      plot[i + 1].AddData("hInvMassGGVsPtMixed", "CaloQA", "mixed event").ProjectX(low, high, true).ScaleX(1000.0).Normalize(false, 190.0, 240.0).SetDrawOption(hist).SetFill(1001, "#b9d3ee").SetLineColor("#b9d3ee");
       plot[i + 1].AddData("hInvMassGGVsPt", "CaloQA", "same event").ProjectX(low, high, true).ScaleX(1000.0).Normalize(false, 190.0, 240.0).SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(1.0).SetDefinesFrame();
-      plot[i + 1].AddPoints({190.0, 240.0}, {0.05, 0.05}, "norm. region").SetDrawOption(line).SetLine(kSolid, 5.0, kRed + 1);  // 20 bins: 1/20 each
+      plot[i + 1].AddPoints({190.0, 240.0}, {0.05, 0.05}, "norm. region").SetDrawOption(line).SetLine(kSolid, 5.0, "#d6403a");  // 20 bins: 1/20 each
       plot[i + 1].AddText(0.6, 0.9, Form("%g < #it{p}_{T} < %g GeV/#it{c}", low, high));
     }
     plot[1].AddLegend(0.6, 0.8);  // upper left corner, in pad coordinates like the texts
@@ -606,7 +640,7 @@ void DefineDetectorPlots(PlotManager& pm)
   {  // the status of each calorimeter cell from the calibration: a map of categories in discrete colours, explained by a legend of its own
     // (rows without data: AddEntry with a fill)
     Plot plot("cellStatus", "detector/calorimeter", "1d");  // no colour scale: the colours are the categories
-    const vector<std::pair<string, color_t>> status = {{"good cells", kYellow - 9}, {"dead cells", kGray + 1}, {"bad cells", kRed + 1}};
+    const vector<std::pair<string, color_t>> status = {{"good cells", "#fff3b0"}, {"dead cells", kGray + 1}, {"bad cells", "#d6403a"}};
     plot[1].SetPalette({{status[0].second, 0.0}, {status[1].second, 0.5}, {status[2].second, 1.0}}, std::nullopt, 3);  // one colour per status (1, 2, 3)
     plot[1].AddData("calo/cellStatus", "detector").SetDrawOption(col).SetContours(3);
     plot[1]['Z'].SetRange(0.5, 3.5);
@@ -626,14 +660,14 @@ void DefineDetectorPlots(PlotManager& pm)
     Plot plot("turnOn", "detector/trigger", "1d");
     plot[1].AddRatio({"hLeadingPtTriggered", "TriggerQA"}, {"hLeadingPtAll"}, "data").SetCorrelated().Result().Scale(100.0);
     // SetRangeX limits the range in which a data item is drawn
-    plot[1].AddFunction("98*0.5*(1+TMath::Erf((x-8)/(sqrt(2)*1.5)))", "erf, #it{p}_{T}^{thr} = 8 GeV/#it{c}").SetRangeX(0.0, 20.0).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddFunction("98*0.5*(1+TMath::Erf((x-8)/(sqrt(2)*1.5)))", "erf, #it{p}_{T}^{thr} = 8 GeV/#it{c}").SetRangeX(0.0, 20.0).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(0.553, 0.36);
     plot[1]['Y'].SetTitle("trigger efficiency (%)").SetRange(0.0, 110.0);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // TEfficiency objects keep passed and total counts; drawn, their errors are binomial intervals (Clopper-Pearson)
     Plot plot("muonEfficiency", "detector/trigger", "1d");
-    plot[1].AddData("eta_2023", "trigger", "2023").SetMarkerStyle(kOpenCircle).SetMarkerSize(1.2).SetColor(kRed + 1);
+    plot[1].AddData("eta_2023", "trigger", "2023").SetMarkerStyle(kOpenCircle).SetMarkerSize(1.2).SetColor("#d6403a");
     plot[1].AddData("eta_2024", "trigger", "2024 (repaired)").SetMarkerStyle(kFullCircle).SetColor(kBlack);
     plot[1].AddText(0.18, 0.38, {"muon trigger", "#it{p}_{T} > 25 GeV/#it{c}"});
     plot[1].AddLegend(0.62, 0.38);
@@ -650,7 +684,7 @@ void DefineDetectorPlots(PlotManager& pm)
   {  // shapes compared at their maxima; the overflow bin shows entries beyond the axis range
     Plot plot("pileUp", "detector/events", "1d");
     plot[1].AddData("hNPV", "EventQA", "data").NormalizeToMaximum().SetShowOverflowBins();
-    plot[1].AddData("hNPV", "EventQA_MC", "simulation").NormalizeToMaximum().SetShowOverflowBins().SetDrawOption(hist).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("hNPV", "EventQA_MC", "simulation").NormalizeToMaximum().SetShowOverflowBins().SetDrawOption(hist).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(0.194, 0.911);
     plot[1]['Y'].SetTitle("normalised to maximum").SetRoomAboveMax(0.25);  // a quarter of the frame free above the data for the legend
     pm.AddPlot(plot);
@@ -662,7 +696,7 @@ void DefineDetectorPlots(PlotManager& pm)
   {  // wide custom base plot; a line with a legend row is data (points drawn as a line), one without would be a shape (AddHorizontalLine)
     Plot plot("meanMultiplicityVsRun", "detector/qa", "1d_wide");
     plot[1].AddData("runQA", "runQA", "run average").Scatter("run", "meanNch", "0.", "meanNch_err");
-    plot[1].AddPoints({544000.0, 544400.0}, {9.6, 9.6}, "reference").SetDrawOption(line).SetLine(kDashed, 3.0, kRed + 1);
+    plot[1].AddPoints({544000.0, 544400.0}, {9.6, 9.6}, "reference").SetDrawOption(line).SetLine(kDashed, 3.0, "#d6403a");
     plot[1].AddLegend(0.718, 0.914);
     plot[1]['X'].SetTitle("run number").SetRange(544000.0, 544400.0).SetNumDivisions(504).SetTickOrientation("+");
     plot[1]['Y'].SetTitle("#LT#it{N}_{ch}#GT").SetRange(8.7, 10.2);
@@ -691,7 +725,7 @@ void DefineDetectorPlots(PlotManager& pm)
     Plot plot("ptFlowVsEta", "detector/tracking", "1d");
     plot[1].AddData("tracks", "tracks").Project1D({"eta", 18, {-0.9, 0.9}}, "pt");
     plot[1]['X'].SetTitle("#eta");
-    plot[1]['Y'].SetTitle("#Sigma #it{p}_{T} (GeV/#it{c})").SetRange(0.0, 2500.0);
+    plot[1]['Y'].SetTitle("#Sigma #it{p}_{T} (GeV/#it{c})").SetRange(1000.0, 1800.0);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
 
@@ -734,7 +768,7 @@ void DefineDetectorPlots(PlotManager& pm)
     plot.ShareAxis('Y', {1, 2, 3, 4});
     uint8_t pad = 1;
     for (const string& source : {"tracking", "pid", "material", "normalisation"}) {
-      plot[pad].AddData("systematics", "systematics", "this source").Scatter("pt", source).SetDrawOption(line).SetLine(kSolid, 4.0, kBlue + 1);
+      plot[pad].AddData("systematics", "systematics", "this source").Scatter("pt", source).SetDrawOption(line).SetLine(kSolid, 4.0, "#2f4fb0");
       plot[pad].AddData("systematics", "systematics", "total").Scatter("pt", "total").SetDrawOption(line).SetLine(kDashed, 3.0, kGray + 2);
       plot[pad].AddText(top_left, source);
       ++pad;
@@ -768,7 +802,7 @@ void DefineCollisionPlots(PlotManager& pm)
 {
   {  // DivideBinWidth() turns counts in logarithmic bins into a density ---------------------
     Plot plot("massSpectrum", "collisions/dimuon", "1d");
-    plot[1].AddData("mMuMu", "dimuon").DivideBinWidth().SetDrawOption(hist).SetLine(kSolid, 3.0, kAzure + 2);
+    plot[1].AddData("mMuMu", "dimuon").DivideBinWidth().SetDrawOption(hist).SetLine(kSolid, 3.0, "#3a78c2");
     plot[1].AddText(0.249, 0.836, "#omega #phi");
     plot[1].AddText(0.378, 0.91, "J/#psi");
     plot[1].AddText(0.477, 0.82, "#psi'");
@@ -825,6 +859,150 @@ void DefineCollisionPlots(PlotManager& pm)
 
 //**************************************************************************************************
 /**
+ * Final results of a pp analysis as in a publication: systematic uncertainties as boxes, theory as bands and curves.
+ */
+//**************************************************************************************************
+void DefineQCDPlots(PlotManager& pm)
+{
+  // a measurement: the systematic uncertainties as boxes (raw ROOT option "5": filled pale, outlined in the full colour), the points with
+  // their statistical errors on top; one legend row shows both
+  auto addResult = [](Plot::Pad& pad, const string& name, color_t color, int16_t marker, const std::optional<string>& label = {}, float_t size = 1.4) {
+    auto& syst = pad.AddData(name + "_syst", "qcd", label).SetDrawOption("5").SetFill(1001, color, 0.3).SetLine(kSolid, 2.0, color);
+    syst.GetLegendEntry().SetSymbolElements("FPE").SetMarker(marker, size, color);
+    pad.AddData(name + "_stat", "qcd").SetColor(color).SetMarker(marker, size, color);
+  };
+  // the same for a ratio of two measurements (statistical and systematic uncertainties each propagated) or to a function
+  auto addResultRatio = [](Plot::Pad& pad, const string& numer, const string& denom, color_t color, int16_t marker, bool denomIsFunction = false) {
+    pad.AddRatio({numer + "_syst", "qcd"}, {denomIsFunction ? denom : denom + "_syst"}).SetDrawOption("5").SetFill(1001, color, 0.3).SetLine(kSolid, 2.0, color);
+    pad.AddRatio({numer + "_stat", "qcd"}, {denomIsFunction ? denom : denom + "_stat"}).SetColor(color).SetMarkerStyle(marker);
+  };
+
+  {  // correlation functions of deuterons and protons with protons: left the two particle pairs, right three momentum classes of the
+    // deuterons; below each the ratio to the black reference
+    Plot plot("deltaPhi", "qcd/correlations", "1d_2x1_ratio");
+    const string green = "#4c9a2a", blue = "#3a78c2", red = "#e0453a";
+    addResult(plot[1], "pp", green, kFullSquare, "#bar{p}p + pp");
+    addResult(plot[1], "dp", kBlack, kFullCircle, "#bar{d}p + dp");
+    plot[1].AddLegend(0.2, 0.83, "0.6 < #it{p}_{T}/#it{A} < 1.0 GeV/#it{c}");
+    plot[1].AddText(0.2, 0.93, string(kExperiment) + ", " + kCollisions);
+    addResult(plot[2], "dp_lowPt", blue, kFullCircle, "0.6 < #it{p}_{T} < 1.0 GeV/#it{c}");
+    addResult(plot[2], "dp", kBlack, kFullCross, "0.6 < #it{p}_{T}/#it{A} < 1.0 GeV/#it{c}");
+    addResult(plot[2], "dp_highPt", red, kFullSquare, "1.2 < #it{p}_{T} < 2.0 GeV/#it{c}");
+    plot[2].AddLegend(0.08, 0.9, "#bar{d}p + dp");
+    addResultRatio(plot[3], "pp", "dp", green, kFullSquare);
+    addResultRatio(plot[4], "dp_lowPt", "dp", blue, kFullCircle);
+    addResultRatio(plot[4], "dp_highPt", "dp", red, kFullSquare);
+    plot[0]['X'].SetRange(-0.5 * TMath::Pi(), 1.5 * TMath::Pi()).SetTitle("#Delta#it{#varphi} (rad)");
+    plot[1]['Y'].SetRange(0.6, 1.7).SetTitle("#it{C}(#Delta#it{#varphi})");
+    plot[0]['Y'].SetRange(0.8, 1.2);  // the panels of the lower row share their y axis and title
+    plot[3]['Y'].SetTitle("ratio to #bar{d}p+dp");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // the pi0 cross section against NLO calculations and event generators, each divided by the fit to the data in a panel of its own
+    // (a layout of three rows; their reference lines and axis conventions are set once in the base plot)
+    Plot twoRatios("1d_ratio_ratio", PanelLayout({{Panel()}, {Panel(1.0, 0.4)}, {Panel(1.0, 0.4)}}));
+    for (uint8_t pad : {2, 3}) {
+      twoRatios[pad].SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 2);
+      twoRatios[pad]['Y'].SetNumDivisions(305).SetTitleCenter();
+    }
+    pm.AddBasePlot(twoRatios);
+    Plot plot("pi0CrossSection", "qcd/neutralMesons", "1d_ratio_ratio");
+    const vector<std::tuple<string, string, int16_t, string>> nlo = {
+      {"nlo_A", "#2fb5c8", kDashed, "PDF A + FF A"}, {"nlo_B", "#5bb450", kDashDotted, "PDF A + FF B"}, {"nlo_C", "#6b7bd6", kSolid, "PDF B + FF B"}};
+    const vector<std::tuple<string, string, int16_t, string>> generators = {
+      {"generator_A", "#a3201d", kSolid, "generator A"}, {"generator_B", "#e377c2", kDashed, "generator B"}, {"generator_C", "#f28e2b", kDotted, "generator C"}};
+    for (const auto& [name, color, style, label] : nlo) {
+      // the band, and its central value as a line; the legend row (in the second legend) shows both
+      plot[1].AddData(name, "qcd", "NLO, " + label).SetDrawOption(band).SetFill(1001, color, 0.35).SetLine(style, 3.0, color).SetLegend(2).GetLegendEntry().SetSymbolElements("LF");
+      plot[1].AddData(name, "qcd").SetDrawOption(line).SetLine(style, 3.0, color);
+      plot[2].AddRatio({name, "qcd"}, {"pi0_fit"}).SetDrawOption(band).SetFill(1001, color, 0.35);
+      plot[2].AddRatio({name, "qcd"}, {"pi0_fit"}).SetDrawOption(line).SetLine(style, 3.0, color);
+    }
+    for (const auto& [name, color, style, label] : generators) {
+      plot[1].AddData(name, "qcd", label).SetDrawOption(curve).SetLine(style, 4.0, color).SetLegend(2);
+      plot[3].AddRatio({name, "qcd"}, {"pi0_fit"}).SetDrawOption(curve).SetLine(style, 4.0, color);
+    }
+    // the fit behind the data, its legend row after theirs (data 11: the systematic boxes carrying the label)
+    plot[1].AddData("pi0_fit", "qcd", "Tsallis fit").SetLine(kSolid, 2.0, kGray + 1).GetLegendEntry().AfterData(11);
+    addResult(plot[1], "pi0", kBlack, kFullCircle, "data");
+    for (uint8_t pad : {2, 3}) {
+      addResultRatio(plot[pad], "pi0", "pi0_fit", kBlack, kFullCircle, true);
+    }
+    // the data in the free upper right, the calculations in the free lower left corner
+    plot[1].AddText(0.24, 0.93, string(kExperiment) + ", " + kCollisions);
+    plot[1].AddLegend(0.6, 0.86, "#pi^{0}, |#it{y}| < 0.8");
+    plot[1].AddLegend(0.2, 0.46);
+    plot[0]['X'].SetLog().SetRange(0.3, 45.0).SetNoExponent().SetTitle("#it{p}_{T} (GeV/#it{c})");
+    // a grid on both logarithmic axes of the spectrum (lines at the major ticks: every decade)
+    plot[1]['X'].SetGrid();
+    plot[1]['Y'].SetLog().SetGrid().SetRange(0.03, 3e12).SetTitle("#it{E} d^{3}#it{#sigma}/d#it{p}^{3} (pb GeV^{#minus2}#it{c}^{3})");
+    plot[2]['Y'].SetRange(0.4, 2.1).SetTitle("NLO / fit");
+    plot[3]['Y'].SetRange(0.5, 1.5).SetTitle("MC / fit");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // eta/pi0 in jets against the momentum fraction z, in four classes of jet pT, side by side in each bin; an event generator as lines of the same
+    // colours; the legend in two columns under a title
+    Plot plot("etaToPi0InJets", "qcd/neutralMesons", "1d");
+    const vector<std::tuple<string, string, string, int16_t, float_t>> jetBins = {{"10", "10#minus20", "#cf3d96", kFullCircle, 1.6},
+                                                                                  {"20", "20#minus40", "#8752d4", kFullSquare, 1.5},
+                                                                                  {"40", "40#minus60", "#2f74d0", kFullTriangleUp, 1.8},
+                                                                                  {"60", "60#minus80", "#6fae1c", kFullDiamond, 2.3}};
+    for (const auto& [tag, label, color, marker, size] : jetBins) {
+      plot[1].AddData("generator_jetPt" + tag, "qcd").SetDrawOption(line).SetLine(kSolid, 3.0, color, 0.6);
+    }
+    for (const auto& [tag, label, color, marker, size] : jetBins) {
+      addResult(plot[1], "etaToPi0_jetPt" + tag, color, marker, label, size);
+    }
+    auto& legend = plot[1].AddLegend(0.2, 0.84, "#it{p}_{T}^{jet} (GeV/#it{c}), anti-#it{k}_{T}, #it{R} = 0.4").SetNumColumns(2);
+    legend.AddEntry("generator A").SetSymbolElements("L").SetLine(kSolid, 3.0, kGray + 2);
+    plot[1].AddText(0.2, 0.93, string(kExperiment) + ", " + kCollisions);
+    plot[1]['X'].SetRange(0.05, 1.0).SetTitle("#it{z} = #it{p}_{T}^{meson} / #it{p}_{T}^{jet}");
+    plot[1]['Y'].SetRange(0.25, 1.05).SetTitle("#it{#eta} / #it{#pi}^{0}");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+  {  // fragmentation functions at three orders: a grid of blocks, each a panel with the ratios to LO and to NLO below it (touching
+    // panels share their axes, the blocks are set apart by a gap), the legend in the free cell
+    const Panel main(1.0, 0.8), ratio(1.0, 0.32);
+    pm.AddBasePlot(Plot("fragmentationGrid", PanelLayout({{main, main, main}, {ratio, ratio, ratio}, {ratio, ratio, ratio}, {Gap()}, {main, main, Empty().Span(1, 3)}, {ratio, ratio}, {ratio, ratio}})));
+    // pads: 1-3 the upper panels, 4-6 and 7-9 their ratios, 10 and 11 the lower panels, 12 the free cell, 13-14 and 15-16 their ratios
+    Plot plot("fragmentationFunctions", "qcd/fragmentation", "fragmentationGrid");
+    const vector<std::tuple<string, string, int16_t, float_t>> orders = {{"LO", "#2c6fbb", 3354, 1.0}, {"NLO", "#2e9e4f", 3345, 1.0}, {"NNLO", "#d1352b", 1001, 0.35}};  // hatched, hatched, filled
+    const vector<std::pair<string, string>> partons = {{"g", "g"}, {"u", "u + #bar{u}"}, {"d", "d + #bar{d}"}, {"s", "s + #bar{s}"}, {"c", "c + #bar{c}"}};
+    const vector<std::tuple<uint8_t, uint8_t, uint8_t>> pads = {{1, 4, 7}, {2, 5, 8}, {3, 6, 9}, {10, 13, 15}, {11, 14, 16}};
+    for (size_t i = 0; i < partons.size(); ++i) {
+      const auto& [parton, label] = partons[i];
+      const auto& [mainPad, toLO, toNLO] = pads[i];
+      for (const auto& [order, color, fill, alpha] : orders) {
+        const string name = parton + "_" + order;
+        plot[mainPad].AddData(name, "qcd", order).SetDrawOption(band).SetFill(fill, color, alpha).SetLine(kSolid, 3.0, color).GetLegendEntry().SetSymbolElements("LF");
+        plot[mainPad].AddData(name, "qcd").SetDrawOption(line).SetLine(kSolid, 3.0, color);
+        for (const auto& [pad, denom] : vector<std::pair<uint8_t, string>>{{toLO, "_LO_central"}, {toNLO, "_NLO_central"}}) {
+          plot[pad].AddRatio({name, "qcd"}, {parton + denom}).SetDrawOption(band).SetFill(fill, color, alpha);
+          plot[pad].AddRatio({name, "qcd"}, {parton + denom}).SetDrawOption(line).SetLine(kSolid, 3.0, color);
+        }
+      }
+      plot[mainPad].AddText(0.9, 0.88, label + " #rightarrow h^{#pm}").SetTextAlign(32);
+      plot[mainPad]['Y'].SetLog().SetRange(4e-3, 2.0).SetTitle("#it{z} #it{D}(#it{z})");
+      plot[toLO]['Y'].SetRange(0.65, 1.35).SetNumDivisions(305).SetTitle("/ LO").SetTitleCenter();
+      plot[toNLO]['Y'].SetRange(0.8, 1.3).SetNumDivisions(305).SetTitle("/ NLO").SetTitleCenter();
+      for (uint8_t pad : {mainPad, toLO, toNLO}) {
+        plot[pad]['X'].SetGrid();  // a grid in x only, through the panel and its ratios
+      }
+      plot[toLO].SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 2);
+      plot[toNLO].SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 2);
+    }
+    plot[12].AddText(0.15, 0.75, {"fragmentation into", "charged hadrons", "#it{Q} = 10 GeV"});
+    auto& legend = plot[12].AddLegend(0.15, 0.62);
+    for (uint16_t dataID : {1, 3, 5}) {  // the bands of the first panel
+      legend.AddDataEntry(1, dataID);
+    }
+    plot[0]['X'].SetLog().SetRange(0.01, 1.0).SetTitle("#it{z}");
+    pm.AddPlot(plot);
+  }  // -----------------------------------------------------------------------------------
+}
+
+//**************************************************************************************************
+/**
  * Heavy-ion collisions: centrality, nuclear modification factor, flow.
  */
 //**************************************************************************************************
@@ -832,12 +1010,13 @@ void DefineHeavyIonPlots(PlotManager& pm)
 {
   const vector<string> centralities = {"0-10", "10-30", "30-50"};
   const std::map<string, double> ncoll = {{"0-10", 1500.0}, {"10-30", 750.0}, {"30-50", 260.0}};
+  const std::map<string, string> centColors = {{"0-10", "#e0453a"}, {"10-30", "#f28e2b"}, {"30-50", "#3a78c2"}};  // one colour per centrality class in all plots
 
   {  // vertical lines marking the centrality classes (shapes: over the height of the frame, not data)
     Plot plot("centrality", "heavyion", "1d");
     plot[1].AddData("hV0M", "heavyion");
     for (const double boundary : {2700.0, 6800.0, 14000.0}) {
-      plot[1].AddVerticalLine(boundary).SetLine(kDashed, 3.0, kRed + 1);
+      plot[1].AddVerticalLine(boundary).SetLine(kDashed, 3.0, "#d6403a");
     }
     plot[1].AddText(0.7, 0.5, "0-10%");
     plot[1].AddText(0.43, 0.6, "10-30%");
@@ -854,8 +1033,8 @@ void DefineHeavyIonPlots(PlotManager& pm)
     for (const auto& [x, cent] : vector<std::pair<double, string>>{{1.0, "0-10"}, {15.0, "10-30"}, {35.0, "30-50"}}) {
       plot[1].AddText(x, 4.0, cent).SetUserCoordinates();
     }
-    plot[1].AddData("ncoll", "glauber", "#LT#it{N}_{coll}#GT").SetDrawOption(points_xerr).SetMarker(kFullCircle, 1.4, kRed + 1).SetLineColor(kRed + 1);
-    plot[1].AddData("npart", "glauber", "#LT#it{N}_{part}#GT").SetDrawOption(points_xerr).SetMarker(kFullSquare, 1.3, kAzure + 2).SetLineColor(kAzure + 2);
+    plot[1].AddData("ncoll", "glauber", "#LT#it{N}_{coll}#GT").SetDrawOption(points_xerr).SetMarker(kFullCircle, 1.4, "#d6403a").SetLineColor("#d6403a");
+    plot[1].AddData("npart", "glauber", "#LT#it{N}_{part}#GT").SetDrawOption(points_xerr).SetMarker(kFullSquare, 1.3, "#3a78c2").SetLineColor("#3a78c2");
     plot[1].AddText(0.55, 0.92, {"Pb-Pb, #sqrt{#it{s}_{NN}} = 5.02 TeV", "Glauber model"});
     plot[1].AddLegend(0.72, 0.78);
     plot[1]['X'].SetRange(0.0, 90.0).SetTitle("centrality (%)");
@@ -868,14 +1047,14 @@ void DefineHeavyIonPlots(PlotManager& pm)
       const auto& cent = centralities[i];
       auto& panel = plot[i + 1];
       const std::optional<string> label = (i == 0) ? std::optional<string>("Pb-Pb / pp") : std::nullopt;  // one legend entry is enough
-      panel.AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}, label).Numer().Scale(1.0 / ncoll.at(cent));
+      panel.AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}, label).Numer().Scale(1.0 / ncoll.at(cent)).Result().SetRangeX(0.15, 6.0).SetColor(centColors.at(cent));
       panel.SetRefFunc("1").SetLine(kDashed, 3.0, kGray + 1);
       panel.AddText(0.5, 0.9, cent + "%");
     }
     // the published values in the first panel: systematic uncertainties as boxes, statistical as bars,
     // both from the same table; they get their own (second) legend
-    plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high").SetDrawOption(boxes).SetColor(kOrange + 1).SetFill(1001, kOrange - 9).SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
-    plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetColor(kOrange + 1).SetMarkerStyle(kOpenCircle).SetMarkerSize(1.2).SetLegend(2);
+    plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high").SetDrawOption(boxes).SetColor("#f28e2b").SetFill(1001, "#fbd5a5").SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetColor("#f28e2b").SetMarkerStyle(kOpenCircle).SetMarkerSize(1.2).SetLegend(2);
     plot[1].AddLegend(0.2, 0.3);
     plot[1].AddLegend(0.2, 0.78);
     // a legend row that belongs to no data: a note on the normalisation
@@ -888,7 +1067,7 @@ void DefineHeavyIonPlots(PlotManager& pm)
     for (const auto& cent : centralities) {
       Plot single("raa_" + cent, "heavyion", "1d");
       single.AppendGroup("raaPerCentrality");
-      single[1].AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}).Numer().Scale(1.0 / ncoll.at(cent));
+      single[1].AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}).Numer().Scale(1.0 / ncoll.at(cent)).Result().SetRangeX(0.15, 6.0).SetColor(centColors.at(cent));
       single[1].SetRefFunc("1").SetLine(kDashed, 3.0, kGray + 1);
       single[1].AddText(0.5, 0.9, "Pb-Pb " + cent + "%");
       single[1]['X'].SetLog().SetRange(0.15, 10.0);
@@ -899,7 +1078,7 @@ void DefineHeavyIonPlots(PlotManager& pm)
   {  // graphs in a loop; a legend in several columns --------------------------------------
     Plot plot("ellipticFlow", "heavyion", "1d");
     for (const auto& cent : centralities) {
-      plot[1].AddData("cent_" + cent + "/v2", "heavyion", cent + "%");
+      plot[1].AddData("cent_" + cent + "/v2", "heavyion", cent + "%").SetColor(centColors.at(cent));
     }
     plot[1].AddLegend(0.2, 0.9, "Pb-Pb, #it{v}_{2}{2}").SetNumColumns(3);
     plot[1]['Y'].SetRange(0.0, 0.3);
@@ -914,7 +1093,7 @@ void DefineHeavyIonPlots(PlotManager& pm)
       plot[1].AddData("hPtEtaCent", "heavyion", label).Project({0}, {{2, low, high}}, true).Normalize();
     }
     plot[1].AddLegend();
-    plot[1]['X'].SetRange(0.0, 5.5);
+    plot[1]['X'].SetRange(0.0, 4.0);
     plot[1]['Y'].SetLog().SetTitle("normalised counts");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
@@ -923,10 +1102,10 @@ void DefineHeavyIonPlots(PlotManager& pm)
     Plot plot("spectraAndRaa", "heavyion", "1d_2x1_ratio");
     for (size_t i = 0; i < 2; ++i) {
       const string cent = centralities[2 * i];  // 0-10 and 30-50
-      plot[i + 1].AddData("cent_" + cent + "/ptSpec", "heavyion", "Pb-Pb " + cent + "%");
+      plot[i + 1].AddData("cent_" + cent + "/ptSpec", "heavyion", "Pb-Pb " + cent + "%").SetColor(centColors.at(cent));
       plot[i + 1].AddData("ptSpec", "data", "pp #times #LT#it{N}_{coll}#GT").Scale(ncoll.at(cent)).SetDrawOption(hist).SetLine(kDashed, 3.0, kGray + 2);
       plot[i + 1].AddLegend();
-      plot[i + 3].AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}).Numer().Scale(1.0 / ncoll.at(cent));
+      plot[i + 3].AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}).Numer().Scale(1.0 / ncoll.at(cent)).Result().SetRangeX(0.15, 6.0).SetColor(centColors.at(cent));
     }
     plot[0]['X'].SetLog().SetRange(0.15, 10.0);
     plot[1]['Y'].SetLog().SetRange(1e-3, 1e6).SetTitle("d#it{N}/d#it{p}_{T} (GeV/#it{c})^{-1}");
@@ -944,21 +1123,22 @@ void DefineHeavyIonPlots(PlotManager& pm)
       plot[i + 1].AddData("hPtEtaCent", "heavyion").Project({0}, {{2, low, high}}, true).Normalize();
       plot[i + 1].AddText(0.6, 0.85, label);
     }
-    plot[0]['Y'].SetLog().SetRange(1e-6, 1.0).SetTitle("normalised counts");
+    plot[0]['X'].SetRange(0.0, 4.0);
+    plot[0]['Y'].SetLog().SetRange(1e-5, 1.0).SetTitle("normalised counts");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // two panels side by side, sharing the y axis ------------------------------------------
     Plot plot("flowCentralVsPeripheral", "heavyion", "1d_2x1");
     for (size_t i = 0; i < 2; ++i) {
       const string cent = centralities[2 * i];  // 0-10 and 30-50
-      plot[i + 1].AddData("cent_" + cent + "/v2", "heavyion");
+      plot[i + 1].AddData("cent_" + cent + "/v2", "heavyion").SetColor(centColors.at(cent));
       plot[i + 1].AddText(0.2, 0.85, "Pb-Pb " + cent + "%");
     }
     plot[1].AddText(0.2, 0.75, {kExperiment, "#it{v}_{2}{2}"});
     plot[0]['Y'].SetRange(0.0, 0.3).SetTitle("#it{v}_{2}");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
-  const vector<std::tuple<string, string, int, int>> hadrons = {{"pi", "#pi^{#pm}", kRed + 1, kFullCircle}, {"K", "K^{#pm}", kGreen + 2, kFullSquare}, {"p", "p+#bar{p}", kAzure + 2, kFullTriangleUp}};
+  const vector<std::tuple<string, string, color_t, int>> hadrons = {{"pi", "#pi^{#pm}", "#d6403a", kFullCircle}, {"K", "K^{#pm}", "#3f9b45", kFullSquare}, {"p", "p+#bar{p}", "#3a78c2", kFullTriangleUp}};
   {  // identified particles: lighter ones flow more at low pT (mass ordering), baryons more at intermediate pT
     Plot plot("flowIdentified", "heavyion", "1d");
     for (const auto& [name, label, color, marker] : hadrons) {
@@ -981,7 +1161,7 @@ void DefineHeavyIonPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // flow harmonics against centrality, the class widths as x errors
     Plot plot("flowHarmonics", "heavyion", "1d");
-    for (const auto& [n, color] : vector<std::pair<int, int>>{{2, kRed + 1}, {3, kAzure + 2}, {4, kGreen + 2}}) {
+    for (const auto& [n, color] : vector<std::pair<int, color_t>>{{2, "#d6403a"}, {3, "#3a78c2"}, {4, "#3f9b45"}}) {
       const string harmonic = std::to_string(n);
       plot[1].AddData("flow/v" + harmonic, "heavyion", "#it{v}_{" + harmonic + "}{2}").SetDrawOption(points_xerr).SetColor(color);
     }
@@ -1041,20 +1221,20 @@ void DefineHeavyIonPlots(PlotManager& pm)
   {  // the long-range part projected on Delta phi, with the Fourier fit stored with the data
     Plot plot("longRange", "heavyion/correlations", "1d");
     plot[1].AddData("correlations/ridge", "heavyion", "2 < #Delta#eta < 4").ProjectX(2.0, 4.0, true).SetColor(kBlack);
-    plot[1].AddData("correlations/fourier_longRange", "heavyion", "<title>").SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("correlations/fourier_longRange", "heavyion", "<title>").SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(0.2, 0.92);
     plot[1]['Y'].SetTitle("pairs per trigger (a.u.)").SetRange(7.92, 8.2);  // room for the legend
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // femtoscopy: the width of the Bose-Einstein peak measures the size of the source, larger for central collisions
     Plot plot("femtoscopy", "heavyion/correlations", "1d");
-    for (const auto& [centrality, color] : vector<std::pair<string, int>>{{"0-5", kRed + 1}, {"20-30", kGreen + 2}, {"50-60", kAzure + 2}}) {
+    for (const auto& [centrality, color] : vector<std::pair<string, color_t>>{{"0-5", "#d6403a"}, {"20-30", "#3f9b45"}, {"50-60", "#3a78c2"}}) {
       plot[1].AddData("femtoscopy/cf_" + centrality, "heavyion", centrality + "%").SetColor(color);
       plot[1].AddData("femtoscopy/fit_" + centrality, "heavyion", "<title>").SetLine(kSolid, 3.0, color);
     }
     plot[1].AddLegend(0.32, 0.92, "#pi^{#pm}#pi^{#pm}, Pb-Pb").SetNumColumns(2);
     plot[1]['X'].SetRange(0.0, 0.2).SetTitle("#it{q}_{inv} (GeV/#it{c})");
-    plot[1]['Y'].SetRange(0.85, 1.65).SetTitle("#it{C}(#it{q}_{inv})");
+    plot[1]['Y'].SetRange(0.85, 1.45).SetTitle("#it{C}(#it{q}_{inv})");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // the same for direct photons: the Bose-Einstein enhancement is a few 10^-3, as most photons come from pi0 decays, whose
@@ -1063,7 +1243,7 @@ void DefineHeavyIonPlots(PlotManager& pm)
     for (const uint8_t pad : {1, 2}) {
       plot[pad].AddHorizontalLine(1.0).SetLine(kDashed, 1.0, kGray + 1).SetBehindData();
       plot[pad].AddData("femtoscopy/photons_cf", "heavyion", "same / mixed events").SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(0.8);
-      plot[pad].AddData("femtoscopy/photons_fit", "heavyion", "<title>").SetLine(kSolid, 3.0, kRed + 1);
+      plot[pad].AddData("femtoscopy/photons_fit", "heavyion", "<title>").SetLine(kSolid, 3.0, "#d6403a");
     }
     plot[1].AddText(0.13, 1.13, "#pi^{0} #rightarrow #gamma#gamma").SetUserCoordinates();
     plot[1].AddText(0.2, 0.92, {"#gamma#gamma, Pb-Pb 0-10%", "0.1 < #it{k}_{T} < 0.3 GeV/#it{c}"});
@@ -1082,7 +1262,7 @@ void DefineHeavyIonPlots(PlotManager& pm)
     Plot plot("strangenessEnhancement", "heavyion", "1d_wide");
     // name, label, factor, scaled ratio at high multiplicity, colour
     const vector<std::tuple<string, string, double, double, color_t>> species = {
-      {"proton", "p + #bar{p} (#times6)", 6.0, 0.28, kMagenta + 1}, {"K0S", "2K^{0}_{S}", 2.0, 0.134, kBlack}, {"phi", "2#phi (#times2)", 4.0, 0.074, kOrange + 1}, {"Lambda", "#Lambda + #bar{#Lambda} (#times2)", 2.0, 0.052, kBlue}, {"Xi", "#Xi^{#minus} + #bar{#Xi}^{+} (#times4)", 4.0, 0.018, kGreen + 2}, {"Omega", "#Omega^{#minus} + #bar{#Omega}^{+} (#times10)", 10.0, 0.007, kRed + 1}};
+      {"proton", "p + #bar{p} (#times6)", 6.0, 0.28, "#cf3d96"}, {"K0S", "2K^{0}_{S}", 2.0, 0.134, kBlack}, {"phi", "2#phi (#times2)", 4.0, 0.074, "#f28e2b"}, {"Lambda", "#Lambda + #bar{#Lambda} (#times2)", 2.0, 0.052, "#2f5fbf"}, {"Xi", "#Xi^{#minus} + #bar{#Xi}^{+} (#times4)", 4.0, 0.018, "#3f9b45"}, {"Omega", "#Omega^{#minus} + #bar{#Omega}^{+} (#times10)", 10.0, 0.007, "#d6403a"}};
     const vector<std::tuple<string, string, int16_t>> systems = {{"pp7", "pp, 7 TeV", kOpenCircle}, {"pp13", "pp, 13 TeV", kFullCircle}, {"pPb5", "p-Pb, 5.02 TeV", kOpenDiamond}, {"pPb8", "p-Pb, 8.16 TeV", kFullDiamond}, {"XeXe", "Xe-Xe, 5.44 TeV", kFullStar}, {"PbPb", "Pb-Pb, 5.02 TeV", kFullSquare}};
     for (const auto& [name, label, factor, value, color] : species) {
       for (const auto& [system, systemLabel, marker] : systems) {
@@ -1110,18 +1290,18 @@ void DefineMLPlots(PlotManager& pm)
 {
   {  // score distributions, training sample filled, test sample as points: does the classifier overtrain?
     Plot plot("scoreDistribution", "ml", "1d");
-    plot[1].AddData("hBDT_sig_train", "ml", "signal, train").Normalize().SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineColor(kAzure + 2);
-    plot[1].AddData("hBDT_bkg_train", "ml", "background, train").Normalize().SetDrawOption(hist).SetFill(3004, kRed + 1).SetLineColor(kRed + 1);
-    plot[1].AddData("hBDT_sig_test", "ml", "signal, test").Normalize().SetColor(kAzure + 2).SetMarkerStyle(kFullCircle);
-    plot[1].AddData("hBDT_bkg_test", "ml", "background, test").Normalize().SetColor(kRed + 1).SetMarkerStyle(kFullSquare);
+    plot[1].AddData("hBDT_sig_train", "ml", "signal, train").Normalize().SetDrawOption(hist).SetFill(1001, "#b9d3ee").SetLineColor("#3a78c2");
+    plot[1].AddData("hBDT_bkg_train", "ml", "background, train").Normalize().SetDrawOption(hist).SetFill(3004, "#d6403a").SetLineColor("#d6403a");
+    plot[1].AddData("hBDT_sig_test", "ml", "signal, test").Normalize().SetColor("#3a78c2").SetMarkerStyle(kFullCircle);
+    plot[1].AddData("hBDT_bkg_test", "ml", "background, test").Normalize().SetColor("#d6403a").SetMarkerStyle(kFullSquare);
     plot[1].AddLegend(top_left).SetNumColumns(2);
     plot[1]['Y'].SetLog().SetRange(1e-4, 1.0).SetTitle("normalised counts");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // efficiency of a cut on the score: Normalize().Cumulative(false) sums from the right, i.e. the fraction above the cut
     Plot plot("efficiencyVsCut", "ml", "1d");
-    plot[1].AddData("hBDT_sig_test", "ml", "signal").Normalize().Cumulative(false).SetDrawOption(line).SetLine(kSolid, 3.0, kAzure + 2);
-    plot[1].AddData("hBDT_bkg_test", "ml", "background").Normalize().Cumulative(false).SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("hBDT_sig_test", "ml", "signal").Normalize().Cumulative(false).SetDrawOption(line).SetLine(kSolid, 3.0, "#3a78c2");
+    plot[1].AddData("hBDT_bkg_test", "ml", "background").Normalize().Cumulative(false).SetDrawOption(line).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(bottom_left);
     plot[1]['X'].SetTitle("cut on the BDT score");
     plot[1]['Y'].SetLog().SetRange(1e-3, 2.0).SetTitle("efficiency (score > cut)");
@@ -1129,8 +1309,8 @@ void DefineMLPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // ROC curves of two classifiers; <title> puts the title of each graph (with its AUC) into the label
     Plot plot("rocCurve", "ml", "1d");
-    plot[1].AddData("roc_BDT", "ml", "<title>").SetDrawOption(line).SetLine(kSolid, 3.0, kAzure + 2);
-    plot[1].AddData("roc_DNN", "ml", "<title>").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("roc_BDT", "ml", "<title>").SetDrawOption(line).SetLine(kSolid, 3.0, "#3a78c2");
+    plot[1].AddData("roc_DNN", "ml", "<title>").SetDrawOption(line).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddFunction("1 - x", "random guess").SetLine(kDashed, 3.0, kGray + 1);
     plot[1].AddLegend(bottom_left);
     plot[1]['X'].SetRange(0.0, 1.0);
@@ -1139,14 +1319,14 @@ void DefineMLPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // feature importance as horizontal bars, the labels of the bins on the y axis
     Plot plot("featureImportance", "ml", "1d");
-    plot[1].AddData("hFeatureImportance", "ml").SetDrawOption(hbars).SetFill(1001, kAzure - 9).SetLineColor(kAzure + 2);
+    plot[1].AddData("hFeatureImportance", "ml").SetDrawOption(hbars).SetFill(1001, "#b9d3ee").SetLineColor("#3a78c2");
     plot[1].SetLeftMargin(0.2);  // room for the bin labels
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // unsupervised learning: a Gaussian mixture separates three groups of points; the cluster map behind them in pale colours,
     // its contours are the learned borders, the ellipses mark 2 sigma of each fitted component
     Plot plot("clustering", "ml", "1d");  // no colour scale: the colours are the clusters
-    const vector<color_t> clusterColors = {kAzure + 2, kOrange + 7, kGreen + 2};
+    const vector<color_t> clusterColors = {"#3a78c2", "#e8743b", "#3f9b45"};
     plot[1].SetPalette({{clusterColors[0], 0.0}, {clusterColors[1], 0.5}, {clusterColors[2], 1.0}}, 0.15, 3);  // one pale colour per cluster
     plot[1].AddData("clusterMap", "clustering").SetDrawOption(col);
     for (size_t k = 1; k <= clusterColors.size(); ++k) {
@@ -1162,7 +1342,7 @@ void DefineMLPlots(PlotManager& pm)
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   // the components of the mixture density network below: name and colour
-  const vector<std::pair<string, color_t>> components = {{"core", kAzure + 2}, {"tail 1", kViolet + 1}, {"tail 2", kOrange + 7}, {"tail 3", kGreen + 2}};
+  const vector<std::pair<string, color_t>> components = {{"core", "#3a78c2"}, {"tail 1", "#8752d4"}, {"tail 2", "#e8743b"}, {"tail 3", "#3f9b45"}};
   {  // a mixture density network for the electron pT resolution: bremsstrahlung in the material gives a tail to negative values. The
     // material grows towards the forward region and peaks where the services leave the barrel (dashed line, in radiation lengths),
     // so the tail takes weight from the core. The network predicts four Gaussians per |eta| (the core and three for the tail):
@@ -1191,7 +1371,7 @@ void DefineMLPlots(PlotManager& pm)
       const auto& [label, color] = components[k - 1];
       plot[1].AddData("slice_component_" + std::to_string(k), "mdn", label + ", weight <title>").SetDrawOption(area).SetFill(1001, color, 0.3).SetLineColor(color);
     }
-    plot[1].AddData("slice_total", "mdn", "mixture").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("slice_total", "mdn", "mixture").SetDrawOption(line).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddText(0.2, 0.92, {"electrons, |#eta| < 0.9", "2 < #it{p}_{T}^{gen} < 2.5 GeV/#it{c}"});
     plot[1].AddLegend(0.2, 0.78);
     plot[1]['X'].SetRange(-1.0, 0.15).SetTitle("(#it{p}_{T}^{rec} #minus #it{p}_{T}^{gen}) / #it{p}_{T}^{gen}");
@@ -1220,8 +1400,8 @@ void DefineMedicalPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // protons and carbon ions of the same range: the carbon peak is sharper, its fragments deposit dose behind it
     Plot plot("protonVsCarbon", "medical", "1d");
-    plot[1].AddData("depthDose/proton_150MeV", "medical", "protons, 150 MeV").SetDrawOption(curve).SetColor(kAzure + 2);
-    plot[1].AddData("depthDose/carbon_280MeVu", "medical", "^{12}C, 280 MeV/#it{u}").SetDrawOption(curve).SetColor(kRed + 1);
+    plot[1].AddData("depthDose/proton_150MeV", "medical", "protons, 150 MeV").SetDrawOption(curve).SetColor("#3a78c2");
+    plot[1].AddData("depthDose/carbon_280MeVu", "medical", "^{12}C, 280 MeV/#it{u}").SetDrawOption(curve).SetColor("#d6403a");
     plot[1].AddLegend(0.2, 0.85);
     plot[1]['Y'].SetLog().SetRange(1.0, 300.0);
     pm.AddPlot(plot);
@@ -1247,23 +1427,23 @@ void DefineAtomicPlots(PlotManager& pm)
   {  // the fit stored with the data, and the data divided by it below
     Plot plot("hyperfineScan", "atomic", "1d_ratio");
     plot[1].AddData("hScan", "atomic", "data");
-    plot[1].AddData("fitScan", "atomic", "fit: 4 Voigt profiles").SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("fitScan", "atomic", "fit: 4 Voigt profiles").SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(0.2, 0.85);
     plot[1].AddText(0.2, 0.7, {"laser spectroscopy", "hyperfine structure of ^{A}X"});
-    plot[1]['Y'].SetRange(0.0, 850.0);  // room for the texts above the lines
+    plot[1]['Y'].SetRange(0.0, 70000.0);  // room for the texts above the lines
     plot[2].AddRatio({"hScan", "atomic"}, {"fitScan"});
-    plot[2]['Y'].SetTitle("data / fit").SetRange(0.5, 1.5);
+    plot[2]['Y'].SetTitle("data / fit").SetRange(0.95, 1.05);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // Doppler-free spectroscopy: the pump burns narrow dips into the Doppler profile, the ratio shows them alone
     Plot plot("saturatedAbsorption", "atomic", "1d_ratio");
     plot[1].AddData("laser/probeOnly", "atomic", "probe only").SetDrawOption(line).SetLine(kSolid, 3.0, kGray + 2);
-    plot[1].AddData("laser/withPump", "atomic", "probe with pump").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("laser/withPump", "atomic", "probe with pump").SetDrawOption(line).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(0.2, 0.3, "^{87}Rb D_{2}, #it{F} = 2 #rightarrow #it{F}'");
     plot[1]['Y'].SetTitle("probe transmission");
-    plot[2].AddRatio({"laser/withPump", "atomic"}, {"laser/probeOnly"}).SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1);
+    plot[2].AddRatio({"laser/withPump", "atomic"}, {"laser/probeOnly"}).SetDrawOption(line).SetLine(kSolid, 3.0, "#d6403a");
     // the lines (F') and the strongest crossover, halfway between F' = 2 and 3; a text box hangs from its upper left corner
-    for (const auto& [x, label] : vector<std::pair<double, string>>{{-95.0, "1"}, {-22.0, "2"}, {115.0, "c"}, {245.0, "3"}}) {
+    for (const auto& [x, label] : vector<std::pair<double, string>>{{-179.0, "1"}, {-22.0, "2"}, {115.0, "c"}, {245.0, "3"}}) {
       plot[2].AddText(x, 1.43, label).SetUserCoordinates();
     }
     plot[2].AddText(0.2, 0.85, "c: crossover 2-3");
@@ -1273,7 +1453,7 @@ void DefineAtomicPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // Rabi oscillations: measured points and the expectation in the same colour, one colour per detuning
     Plot plot("rabiOscillations", "atomic", "1d");
-    for (const auto& [detuning, color] : vector<std::pair<int, int>>{{0, kAzure + 2}, {1, kRed + 1}, {2, kGreen + 2}}) {
+    for (const auto& [detuning, color] : vector<std::pair<int, color_t>>{{0, "#3a78c2"}, {1, "#d6403a"}, {2, "#3f9b45"}}) {
       const string tag = std::to_string(detuning) + "MHz";
       plot[1].AddData("laser/rabi_" + tag, "atomic", "#Delta/2#pi = " + std::to_string(detuning) + " MHz").SetColor(color);
       plot[1].AddData("laser/theory_" + tag, "atomic").SetLine(kSolid, 3.0, color);  // no label: no legend entry
@@ -1301,9 +1481,9 @@ void DefineAtomicPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // above-threshold ionisation at high intensity: direct electrons up to 2 U_p, rescattered ones up to 10 U_p
     Plot plot("atiPlateau", "atomic", "1d");
-    plot[1].AddData("strongField/argon_1e14", "atomic", "Ar, 800 nm, 10^{14} W/cm^{2}").SetDrawOption(hist).SetColor(kAzure + 2);
+    plot[1].AddData("strongField/argon_1e14", "atomic", "Ar, 800 nm, 10^{14} W/cm^{2}").SetDrawOption(hist).SetColor("#3a78c2");
     plot[1].AddPoints({11.9, 11.9}, {1.0, 1.e6}, "2#it{U}_{p}").SetDrawOption(line).SetLine(kDashed, 3.0, kGray + 2);
-    plot[1].AddPoints({59.7, 59.7}, {1.0, 1.e6}, "10#it{U}_{p}").SetDrawOption(line).SetLine(kDashed, 3.0, kRed + 1);
+    plot[1].AddPoints({59.7, 59.7}, {1.0, 1.e6}, "10#it{U}_{p}").SetDrawOption(line).SetLine(kDashed, 3.0, "#d6403a");
     plot[1].AddText(1.0, 1.e7, "direct").SetUserCoordinates();
     plot[1].AddText(28.0, 5.e3, "rescattered").SetUserCoordinates();
     plot[1].AddLegend(0.45, 0.9);
@@ -1321,8 +1501,8 @@ void DefineAtomicPlots(PlotManager& pm)
   {  // the angular distribution of two ATI rings from the same image: energy and angle defined from the momenta, a ring
     // selected by its energy; the Legendre fits (their beta parameters in the titles) in the colour of their ring
     Plot plot("angularDistributions", "atomic", "1d");
-    const vector<std::tuple<string, string, string, int>> rings = {{"1st ATI ring", "energy > 0.8 && energy < 1.2", "fitRing1", kAzure + 2},
-                                                                   {"2nd ATI ring", "energy > 2.3 && energy < 2.8", "fitRing2", kRed + 1}};
+    const vector<std::tuple<string, string, string, color_t>> rings = {{"1st ATI ring", "energy > 0.8 && energy < 1.2", "fitRing1", "#3a78c2"},
+                                                                       {"2nd ATI ring", "energy > 2.3 && energy < 2.8", "fitRing2", "#d6403a"}};
     for (const auto& [label, ring, fit, color] : rings) {
       plot[1].AddData("strongField/vmi", "atomic", label).Define("energy", "13.6055 * (px * px + pz * pz)").Define("cosTheta", "pz / sqrt(px * px + pz * pz)").Project1D({"cosTheta", 40, {-1.0, 1.0}}).Filter(ring).SetColor(color);
       plot[1].AddData("strongField/" + fit, "atomic", "<title>").SetLine(kSolid, 3.0, color);
@@ -1335,7 +1515,7 @@ void DefineAtomicPlots(PlotManager& pm)
   {  // photoelectron angular distributions, the light polarised along the angle 0: the cos^2 dipole of He 1s (beta = 2) and the
     // rounder Ar 3p; the inputs are polar graphs, drawn on a polar grid in place of the axes (x the angle, y the radius)
     Plot plot("photoelectronAngles", "atomic", "1d");
-    for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"he1s", "He 1s, #beta = 2", kAzure + 2}, {"ar3p", "Ar 3p, #beta = 0.88", kRed + 1}}) {
+    for (const auto& [name, label, color] : vector<std::tuple<string, string, color_t>>{{"he1s", "He 1s, #beta = 2", "#3a78c2"}, {"ar3p", "Ar 3p, #beta = 0.88", "#d6403a"}}) {
       plot[1].AddData("angular/" + name + "_model", "atomic").SetDrawOption(line).SetLine(kSolid, 3.0, color);
       plot[1].AddData("angular/" + name, "atomic", label).SetDrawOption(points).SetColor(color).SetDefinesFrame();
     }
@@ -1360,7 +1540,7 @@ void DefineAtomicPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // radial probability densities in independent panels, one per shell; one colour per angular momentum
     Plot plot("radialDensities", "atomic", "1d_3x1_gap");
-    const std::map<char, int> colors = {{'s', kBlack}, {'p', kAzure + 2}, {'d', kRed + 1}};
+    const std::map<char, color_t> colors = {{'s', kBlack}, {'p', "#3a78c2"}, {'d', "#d6403a"}};
     for (const uint8_t n : {1, 2, 3}) {
       for (const char orbital : string("spd").substr(0, n)) {
         const string state = std::to_string(n) + orbital;
@@ -1375,16 +1555,16 @@ void DefineAtomicPlots(PlotManager& pm)
   {  // Millikan's measurement of Planck's constant: the slope of the stopping voltage against the frequency is h/e
     Plot plot("millikan", "atomic", "1d");
     plot[1].AddData("photoeffect/stoppingVoltage", "atomic", "Hg lines, Cs cathode").SetColor(kBlack);
-    plot[1].AddData("photoeffect/fitStopping", "atomic", "<title>").SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("photoeffect/fitStopping", "atomic", "<title>").SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddHorizontalLine(0.0).SetLine(kDashed, 1.0, kGray + 1);
     plot[1].AddLegend(0.2, 0.9);
     plot[1]['X'].SetRange(4.0, 9.0).SetTitle("frequency #nu (10^{14} Hz)");
-    plot[1]['Y'].SetRange(-0.4, 2.0).SetTitle("stopping voltage (V)");
+    plot[1]['Y'].SetRange(-0.6, 1.8).SetTitle("stopping voltage (V)");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // photocurrent against the voltage: each colour of light sets in at its own stopping voltage
     Plot plot("photocurrent", "atomic", "1d");
-    for (const auto& [wavelength, color] : vector<std::pair<int, int>>{{365, kViolet + 1}, {436, kAzure + 2}, {546, kGreen + 2}}) {
+    for (const auto& [wavelength, color] : vector<std::pair<int, color_t>>{{365, "#8752d4"}, {436, "#3a78c2"}, {546, "#3f9b45"}}) {
       const string w = std::to_string(wavelength);
       plot[1].AddData("photoeffect/current_" + w + "nm", "atomic", w + " nm").SetColor(color);
     }
@@ -1396,9 +1576,9 @@ void DefineAtomicPlots(PlotManager& pm)
   {  // how photons are absorbed in lead: photoeffect with its absorption edges, Compton scattering, pair production
     Plot plot("photonAttenuation", "atomic", "1d");
     plot[1].AddData("photoeffect/lead_total", "atomic", "total").SetDrawOption(line).SetLine(kSolid, 3.0, kBlack);
-    plot[1].AddData("photoeffect/lead_photo", "atomic", "photoeffect").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1);
-    plot[1].AddData("photoeffect/lead_compton", "atomic", "Compton scattering").SetDrawOption(line).SetLine(kSolid, 3.0, kAzure + 2);
-    plot[1].AddData("photoeffect/lead_pair", "atomic", "pair production").SetDrawOption(line).SetLine(kSolid, 3.0, kGreen + 2);
+    plot[1].AddData("photoeffect/lead_photo", "atomic", "photoeffect").SetDrawOption(line).SetLine(kSolid, 3.0, "#d6403a");
+    plot[1].AddData("photoeffect/lead_compton", "atomic", "Compton scattering").SetDrawOption(line).SetLine(kSolid, 3.0, "#3a78c2");
+    plot[1].AddData("photoeffect/lead_pair", "atomic", "pair production").SetDrawOption(line).SetLine(kSolid, 3.0, "#3f9b45");
     plot[1].AddText(0.075, 18.0, "K edge").SetUserCoordinates();
     plot[1].AddText(0.0115, 350.0, "L edges").SetUserCoordinates();
     plot[1].AddLegend(0.55, 0.9, "lead");
@@ -1423,9 +1603,9 @@ void DefineAcceleratorPlots(PlotManager& pm)
     pm.AddBasePlot(profileLayout);
     Plot plot("beamProfile", "accelerator", "profileWithProjections");  // pads: 1 above, 2 the empty cell, 3 the map, 4 right, 5 its colour scale
     plot[3].AddData("hBeamSpot", "accelerator").SetDrawOption(colz);
-    plot[3].SetPalette({{"#e8f2ff", 0.0}, {kAzure - 9, 0.35}, {kAzure + 2, 0.7}, {kAzure + 3, 1.0}});  // pale to dark azure, as the projections
-    plot[1].AddData("hBeamSpot", "accelerator").ProjectX().NormalizeToMaximum().SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineWidth(0.0);
-    plot[4].AddData("hBeamSpot", "accelerator").ProjectY().NormalizeToMaximum().SetDrawOption(hbars).SetFill(1001, kAzure - 9);
+    plot[3].SetPalette({{"#e8f2ff", 0.0}, {"#b9d3ee", 0.35}, {"#3a78c2", 0.7}, {"#2a5d9f", 1.0}});  // pale to dark azure, as the projections
+    plot[1].AddData("hBeamSpot", "accelerator").ProjectX().NormalizeToMaximum().SetDrawOption(hist).SetFill(1001, "#b9d3ee").SetLineWidth(0.0);
+    plot[4].AddData("hBeamSpot", "accelerator").ProjectY().NormalizeToMaximum().SetDrawOption(hbars).SetFill(1001, "#b9d3ee");
     plot[2].AddText(0.05, 0.8, {"screen 3", "#sigma_{#it{x}} = <stddev[.1f]:1@1> mm", "#sigma_{#it{y}} = <stddev[.1f]:1@4> mm"});
     plot[1]['Y'].SetRange(0.0, 1.1).SetTitle("");
     plot[4]['Y'].SetTitle("");
@@ -1434,7 +1614,7 @@ void DefineAcceleratorPlots(PlotManager& pm)
   {  // the particles of a bunch in horizontal phase space, with the rms ellipse (the emittance in its title)
     Plot plot("phaseSpace", "accelerator", "2d_logz");
     plot[1].AddData("beam", "accelerator").Project2D({"x", 80, {-8.0, 8.0}}, {"xp", 88, {-2.2, 2.2}});
-    plot[1].AddData("rmsEllipse", "accelerator", "rms ellipse, #varepsilon = <title> mm mrad").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("rmsEllipse", "accelerator", "rms ellipse, #varepsilon = <title> mm mrad").SetDrawOption(line).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(0.15, 0.92);
     plot[1]['X'].SetTitle("#it{x} (mm)");
     plot[1]['Y'].SetTitle("#it{x}' (mrad)");
@@ -1443,8 +1623,8 @@ void DefineAcceleratorPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // the beta functions along a FODO lattice: the beam is widest in x at the focusing, in y at the defocusing quadrupoles
     Plot plot("betaFunctions", "accelerator", "1d_wide");
-    plot[1].AddData("lattice/betaX", "accelerator", "#beta_{#it{x}}").SetDrawOption(line).SetLine(kSolid, 3.0, kAzure + 2);
-    plot[1].AddData("lattice/betaY", "accelerator", "#beta_{#it{y}}").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("lattice/betaX", "accelerator", "#beta_{#it{x}}").SetDrawOption(line).SetLine(kSolid, 3.0, "#3a78c2");
+    plot[1].AddData("lattice/betaY", "accelerator", "#beta_{#it{y}}").SetDrawOption(line).SetLine(kSolid, 3.0, "#d6403a");
     for (const double s : {0.0, 10.0, 20.0, 30.0, 40.0, 50.0, 60.0}) {  // the quadrupoles: shapes behind the data, no legend rows
       plot[1].AddLine({s, 0.0}, {s, 40.0}).SetLine((std::fmod(s, 20.0) == 0.0) ? kSolid : kDashed, 1.0, kGray + 1).SetBehindData();
     }
@@ -1465,14 +1645,14 @@ void DefineNuclearPlots(PlotManager& pm)
 {
   {  // the tritium beta spectrum
     Plot plot("tritiumSpectrum", "nuclear", "1d");
-    plot[1].AddData("betaDecay/tritium", "nuclear", "^{3}H #rightarrow ^{3}He e^{#minus} #bar{#nu}_{e}").SetDrawOption(hist).SetColor(kAzure + 2);
+    plot[1].AddData("betaDecay/tritium", "nuclear", "^{3}H #rightarrow ^{3}He e^{#minus} #bar{#nu}_{e}").SetDrawOption(hist).SetColor("#3a78c2");
     plot[1].AddLegend(0.45, 0.9);
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // Kurie plot: a straight line for an allowed decay, crossing zero at the endpoint (from the fit, in its title)
     Plot plot("kuriePlot", "nuclear", "1d");
     plot[1].AddData("betaDecay/kurie", "nuclear", "tritium").SetColor(kBlack);
-    plot[1].AddData("betaDecay/kurieFit", "nuclear", "<title>").SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("betaDecay/kurieFit", "nuclear", "<title>").SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(0.45, 0.9);
     plot[1]['X'].SetRange(0.0, 19.5).SetTitle("electron kinetic energy (keV)");
     plot[1]['Y'].SetRange(0.0, 1.2).SetTitle("#sqrt{#it{N} / (#it{F} #it{p} #it{E})} (a.u.)");
@@ -1492,8 +1672,8 @@ void DefineNuclearPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // electrons and positrons from the same nucleus: the Coulomb field slows one and pushes the other
     Plot plot("copperBeta", "nuclear", "1d");
-    plot[1].AddData("betaDecay/cu64_betaMinus", "nuclear", "#beta^{#minus}: ^{64}Cu #rightarrow ^{64}Zn").SetDrawOption(line).SetLine(kSolid, 3.0, kAzure + 2);
-    plot[1].AddData("betaDecay/cu64_betaPlus", "nuclear", "#beta^{+}: ^{64}Cu #rightarrow ^{64}Ni").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("betaDecay/cu64_betaMinus", "nuclear", "#beta^{#minus}: ^{64}Cu #rightarrow ^{64}Zn").SetDrawOption(line).SetLine(kSolid, 3.0, "#3a78c2");
+    plot[1].AddData("betaDecay/cu64_betaPlus", "nuclear", "#beta^{+}: ^{64}Cu #rightarrow ^{64}Ni").SetDrawOption(line).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(0.5, 0.9);
     plot[1]['X'].SetRange(0.0, 700.0).SetTitle("kinetic energy (keV)");
     plot[1]['Y'].SetRange(0.0, 3.5).SetTitle("d#it{N}/d#it{T} (MeV^{#minus1})");
@@ -1502,7 +1682,7 @@ void DefineNuclearPlots(PlotManager& pm)
   {  // reactor antineutrinos disappear and come back with L/E: the oscillation, washed out by the spread of distances
     Plot plot("reactorOscillation", "neutrino", "1d");
     plot[1].AddData("survival", "neutrino", "data #minus background").SetDrawOption(points_xerr).SetColor(kBlack);
-    plot[1].AddData("expectation", "neutrino", "oscillation, best fit").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("expectation", "neutrino", "oscillation, best fit").SetDrawOption(line).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddPoints({15.0, 105.0}, {1.0, 1.0}, "no oscillation").SetDrawOption(line).SetLine(kDashed, 3.0, kGray + 2);
     plot[1].AddLegend(0.45, 0.92);
     plot[1]['X'].SetRange(15.0, 105.0).SetTitle("#it{L}_{0} / #it{E}_{#bar{#nu}_{e}} (km/MeV)");
@@ -1523,12 +1703,12 @@ void DefineNuclearPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // neutrino-nucleon cross-sections from quasi-elastic scattering to deep-inelastic scattering, with measurements
     Plot plot("crossSections", "neutrino", "1d");
-    for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"qe", "quasi-elastic", kAzure + 2}, {"res", "resonance production", kGreen + 2}, {"dis", "deep-inelastic", kOrange + 7}}) {
+    for (const auto& [name, label, color] : vector<std::tuple<string, string, color_t>>{{"qe", "quasi-elastic", "#3a78c2"}, {"res", "resonance production", "#3f9b45"}, {"dis", "deep-inelastic", "#e8743b"}}) {
       plot[1].AddData("crossSection/" + name, "neutrino", label).SetDrawOption(line).SetLine(kSolid, 3.0, color);
     }
     plot[1].AddData("crossSection/total", "neutrino", "total").SetDrawOption(line).SetLine(kSolid, 3.0, kBlack);
     for (const auto& [name, label, marker, color] :
-         vector<std::tuple<string, string, int, int>>{{"data_A", "experiment A", kFullCircle, kBlack}, {"data_B", "experiment B", kOpenSquare, kViolet + 1}, {"data_C", "experiment C", kFullTriangleUp, kGray + 2}}) {
+         vector<std::tuple<string, string, int, color_t>>{{"data_A", "experiment A", kFullCircle, kBlack}, {"data_B", "experiment B", kOpenSquare, "#8752d4"}, {"data_C", "experiment C", kFullTriangleUp, kGray + 2}}) {
       plot[1].AddData("crossSection/" + name, "neutrino", label).SetMarkerStyle(marker).SetMarkerSize(1.3).SetColor(color);
     }
     plot[1].AddText(0.2, 0.92, "#nu_{#mu} #it{N} #rightarrow #mu^{#minus} #it{X}");
@@ -1549,9 +1729,9 @@ void DefineSearchPlots(PlotManager& pm)
   {  // limits of three experiments, the expectation of the newest with its bands, the neutrino fog beneath
     Plot plot("darkMatterLimits", "searches/darkMatter", "1d");
     plot[1].AddData("darkMatter/neutrinoFog", "searches", "neutrino fog").SetDrawOption(band).SetFill(1001, kGray).SetLineColor(kGray).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
-    plot[1].AddData("darkMatter/expected_A_2sigma", "searches", "expected A #pm 2#sigma").SetDrawOption(band).SetFill(1001, kOrange).SetLineColor(kOrange).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
-    plot[1].AddData("darkMatter/expected_A_1sigma", "searches", "expected A #pm 1#sigma").SetDrawOption(band).SetFill(1001, kGreen + 1).SetLineColor(kGreen + 1).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
-    for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"limit_A", "experiment A (2025)", kBlack}, {"limit_B", "experiment B (2020)", kAzure + 2}, {"limit_C", "experiment C, low threshold", kRed + 1}}) {
+    plot[1].AddData("darkMatter/expected_A_2sigma", "searches", "expected A #pm 2#sigma").SetDrawOption(band).SetFill(1001, "#f5b041").SetLineColor("#f5b041").SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("darkMatter/expected_A_1sigma", "searches", "expected A #pm 1#sigma").SetDrawOption(band).SetFill(1001, "#6bbf59").SetLineColor("#6bbf59").SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    for (const auto& [name, label, color] : vector<std::tuple<string, string, color_t>>{{"limit_A", "experiment A (2025)", kBlack}, {"limit_B", "experiment B (2020)", "#3a78c2"}, {"limit_C", "experiment C, low threshold", "#d6403a"}}) {
       plot[1].AddData("darkMatter/" + name, "searches", label).SetDrawOption(line).SetLine(kSolid, 3.0, color);
     }
     plot[1].AddLegend(0.38, 0.92, "90% CL upper limits");
@@ -1562,9 +1742,9 @@ void DefineSearchPlots(PlotManager& pm)
   {  // the mass plane of a top-squark search: the upper limit as colour, the excluded region as contours
     Plot plot("stopExclusion", "searches/stop", "2d_logz");
     plot[1].AddData("stop/upperLimit", "searches").SetDrawOption(colz);
-    plot[1].AddData("stop/expected", "searches", "expected #pm 1#sigma_{exp}").SetDrawOption(line).SetLine(kDashed, 3.0, kRed + 1);
+    plot[1].AddData("stop/expected", "searches", "expected #pm 1#sigma_{exp}").SetDrawOption(line).SetLine(kDashed, 3.0, "#d6403a");
     for (const string variation : {"expected_up", "expected_down"}) {
-      plot[1].AddData("stop/" + variation, "searches").SetDrawOption(line).SetLine(kDashed, 1.0, kRed + 1);
+      plot[1].AddData("stop/" + variation, "searches").SetDrawOption(line).SetLine(kDashed, 1.0, "#d6403a");
     }
     plot[1].AddData("stop/observed", "searches", "observed #pm 1#sigma_{theory}").SetDrawOption(line).SetLine(kSolid, 803.0, kBlack).SetFill(3354, kBlack);  // 803: hatches of width 8 on the excluded side
     for (const string variation : {"observed_theoryUp", "observed_theoryDown"}) {
@@ -1580,10 +1760,10 @@ void DefineSearchPlots(PlotManager& pm)
   {  // a bump hunt: the dijet mass spectrum with a smooth fit, below it the significance of each bin's deviation
     Plot plot("dijetMass", "searches/resonance", "1d_ratio");
     plot[1].AddData("dijet/spectrum", "searches", "data").SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(0.9);
-    plot[1].AddData("dijet/fit", "searches", "<title>").SetLine(kSolid, 3.0, kRed + 1);
-    plot[2].AddData("dijet/significance", "searches").SetRangeX(1.5, 6.5).SetDrawOption(hist).SetFill(1001, kRed - 9).SetLineColor(kRed + 1);  // empty bins above
+    plot[1].AddData("dijet/fit", "searches", "<title>").SetLine(kSolid, 3.0, "#d6403a");
+    plot[2].AddData("dijet/significance", "searches").SetRangeX(1.5, 6.5).SetDrawOption(hist).SetFill(1001, "#f6c1bb").SetLineColor("#d6403a");  // empty bins above
     // what a signal would look like: excited quarks of two masses on top of the fit, and below the significance each would give
-    for (const auto& [mass, color] : vector<std::pair<int, int>>{{3, kAzure + 2}, {5, kGreen + 2}}) {
+    for (const auto& [mass, color] : vector<std::pair<int, color_t>>{{3, "#3a78c2"}, {5, "#3f9b45"}}) {
       plot[1].AddData(Form("dijet/sigPlusBkg_%dTeV", mass), "searches", Form("fit + excited quark, %d TeV", mass)).SetDrawOption(line).SetLine(kSolid, 3.0, color);
       plot[2].AddData(Form("dijet/significance_%dTeV", mass), "searches").SetRangeX(0.79 * mass, 1.21 * mass).SetDrawOption(hist).SetLine(kSolid, 3.0, color);  // 3 sigma
     }
@@ -1604,7 +1784,7 @@ void DefineSearchPlots(PlotManager& pm)
 //**************************************************************************************************
 void DefineNeutronStarPlots(PlotManager& pm)
 {
-  const vector<std::pair<string, int>> eos = {{"soft", kAzure + 2}, {"medium", kGreen + 2}, {"stiff", kRed + 1}};
+  const vector<std::pair<string, color_t>> eos = {{"soft", "#3a78c2"}, {"medium", "#3f9b45"}, {"stiff", "#d6403a"}};
   {  // three equations of state, pressure against energy density
     Plot plot("equationOfState", "neutronStars", "1d");
     for (const auto& [name, color] : eos) {
@@ -1621,8 +1801,8 @@ void DefineNeutronStarPlots(PlotManager& pm)
     for (const auto& [name, color] : eos) {
       plot[1].AddData("structure/massRadius_" + name, "neutronstars", name).SetDrawOption(line).SetLine(kSolid, 3.0, color);
     }
-    plot[1].AddData("structure/nicer_J0030", "neutronstars", "NICER J0030").SetDrawOption(line).SetLine(kSolid, 3.0, kViolet + 1);
-    plot[1].AddData("structure/nicer_J0740", "neutronstars", "NICER J0740").SetDrawOption(line).SetLine(kSolid, 3.0, kOrange + 7);
+    plot[1].AddData("structure/nicer_J0030", "neutronstars", "NICER J0030").SetDrawOption(line).SetLine(kSolid, 3.0, "#8752d4");
+    plot[1].AddData("structure/nicer_J0740", "neutronstars", "NICER J0740").SetDrawOption(line).SetLine(kSolid, 3.0, "#e8743b");
     plot[1].AddLegend(0.18, 0.92).SetNumColumns(2);
     plot[1]['X'].SetRange(8.0, 16.0).SetTitle("radius (km)");
     plot[1]['Y'].SetRange(0.0, 3.6).SetTitle("mass (#it{M}_{#odot})");  // room for the legend
@@ -1631,7 +1811,7 @@ void DefineNeutronStarPlots(PlotManager& pm)
   {  // the chirp of the last tenth of a second before the merger: detector data and the template found in it
     Plot plot("gwStrain", "neutronStars/merger", "1d_wide");
     plot[1].AddData("merger/strain", "neutronstars", "data (whitened)").SetDrawOption(line).SetLine(kSolid, 1.0, kGray + 1);
-    plot[1].AddData("merger/template", "neutronstars", "template, #it{M}_{c} = 1.19 #it{M}_{#odot}").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("merger/template", "neutronstars", "template, #it{M}_{c} = 1.19 #it{M}_{#odot}").SetDrawOption(line).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(0.15, 0.92);
     plot[1]['X'].SetRange(-0.1, 0.01).SetTitle("time from merger (s)");
     plot[1]['Y'].SetRange(-2.5, 3.5).SetTitle("strain (a.u.)");
@@ -1648,12 +1828,12 @@ void DefineNeutronStarPlots(PlotManager& pm)
   {  // the kilonova: the light of the radioactive ejecta, a fast blue and a slow red part
     Plot plot("kilonova", "neutronStars/merger", "1d");
     plot[1].AddData("merger/bolometric", "neutronstars", "bolometric").SetMarker(kFullCircle, 1.2, kBlack).SetLineColor(kBlack);
-    plot[1].AddData("merger/model_blue", "neutronstars", "lanthanide-poor ejecta").SetLine(kSolid, 3.0, kAzure + 2);
-    plot[1].AddData("merger/model_red", "neutronstars", "lanthanide-rich ejecta").SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("merger/model_blue", "neutronstars", "lanthanide-poor ejecta").SetLine(kSolid, 3.0, "#3a78c2");
+    plot[1].AddData("merger/model_red", "neutronstars", "lanthanide-rich ejecta").SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddData("merger/model_total", "neutronstars", "sum").SetLine(kSolid, 3.0, kGray + 2);
     plot[1].AddLegend(0.45, 0.92);
     plot[1]['X'].SetLog().SetRange(0.2, 20.0).SetTitle("time after merger (days)");
-    plot[1]['Y'].SetLog().SetRange(0.1, 1000.0).SetTitle("luminosity (10^{40} erg/s)");
+    plot[1]['Y'].SetLog().SetRange(1.0, 1000.0).SetTitle("luminosity (10^{40} erg/s)");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
 }
@@ -1680,7 +1860,7 @@ void DefineBiophysicsPlots(PlotManager& pm)
   {  // stretching a DNA molecule: entropic elasticity, then the overstretching plateau at 65 pN
     Plot plot("dnaStretching", "biophysics", "1d");
     plot[1].AddData("forceExtension", "biophysics", "#lambda-DNA, optical tweezers").SetColor(kBlack);
-    plot[1].AddData("wormLikeChain", "biophysics", "worm-like chain, #it{P} = 50 nm").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("wormLikeChain", "biophysics", "worm-like chain, #it{P} = 50 nm").SetDrawOption(line).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddPoints({16.4, 16.4}, {0.0, 100.0}, "contour length").SetDrawOption(line).SetLine(kDashed, 3.0, kGray + 2);
     plot[1].AddLegend(0.2, 0.92);
     plot[1]['X'].SetRange(0.0, 32.0).SetTitle("extension (#mum)");
@@ -1691,8 +1871,8 @@ void DefineBiophysicsPlots(PlotManager& pm)
     Plot plot("fretEfficiency", "biophysics", "1d");
     plot[1].AddData("fretEfficiency", "biophysics", "molecules").SetDrawOption(hist).SetLine(kSolid, 3.0, kGray + 2);
     // the two states of the fit as filled areas under the curve of the whole fit
-    plot[1].AddData("fretUnfolded", "biophysics", "unfolded, <title>").SetDrawOption(area).SetFill(1001, kAzure + 2, 0.35).SetLineColor(kAzure + 2).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
-    plot[1].AddData("fretFolded", "biophysics", "folded, <title>").SetDrawOption(area).SetFill(1001, kRed + 1, 0.35).SetLineColor(kRed + 1).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("fretUnfolded", "biophysics", "unfolded, <title>").SetDrawOption(area).SetFill(1001, "#3a78c2", 0.35).SetLineColor("#3a78c2").SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("fretFolded", "biophysics", "folded, <title>").SetDrawOption(area).SetFill(1001, "#d6403a", 0.35).SetLineColor("#d6403a").SetLegendEntry(LegendEntry().SetSymbolElements("F"));
     plot[1].AddData("fretFit", "biophysics", "fit, with donor-only peak").SetLine(kSolid, 3.0, kBlack);
     plot[1].AddLegend(0.2, 0.92);
     plot[1]['Y'].SetRange(0.0, 1300.0);  // room for the legend
@@ -1700,7 +1880,7 @@ void DefineBiophysicsPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // enzyme kinetics: a competitive inhibitor raises K_M and leaves the maximal rate
     Plot plot("michaelisMenten", "biophysics", "1d");
-    for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"noInhibitor", "without inhibitor", kAzure + 2}, {"inhibitor", "with inhibitor", kRed + 1}}) {
+    for (const auto& [name, label, color] : vector<std::tuple<string, string, color_t>>{{"noInhibitor", "without inhibitor", "#3a78c2"}, {"inhibitor", "with inhibitor", "#d6403a"}}) {
       plot[1].AddData("rate_" + name, "biophysics", label).SetColor(color);
       plot[1].AddData("fit_" + name, "biophysics", "<title>").SetLine(kSolid, 3.0, color);
     }
@@ -1711,7 +1891,7 @@ void DefineBiophysicsPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // a single ion channel opening and closing
     Plot plot("ionChannel", "biophysics", "1d_wide");
-    plot[1].AddData("current", "biophysics").SetDrawOption(line).SetLine(kSolid, 1.0, kAzure + 2);
+    plot[1].AddData("current", "biophysics").SetDrawOption(line).SetLine(kSolid, 1.0, "#3a78c2");
     plot[1].AddText(0.15, 0.3, "open");
     plot[1].AddText(0.15, 0.85, "closed");
     plot[1]['X'].SetRange(0.0, 300.0).SetTitle("time (ms)");
@@ -1720,8 +1900,8 @@ void DefineBiophysicsPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // its open times in logarithmic bins: one exponential is one peak at its time constant
     Plot plot("dwellTimes", "biophysics", "1d");
-    plot[1].AddData("openDwellTimes", "biophysics", "open times").SetColor(kAzure + 2);
-    plot[1].AddData("fit_openDwellTimes", "biophysics", "<title>").SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddData("openDwellTimes", "biophysics", "open times").SetColor("#3a78c2");
+    plot[1].AddData("fit_openDwellTimes", "biophysics", "<title>").SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(0.2, 0.92);
     plot[1]['X'].SetLog();
     plot[1]['Y'].SetRange(0.0, 400.0);
@@ -1738,7 +1918,7 @@ void DefineElectronicsPlots(PlotManager& pm)
 {
   {  // threshold scans: the hit efficiency while the injected charge rises, one colour per pixel for the points and their erf fit
     Plot plot("sCurves", "electronics/pixelChip", "1d");
-    for (const auto& [pixel, color] : vector<std::pair<string, int>>{{"A", kAzure + 2}, {"B", kBlack}, {"C", kRed + 1}}) {
+    for (const auto& [pixel, color] : vector<std::pair<string, color_t>>{{"A", "#3a78c2"}, {"B", kBlack}, {"C", "#d6403a"}}) {
       plot[1].AddData("pixelChip/scan_" + pixel, "electronics", "pixel " + pixel + ": <title>").SetColor(color);
       plot[1].AddData("pixelChip/fit_" + pixel, "electronics").SetLine(kSolid, 3.0, color);  // no label: no legend row
     }
@@ -1750,12 +1930,12 @@ void DefineElectronicsPlots(PlotManager& pm)
   {  // the thresholds of all pixels before and after tuning the trim DAC of each pixel; masked pixels left out
     Plot plot("thresholdTuning", "electronics/pixelChip", "1d");
     plot[1].AddData("pixelChip/pixels", "electronics", "before tuning").Filter("!masked").Project1D({"thresholdUntuned", 140, {400.0, 1800.0}}).SetDrawOption(hist).SetFill(1001, kGray).SetLineColor(kGray + 1);
-    plot[1].AddData("pixelChip/pixels", "electronics", "after tuning").Filter("!masked").Project1D({"threshold", 140, {400.0, 1800.0}}).SetDrawOption(hist).SetLine(kSolid, 3.0, kAzure + 2);
-    plot[1].AddData("pixelChip/fitTuned", "electronics", "<title>").SetLine(kDashed, 3.0, kRed + 1);
+    plot[1].AddData("pixelChip/pixels", "electronics", "after tuning").Filter("!masked").Project1D({"threshold", 140, {400.0, 1800.0}}).SetDrawOption(hist).SetLine(kSolid, 3.0, "#3a78c2");
+    plot[1].AddData("pixelChip/fitTuned", "electronics", "<title>").SetLine(kDashed, 3.0, "#d6403a");
     plot[1].AddVerticalLine(1000.0).SetLine(kDotted, 3.0, kGray + 2).SetBehindData();
     plot[1].AddText(0.2, 0.92, {"128 #times 64 pixels", "target 1000 e^{#minus}"});
     plot[1].AddLegend(0.58, 0.92);
-    plot[1]['X'].SetTitle("threshold (e^{#minus})");
+    plot[1]['X'].SetRange(550.0, 1500.0).SetTitle("threshold (e^{#minus})");
     plot[1]['Y'].SetLog().SetRange(0.5, 2.0e4).SetTitle("pixels per 10 e^{#minus}");  // room for the legend above the peak
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
@@ -1779,18 +1959,18 @@ void DefineElectronicsPlots(PlotManager& pm)
   {  // the shaper output for three charges: the larger pulse crosses the threshold earlier (time walk) and stays above it
     // longer (time over threshold); arrows and lines are shapes: no data, no legend rows
     Plot plot("pulseShapes", "electronics/frontEnd", "1d");
-    for (const auto& [charge, color] : vector<std::pair<int, int>>{{2, kAzure + 2}, {5, kGreen + 2}, {10, kRed + 1}}) {
+    for (const auto& [charge, color] : vector<std::pair<int, color_t>>{{2, "#3a78c2"}, {5, "#3f9b45"}, {10, "#d6403a"}}) {
       plot[1].AddData(Form("frontEnd/pulse_%dke", charge), "electronics", Form("%d000 e^{#minus}", charge)).SetDrawOption(line).SetLine(kSolid, 3.0, color);
     }
     plot[1].AddHorizontalLine(25.0).SetLine(kDashed, 3.0, kGray + 2).SetBehindData();
     plot[1].AddText(172.0, 52.0, "threshold").SetUserCoordinates();
     // where the smallest and the largest pulse cross the threshold
-    plot[1].AddLine({19.0, 25.0}, {19.0, 60.0}).SetLine(kDotted, 3.0, kAzure + 2);
-    plot[1].AddLine({6.6, 60.0}, {6.6, -30.0}).SetLine(kDotted, 3.0, kRed + 1);
-    plot[1].AddLine({168.2, 25.0}, {168.2, -30.0}).SetLine(kDotted, 3.0, kRed + 1);
+    plot[1].AddLine({19.0, 25.0}, {19.0, 60.0}).SetLine(kDotted, 3.0, "#3a78c2");
+    plot[1].AddLine({6.6, 60.0}, {6.6, -30.0}).SetLine(kDotted, 3.0, "#d6403a");
+    plot[1].AddLine({168.2, 25.0}, {168.2, -30.0}).SetLine(kDotted, 3.0, "#d6403a");
     plot[1].AddArrow({6.6, 55.0}, {19.0, 55.0}).SetArrowHead("<|>").SetLine(kSolid, 3.0, kBlack).SetFill(1001, kBlack).SetArrowSize(0.012);
     plot[1].AddText(22.0, 70.0, "time walk").SetUserCoordinates();
-    plot[1].AddArrow({6.6, -20.0}, {168.2, -20.0}).SetArrowHead("<|>").SetLine(kSolid, 3.0, kRed + 1).SetFill(1001, kRed + 1).SetArrowSize(0.012);
+    plot[1].AddArrow({6.6, -20.0}, {168.2, -20.0}).SetArrowHead("<|>").SetLine(kSolid, 3.0, "#d6403a").SetFill(1001, "#d6403a").SetArrowSize(0.012);
     plot[1].AddText(50.0, -28.0, "time over threshold").SetUserCoordinates();
     plot[1].AddLegend(0.6, 0.92, "injected charge");
     plot[1]['X'].SetRange(-10.0, 220.0).SetTitle("time (ns)");
@@ -1800,7 +1980,7 @@ void DefineElectronicsPlots(PlotManager& pm)
   {  // a Bode plot: gain and phase of the shaper at two peaking times, in two panels sharing the logarithmic frequency axis; the
     // measurement leaves the ideal CR-RC^2 response at high frequencies, where the preamplifier has its pole
     Plot plot("bodePlot", "electronics/frontEnd", "1d_wide_1x2");
-    for (const auto& [peaking, color] : vector<std::pair<int, int>>{{25, kAzure + 2}, {100, kRed + 1}}) {
+    for (const auto& [peaking, color] : vector<std::pair<int, color_t>>{{25, "#3a78c2"}, {100, "#d6403a"}}) {
       plot[1].AddData(Form("frontEnd/gain_%dns", peaking), "electronics", Form("peaking time %d ns", peaking)).SetColor(color).SetMarkerStyle(kFullCircle).SetMarkerSize(0.8);
       plot[1].AddData(Form("frontEnd/gainModel_%dns", peaking), "electronics").SetDrawOption(line).SetLine(kSolid, 3.0, color);
       plot[2].AddData(Form("frontEnd/phase_%dns", peaking), "electronics").SetColor(color).SetMarkerStyle(kFullCircle).SetMarkerSize(0.8);
@@ -1816,7 +1996,7 @@ void DefineElectronicsPlots(PlotManager& pm)
   {  // the radiation pattern of an array of four patch antennas, fed in phase and steered by 30 deg with phase steps: polar graphs
     // drawn on a polar grid in place of the axes (x the angle, the front of the array up, y the field strength)
     Plot plot("antennaPattern", "electronics/antenna", "1d");
-    for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"broadside", "in phase", kAzure + 2}, {"steered30", "steered by 30#circ", kRed + 1}}) {
+    for (const auto& [name, label, color] : vector<std::tuple<string, string, color_t>>{{"broadside", "in phase", "#3a78c2"}, {"steered30", "steered by 30#circ", "#d6403a"}}) {
       plot[1].AddData("antenna/" + name + "_model", "electronics").SetDrawOption(line).SetLine(kSolid, 3.0, color);
       plot[1].AddData("antenna/" + name, "electronics", label).SetDrawOption(points).SetMarker(kFullCircle, 0.7, color).SetLineColor(color).SetDefinesFrame();
     }
@@ -1836,7 +2016,7 @@ void DefineTheoryPlots(PlotManager& pm)
 {
   {  // asymptotic freedom: the strong coupling falls with the scale
     Plot plot("runningCoupling", "theory", "1d");
-    plot[1].AddData("alphaS", "theory", "2-loop QCD, #alpha_{s}(#it{m}_{Z}) = 0.118").SetDrawOption(band).SetFill(1001, kOrange - 9).SetLineColor(kOrange + 1).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+    plot[1].AddData("alphaS", "theory", "2-loop QCD, #alpha_{s}(#it{m}_{Z}) = 0.118").SetDrawOption(band).SetFill(1001, "#fbd5a5").SetLineColor("#f28e2b").SetLegendEntry(LegendEntry().SetSymbolElements("F"));
     plot[1].AddData("alphaS_measurements", "theory", "measurements").SetColor(kBlack);
     plot[1].AddLegend(0.3, 0.92);
     plot[1]['X'].SetLog().SetRange(1.0, 3000.0).SetTitle("#it{Q} (GeV)");
@@ -1845,7 +2025,7 @@ void DefineTheoryPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // what is inside a proton: parton distributions with their uncertainty bands
     Plot plot("partonDistributions", "theory", "1d");
-    for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"uv", "#it{x}#it{u}_{v}", kRed + 1}, {"dv", "#it{x}#it{d}_{v}", kAzure + 2}, {"g", "#it{x}#it{g} / 10", kGreen + 2}, {"sea", "#it{x}#it{S} / 10", kViolet + 1}}) {
+    for (const auto& [name, label, color] : vector<std::tuple<string, string, color_t>>{{"uv", "#it{x}#it{u}_{v}", "#d6403a"}, {"dv", "#it{x}#it{d}_{v}", "#3a78c2"}, {"g", "#it{x}#it{g} / 10", "#3f9b45"}, {"sea", "#it{x}#it{S} / 10", "#8752d4"}}) {
       plot[1].AddData("pdf_" + name, "theory", label).SetDrawOption(band).SetFill(1001, color, 0.4).SetLineColor(color).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
     }
     plot[1].AddLegend(0.6, 0.92, "#it{Q}^{2} = 10 GeV^{2}");
@@ -1856,7 +2036,7 @@ void DefineTheoryPlots(PlotManager& pm)
   {  // QCD matter from the lattice: the crossover from hadrons to quarks and gluons
     Plot plot("latticeQCD", "theory", "1d");
     plot[1].AddData("crossover", "theory", "#it{T}_{c}").SetDrawOption(boxes_nomarkers).SetFill(1001, kGray).SetLineColor(kGray).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
-    for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"energy", "#varepsilon/#it{T}^{4}", kRed + 1}, {"entropy", "3#it{s}/4#it{T}^{3}", kAzure + 2}, {"3p", "3#it{p}/#it{T}^{4}", kGreen + 2}}) {
+    for (const auto& [name, label, color] : vector<std::tuple<string, string, color_t>>{{"energy", "#varepsilon/#it{T}^{4}", "#d6403a"}, {"entropy", "3#it{s}/4#it{T}^{3}", "#3a78c2"}, {"3p", "3#it{p}/#it{T}^{4}", "#3f9b45"}}) {
       plot[1].AddData("lattice_" + name, "theory", label).SetDrawOption(band).SetFill(1001, color, 0.6).SetLineColor(color).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
     }
     plot[1].AddPoints({130.0, 410.0}, {15.62, 15.62}, "Stefan-Boltzmann limit").SetDrawOption(line).SetLine(kDashed, 3.0, kBlack);
@@ -1873,7 +2053,7 @@ void DefineTheoryPlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // its Lyapunov exponent: positive where nearby orbits separate
     Plot plot("lyapunov", "theory", "1d_wide");
-    plot[1].AddData("lyapunov", "theory").SetDrawOption(line).SetLine(kSolid, 1.0, kAzure + 2);
+    plot[1].AddData("lyapunov", "theory").SetDrawOption(line).SetLine(kSolid, 1.0, "#3a78c2");
     plot[1].SetRefFunc("0").SetLine(kDashed, 3.0, kGray + 1);
     plot[1]['X'].SetRange(2.8, 4.0).SetTitle("#it{r}");
     plot[1]['Y'].SetRange(-2.5, 1.0).SetTitle("Lyapunov exponent #lambda");
@@ -1922,7 +2102,7 @@ void DefineOtherSciencePlots(PlotManager& pm)
 {
   {  // monthly CO2 with its seasonal cycle, and the trend without it
     Plot plot("co2", "climate", "1d_wide");
-    plot[1].AddData("co2", "co2", "monthly mean").Scatter("year", "co2").SetDrawOption(line).SetLine(kSolid, 3.0, kAzure + 2);
+    plot[1].AddData("co2", "co2", "monthly mean").Scatter("year", "co2").SetDrawOption(line).SetLine(kSolid, 3.0, "#3a78c2");
     plot[1].AddData("co2", "co2", "seasonal cycle removed").Scatter("year", "deseasonalized").SetDrawOption(line).SetLine(kSolid, 3.0, kBlack);
     plot[1].AddLegend(0.15, 0.85);
     plot[1]['X'].SetRange(1960.0, 2030.0).SetTitle("year");
@@ -1932,8 +2112,8 @@ void DefineOtherSciencePlots(PlotManager& pm)
   {  // yearly global temperature anomalies as bars, warm years red and cold years blue: Filter selects the rows of a table
     Plot plot("temperatureAnomaly", "climate", "1d_wide");
     const Data::data_dim_t years{"year", 146, {1879.5, 2025.5}};
-    plot[1].AddData("temperature", "temperature").Filter("anomaly >= 0").Project1D(years, "anomaly").SetDrawOption(bars).SetFill(1001, kRed - 4).SetLineColor(kRed - 4);
-    plot[1].AddData("temperature", "temperature").Filter("anomaly < 0").Project1D(years, "anomaly").SetDrawOption(bars).SetFill(1001, kAzure - 4).SetLineColor(kAzure - 4);
+    plot[1].AddData("temperature", "temperature").Filter("anomaly >= 0").Project1D(years, "anomaly").SetDrawOption(bars).SetFill(1001, "#ec7063").SetLineColor("#ec7063");
+    plot[1].AddData("temperature", "temperature").Filter("anomaly < 0").Project1D(years, "anomaly").SetDrawOption(bars).SetFill(1001, "#7aa6dc").SetLineColor("#7aa6dc");
     plot[1].AddData("temperature", "temperature", "11-year mean").Scatter("year", "smoothed").SetDrawOption(line).SetLine(kSolid, 3.0, kBlack);
     plot[1].AddLegend(0.15, 0.85);
     plot[1]['X'].SetRange(1879.5, 2025.5).SetTitle("year");
@@ -2004,7 +2184,7 @@ void DefineOtherSciencePlots(PlotManager& pm)
     Plot plot("rotationCurve", "astronomy", "1d");
     plot[1].AddData("rotation/measured", "astronomy", "measured (H I, H#alpha)").SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(1.1);
     plot[1].AddData("rotation/total", "astronomy", "total").SetDrawOption(line).SetLine(kSolid, 3.0, kBlack);
-    for (const auto& [name, label, color] : vector<std::tuple<string, string, int>>{{"bulge", "bulge", kOrange + 7}, {"disk", "stellar disk", kAzure + 2}, {"halo", "dark matter halo", kGray + 2}}) {
+    for (const auto& [name, label, color] : vector<std::tuple<string, string, color_t>>{{"bulge", "bulge", "#e8743b"}, {"disk", "stellar disk", "#3a78c2"}, {"halo", "dark matter halo", kGray + 2}}) {
       plot[1].AddData("rotation/" + name, "astronomy", label).SetDrawOption(line).SetLine(kSolid, 3.0, color);
     }
     plot[1].AddLegend(0.2, 0.92).SetNumColumns(2);
@@ -2014,7 +2194,7 @@ void DefineOtherSciencePlots(PlotManager& pm)
   }  // -----------------------------------------------------------------------------------
   {  // the temperature power spectrum of the cosmic microwave background: the acoustic peaks of the early universe
     Plot plot("cmbPowerSpectrum", "astronomy", "1d_wide");
-    plot[1].AddData("cmb/measured", "astronomy", "measured").SetDrawOption(points_xerr).SetMarkerStyle(kFullCircle).SetMarkerSize(0.8).SetColor(kRed + 1);
+    plot[1].AddData("cmb/measured", "astronomy", "measured").SetDrawOption(points_xerr).SetMarkerStyle(kFullCircle).SetMarkerSize(0.8).SetColor("#d6403a");
     plot[1].AddData("cmb/model", "astronomy", "#LambdaCDM best fit").SetDrawOption(line).SetLine(kSolid, 3.0, kBlack);
     plot[1].AddLegend(0.7, 0.9);
     plot[1]['X'].SetRange(0.0, 2500.0).SetTitle("multipole #it{l}");
@@ -2037,16 +2217,16 @@ void DefineOtherSciencePlots(PlotManager& pm)
     plot[1].AddData("spikes", "spikes").Scatter("time", "trial").SetDrawOption(points).SetColor(kBlack).SetMarkerStyle(kFullDotLarge).SetMarkerSize(1.0);
     plot[1]['Y'].SetRange(0.0, 41.0).SetTitle("trial");
     // 40 trials and 50 ms bins: the counts times 1 / (40 x 0.05 s) are spikes per second
-    plot[2].AddData("spikes", "spikes").Project1D({"time", 30, {-500.0, 1000.0}}).Scale(0.5).SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineColor(kAzure + 2);
+    plot[2].AddData("spikes", "spikes").Project1D({"time", 30, {-500.0, 1000.0}}).Scale(0.5).SetDrawOption(hist).SetFill(1001, "#b9d3ee").SetLineColor("#3a78c2");
     plot[2]['Y'].SetTitle("rate (spikes/s)");
     plot[0]['X'].SetRange(-500.0, 1000.0).SetTitle("time after stimulus (ms)");
     pm.AddPlot(plot);
   }  // -----------------------------------------------------------------------------------
   {  // a train of action potentials in the Hodgkin-Huxley model while a current is injected, the current below
     Plot plot("actionPotentials", "neuroscience", "1d_wide_1x2");
-    plot[1].AddData("membrane", "membrane").Scatter("time", "voltage").SetDrawOption(line).SetLine(kSolid, 3.0, kAzure + 2);
+    plot[1].AddData("membrane", "membrane").Scatter("time", "voltage").SetDrawOption(line).SetLine(kSolid, 3.0, "#3a78c2");
     plot[1]['Y'].SetRange(-85.0, 55.0).SetTitle("membrane voltage (mV)");
-    plot[2].AddData("membrane", "membrane").Scatter("time", "current").SetDrawOption(line).SetLine(kSolid, 3.0, kRed + 1);
+    plot[2].AddData("membrane", "membrane").Scatter("time", "current").SetDrawOption(line).SetLine(kSolid, 3.0, "#d6403a");
     plot[2]['Y'].SetRange(-2.0, 13.0).SetTitle("#it{I} (#muA/cm^{2})");
     plot[0]['X'].SetRange(0.0, 100.0).SetTitle("time (ms)");
     pm.AddPlot(plot);
@@ -2054,7 +2234,7 @@ void DefineOtherSciencePlots(PlotManager& pm)
   {  // the orientation tuning curve of a visual cortex neuron, with the von Mises function it was drawn from
     Plot plot("orientationTuning", "neuroscience", "1d");
     plot[1].AddData("tuning", "tuning", "20 trials per orientation").Scatter("orientation", "rate", "0", "rate_err").SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(1.2);
-    plot[1].AddFunction("2 + 38*exp(2.5*(cos(2*(x - 60)*TMath::DegToRad()) - 1))", "von Mises, peak at 60#circ").SetRangeX(0.0, 180.0).SetLine(kSolid, 3.0, kRed + 1);
+    plot[1].AddFunction("2 + 38*exp(2.5*(cos(2*(x - 60)*TMath::DegToRad()) - 1))", "von Mises, peak at 60#circ").SetRangeX(0.0, 180.0).SetLine(kSolid, 3.0, "#d6403a");
     plot[1].AddLegend(0.45, 0.9);
     plot[1]['X'].SetRange(0.0, 180.0).SetNumDivisions(504).SetTitle("grating orientation (deg)");
     plot[1]['Y'].SetRange(0.0, 55.0).SetTitle("firing rate (spikes/s)");
@@ -2151,14 +2331,14 @@ void DefineAnimations(PlotManager& pm)
       const int high = low + 3;
       Plot plot("nch" + std::to_string(low), "animations/multiplicityClasses", "1d_ratio");
       const string label = std::to_string(low) + " #leq #it{N}_{ch} #leq " + std::to_string(high);
-      plot[1].AddData("ptVsMult", "data", label).ProjectY(low, high, true).Normalize().SetColor(kRed + 1);
+      plot[1].AddData("ptVsMult", "data", label).ProjectY(low, high, true).Normalize().SetColor("#d6403a").SetRangeX(0.0, 2.6);
       plot[1].AddData("ptVsMult", "data", "all #it{N}_{ch}").ProjectY(1, 60, true).Normalize().SetDrawOption(hist_open).SetLine(kSolid, 3.0, kBlack);
       plot[1].AddLegend(0.6, 0.88);
       plot[1].AddText(0.2, 0.88, {kExperiment, kCollisions});
-      plot[1]['Y'].SetLog().SetRange(1e-5, 100.0).SetTitle("normalised counts");
-      plot[2].AddRatio({"ptVsMult", "data"}, {"ptVsMult"}).Numer().ProjectY(low, high, true).Denom().ProjectY(1, 60, true).Both().Normalize().SetColor(kRed + 1);
+      plot[1]['Y'].SetLog().SetRange(1e-5, 3.0).SetTitle("normalised counts");
+      plot[2].AddRatio({"ptVsMult", "data"}, {"ptVsMult"}).Numer().ProjectY(low, high, true).Denom().ProjectY(1, 60, true).Both().Normalize().Result().SetRangeX(0.0, 2.6).SetColor("#d6403a");
       plot[2]['Y'].SetRange(0.0, 4.0).SetTitle("class / all");
-      plot[0]['X'].SetRange(0.0, 4.0);  // fixed ranges: the frames differ only in the data
+      plot[0]['X'].SetRange(0.0, 2.6);  // fixed ranges: the frames differ only in the data
       pm.AddPlot(plot);
     }
   }  // -----------------------------------------------------------------------------------
@@ -2168,8 +2348,8 @@ void DefineAnimations(PlotManager& pm)
       Plot plot(Form("lumi%03d", lumi), "animations/higgsDiscovery", "1d");
       plot[1].AddData("diphoton", "timeline", "data").Filter(Form("lumi < %d", lumi)).Project1D({"mass", 60, {100.0, 160.0}}).SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(1.0);
       const string background = Form("%g * exp(-(x - 100) / 22)", lumi / 140.0 * 5350.0);  // the shape the background was drawn from, per GeV
-      plot[1].AddFunction(background + Form(" + %g * TMath::Gaus(x, 125, 1.7, true)", lumi / 140.0 * 1400.0), "signal + background").SetLine(kSolid, 3.0, kRed + 1);
-      plot[1].AddFunction(background, "background").SetLine(kDashed, 3.0, kAzure + 2);
+      plot[1].AddFunction(background + Form(" + %g * TMath::Gaus(x, 125, 1.7, true)", lumi / 140.0 * 1400.0), "signal + background").SetLine(kSolid, 3.0, "#d6403a");
+      plot[1].AddFunction(background, "background").SetLine(kDashed, 3.0, "#3a78c2");
       plot[1].AddText(0.45, 0.9, {kExperiment, Form("#sqrt{#it{s}} = 13.6 TeV, %d fb^{-1}", lumi), "H #rightarrow #gamma#gamma"});
       plot[1].AddLegend(0.45, 0.68);
       plot[1]['X'].SetTitle("#it{m}_{#gamma#gamma} (GeV)");
@@ -2184,7 +2364,7 @@ void DefineAnimations(PlotManager& pm)
     for (int length = 1; length <= 10; ++length) {
       Plot plot(Form("cable%02dm", length), "animations/eyeClosing", "2d_logz");
       plot[1].AddData(Form("link/eye_%dm", length), "electronics").SetDrawOption(colz);
-      plot[1].AddPolygon({{0.3, 0.0}, {0.4, 80.0}, {0.6, 80.0}, {0.7, 0.0}, {0.6, -80.0}, {0.4, -80.0}}).SetFill(3354, kRed - 4).SetLine(kSolid, 3.0, kRed - 4);
+      plot[1].AddPolygon({{0.3, 0.0}, {0.4, 80.0}, {0.6, 80.0}, {0.7, 0.0}, {0.6, -80.0}, {0.4, -80.0}}).SetFill(3354, "#ec7063").SetLine(kSolid, 3.0, "#ec7063");
       plot[1].AddText(0.15, 0.92, Form("2.56 Gb/s, PRBS7, %d m cable", length)).SetTextColor(kWhite);
       plot[1].SetFrameFill(1001, kBlack);  // dark like the screen of an oscilloscope
       plot[1].SetPalette(kBird);

@@ -95,7 +95,13 @@
 //     antenna/     broadside, steered30 (TGraphPolar: radiation patterns of a patch array), ..._model (TGraphPolar)
 //   climate.root                      warmingMap (TH2: warming 2015-2024 vs. 1951-1980), landFraction (TH2), lightningEurope (TH2Poly)
 //   detector.root                     calo/cellStatus (TH2: good, dead and bad cells), conversions/vertexXY (TH2: photon conversion
-//                                     vertices), v0/{cowboy,sailor}_{pos,neg} (TGraph: the daughter tracks of a V0 decay)
+//                                     vertices), v0/{cowboy,sailor}_{pos,neg} (TGraph: the daughter tracks of a V0 decay),
+//                                     pid/{tracked,matched,identified} (TGraphAsymmErrors: pion efficiencies vs. pT)
+//   qcd.root                          final results of a pp analysis, each with statistical (_stat) and systematic (_syst) uncertainties
+//     correlations/ pp, dp, dp_lowPt, dp_highPt (_stat, _syst: TGraphErrors, correlation functions vs. Delta phi)
+//     neutralMesons/ pi0 (_stat, _syst), pi0_fit (TF1), nlo_{A,B,C} (TGraphAsymmErrors: scale bands), generator_{A,B,C} (TGraph);
+//                   etaToPi0_jetPt{10,20,40,60} (_stat, _syst: eta/pi0 vs. z in jets), generator_jetPt{10,20,40,60} (TGraph)
+//     fragmentation/ {g,u,d,s,c}_{LO,NLO,NNLO} (TGraphAsymmErrors: z D(z) bands), {g,u,d,s,c}_{LO,NLO}_central (TGraph)
 //   co2.csv                           monthly atmospheric CO2: year (decimal), co2, deseasonalized
 //   stars.csv                         a star catalogue for a Hertzsprung-Russell diagram: bv (colour index), logL
 //   spikes.csv                        spike times of a neuron in 40 trials around a stimulus: trial, time (ms)
@@ -1220,7 +1226,7 @@ void WritePhotoeffect(TFile& file)
   TRandom3 random(18);
   file.mkdir("photoeffect")->cd();
   constexpr double kPlanck = 0.41357;  // h in eV per 1e14 Hz
-  constexpr double kWork = 1.85;       // work function of the cathode (eV)
+  constexpr double kWork = 2.1;        // work function of the caesium cathode (eV)
   auto frequency = [](double wavelength) { return 2997.92458 / wavelength; };  // 1e14 Hz, wavelength in nm
   {  // stopping voltage for the lines of a mercury lamp: e U = h nu - W
     TGraphErrors stopping;
@@ -1307,7 +1313,7 @@ void WriteLaserSpectroscopy(TFile& file)
   {  // probe transmission through a vapour cell over the 87Rb D2 lines F = 2 -> F' = 1, 2, 3 (relative strengths 1 : 5 : 14):
     // the Doppler profile alone, and with a counter-propagating pump that burns Lamb dips at the transitions and crossover
     // resonances halfway between them (atoms moving such that the pump drives one transition and the probe the other)
-    const std::vector<std::pair<double, double>> lines = {{-72.2, 1.}, {0., 5.}, {266.7, 14.}};  // MHz from F' = 2
+    const std::vector<std::pair<double, double>> lines = {{-156.9, 1.}, {0., 5.}, {266.7, 14.}};  // MHz from F' = 2
     constexpr double kDoppler = 220., kWidth = 9.;  // sigma of the Doppler profile and half width of the dips (MHz)
     auto gauss = [](double x) { return std::exp(-0.5 * x * x / (kDoppler * kDoppler)); };
     auto lorentz = [](double x) { return kWidth * kWidth / (x * x + kWidth * kWidth); };
@@ -1395,7 +1401,7 @@ void WriteAtomic()
   const char* lines = "[0] + [1]*(0.55*TMath::Voigt(x+1820.-[2],[3],[4]) + 0.35*TMath::Voigt(x+1240.-[2],[3],[4])"
                       " + TMath::Voigt(x-610.-[2],[3],[4]) + 0.6*TMath::Voigt(x-1390.-[2],[3],[4]))";
   TF1 truth("truth", lines, -3000., 3000.);
-  truth.SetParameters(40., 60000., 12., 38., 22.);  // background, line strength, centroid shift (MHz), Doppler sigma, natural FWHM
+  truth.SetParameters(4000., 6000000., 12., 38., 22.);  // background, line strength, centroid shift (MHz), Doppler sigma, natural FWHM
   TH1D scan("hScan", "", 300, -3000., 3000.);
   scan.GetXaxis()->SetTitle("laser frequency offset (MHz)");
   scan.GetYaxis()->SetTitle("counts per 20 MHz");
@@ -1406,7 +1412,7 @@ void WriteAtomic()
   }
   scan.Write();
   TF1 fit("fitScan", lines, -3000., 3000.);
-  fit.SetParameters(35., 50000., 0., 30., 15.);
+  fit.SetParameters(3500., 5000000., 0., 30., 15.);
   scan.Fit(&fit, "Q0N");
   fit.SetNpx(2000);
   fit.Write();
@@ -2596,7 +2602,7 @@ void WriteAstronomy()
     }
     TGraphErrors measured;
     for (double r = 1.; r <= 29.; r += 1.25) {
-      const double error = 4. + 0.25 * r;  // km/s, growing with the faint outer gas
+      const double error = 2.5 + 0.12 * r;  // km/s, growing with the faint outer gas
       measured.AddPointError(r, total(r) + random.Gaus(0., error), 0., error);
     }
     measured.Write("measured");
@@ -3411,6 +3417,182 @@ void WriteStrangeness()
 }
 
 // --------------------------------------------------------------------------------------------------
+// detector.root (pid/): efficiencies of pions against pT, from tracking over the match to the time-of-flight layers to the identification
+// --------------------------------------------------------------------------------------------------
+void WritePIDEfficiency()
+{
+  TFile file((kFolder + "detector.root").data(), "UPDATE");
+  TRandom3 random(54);
+  file.mkdir("pid")->cd();
+  // smooth steps in log(pT): rising at low, falling at high
+  auto rise = [](double pt, double at, double width) { return 1. / (1. + std::exp(-std::log(pt / at) / width)); };
+  auto fall = [&](double pt, double at, double width) { return 1. - rise(pt, at, width); };
+  auto tracked = [&](double pt) { return 0.97 * rise(pt, 0.075, 0.18); };
+  auto matched = [&](double pt) { return 0.86 * rise(pt, 0.28, 0.12) * tracked(pt); };  // the track must reach the outer layers in the field
+  // pions told apart from kaons by 3 sigma: the inner time of flight at low pT, the outer one up to 2.5 GeV/c, the RICH above
+  auto identified = [&](double pt) {
+    const double innerTOF = 0.8 * tracked(pt) * rise(pt, 0.1, 0.1) * fall(pt, 0.75, 0.1);
+    const double outerTOF = 0.95 * matched(pt) * fall(pt, 2.6, 0.08);
+    const double rich = 0.9 * tracked(pt) * rise(pt, 2.0, 0.06) * fall(pt, 11., 0.1);
+    return std::pow(std::pow(innerTOF, 8) + std::pow(outerTOF, 8) + std::pow(rich, 8), 1. / 8.);  // the best detector, smoothly handed over
+  };
+  const std::vector<std::pair<std::string, std::function<double(double)>>> steps = {{"tracked", tracked}, {"matched", matched}, {"identified", identified}};
+  for (const auto& [name, eff] : steps) {
+    TGraphAsymmErrors graph;
+    graph.SetName(name.data());
+    for (double pt = 0.045; pt < 25.; pt *= 1.27) {
+      const double value = eff(pt);
+      const double error = 0.004 + 0.012 * std::sqrt(value * (1. - value));  // binomial-like: largest on the slopes
+      const double measured = std::clamp(value + random.Gaus(0., 0.5 * error), 0., 1.);
+      const int i = graph.GetN();
+      graph.SetPoint(i, pt, measured);
+      graph.SetPointError(i, 0., 0., std::min(error, measured), std::min(error, 1. - measured));
+    }
+    graph.Write();
+  }
+}
+
+// --------------------------------------------------------------------------------------------------
+// qcd.root: final results of a pp analysis with statistical and systematic uncertainties, and the theory they are compared to
+// --------------------------------------------------------------------------------------------------
+void WriteQCD()
+{
+  TFile file((kFolder + "qcd.root").data(), "RECREATE");
+  TRandom3 random(55);
+  // a measurement: the points (statistical errors) and the same points with the systematic ones, x errors as wide as the bin
+  auto writeResult = [&](const std::string& name, const std::vector<double>& x, const std::vector<double>& halfWidth, const std::function<double(double)>& value,
+                         const std::function<double(double)>& relStat, const std::function<double(double)>& relSyst, double xShift = 0.) {
+    TGraphErrors stat, syst;
+    stat.SetName((name + "_stat").data());
+    syst.SetName((name + "_syst").data());
+    for (size_t i = 0; i < x.size(); ++i) {
+      const double truth = value(x[i]);
+      const double measured = truth * (1. + random.Gaus(0., relStat(x[i])));
+      stat.SetPoint(i, x[i] + xShift, measured);
+      stat.SetPointError(i, 0., measured * relStat(x[i]));
+      syst.SetPoint(i, x[i] + xShift, measured);
+      syst.SetPointError(i, halfWidth[i], measured * relSyst(x[i]));
+    }
+    stat.Write();
+    syst.Write();
+  };
+
+  // two-particle correlation functions in Delta phi: a dip at small angles, the away side at pi; deeper and higher for heavier particles and higher pT
+  file.mkdir("correlations")->cd();
+  {
+    const int nBins = 24;
+    const double width = 2. * TMath::Pi() / nBins;
+    std::vector<double> x, halfWidth;
+    for (int i = 0; i < nBins; ++i) {
+      x.push_back(-0.5 * TMath::Pi() + (i + 0.5) * width);
+      halfWidth.push_back(0.5 * width);
+    }
+    // amplitude of the cos term, its second harmonic, a small near-side peak
+    const std::vector<std::tuple<std::string, double, double, double, double>> samples = {
+      {"pp", 0.16, -0.01, 0.03, 0.009}, {"dp", 0.245, -0.022, 0., 0.011}, {"dp_lowPt", 0.16, -0.02, 0.01, 0.012}, {"dp_highPt", 0.30, -0.02, 0., 0.013}};
+    for (const auto& [name, a1, a2, peak, stat] : samples) {
+      auto value = [&, a1 = a1, a2 = a2, peak = peak](double dphi) { return 1.01 - a1 * std::cos(dphi) - a2 * std::cos(2. * dphi) + peak * std::exp(-0.5 * dphi * dphi / 0.09); };
+      writeResult(name, x, halfWidth, value, [stat = stat](double) { return stat; }, [](double) { return 0.022; });
+    }
+  }
+
+  // the pi0 cross section from 0.4 to 40 GeV/c, a Tsallis fit to it, NLO calculations with three sets of parton distribution and fragmentation
+  // functions (bands: scale variations) and three event generators
+  file.mkdir("neutralMesons")->cd();
+  {
+    const std::vector<double> edges = {0.4, 0.5, 0.6, 0.7, 0.8, 1., 1.2, 1.4, 1.6, 1.8, 2., 2.2, 2.4, 2.6, 2.8, 3., 3.3, 3.6, 4., 4.5, 5., 5.5, 6., 7., 8., 10., 12., 14., 16., 20., 25., 30., 40.};
+    std::vector<double> x, halfWidth;
+    for (size_t i = 0; i + 1 < edges.size(); ++i) {
+      x.push_back(0.5 * (edges[i] + edges[i + 1]));
+      halfWidth.push_back(0.5 * (edges[i + 1] - edges[i]));
+    }
+    // E d^3 sigma / dp^3 in pb GeV^-2 c^3
+    TF1 fit("pi0_fit", "[0] * pow(1. + (sqrt(x * x + 0.135 * 0.135) - 0.135) / ([1] * [2]), -[1])", 0.3, 50.);
+    fit.SetParameters(4.2e10, 6.45, 0.158);
+    fit.SetNpx(500);
+    fit.SetTitle("Tsallis fit");
+    writeResult("pi0", x, halfWidth, [&](double pt) { return fit.Eval(pt); }, [](double pt) { return 0.012 + 0.0035 * pt; },
+                [](double pt) { return 0.055 + 0.0018 * pt + 0.03 / pt; });
+    fit.Write();
+    auto logStep = [](double pt, double low, double high) { return low + (high - low) * std::log(pt / 1.5) / std::log(30. / 1.5); };
+    // the central NLO / fit and the relative scale uncertainty, all at 1.5 and at 30 GeV/c
+    const std::vector<std::tuple<std::string, double, double, double, double>> nlo = {
+      {"nlo_A", 1.45, 1.12, 0.32, 0.14}, {"nlo_B", 1.22, 0.98, 0.28, 0.12}, {"nlo_C", 1.06, 0.88, 0.26, 0.11}};
+    for (const auto& [name, low, high, uncLow, uncHigh] : nlo) {
+      TGraphAsymmErrors band;
+      band.SetName(name.data());
+      for (double pt = 1.5; pt < 41.; pt *= 1.08) {
+        const double central = fit.Eval(pt) * logStep(pt, low, high);
+        const double rel = logStep(pt, uncLow, uncHigh);
+        const int i = band.GetN();
+        band.SetPoint(i, pt, central);
+        band.SetPointError(i, 0., 0., central * 0.8 * rel, central * rel);  // larger upwards, as a lower scale raises the cross section
+      }
+      band.Write();
+    }
+    const std::vector<std::pair<std::string, std::function<double(double)>>> generators = {
+      {"generator_A", [](double pt) { return 1. + 0.12 * std::cos(1.6 * std::log(pt / 0.6)) * std::exp(-0.15 * std::log(pt)); }},
+      {"generator_B", [](double pt) { return 0.82 + 0.12 * std::log(pt); }},
+      {"generator_C", [](double pt) { return 1.18 - 0.14 * std::log(pt) + 0.02 * std::log(pt) * std::log(pt); }}};
+    for (const auto& [name, ratio] : generators) {
+      TGraph curve;
+      curve.SetName(name.data());
+      for (double pt = 0.4; pt < 41.; pt *= 1.12) curve.SetPoint(curve.GetN(), pt, fit.Eval(pt) * ratio(pt));
+      curve.Write();
+    }
+
+    // eta/pi0 against the momentum fraction z of the jet carried by the meson, in four bins of jet pT, and an event generator for each
+    const std::vector<double> zEdges = {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.};
+    std::vector<double> z, zHalfWidth;
+    for (size_t i = 0; i + 1 < zEdges.size(); ++i) {
+      z.push_back(0.5 * (zEdges[i] + zEdges[i + 1]));
+      zHalfWidth.push_back(0.008);  // narrow boxes: the four classes are drawn side by side
+    }
+    const std::vector<std::string> jetPt = {"10", "20", "40", "60"};
+    for (size_t j = 0; j < jetPt.size(); ++j) {
+      auto ratio = [j](double zz) { return 0.36 + 0.055 * j + 0.17 * (zz - 0.1) - 0.05 * (zz - 0.1) * (zz - 0.1); };
+      writeResult("etaToPi0_jetPt" + jetPt[j], z, zHalfWidth, ratio, [](double zz) { return 0.012 + 0.025 * zz * zz; }, [](double) { return 0.035; }, -0.03 + 0.02 * j);
+      TGraph generator;
+      generator.SetName(("generator_jetPt" + jetPt[j]).data());
+      for (double zz = 0.1; zz <= 1.0001; zz += 0.01) generator.SetPoint(generator.GetN(), zz, ratio(zz) - 0.03 + 0.04 * (zz - 0.1));
+      generator.Write();
+    }
+  }
+
+  // fragmentation functions z D(z) into charged hadrons at Q = 10 GeV for five partons at three orders of perturbation theory
+  file.mkdir("fragmentation")->cd();
+  {
+    // normalisation, power at small z, power of (1 - z)
+    const std::vector<std::tuple<std::string, double, double, double>> partons = {
+      {"g", 1.9, 0.75, 4.2}, {"u", 1.05, 0.38, 1.75}, {"d", 0.98, 0.38, 1.9}, {"s", 1.2, 0.45, 2.2}, {"c", 3.6, 1.15, 3.1}};
+    // NLO and NNLO relative to LO: lower at small, higher at large z; the relative uncertainty of each order
+    auto kNLO = [](double zz) { return 0.98 + 0.07 * std::log10(zz) + 0.2 * zz * zz; };
+    auto kNNLO = [&](double zz) { return kNLO(zz) * (1. + 0.025 * std::log10(zz) + 0.04 * zz * zz); };
+    auto relUnc = [](double zz, double base) { return base * (1. + 0.25 * std::pow(std::log10(zz) + 1., 2) + 2.5 * std::pow(zz, 4)); };
+    for (const auto& [name, norm, alpha, beta] : partons) {
+      auto lo = [norm = norm, alpha = alpha, beta = beta](double zz) { return norm * std::pow(zz, alpha) * std::pow(1. - zz, beta); };
+      const std::vector<std::tuple<std::string, std::function<double(double)>, double>> orders = {
+        {"LO", [](double) { return 1.; }, 0.11}, {"NLO", kNLO, 0.055}, {"NNLO", kNNLO, 0.03}};
+      for (const auto& [order, factor, base] : orders) {
+        TGraphAsymmErrors band;
+        TGraph central;
+        band.SetName((name + "_" + order).data());
+        central.SetName((name + "_" + order + "_central").data());
+        for (double zz = 0.01; zz < 0.951; zz *= 1.1) {
+          const double value = lo(zz) * factor(zz);
+          const int i = band.GetN();
+          band.SetPoint(i, zz, value);
+          band.SetPointError(i, 0., 0., value * relUnc(zz, base), value * relUnc(zz, base));
+          central.SetPoint(i, zz, value);
+        }
+        band.Write();
+        if (order != "NNLO") central.Write();
+      }
+    }
+  }
+}
+
+// --------------------------------------------------------------------------------------------------
 // logo.png
 // --------------------------------------------------------------------------------------------------
 void WriteLogo()
@@ -3484,5 +3666,7 @@ void generateExampleData()
   WriteDetectorMaps();
   WriteEnergyScan();
   WriteStrangeness();
+  WritePIDEfficiency();
+  WriteQCD();
   WriteLogo();
 }

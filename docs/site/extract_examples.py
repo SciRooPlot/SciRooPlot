@@ -18,7 +18,8 @@ def snippets(path, lang):
     out, seg = {}, []
     for line in lines:
         s = line.strip()
-        if lang == "py" and (s.startswith(("def ", '"""')) or (seg and seg[-1].strip().startswith('"""') and not s)):
+        # a function of the program starts a new snippet (a function defined inside one belongs to the snippet using it)
+        if lang == "py" and (line.startswith("def ") or s.startswith('"""') or (seg and seg[-1].strip().startswith('"""') and not s)):
             seg = []
             continue
         if lang == "cpp" and (re.match(r"^(void|int|Plot|auto)\b.*\)\s*\{?$", line) or (s in ("{", "}") and not seg)):
