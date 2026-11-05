@@ -75,10 +75,10 @@ def close(a, b, rel=1e-9):
 # ---------------------------------------------------------------------------------------------
 # case lists
 # ---------------------------------------------------------------------------------------------
-def cases(dims, valid=lambda case: True, named=()):
+def cases(dims, valid=lambda case: True, named=(), always=lambda case: False):
     """The combinations of the values in dims (a dict of lists) as dicts, without those that are not valid.
-    The fast run takes those needed to have every value of every dimension at least once; the full run all of them.
-    Named cases (dicts with a "why": a bug that happened) are always included."""
+    The fast run takes those needed to have every value of every dimension at least once, and those always is true for; the full run
+    all of them. Named cases (dicts with a "why": a bug that happened) are always included."""
     allCases = [dict(zip(dims, values)) for values in itertools.product(*dims.values())]
     allCases = [case for case in allCases if valid(case)]
     chosen = allCases
@@ -86,7 +86,7 @@ def cases(dims, valid=lambda case: True, named=()):
         chosen, seen = [], set()
         for case in allCases:
             pairs = set(case.items())
-            if not pairs <= seen:
+            if not pairs <= seen or always(case):
                 chosen.append(case)
                 seen |= pairs
     for extra in named:
@@ -111,10 +111,14 @@ def describe(case):
 # (a function of the plot definition, no input object), cpp (a function of compiled C++ code: stored as values sampled over its range),
 # projected (an n-dimensional histogram, drawn as its projection onto the first axis, or the first two), polygons (bins that are
 # polygons: the axes have no bins, a frame ends where it is asked to as for graphs).
+# hist_noerrors is a histogram whose errors are all zero, hist_counts one filled without weights (no Sumw2: its errors are the square
+# roots of the contents).
 # A test takes its kinds from these tables, so a kind added here is covered everywhere.
 DATA_KINDS = {
     "hist": (1, "TH1D", {"binned"}),
     "hist_var": (1, "TH1D", {"binned"}),
+    "hist_noerrors": (1, "TH1D", {"binned"}),
+    "hist_counts": (1, "TH1D", {"binned"}),
     "profile": (1, "TProfile", {"binned"}),
     "efficiency": (1, "TEfficiency", {"binned"}),
     "thn": (1, "THnD", {"binned", "projected"}),
@@ -238,6 +242,8 @@ def data_objects(variant="normal"):
     outside = 1e6 if variant == "overflow" else 0.0  # content of the underflow and overflow bins
 
     h = ROOT.TH1D("hist", "", 18, 1.0, 10.0)
+    hn = ROOT.TH1D("hist_noerrors", "", 18, 1.0, 10.0)
+    hc = ROOT.TH1D("hist_counts", "", 18, 1.0, 10.0)
     edges = ROOT.std.vector("double")([1.0, 1.2, 1.5, 2.0, 2.7, 3.5, 4.5, 6.0, 7.5, 9.0, 10.0])
     hv = ROOT.TH1D("hist_var", "", edges.size() - 1, edges.data())
     p = ROOT.TProfile("profile", "", 18, 1.0, 10.0)
@@ -249,6 +255,13 @@ def data_objects(variant="normal"):
         hist.SetBinContent(0, outside)
         hist.SetBinContent(hist.GetNbinsX() + 1, outside)
         hist.SetEntries(sum(keep(b) for b in range(hist.GetNbinsX())))
+    hn.Sumw2()
+    for hist in (hn, hc):
+        for b in range(1, hist.GetNbinsX() + 1):
+            if keep(b - 1):
+                hist.SetBinContent(b, value(b - 1, hist.GetBinCenter(b)))
+        hist.SetBinContent(0, outside)
+        hist.SetBinContent(hist.GetNbinsX() + 1, outside)
     for b in range(1, p.GetNbinsX() + 1):
         if keep(b - 1):
             x = p.GetBinCenter(b)
@@ -349,7 +362,7 @@ def data_objects(variant="normal"):
         g2e.SetPointError(m, 0.1, 0.1, abs(0.1 * value(n, x, y)))
     for graph, name in ((g2, "graph2d"), (g2e, "graph2d_errors")):
         graph.SetName(name)
-    objects = {"hist": h, "hist_var": hv, "profile": p, "efficiency": eff, "thn": thn, "thn_sparse": sparse, "graph": g, "graph_errors": ge}
+    objects = {"hist": h, "hist_noerrors": hn, "hist_counts": hc, "hist_var": hv, "profile": p, "efficiency": eff, "thn": thn, "thn_sparse": sparse, "graph": g, "graph_errors": ge}
     objects.update({"graph_asymm": ga, "graph_multi": gm, "graph_polar": gp, "hist2d": h2, "profile2d": p2, "hist2poly": poly})
     objects.update({"efficiency2d": eff2, "thn_sparse2d": sparse2, "graph2d": g2, "graph2d_errors": g2e, "hist3d": h3, "profile3d": p3})
     if variant in FUNCTION_VARIANTS:
@@ -408,6 +421,53 @@ def base_of(kind):
     return "1d" if DATA_KINDS[kind][0] == 1 else "2d"
 
 
+def drawn_type(kind):
+    """the type data of a kind is drawn as (the columns of the drawing option tables): hist1d, graph, function, hist2d, graph2d,
+    function2d, hist3d, function3d; a TEfficiency as the graph or 2d histogram ROOT makes of it, a THn as its projection"""
+    dim, cls, _ = DATA_KINDS[kind]
+    if cls.startswith("TF"):
+        return ("function", "function2d", "function3d")[dim - 1]
+    if cls.startswith("TGraph2D"):
+        return "graph2d"
+    if cls.startswith("TGraph") or (cls == "TEfficiency" and dim == 1):
+        return "graph"
+    return f"hist{dim}d"
+
+
+def data_name(kind, variant="normal"):
+    """the name SciRooPlot gives data of a kind in messages: the formula of a function of the plot definition, else the input's name"""
+    return formula(kind, variant) if "formula" in DATA_KINDS[kind][2] else kind
+
+
+def option(text):
+    """a drawing option as ROOT reads it: upper case, without SAME, single spaces"""
+    return " ".join(str(text).upper().replace("SAME", "").split())
+
+
+def no_scale(opt):
+    """a drawing option without its colour scale: the Z ending a word of a 2d or 3d option (COLZ, COLZ0, LEGO2Z, CONTZ, PCOLZ, BOX2Z)"""
+    return " ".join(re.sub(r"(?<=[A-Z0-9])Z(?=0?$)", "", word) for word in opt.split())
+
+
+ALIASES = list(S.draw_option_t.__members__)
+
+
+def alias_table():
+    """the documented alias table (docs/skill/scirooplot/reference/drawing-options.md): {alias: {drawn type: ROOT option}}, with "-" for
+    an alias the type cannot draw and "graph" or "hist1d" for one it is drawn with as that type (see drawn_type)"""
+    columns = {"1D histogram": "hist1d", "graph": "graph", "function": "function", "2D histogram": "hist2d", "2D graph": "graph2d", "2D function": "function2d", "3D histogram": "hist3d", "3D function": "function3d"}
+    table, header = {}, None
+    with open(os.path.join(os.path.dirname(__file__), "..", "docs", "skill", "scirooplot", "reference", "drawing-options.md"), encoding="utf-8") as f:
+        for line in f:
+            cells = [c.strip() for c in re.split(r" \| ", line.strip().strip("|").strip())]
+            if cells[0] == "alias":
+                header = [columns[c] for c in cells[1:]]
+            elif header and len(cells) == len(header) + 1 and cells[0].startswith("`"):
+                values = [{"*as graph*": "graph", "*as histogram*": "hist1d", "–": "-"}.get(c, c.strip("`")) for c in cells[1:]]
+                table[cells[0].strip("`")] = dict(zip(header, values))
+    return table
+
+
 # ---------------------------------------------------------------------------------------------
 # a project and its runs
 # ---------------------------------------------------------------------------------------------
@@ -452,6 +512,22 @@ class Run:
             if m:
                 found.append((int(m.group(1)), prim))
         return [obj for _, obj in sorted(found, key=lambda item: item[0])]
+
+    def drawn(self, name, group, pad=1):
+        """the drawn data of a pad in the order it was added, as (object, drawing option as by option())"""
+        found = [(int(obj.GetName().split(":")[0]), obj, option(opt)) for obj, opt in self._links(name, group, pad) if re.match(r"^\d+:", obj.GetName())]
+        return [(obj, opt) for _, obj, opt in sorted(found, key=lambda item: item[0])]
+
+    def frame_option(self, name, group, pad=1):
+        """the drawing option of the frame histogram of a pad (as by option()), None if it has none"""
+        return next((option(opt) for obj, opt in self._links(name, group, pad) if obj.GetName() == f"axis_hist_pad_{pad}"), None)
+
+    def _links(self, name, group, pad):
+        padObj = self.pad(name, group, pad)
+        link = padObj.GetListOfPrimitives().FirstLink() if padObj else None
+        while link:
+            yield link.GetObject(), str(link.GetOption())
+            link = link.Next()
 
     def frame(self, name, group, pad=1):
         """the frame of a pad in axis values: {"X": (min, max), "Y": (min, max)}, or None if the plot was not made"""

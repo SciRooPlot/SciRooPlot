@@ -13,7 +13,7 @@ import collections
 import hashlib
 import re
 
-from srptest import FUNCTIONS, WORK, Project, ROOT, S, add_data, cases, check, data_objects, describe, finish
+from srptest import FUNCTIONS, WORK, Project, ROOT, S, add_data, cases, check, describe, finish
 
 ALIASES_POINTS_LINES = ["default", "points", "points_xerr", "points_endcaps", "points_xerr_endcaps", "points_line", "points_arrows", "line", "curve", "curve_clipped"]
 ALIASES_1D = ALIASES_POINTS_LINES + ["hist", "hist_open", "hist_clipped", "hist_open_clipped", "bars", "hbars", "area", "area_smooth", "band", "band_smooth", "boxes", "boxes_nomarkers", "brackets"]
@@ -34,7 +34,7 @@ STYLES = {
     "split_dashed_ms0": lambda d: d.SetMarkerColor(S.kRed + 1).SetLine(S.kDashed, 3, S.kBlue + 1).SetFill(3354, S.kGreen + 2).SetMarkerSize(0),
     "solid_lw1": lambda d: d.SetColor(S.kRed + 1).SetFill(1001, S.kGreen + 2).SetLineWidth(1).SetMarker(20, 1, S.kRed + 1),
 }
-HIST_NO_ERRORS = "hist_noerr"  # a histogram like hist whose errors are all zero (a data source of this test)
+HIST_NO_ERRORS = "hist_noerrors"  # a histogram whose errors are all zero
 HIST_KINDS = ("hist", "hist_var", "profile", HIST_NO_ERRORS)
 GRAPH_KINDS = ("graph", "graph_errors", "graph_asymm")
 GRAPHS_WITH_ERRORS = ("graph_errors", "graph_asymm")
@@ -67,14 +67,10 @@ def compared(case):
 
 p = Project("legend_symbols")
 p.inputs()
-noErrors = data_objects()["hist"].Clone(HIST_NO_ERRORS)
-for b in range(noErrors.GetNbinsX() + 2):
-    noErrors.SetBinError(b, 0.0)
-p.source("no_errors", {HIST_NO_ERRORS: noErrors})
 todo = cases({"kind": KINDS, "option": list(dict.fromkeys(ALIASES_1D + RAW_HIST + RAW_GRAPH + ALIASES_2D)), "style": list(STYLES)}, valid=compared)
 for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "legend", "1d")
-    data = (plot[1].AddData(HIST_NO_ERRORS, "no_errors") if case["kind"] == HIST_NO_ERRORS else add_data(plot[1], case["kind"])).SetLegendLabel("entry")
+    data = add_data(plot[1], case["kind"]).SetLegendLabel("entry")
     if hasattr(S, case["option"]):
         data.SetDrawOption(getattr(S, case["option"]))
     elif case["option"] != "default":
