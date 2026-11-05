@@ -1,19 +1,24 @@
-"""A legend entry shows what is drawn for its data, for histograms (fixed and variable bins, without errors, profiles), graphs (without,
-with symmetric and with asymmetric errors), functions and the 2d histogram, every drawing option alias, the common
-ROOT options and a set of styles (marker red, line blue and fill green where they differ, so the colour shows which part the legend took).
+"""A legend entry shows what is drawn for its data, for every data kind of srptest, with the drawing option aliases of what it is drawn
+as (a 1d TEfficiency as a graph, a 2d one as a histogram), the common ROOT options of 1d histograms and graphs, and a set of styles
+(marker red, line blue and fill green where they differ, so the colour shows which part the legend took).
 Each canvas is printed to SVG without the legend, without the data and with neither (the frame): the styles of the elements drawn for
 the data (fill, stroke, width, dashes, opacity, marker size) must be those drawn for the legend entry, and a line through the points
 must have a line (or a fill outlined by it) in the legend and vice versa.
 Not compared, since TLegend cannot draw them or ROOT's option does not follow its own drawing rules: the error bars of graphs drawn as
-fill (F, B), the *H, B and BAR options of histograms, the shading of 3d views and the parts of candles and violins, the solid arrowed
-error bars of asymmetric graphs, line and markers hidden by an opaque band (3L, 3PL, 4C), the outline of a hollow HIST E2 box (TLegend
-takes the fill colour), arrow heads, and the lines of 2d drawings (contours and meshes are many short pieces)."""
+fill (F, B) and of multi-error graphs with a raw box or band option (2-5 without ';': ROOT draws only the first set as boxes or band,
+the others as bars, and TLegend has one line for both), the *H, B and BAR options of histograms, 3d views (shaded, or drawn with the
+box of the view: lego, surf, the boxes and iso surfaces of 3d data, the markers, lines and triangles of 2d graphs), the parts of candles
+and violins, the solid arrowed error bars of asymmetric graphs, line and markers hidden by an opaque band (3L, 3PL, 4C), the outline of
+a hollow HIST E2 box (TLegend takes the fill colour), arrow heads, and the lines of 2d drawings (contours and meshes are many short
+pieces)."""
 
 import collections
 import hashlib
+import os
+import pickle
 import re
 
-from srptest import FUNCTIONS, WORK, Project, ROOT, S, add_data, cases, check, describe, finish
+from srptest import DATA_KINDS, WORK, Project, ROOT, S, add_data, cases, check, describe, drawn_type, finish
 
 ALIASES_POINTS_LINES = ["default", "points", "points_xerr", "points_endcaps", "points_xerr_endcaps", "points_line", "points_arrows", "line", "curve", "curve_clipped"]
 ALIASES_1D = ALIASES_POINTS_LINES + ["hist", "hist_open", "hist_clipped", "hist_open_clipped", "bars", "hbars", "area", "area_smooth", "band", "band_smooth", "boxes", "boxes_nomarkers", "brackets"]
@@ -21,6 +26,10 @@ RAW_HIST = ["E", "E0", "E1", "E3", "E4", "HIST", "L", "C", "P", "B", "BAR", "HBA
 RAW_GRAPH = ["P", "L", "C", "B", "F", "LP", "CP", "PZ", "2", "3", "4", "5", "3L", "4C", "3PL", "AP", "LF", "E", "E1", "||", "[]", "0", "X P", "*"]
 ALIASES_FUNC = ["default", "points", "line", "curve", "area", "area_smooth"]
 ALIASES_2D = ["default", "col", "colz", "box", "lego", "surf", "cont", "cont_col", "cont_fill", "candle", "violin"]
+ALIASES_GRAPH_2D = ["default", "points", "points_col", "line", "col", "colz", "lego", "surf", "cont", "cont_col", "triangles", "triangles_col"]
+ALIASES_FUNC_2D = ["default", "col", "colz", "lego", "surf", "cont", "cont_col", "cont_fill"]
+ALIASES_3D = ["default", "col", "colz", "box", "iso"]
+ALIASES_FUNC_3D = ["default", "iso"]
 STYLES = {
     "color": lambda d: d.SetColor(S.kRed + 1),
     "fill": lambda d: d.SetColor(S.kRed + 1).SetFill(1001, S.kRed + 1, 0.4),
@@ -34,42 +43,56 @@ STYLES = {
     "split_dashed_ms0": lambda d: d.SetMarkerColor(S.kRed + 1).SetLine(S.kDashed, 3, S.kBlue + 1).SetFill(3354, S.kGreen + 2).SetMarkerSize(0),
     "solid_lw1": lambda d: d.SetColor(S.kRed + 1).SetFill(1001, S.kGreen + 2).SetLineWidth(1).SetMarker(20, 1, S.kRed + 1),
 }
-HIST_NO_ERRORS = "hist_noerrors"  # a histogram whose errors are all zero
-HIST_KINDS = ("hist", "hist_var", "profile", HIST_NO_ERRORS)
-GRAPH_KINDS = ("graph", "graph_errors", "graph_asymm")
-GRAPHS_WITH_ERRORS = ("graph_errors", "graph_asymm")
-KINDS = (*HIST_KINDS, *GRAPH_KINDS, "function", "hist2d")
+KINDS = tuple(DATA_KINDS)
+OPTIONS = {
+    "hist1d": ALIASES_1D + RAW_HIST,
+    "graph": ALIASES_1D + RAW_GRAPH,
+    "function": ALIASES_FUNC,
+    "hist2d": ALIASES_2D,
+    "graph2d": ALIASES_GRAPH_2D,
+    "function2d": ALIASES_FUNC_2D,
+    "hist3d": ALIASES_3D,
+    "function3d": ALIASES_FUNC_3D,
+}
+# drawn in a 3d view, shaded or with the box of the view (2d graphs draw markers, lines and triangles in 3d)
+VIEWS_3D = {
+    "hist2d": ("lego", "surf"),
+    "function2d": ("lego", "surf"),
+    "graph2d": ("points", "line", "lego", "surf", "triangles"),
+    "hist3d": ("box", "iso"),
+    "function3d": ("default", "iso"),
+}
+ASYMMETRIC = ("TGraphAsymmErrors", "TGraphMultiErrors", "TEfficiency")  # graphs drawn with asymmetric errors
 
 
-def options(kind):
-    if kind in HIST_KINDS:
-        return ALIASES_1D + RAW_HIST
-    if kind in GRAPH_KINDS:
-        return ALIASES_1D + RAW_GRAPH
-    return ALIASES_FUNC if kind in FUNCTIONS else ALIASES_2D
+def has_errors(kind):
+    return kind != "hist_noerrors" and DATA_KINDS[kind][1] not in ("TGraph", "TGraphPolar")
 
 
 def compared(case):
     """the cases whose differences TLegend cannot avoid, or whose ROOT option does not follow its own drawing rules, are left out"""
     kind, option, style = case["kind"], case["option"], case["style"]
-    if option not in options(kind):
+    what = drawn_type(kind)
+    if option not in OPTIONS[what]:
         return False
-    if kind in GRAPHS_WITH_ERRORS and option in ("F", "B", "3L", "3PL", "4C"):
+    if what == "graph" and has_errors(kind) and option in ("F", "B", "3L", "3PL", "4C"):
         return False
-    if kind in HIST_KINDS and option in ("*H", "B", "BAR"):
+    if kind == "graph_multi" and option in ("2", "3", "4", "5"):  # ROOT draws the first set of errors as boxes or a band, the others as bars
         return False
-    if kind == "hist2d" and option in ("lego", "surf", "candle", "violin"):
+    if what == "hist1d" and option in ("*H", "B", "BAR"):
         return False
-    if kind == "graph_asymm" and option == "points_arrows" and "dashed" in style:
+    if option in VIEWS_3D.get(what, ()) or option in ("candle", "violin"):
         return False
-    return not (kind in HIST_KINDS and kind != HIST_NO_ERRORS and option == "HIST E2" and style == "hollow_split")
+    if DATA_KINDS[kind][1] in ASYMMETRIC and option == "points_arrows" and "dashed" in style:
+        return False
+    return not (what == "hist1d" and has_errors(kind) and option == "HIST E2" and style == "hollow_split")
 
 
 p = Project("legend_symbols")
 p.inputs()
-todo = cases({"kind": KINDS, "option": list(dict.fromkeys(ALIASES_1D + RAW_HIST + RAW_GRAPH + ALIASES_2D)), "style": list(STYLES)}, valid=compared)
+todo = cases({"kind": KINDS, "option": list(dict.fromkeys(sum(OPTIONS.values(), []))), "style": list(STYLES)}, valid=compared)
 for i, case in enumerate(todo):
-    plot = S.Plot(f"c{i}", "legend", "1d")
+    plot = S.Plot(f"c{i}", "legend", "1d" if drawn_type(case["kind"]) in ("hist1d", "graph", "function") else "2d")
     data = add_data(plot[1], case["kind"]).SetLegendLabel("entry")
     if hasattr(S, case["option"]):
         data.SetDrawOption(getattr(S, case["option"]))
@@ -164,7 +187,9 @@ def paint(name, keep):
         if obj.InheritsFrom("TLegend"):
             obj.SetFillStyle(0)
             obj.SetBorderSize(0)
-        if not keep(obj):
+        # left out in all three: ROOT compiles the command of a TExec at every paint and keeps the code (memory runs out over thousands
+        # of paints), and the styles here use only ROOT's preset colours, which need no TExec
+        if not keep(obj) or obj.InheritsFrom("TExec"):
             primitives.Remove(obj)
     canvas.SaveAs(SVG)
     entryOptions = [entry.GetOption().lower() for obj in primitives if obj.InheritsFrom("TLegend") for entry in obj.GetListOfPrimitives()]
@@ -174,19 +199,20 @@ def paint(name, keep):
 
 
 def is_frame(obj):
-    return obj.InheritsFrom("TFrame") or obj.InheritsFrom("TExec") or obj.GetName().startswith("axis_hist")
+    """everything in the pad but the data (named <data number>:..., its fill fill_<data number>:...) and the legend: frame, axes, grids (also the polar one), colour scale"""
+    return not obj.InheritsFrom("TLegend") and not re.match(r"(fill_)?\d+:", obj.GetName())
 
 
 def show(style):
     return style[0] + " " + " ".join(f"{k}={v}" for k, v in style[1:])
 
 
-for i, case in enumerate(todo):
+def legend_check(i, case):
+    """the check of a case: (title, passed, detail)"""
     what = describe(case)
     frame = paint(f"c{i}", is_frame)[0]
     if frame is None:
-        check(f"plot made: {what}", False, " | ".join(run.lines("ERR")[:2]))
-        continue
+        return f"plot made: {what}", False, " | ".join(run.lines("ERR")[:2])
     dataElements = paint(f"c{i}", lambda o: not o.InheritsFrom("TLegend"))[0] - frame
     legendElements, entryOptions = paint(f"c{i}", lambda o: is_frame(o) or o.InheritsFrom("TLegend"))
     legendElements -= frame
@@ -198,7 +224,7 @@ for i, case in enumerate(todo):
         lineLength[e[0]] += e[2]
     plotLine = any(length > 100 for length in lineLength.values())
     problem = ""
-    if case["kind"] != "hist2d":  # contour lines and meshes are many short pieces
+    if drawn_type(case["kind"]) in ("hist1d", "graph", "function"):  # contour lines and meshes are many short pieces
         if plotLine and "l" not in option and "f" not in option:
             problem = f"the plot draws a line through the points, the legend has none (option '{option}')"
         if "l" in option and not plotLine:
@@ -209,5 +235,27 @@ for i, case in enumerate(todo):
     if case["option"] == "points_arrows":
         onlyPlot = set()  # the arrow heads cannot be drawn by TLegend
     detail = "; ".join([*(f"only in the plot: {show(s)}" for s in sorted(onlyPlot)), *(f"only in the legend: {show(s)}" for s in sorted(onlyLegend)), *([problem] if problem else [])])
-    check(f"legend symbol shows the drawn data: {what}", not detail, detail)
+    return f"legend symbol shows the drawn data: {what}", not detail, detail
+
+
+# the cases are compared in chunks, each in a child process: ROOT keeps memory at every paint (about 65 kB), which would run out over the
+# thousands of paints of the full list
+CHUNK = 500
+for start in range(0, len(todo), CHUNK):
+    chunk = range(start, min(start + CHUNK, len(todo)))
+    reader, writer = os.pipe()
+    if (pid := os.fork()) == 0:
+        os.close(reader)
+        with os.fdopen(writer, "wb") as out:
+            pickle.dump([legend_check(i, todo[i]) for i in chunk], out)
+        os._exit(0)
+    os.close(writer)
+    try:
+        with os.fdopen(reader, "rb") as results:
+            for title, passed, detail in pickle.load(results):
+                check(title, passed, detail)
+    except EOFError:
+        check(f"comparison of cases {chunk.start} to {chunk.stop - 1} ran", False, f"the process comparing them ended with status {os.waitpid(pid, 0)[1]}")
+        continue
+    os.waitpid(pid, 0)
 finish()
