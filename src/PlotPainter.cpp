@@ -2784,7 +2784,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                         !std::isfinite(data_ptr->GetErrorXhigh(i)) || !std::isfinite(data_ptr->GetErrorYlow(i)) || !std::isfinite(data_ptr->GetErrorYhigh(i));
             }
             if (invalid) {
-              data_ptr->RemovePoint(i);
+              RemoveGraphPoint(data_ptr, i);
               ++nInvalid;
             }
           }
@@ -5961,7 +5961,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
     logger::warning("{} is zero at every point of {}: the ratio has no values.", denominator->GetName(), numerator->GetName());
   }
   for (auto it = undefined.rbegin(); it != undefined.rend(); ++it) {
-    numerator->RemovePoint(*it);
+    RemoveGraphPoint(numerator, *it);
   }
   if (doInterpol) {
     if (denomY) delete[] denomY;
@@ -6170,12 +6170,52 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
   }
   ScaleMultiErrors(numerator, multiErrors);
   for (auto it = undefined.rbegin(); it != undefined.rend(); ++it) {
-    numerator->RemovePoint(*it);
+    RemoveGraphPoint(numerator, *it);
   }
   if (binomialErrors && verbose) {
     logger::warning("Binomial errors are not supported for the division of {} by function {}.", numerator->GetName(), denominator->GetName());
   }
   return true;
+}
+
+//**************************************************************************************************
+/**
+ * Removes point i of a graph. TGraph::RemovePoint leaves the y errors of a TGraphMultiErrors where they are (ROOT bug) and crashes on one
+ * made by its streamer (no sums of the errors yet): the sums are made first and the error sets moved here.
+ */
+//**************************************************************************************************
+void PlotPainter::RemoveGraphPoint(TGraph* graph, int32_t i)
+{
+  auto* multi = dynamic_cast<TGraphMultiErrors*>(graph);
+  if (!multi) {
+    graph->RemovePoint(i);
+    return;
+  }
+  multi->GetEYlow();
+  multi->GetEYhigh();
+  multi->RemovePoint(i);
+  for (int32_t e = 0; e < multi->GetNYErrors(); ++e) {
+    const double_t* low = multi->GetEYlow(e);
+    const double_t* high = multi->GetEYhigh(e);
+    for (int32_t k = i; k < multi->GetN(); ++k)
+      multi->SetPointEY(k, e, low[k + 1], high[k + 1]);
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Removes point i of a 2d graph: RemovePoint is not virtual, the one of TGraph2D leaves the errors where they are.
+ */
+//**************************************************************************************************
+void PlotPainter::RemoveGraphPoint(TGraph2D* graph, int32_t i)
+{
+  if (auto* errors = dynamic_cast<TGraph2DErrors*>(graph)) {
+    errors->RemovePoint(i);
+  } else if (auto* asymmErrors = dynamic_cast<TGraph2DAsymmErrors*>(graph)) {
+    asymmErrors->RemovePoint(i);
+  } else {
+    graph->RemovePoint(i);
+  }
 }
 
 //**************************************************************************************************
@@ -6189,7 +6229,7 @@ void PlotPainter::RemoveGraphPointsOutside(TGraph* graph, optional<double_t> min
   for (int32_t i = graph->GetN() - 1; i >= 0; --i) {  // from the back, so that the indices of the remaining points stay valid
     const double_t x = graph->GetPointX(i);
     const double_t y = graph->GetPointY(i);
-    if ((minX && x < *minX) || (maxX && x > *maxX) || (minY && y < *minY) || (maxY && y > *maxY)) graph->RemovePoint(i);
+    if ((minX && x < *minX) || (maxX && x > *maxX) || (minY && y < *minY) || (maxY && y > *maxY)) RemoveGraphPoint(graph, i);
   }
 }
 
