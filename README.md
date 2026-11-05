@@ -2,9 +2,7 @@
 SciRooPlot is a [ROOT](https://github.com/root-project/root)-based C++ and Python framework to define, organize and generate plots.
 
 <p align="center">
-  <a href="https://scirooplot.github.io/SciRooPlot/"><img src="https://img.shields.io/badge/%F0%9F%8C%90%20website-scirooplot.github.io-4c7bd9?style=for-the-badge" alt="website"></a>
-  <a href="https://scirooplot.github.io/SciRooPlot/#tour"><img src="https://img.shields.io/badge/%F0%9F%A7%AD%20guided%20tour-for%20newcomers-30ae5e?style=for-the-badge" alt="guided tour"></a>
-  <a href="https://scirooplot.github.io/SciRooPlot/#examples"><img src="https://img.shields.io/badge/%F0%9F%93%8A%20examples-with%20code-e5743c?style=for-the-badge" alt="examples"></a>
+  <b><a href="https://scirooplot.github.io/SciRooPlot/">Website</a> · <a href="https://scirooplot.github.io/SciRooPlot/#tour">Guided tour</a> · <a href="https://scirooplot.github.io/SciRooPlot/#examples">Examples</a></b>
 </p>
 
 <p align="center">
