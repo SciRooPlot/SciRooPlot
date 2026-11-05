@@ -6,9 +6,6 @@ if [ -z "${SRP_TEST_INSTALL:-}" ]; then
     echo "SRP_TEST_INSTALL is not set"
     exit 1
 fi
-if [ -n "${CONDA_PREFIX:-}" ]; then
-    export CMAKE_PREFIX_PATH="${CONDA_PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
-fi
 # shellcheck disable=SC1091
 source "${SRP_TEST_INSTALL}/share/scirooplot/env.sh"
 

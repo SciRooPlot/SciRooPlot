@@ -179,8 +179,6 @@ t 'ls my-analysis/output/higgs'; sleep 0.5; key Return; sleep 4.5
 stop; clean
 
 # the same project in C++: built with CMake as by srp init-cpp, the program in build/
-# in a conda environment ROOT's dependencies (e.g. Vdt) are found only with the environment on CMAKE_PREFIX_PATH (as in test-example-project.sh)
-[[ -n "${CONDA_PREFIX:-}" ]] && export CMAKE_PREFIX_PATH="${CONDA_PREFIX}${CMAKE_PREFIX_PATH:+:${CMAKE_PREFIX_PATH}}"
 SCIROOPLOT_CONFIG_PATH=$CFG "$PREFIX/bin/srp" remove my-analysis >/dev/null
 rm -r "${EXDIR:?}"/*
 mkdir "$EXDIR/build"
