@@ -10,7 +10,7 @@ import textwrap
 # taken from a loop over a family of plots, Plot(name, group, base plot), which is shown as its first plot
 NAME = re.compile(r'Plot(?:\s+\w+)?\s*\(\s*(?:(\w+)\s*,\s*)?"([^"]+)"\s*,\s*"([^"]+)"')
 # an animation: frames named in a loop, in a group of their own, with the command making the gif in a comment
-GIF = re.compile(r"plot (\S+) '\.\+' (gif\+\d+(?:\+\+\d*)?)")
+GIF = re.compile(r"plot (\S+) \.\+ (gif\+\d+(?:\+\+\d*)?)")
 
 
 def snippets(path, lang):
