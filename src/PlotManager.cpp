@@ -1927,6 +1927,15 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   // the personal scale settings only change the number of pixels of plots on screen and of bitmap files, vector files do not depend on them
   const bool isBitmapMode = (mode == "png") || (mode == "jpg") || isGifMode;
   PlotPainter painter(isInteractiveMode ? Config::Get().ScreenScale() : (isBitmapMode ? Config::Get().BitmapScale() : 1.), isInteractiveMode);
+  // an exception while painting (thrown by ROOT for data it cannot paint) loses only this plot, not the rest of the run
+  auto paint = [&](Plot& toPaint) -> std::unique_ptr<TCanvas> {
+    try {
+      return painter.GeneratePlot(toPaint, mDataBuffer);
+    } catch (const std::exception& e) {
+      logger::error("Plot {} could not be painted: {}.", fullPlot.GetName(), e.what());
+      return nullptr;
+    }
+  };
   gROOT->SetBatch(!isInteractiveMode && !isMacroMode);
   shared_ptr<TCanvas> canvas;
   auto sharedAxes = fullPlot.GetSharedAxes();
@@ -1946,7 +1955,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     it = (it->second.empty()) ? sharedAxes.erase(it) : std::next(it);
   }
   if (sharedAxes.empty()) {
-    canvas.reset(painter.GeneratePlot(fullPlot, mDataBuffer).release());
+    canvas.reset(paint(fullPlot).release());
   } else {
     // pads sharing an axis: a log scale, time format or range set in one of them (else in pad 0) holds for all of them
     map<char, vector<vector<uint8_t>>> groups;
@@ -2008,7 +2017,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     // the automatic ranges: the union of the ranges the pads get on their own (with their room), known after a first paint;
     // the plot is painted again only if a pad got another range than the union
     Plot firstPlot = fullPlot;  // painting changes the plot (e.g. the legend rows of the data)
-    std::unique_ptr<TCanvas> firstCanvas = painter.GeneratePlot(firstPlot, mDataBuffer);
+    std::unique_ptr<TCanvas> firstCanvas = paint(firstPlot);
     if (!firstCanvas) return false;
     const auto ranges = painter.GetFrameRanges();
     set<std::pair<uint8_t, char>> commonRanges;
@@ -2056,7 +2065,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
       auto quiet = ignore_root_messages_below(kError);
       logger::muted() = true;
       auto unmute = make_scope_guard([]() { logger::muted() = false; });
-      canvas.reset(painter.GeneratePlot(fullPlot, mDataBuffer).release());
+      canvas.reset(paint(fullPlot).release());
     }
   }
   if (!canvas) return false;

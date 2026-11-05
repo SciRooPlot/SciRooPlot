@@ -23,6 +23,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A minimum or maximum stored with 2d data that defines the frame (`Pad::SetFrame`, `Data::SetDefinesFrame`) was widened to the contents of the other 2d data of the pad | The stored z range is kept, like a range set on `'Z'` | behaviour | none |
 | A minimum or maximum stored with a function (TF1, TF2, TF3) drawn as data was kept | It is discarded as those of histograms and graphs (kept where the function defines the frame) | behaviour | Set the range on the pad axis. |
 | An empty TGraph2D crashed `plot` | It is not drawn, with a warning, as an empty TGraph (the next data keeps its number, the frame comes from the next data) | behaviour | none |
+| An exception while painting a plot (thrown by ROOT, e.g. for a log colour scale beyond the float range) ended the `plot` run | Only that plot is lost, with an error naming it | behaviour | none |
 
 ## 3.3.3 → 4.0.0
 
