@@ -2922,6 +2922,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               prepareOperand(*denom, ratio->GetDenomModify());
               const bool fullRange = (data->GetDataSource() == kUserFunctions);
               auto* sampled = new TGraph();
+              sampled->SetBit(kCanDelete);  // owned by the pad, as the clone it replaces
               auto sample = [&](double_t x) {
                 if (fullRange || ((*func)->GetXmin() <= x && x <= (*func)->GetXmax())) sampled->AddPoint(x, (*func)->Eval(x));
               };
