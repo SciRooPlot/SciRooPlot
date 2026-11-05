@@ -1671,7 +1671,7 @@ const EX_TAGS = [
   ["table", "table (CSV)", /Scatter\(/, "trees"], ["modifiers", "modifiers", /Normalize|Rebin|\.Scale\(|ScaleX|Cumulative|DivideBinWidth|Smooth/, "modifiers"],
   ["projection", "projection", /ProjectX|ProjectY|ProfileX/, "modifiers"], ["uncertainty", "uncertainties", /\bboxes\b|\bband\b|brackets|SetCorrelated/, "appearance"],
   ["function", "functions, lines and shapes", /AddFunction|AddLine|AddArrow|AddVerticalLine|AddHorizontalLine|AddRegion|AddEllipse|SetRefFunc/, "adding"], ["numbers", "numbers in labels", /"[^"]*<(mean|entries|integral|name|title|stddev|maximum|minimum|source|projection|selection)[^"]*"/, "labels"],
-  ["animation", "animations", /'\.\+' gif\+/, "cli"], ["log", "log scale", /SetLog\(/, "plots"], ["text", "texts", /AddText\(/, "legends"], ["loop", "plot families", /\bfor\b/, "templates"]];
+  ["animation", "animations", /\.\+ gif\+/, "cli"], ["log", "log scale", /SetLog\(/, "plots"], ["text", "texts", /AddText\(/, "legends"], ["loop", "plot families", /\bfor\b/, "templates"]];
 const exTags = k => EX_TAGS.filter(([, , re]) => re.test(EXAMPLES[k].py)).map(x => x[0]);
 let exTagSel = new Set();
 function renderExamples() {
