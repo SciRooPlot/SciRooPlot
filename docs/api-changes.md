@@ -24,6 +24,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A minimum or maximum stored with a function (TF1, TF2, TF3) drawn as data was kept | It is discarded as those of histograms and graphs (kept where the function defines the frame) | behaviour | Set the range on the pad axis. |
 | An empty TGraph2D crashed `plot` | It is not drawn, with a warning, as an empty TGraph (the next data keeps its number, the frame comes from the next data) | behaviour | none |
 | An exception while painting a plot (thrown by ROOT, e.g. for a log colour scale beyond the float range) ended the `plot` run | Only that plot is lost, with an error naming it | behaviour | none |
+| A TEfficiency was drawn under the name ROOT gives the graph or histogram it makes of it (`eff_graph`, `eff_histo`: in `Plots.root`, macros and messages) | It is drawn under its own name, as all other data | behaviour | none |
 
 ## 3.3.3 → 4.0.0
 

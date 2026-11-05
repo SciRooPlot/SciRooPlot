@@ -5560,8 +5560,10 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
       int dim = teff->GetDimension();
       // a TEfficiency carries ROOT's fill defaults (colour 19, style 1001; TH1 and TGraph start with colour 0) and copies them to the created object:
       // they are not a fill set by the user, so the default drawing rule must not take them as one (points, not an area, with SetKeepInputStyle())
-      auto dropDefaultFill = [](auto* created) {
+      // the created object is named by ROOT (eff_graph, eff_histo): it is drawn under the name of the input
+      auto dropDefaultFill = [&](auto* created) {
         if (created->GetFillColor() == 19 && created->GetFillStyle() == 1001) created->SetFillStyle(0);
+        created->SetName(teff->GetName());
         return created;
       };
       if (dim == 1) {
