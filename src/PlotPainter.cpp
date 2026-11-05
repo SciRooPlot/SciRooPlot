@@ -4166,7 +4166,33 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
     return symbol;
   };
 
-  if (obj->InheritsFrom(TF2::Class())) return (takeToken("FC") && hasFill) ? LegendSymbol{"F", Outline::none} : LegendSymbol{L};
+  const bool isGraph2D = obj->InheritsFrom(TGraph2D::Class());
+  const bool isFunction2D = obj->InheritsFrom(TF2::Class());
+  if (isGraph2D || isFunction2D || obj->InheritsFrom(TH2::Class()) || obj->InheritsFrom(TH3::Class())) {
+    takeToken("POL");  // polar coordinates, not a symbol
+    // coloured by the palette (also LEGO2, SURF1-4, the filled contours, the boxes of 3d histograms coloured by the content and the
+    // coloured triangles of 2d graphs)
+    for (const char* token : {"COL", "Z", "LEGO2", "SURF1", "SURF2", "SURF3", "SURF4", "CONT0", "CONT1", "CONT4", "BOX2", "ISO", "TRI1", "TRI2"}) {
+      if (str_contains(option, token)) return {};
+    }
+    if (isGraph2D) {
+      if (str_contains(option, "TRIW") || str_contains(option, "LINE")) return {L};  // a wire mesh, a line through the points
+      if (str_contains(option, "TRI")) return area(Outline::line);                   // triangles in the fill colour, edged in the line colour
+      if (has('P')) return {"P"};
+    }
+    if (isFunction2D) return (takeToken("FC") && hasFill) ? LegendSymbol{"F", Outline::none} : LegendSymbol{L};
+    if (obj->InheritsFrom(TH2Poly::Class()) && !str_contains(option, "LEGO") && !str_contains(option, "SURF")) {
+      // ROOT draws polygon bins only filled, outlined or as markers (THistPainter::PaintTH2PolyBins), not as boxes or contours
+      LegendSymbol symbol = (has('F') && hasFill) ? LegendSymbol{"F", Outline::none} : LegendSymbol{};
+      if (has('L')) symbol.elements += L;
+      if (has('P')) symbol.elements += "P";
+      return symbol;
+    }
+    if (str_contains(option, "CANDLE") || str_contains(option, "VIOLIN")) return (hasFill) ? area(Outline::line) : LegendSymbol{L};
+    if (str_contains(option, "BOX")) return box();
+    if (str_contains(option, "CONT") || str_contains(option, "SURF")) return {L};  // contour lines, mesh
+    return (hasFill) ? area(Outline::line) : LegendSymbol{L};
+  }
   if (obj->InheritsFrom(TF1::Class())) {
     // a function is drawn with markers at its sampling points with P, otherwise as a curve that a fill colours down to zero
     if (has('P')) return {"P"};
@@ -4202,16 +4228,6 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
     return symbol;
   }
   if (auto hist = dynamic_cast<TH1*>(obj)) {
-    if (hist->InheritsFrom(TH2::Class()) || hist->InheritsFrom(TH3::Class())) {
-      // coloured by the palette (also LEGO2, SURF1-4, the filled contours and the boxes of 3d histograms coloured by the content)
-      for (const char* token : {"COL", "Z", "LEGO2", "SURF1", "SURF2", "SURF3", "SURF4", "CONT0", "CONT1", "CONT4", "BOX2", "ISO"}) {
-        if (str_contains(option, token)) return {};
-      }
-      if (str_contains(option, "CANDLE") || str_contains(option, "VIOLIN")) return (hasFill) ? area(Outline::line) : LegendSymbol{L};
-      if (str_contains(option, "BOX")) return box();
-      if (str_contains(option, "CONT") || str_contains(option, "SURF")) return {L};  // contour lines, mesh
-      return (hasFill) ? area(Outline::line) : LegendSymbol{L};
-    }
     if (str_contains(option, "HBAR")) return box();  // bars only, without the errors or markers of other options
     const bool noErrors = takeToken("HIST");
     // E0 - E6 (the digits of other options, as in LF2, are no error types)
