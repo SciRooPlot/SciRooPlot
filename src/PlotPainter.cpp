@@ -687,6 +687,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     string drawOption;
     uint16_t dataIndex{};
     bool mapDrawn{};  // a 2d or 3d histogram of the pad is drawn (the first one gives the frame its colour levels)
+    // minimum, maximum stored with the 2d data defining the frame: kept like a range set by the user
+    std::pair<bool, bool> storedRangeZ{};
     struct {
       uint16_t color, markerStyle, lineStyle, fillStyle;  // one colour entry per data item for marker, line and fill alike
     } usedDefaults{};                                     // entries of the pad's default lists taken so far
@@ -1549,6 +1551,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // reset the axis histogram which owns the z axis, while keeping default range defined by the data
             double_t min = axisHist_ptr->GetMinimum();
             double_t max = axisHist_ptr->GetMaximum();
+            if constexpr (is_hist_2d<data_type>()) storedRangeZ = {axisHist_ptr->GetMinimumStored() != -1111, axisHist_ptr->GetMaximumStored() != -1111};
             // ROOT draws a log z axis of a histogram without a positive minimum from min(1, 0.001 * maximum) (THistPainter::PaintInit),
             // but for data drawn SAME on a frame with a stored minimum of zero it leaves out the bins of the lowest contents.
             // This floor is ROOT's default on purpose, not a choice of SciRooPlot: the smallest positive content could be used instead, but it
@@ -1561,8 +1564,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 if (axis->GetMinRange()) userMinZ = axis->GetMinRange();
                 if (axis->GetMaxRange()) userMaxZ = axis->GetMaxRange();
               }
-              if (!userMinZ) min = std::min(min, graphRangeZ.first);
-              if (!userMaxZ) max = std::max(max, graphRangeZ.second);
+              // a minimum or maximum stored with the graph defining the frame is kept like a range set by the user
+              storedRangeZ = {data_ptr->GetMinimum() != -1111, data_ptr->GetMaximum() != -1111};
+              if (!userMinZ) min = (storedRangeZ.first) ? data_ptr->GetMinimum() : std::min(min, graphRangeZ.first);
+              if (!userMaxZ) max = (storedRangeZ.second) ? data_ptr->GetMaximum() : std::max(max, graphRangeZ.second);
             }
             bool contentRange{};
             if (frameDim == 3) {
@@ -2022,8 +2027,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 minimum = data_ptr->GetZmin();
                 maximum = data_ptr->GetZmax();
               }
-              if (maximum > axisHist_ptr->GetMaximum()) axisHist_ptr->SetMaximum(maximum);
-              if (!pad_ptr->GetLogz() && minimum < axisHist_ptr->GetMinimum()) axisHist_ptr->SetMinimum(minimum);
+              if (!storedRangeZ.second && maximum > axisHist_ptr->GetMaximum()) axisHist_ptr->SetMaximum(maximum);
+              if (!storedRangeZ.first && !pad_ptr->GetLogz() && minimum < axisHist_ptr->GetMinimum()) axisHist_ptr->SetMinimum(minimum);
             }
           }
           if constexpr (is_graph_2d<data_type>()) {
@@ -5522,7 +5527,7 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
                 if (ptr->GetN() > 0) ptr->GetHistogram()->GetXaxis()->SetRange();
                 ptr->SetMinimum();
                 ptr->SetMaximum();
-              } else if constexpr (std::is_base_of_v<TGraph2D, T>) {
+              } else if constexpr (std::is_base_of_v<TGraph2D, T> || std::is_base_of_v<TF1, T>) {
                 ptr->SetMinimum();
                 ptr->SetMaximum();
               }
