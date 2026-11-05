@@ -17,6 +17,8 @@ import subprocess
 import sys
 import warnings
 
+import numpy as np
+
 PREFIX = os.environ.get("SRP_PREFIX", "")
 if not os.path.isfile(os.path.join(PREFIX, "bin", "plot")):
     sys.exit("SRP_PREFIX must name a build or install directory of SciRooPlot: run the tests with ctest")
@@ -103,56 +105,307 @@ def describe(case):
 # ---------------------------------------------------------------------------------------------
 # data of every kind
 # ---------------------------------------------------------------------------------------------
-# 1d data on x from 1 to 10 with values from about 1 to 10 (positive: usable on log axes)
-DATA_1D = ("hist", "hist_var", "profile", "graph", "graph_errors", "graph_asymm", "function")
-DATA_2D = ("hist2d", "function2d")
-HISTS = ("hist", "hist_var", "profile", "hist2d")
+# Every kind of data SciRooPlot draws, by kind: (dimension of the drawn data, class, properties). The data covers 1 to 10 on every axis
+# with positive values (usable on log axes): about 1 to 10 for 1d data, products of those for 2d and 3d data, about 0.1 to 0.8 for
+# efficiencies. Properties: binned (a histogram: the frame shows whole bins), polar (drawn in a polar grid, no cartesian frame), formula
+# (a function of the plot definition, no input object), cpp (a function of compiled C++ code: stored as values sampled over its range),
+# projected (an n-dimensional histogram, drawn as its projection onto the first axis, or the first two), polygons (bins that are
+# polygons: the axes have no bins, a frame ends where it is asked to as for graphs).
+# A test takes its kinds from these tables, so a kind added here is covered everywhere.
+DATA_KINDS = {
+    "hist": (1, "TH1D", {"binned"}),
+    "hist_var": (1, "TH1D", {"binned"}),
+    "profile": (1, "TProfile", {"binned"}),
+    "efficiency": (1, "TEfficiency", {"binned"}),
+    "thn": (1, "THnD", {"binned", "projected"}),
+    "thn_sparse": (1, "THnSparseD", {"binned", "projected"}),
+    "graph": (1, "TGraph", set()),
+    "graph_errors": (1, "TGraphErrors", set()),
+    "graph_asymm": (1, "TGraphAsymmErrors", set()),
+    "graph_multi": (1, "TGraphMultiErrors", set()),
+    "graph_polar": (1, "TGraphPolar", {"polar"}),
+    "tf1": (1, "TF1", set()),
+    "tf1_cpp": (1, "TF1", {"cpp"}),
+    "function": (1, "TF1", {"formula"}),
+    "hist2d": (2, "TH2D", {"binned"}),
+    "profile2d": (2, "TProfile2D", {"binned"}),
+    "hist2poly": (2, "TH2Poly", {"binned", "polygons"}),
+    "efficiency2d": (2, "TEfficiency", {"binned"}),
+    "thn_sparse2d": (2, "THnSparseD", {"binned", "projected"}),
+    "graph2d": (2, "TGraph2D", set()),
+    "graph2d_errors": (2, "TGraph2DErrors", set()),
+    "tf2": (2, "TF2", set()),
+    "tf2_cpp": (2, "TF2", {"cpp"}),
+    "function2d": (2, "TF2", {"formula"}),
+    "hist3d": (3, "TH3D", {"binned"}),
+    "profile3d": (3, "TProfile3D", {"binned"}),
+    "tf3": (3, "TF3", set()),
+    "tf3_cpp": (3, "TF3", {"cpp"}),
+}
+DATA_1D = tuple(k for k, (dim, _, props) in DATA_KINDS.items() if dim == 1 and "polar" not in props)  # cartesian 1d frames
+DATA_POLAR = tuple(k for k, (_, _, props) in DATA_KINDS.items() if "polar" in props)
+DATA_2D = tuple(k for k, (dim, _, _) in DATA_KINDS.items() if dim == 2)
+DATA_3D = tuple(k for k, (dim, _, _) in DATA_KINDS.items() if dim == 3)
+HISTS = tuple(k for k, (_, _, props) in DATA_KINDS.items() if "binned" in props)
+BINNED_AXES = tuple(k for k in HISTS if "polygons" not in DATA_KINDS[k][2])  # frames ending at bin edges
+FUNCTIONS = tuple(k for k, (_, cls, _) in DATA_KINDS.items() if cls.startswith("TF"))
+FORMULAS = {"function": "1 + (x - 1) * (1 - 0.3 * ((x - 5.5) / 4.5)^2)"}
+
+# Variants of the data of every kind, for robustness: values crossing zero (negative), one NaN or infinite value (nan, inf), all values
+# zero (zeros), no entries or points at all (empty), a single filled bin or point (single), values near the largest float (huge),
+# graph points in shuffled order (unsorted), histograms with large underflow and overflow contents (overflow), functions sampled with
+# few or many points (coarse, fine). A TEfficiency counts events: it has no negative, NaN, infinite, huge or overflow variant.
+VARIANTS = ("normal", "negative", "nan", "inf", "zeros", "empty", "single", "huge", "unsorted", "overflow", "coarse", "fine")
+COUNTS_VARIANTS = ("normal", "zeros", "empty", "single")
+FUNCTION_VARIANTS = ("normal", "negative", "zeros", "coarse", "fine")
+NPX = {"normal": 100, "coarse": 5, "fine": 10000}  # points of a function per axis, at most NPX_MAX in 2d and 3d (memory of the stored samples)
+NPX_MAX = {1: 10000, 2: 200, 3: 20}
+
+
+def has_variant(kind, variant):
+    _, cls, props = DATA_KINDS[kind]
+    if cls == "TEfficiency":
+        return variant in COUNTS_VARIANTS
+    if cls.startswith("TF"):
+        return variant in FUNCTION_VARIANTS and not ("formula" in props and variant in NPX and variant != "normal")
+    if variant in ("coarse", "fine"):
+        return False
+    if variant == "unsorted":
+        return "binned" not in props
+    if variant == "overflow":
+        return "binned" in props
+    return True
 
 
 def _value(x):
     return 1.0 + (x - 1.0) * (1.0 - 0.3 * ((x - 5.5) / 4.5) ** 2)
 
 
-def make_inputs(path):
-    """writes one object of every data kind into path (the function kinds need no input)"""
-    f = ROOT.TFile(path, "RECREATE")
+def formula(kind, variant="normal"):
+    """the formula of a function kind in a variant"""
+    dim = DATA_KINDS[kind][0]
+    base = {1: FORMULAS["function"], 2: "x * y", 3: "x * y * z"}[dim]
+    return {"negative": f"({base}) - {5**dim}", "zeros": f"0 * {' * '.join('xyz'[:dim])}"}.get(variant, base)
+
+
+def _declare():
+    """C++ makers for what PyROOT cannot build: TH2Poly bins (AddBin with numbers fails in a pythonization) and compiled functions"""
+    if hasattr(ROOT, "srptest_poly"):
+        return
+    code = """
+    TH2Poly* srptest_poly() {
+      auto* h = new TH2Poly("hist2poly", "", 1., 10., 1., 10.);
+      for (int i = 0; i < 9; ++i)
+        for (int j = 0; j < 9; ++j) h->AddBin(1. + i, 1. + j, 2. + i, 2. + j);
+      return h;
+    }
+    double srptest_value(double x) { return 1. + (x - 1.) * (1. - 0.3 * std::pow((x - 5.5) / 4.5, 2)); }
+    """
+    for variant, shift, scale in (("normal", 0, 1), ("negative", 1, 1), ("zeros", 0, 0)):
+        code += f"""
+    double srptest_f1_{variant}(double* x, double*) {{ return {scale} * (srptest_value(x[0]) - {shift} * 5.); }}
+    double srptest_f2_{variant}(double* x, double*) {{ return {scale} * (x[0] * x[1] - {shift} * 25.); }}
+    double srptest_f3_{variant}(double* x, double*) {{ return {scale} * (x[0] * x[1] * x[2] - {shift} * 125.); }}"""
+    ROOT.gInterpreter.Declare(code)
+
+
+def data_objects(variant="normal"):
+    """one object of every data kind that has the variant (see VARIANTS), by kind; the formula kinds need none"""
+    _declare()
+    special = 3  # the item of every object that gets the NaN or infinite value, or stays filled in the single variant
+
+    def value(index, *coords):
+        """the value of item index (in fill order) at coords"""
+        v = 1e35 if variant == "huge" else 1.0  # ROOT finds minima and maxima of histograms only below the largest float (3.4e38)
+        for c in coords:
+            v *= _value(c)
+        if variant == "negative":
+            v -= 5.0 ** len(coords)
+        elif variant == "zeros":
+            v = 0.0
+        elif variant in ("nan", "inf") and index == special:
+            v = float(variant)
+        return v
+
+    def keep(index):
+        """whether item index is filled"""
+        return variant != "empty" and (variant != "single" or index == special)
+
+    def order(items):
+        """the order the points of a graph are set in"""
+        return sorted(items, key=lambda item: (7 * item[0]) % len(items)) if variant == "unsorted" else items
+
+    outside = 1e6 if variant == "overflow" else 0.0  # content of the underflow and overflow bins
+
     h = ROOT.TH1D("hist", "", 18, 1.0, 10.0)
     edges = ROOT.std.vector("double")([1.0, 1.2, 1.5, 2.0, 2.7, 3.5, 4.5, 6.0, 7.5, 9.0, 10.0])
     hv = ROOT.TH1D("hist_var", "", edges.size() - 1, edges.data())
     p = ROOT.TProfile("profile", "", 18, 1.0, 10.0)
     for hist in (h, hv):
         for b in range(1, hist.GetNbinsX() + 1):
-            hist.SetBinContent(b, _value(hist.GetBinCenter(b)))
-            hist.SetBinError(b, 0.1 * _value(hist.GetBinCenter(b)))
+            if keep(b - 1):
+                hist.SetBinContent(b, value(b - 1, hist.GetBinCenter(b)))
+                hist.SetBinError(b, abs(0.1 * value(b - 1, hist.GetBinCenter(b))))
+        hist.SetBinContent(0, outside)
+        hist.SetBinContent(hist.GetNbinsX() + 1, outside)
+        hist.SetEntries(sum(keep(b) for b in range(hist.GetNbinsX())))
     for b in range(1, p.GetNbinsX() + 1):
-        x = p.GetBinCenter(b)
-        p.Fill(x, 0.9 * _value(x))
-        p.Fill(x, 1.1 * _value(x))
+        if keep(b - 1):
+            x = p.GetBinCenter(b)
+            p.Fill(x, 0.9 * value(b - 1, x))
+            p.Fill(x, 1.1 * value(b - 1, x))
+    if outside:
+        p.Fill(0.0, outside)
+        p.Fill(11.0, outside)
+    nBins = np.array([18, 3, 3], dtype=np.int32)
+    low, high = np.array([1.0, 0.0, 0.0]), np.array([10.0, 3.0, 3.0])
+    thn = ROOT.THnD("thn", "", 2, nBins[:2], low[:2], high[:2])
+    sparse = ROOT.THnSparseD("thn_sparse", "", 2, nBins[:2], low[:2], high[:2])
+    sparse2 = ROOT.THnSparseD("thn_sparse2d", "", 3, np.array([18, 18, 3], dtype=np.int32), np.array([1.0, 1.0, 0.0]), np.array([10.0, 10.0, 3.0]))
+    for b in range(18):
+        x = 1.25 + 0.5 * b
+        for nd in (thn, sparse):
+            if keep(b):
+                nd.Fill(np.array([x, 1.5]), value(b, x))
+        for c in range(18):
+            y = 1.25 + 0.5 * c
+            if keep(18 * b + c):
+                sparse2.Fill(np.array([x, y, 1.5]), value(18 * b + c, x, y))
+    if outside:
+        for nd, coords in ((thn, ([0.0, 1.5], [11.0, 1.5])), (sparse, ([0.0, 1.5], [11.0, 1.5])), (sparse2, ([0.0, 5.0, 1.5], [11.0, 5.0, 1.5]))):
+            for c in coords:
+                nd.Fill(np.array(c), outside)
     xs = [1.0 + 0.5 * i for i in range(19)]
-    g = ROOT.TGraph(len(xs))
-    ge = ROOT.TGraphErrors(len(xs))
-    ga = ROOT.TGraphAsymmErrors(len(xs))
-    for i, x in enumerate(xs):
-        for graph in (g, ge, ga):
-            graph.SetPoint(i, x, _value(x))
-        ge.SetPointError(i, 0.2, 0.1 * _value(x))
-        ga.SetPointError(i, 0.2, 0.2, 0.05 * _value(x), 0.15 * _value(x))
+    kept = order([(i, x) for i, x in enumerate(xs) if keep(i)])
+    g = ROOT.TGraph(len(kept))
+    ge = ROOT.TGraphErrors(len(kept))
+    ga = ROOT.TGraphAsymmErrors(len(kept))
+    gm = ROOT.TGraphMultiErrors("graph_multi", "", len(kept), 2)
+    gp = ROOT.TGraphPolar(len(kept))
+    for n, (i, x) in enumerate(kept):
+        y = value(i, x)
+        for graph in (g, ge, ga, gm):
+            graph.SetPoint(n, x, y)
+        ge.SetPointError(n, 0.2, abs(0.1 * y))
+        ga.SetPointError(n, 0.2, 0.2, abs(0.05 * y), abs(0.15 * y))
+        gm.SetPointEX(n, 0.2, 0.2)
+        gm.SetPointEY(n, 0, abs(0.05 * y), abs(0.05 * y))
+        gm.SetPointEY(n, 1, abs(0.1 * y), abs(0.1 * y))
+        gp.SetPoint(n, 2 * ROOT.TMath.Pi() * i / len(xs), y)
+    total = ROOT.TH1D("total", "", 18, 1.0, 10.0)
+    passed = ROOT.TH1D("passed", "", 18, 1.0, 10.0)
+    total2 = ROOT.TH2D("total2", "", 9, 1.0, 10.0, 9, 1.0, 10.0)
+    passed2 = ROOT.TH2D("passed2", "", 9, 1.0, 10.0, 9, 1.0, 10.0)
+    for b in range(1, 19):
+        if keep(b - 1):
+            total.SetBinContent(b, 100)
+            passed.SetBinContent(b, 0 if variant == "zeros" else round(8 * _value(total.GetBinCenter(b))))
+    for i in range(1, 10):
+        for j in range(1, 10):
+            if keep(9 * (i - 1) + j - 1):
+                total2.SetBinContent(i, j, 100)
+                passed2.SetBinContent(i, j, 0 if variant == "zeros" else round(4 * (_value(i + 0.5) + _value(j + 0.5))))
+    eff = ROOT.TEfficiency(passed, total)
+    eff2 = ROOT.TEfficiency(passed2, total2)
     h2 = ROOT.TH2D("hist2d", "", 18, 1.0, 10.0, 18, 1.0, 10.0)
+    p2 = ROOT.TProfile2D("profile2d", "", 18, 1.0, 10.0, 18, 1.0, 10.0)
     for i in range(1, 19):
         for j in range(1, 19):
-            h2.SetBinContent(i, j, _value(h2.GetXaxis().GetBinCenter(i)) * _value(h2.GetYaxis().GetBinCenter(j)))
-    for obj, name in ((h, "hist"), (hv, "hist_var"), (p, "profile"), (g, "graph"), (ge, "graph_errors"), (ga, "graph_asymm"), (h2, "hist2d")):
+            index = 18 * (i - 1) + j - 1
+            if keep(index):
+                x, y = h2.GetXaxis().GetBinCenter(i), h2.GetYaxis().GetBinCenter(j)
+                h2.SetBinContent(i, j, value(index, x, y))
+                p2.Fill(x, y, 0.9 * value(index, x, y))
+                p2.Fill(x, y, 1.1 * value(index, x, y))
+    h2.SetEntries(sum(keep(n) for n in range(18 * 18)))
+    poly = ROOT.srptest_poly()
+    for i in range(9):
+        for j in range(9):
+            if keep(9 * i + j):
+                poly.SetBinContent(1 + 9 * i + j, value(9 * i + j, 1.5 + i, 1.5 + j))
+    h3 = ROOT.TH3D("hist3d", "", 9, 1.0, 10.0, 9, 1.0, 10.0, 9, 1.0, 10.0)
+    p3 = ROOT.TProfile3D("profile3d", "", 9, 1.0, 10.0, 9, 1.0, 10.0, 9, 1.0, 10.0)
+    for i in range(1, 10):
+        for j in range(1, 10):
+            for k in range(1, 10):
+                index = 81 * (i - 1) + 9 * (j - 1) + k - 1
+                if keep(index):
+                    h3.SetBinContent(i, j, k, value(index, i + 0.5, j + 0.5, k + 0.5))
+                    p3.Fill(i + 0.5, j + 0.5, k + 0.5, value(index, i + 0.5, j + 0.5, k + 0.5))
+    h3.SetEntries(sum(keep(n) for n in range(9**3)))
+    if outside:
+        for hist in (h2, p2, poly):
+            hist.Fill(0.0, 5.0, outside)
+            hist.Fill(11.0, 5.0, outside)
+        for hist in (h3, p3):
+            hist.Fill(0.0, 5.0, 5.0, outside)
+            hist.Fill(11.0, 5.0, 5.0, outside)
+    points = order([(n, 1.0 + (n % 10), 1.0 + (n // 10)) for n in range(100) if keep(n)])
+    g2 = ROOT.TGraph2D(len(points))
+    g2e = ROOT.TGraph2DErrors(len(points))
+    for m, (n, x, y) in enumerate(points):
+        for graph in (g2, g2e):
+            graph.SetPoint(m, x, y, value(n, x, y))
+        g2e.SetPointError(m, 0.1, 0.1, abs(0.1 * value(n, x, y)))
+    for graph, name in ((g2, "graph2d"), (g2e, "graph2d_errors")):
+        graph.SetName(name)
+    objects = {"hist": h, "hist_var": hv, "profile": p, "efficiency": eff, "thn": thn, "thn_sparse": sparse, "graph": g, "graph_errors": ge}
+    objects.update({"graph_asymm": ga, "graph_multi": gm, "graph_polar": gp, "hist2d": h2, "profile2d": p2, "hist2poly": poly})
+    objects.update({"efficiency2d": eff2, "thn_sparse2d": sparse2, "graph2d": g2, "graph2d_errors": g2e, "hist3d": h3, "profile3d": p3})
+    if variant in FUNCTION_VARIANTS:
+        npx = NPX.get(variant, NPX["normal"])
+        cpp = variant if variant in ("negative", "zeros") else "normal"
+        functions = {
+            "tf1": ROOT.TF1("tf1", formula("tf1", variant), 1.0, 10.0),
+            "tf2": ROOT.TF2("tf2", formula("tf2", variant), 1.0, 10.0, 1.0, 10.0),
+            "tf3": ROOT.TF3("tf3", formula("tf3", variant), 1.0, 10.0, 1.0, 10.0, 1.0, 10.0),
+            "tf1_cpp": ROOT.TF1("tf1_cpp", getattr(ROOT, f"srptest_f1_{cpp}"), 1.0, 10.0, 0),
+            "tf2_cpp": ROOT.TF2("tf2_cpp", getattr(ROOT, f"srptest_f2_{cpp}"), 1.0, 10.0, 1.0, 10.0, 0),
+            "tf3_cpp": ROOT.TF3("tf3_cpp", getattr(ROOT, f"srptest_f3_{cpp}"), 1.0, 10.0, 1.0, 10.0, 1.0, 10.0, 0),
+        }
+        for name, func in functions.items():
+            dim = DATA_KINDS[name][0]
+            n = min(npx, NPX_MAX[dim])
+            func.SetNpx(n)
+            if dim > 1:
+                func.SetNpy(n)
+            if dim > 2:
+                func.SetNpz(n)
+        objects.update(functions)
+    objects = {kind: obj for kind, obj in objects.items() if has_variant(kind, variant)}
+    for obj in objects.values():
+        ROOT.SetOwnership(obj, False)
+    return objects
+
+
+def write_objects(path, objects):
+    """writes objects (a dict name: object) into a ROOT file"""
+    f = ROOT.TFile(path, "RECREATE")
+    for name, obj in objects.items():
         obj.Write(name)
     f.Close()
 
 
-def add_data(pad, kind, source="inputs"):
-    """adds data of a kind (see make_inputs) to a pad and returns it"""
+def add_data(pad, kind, source="inputs", variant="normal"):
+    """adds data of a kind (see data_objects) to a pad and returns it; source names the data source holding the variant"""
     if kind == "function":
-        return pad.AddFunction("1 + (x - 1) * (1 - 0.3 * ((x - 5.5) / 4.5)^2)").SetRangeX(1.0, 10.0)
+        return pad.AddFunction(formula(kind, variant)).SetRangeX(1.0, 10.0)
     if kind == "function2d":
-        return pad.AddFunction("x * y").SetRangeX(1.0, 10.0).SetRangeY(1.0, 10.0)
-    return pad.AddData(kind, source)
+        return pad.AddFunction(formula(kind, variant)).SetRangeX(1.0, 10.0).SetRangeY(1.0, 10.0)
+    data = pad.AddData(kind, source)
+    if "projected" in DATA_KINDS[kind][2]:
+        data.Project([0] if DATA_KINDS[kind][0] == 1 else [0, 1])
+    return data
+
+
+def source_of(variant):
+    """the data source Project.inputs makes for a variant"""
+    return "inputs" if variant == "normal" else f"inputs_{variant}"
+
+
+def base_of(kind):
+    """the base plot for data of a kind"""
+    return "1d" if DATA_KINDS[kind][0] == 1 else "2d"
 
 
 # ---------------------------------------------------------------------------------------------
@@ -172,6 +425,11 @@ class Run:
     def lines(self, kind):
         """the lines of a kind: ERR, WARN, INFO"""
         return [line for line in self.log.splitlines() if f"[ {kind}" in line or f"[{kind}" in line]
+
+    def errors(self):
+        """the errors of the run: SciRooPlot's and ROOT's (Error in <...>, Fatal in <...>), and crashes"""
+        marks = ("[ ERR", "[ERR", "Error in <", "Fatal in <", "*** Break ***")
+        return [line for line in self.log.splitlines() if any(mark in line for mark in marks)]
 
     def canvas(self, name, group):
         groupDir = self.file.Get(group) if self.file else None
@@ -204,6 +462,15 @@ class Run:
         y = (padObj.GetUymin(), padObj.GetUymax())
         return {"X": tuple(10**v for v in x) if padObj.GetLogx() else x, "Y": tuple(10**v for v in y) if padObj.GetLogy() else y}
 
+    def frame_hist(self, name, group, pad=1):
+        """the histogram drawn as the frame of a pad (axes, z range of 2d data)"""
+        padObj = self.pad(name, group, pad)
+        return padObj.GetPrimitive(f"axis_hist_pad_{pad}") if padObj else None
+
+    def warnings(self, text=""):
+        """the warnings of the run containing text"""
+        return [line for line in self.lines("WARN") if text in line]
+
 
 class Project:
     """one isolated project with its own configuration, inputs and output"""
@@ -224,10 +491,15 @@ class Project:
     def srp(self, *args):
         return subprocess.run([os.path.join(PREFIX, "bin", "srp"), *args], capture_output=True, text=True, check=False)
 
-    def inputs(self):
-        """the data source "inputs" with one object of every data kind"""
-        make_inputs(self.path("inputs.root"))
-        self.pm.AddDataSource("inputs", self.path("inputs.root"))
+    def source(self, name, objects):
+        """a data source of that name: a file holding objects (a dict name: object)"""
+        write_objects(self.path(f"{name}.root"), objects)
+        self.pm.AddDataSource(name, self.path(f"{name}.root"))
+
+    def inputs(self, variants=("normal",)):
+        """the data source "inputs" with one object of every data kind; other variants in the data sources "inputs_<variant>"."""
+        for variant in variants:
+            self.source(source_of(variant), data_objects(variant))
 
     def plot(self, group=".+", name=".+", mode="file", timeout=1800):
         if not self.saved:

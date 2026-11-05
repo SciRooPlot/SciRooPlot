@@ -5,7 +5,7 @@ functions have no bins: their frame ends exactly at the values.
 Also: no histogram bin outside the frame is drawn, and widening x around all the data leaves the automatic y range as it is.
 Covers: 7c2f879 (range beyond the axis), 08f2af5 (exact ends on graph frames, log y headroom), 5b47ca3 (bins outside the frame)."""
 
-from srptest import DATA_1D, DATA_2D, HISTS, Project, S, add_data, cases, check, close, describe, finish
+from srptest import BINNED_AXES, DATA_1D, DATA_2D, DATA_KINDS, Project, S, add_data, cases, check, close, describe, finish
 
 X_RANGES = {"inside": (2.3, 7.7), "beyond": (0.5, 14.0), "above": (1.0, 13.7), "below": (0.5, 10.0), "exact": (1.0, 10.0), "min_only": (3.0, None), "max_only": (None, 7.0)}
 Y_RANGES = {"inside": (2.0, 6.0), "beyond": (0.5, 20.0), "min_only": (2.0, None), "max_only": (None, 30.0)}
@@ -16,7 +16,8 @@ p = Project("user_ranges")
 p.inputs()
 todo = cases(
     {"kind": DATA_1D + DATA_2D, "scale": list(SCALES), "axis": ["X", "Y"], "range": list(X_RANGES)},
-    valid=lambda c: c["range"] in (X_RANGES if c["axis"] == "X" else Y_RANGES) and not (c["kind"] in DATA_2D and "y" in c["scale"]),
+    # a lower end above all values (efficiencies end below 1) is an empty range: whole axis with a warning, see robust_frames.py
+    valid=lambda c: c["range"] in (X_RANGES if c["axis"] == "X" else Y_RANGES) and not (c["kind"] in DATA_2D and "y" in c["scale"]) and not (DATA_KINDS[c["kind"]][1] == "TEfficiency" and c["axis"] == "Y" and c["range"] == "min_only"),
     named=[
         {"kind": "hist", "scale": "lin", "axis": "X", "range": "above", "why": "7c2f879"},
         {"kind": "graph", "scale": "logxy", "axis": "X", "range": "inside", "why": "08f2af5"},
@@ -59,13 +60,13 @@ for i, case in enumerate(todo):
     what = describe(case)
     frame = run.frame(f"c{i}", "ranges")
     if frame is None:
-        check(f"plot made: {what}", False, " | ".join(run.lines("ERR")[:2]))
+        check(f"plot made: {what}", False, " | ".join(run.errors()[:2]))
         continue
     low, high = (X_RANGES if case["axis"] == "X" else Y_RANGES)[case["range"]]
     got = frame[case["axis"]]
     frameHist = run.pad(f"c{i}", "ranges").GetPrimitive("axis_hist_pad_1")
     binnedAxis = case["axis"] == "X" or case["kind"] in DATA_2D
-    if binnedAxis and case["kind"] in HISTS:
+    if binnedAxis and case["kind"] in BINNED_AXES:
         axis = frameHist.GetXaxis() if case["axis"] == "X" else frameHist.GetYaxis()
         if low is not None and axis.GetXmin() < low < axis.GetXmax():
             low = axis.GetBinLowEdge(axis.FindFixBin(low))
@@ -74,7 +75,7 @@ for i, case in enumerate(todo):
     wanted = [(end, value) for end, value in ((0, low), (1, high)) if value is not None]
     check(f"frame ends at the requested range: {what}", all(close(got[end], value) for end, value in wanted), f"frame {got[0]:.6g} to {got[1]:.6g}")
 
-    if case["kind"] in HISTS:
+    if case["kind"] in BINNED_AXES:  # polygons are clipped to the frame by ROOT
         x0, x1 = frame["X"]
         for obj in run.objects(f"c{i}", "ranges"):
             if obj.InheritsFrom("TH1"):
@@ -88,5 +89,5 @@ for i, case in enumerate(todo):
             same = close(frame["Y"][0], reference["Y"][0], 1e-6) and close(frame["Y"][1], reference["Y"][1], 1e-6)
             check(f"automatic y range unchanged by an x range around all data: {what}", same, f"y {frame['Y'][0]:.6g} to {frame['Y'][1]:.6g}, without x range {reference['Y'][0]:.6g} to {reference['Y'][1]:.6g}")
 
-check("no errors from the run", not run.lines("ERR"), " | ".join(run.lines("ERR")[:3]))
+check("no errors from the run", not run.errors(), " | ".join(run.errors()[:3]))
 finish()
