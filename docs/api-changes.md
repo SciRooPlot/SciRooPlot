@@ -27,6 +27,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A TEfficiency was drawn under the name ROOT gives the graph or histogram it makes of it (`eff_graph`, `eff_histo`: in `Plots.root`, macros and messages) | It is drawn under its own name, as all other data | behaviour | none |
 | A graph whose points are not in the order of x drawn as `area` (also the default for a graph with a fill) was sorted silently | It is sorted with a warning | behaviour | none |
 | Legend row of a TGraph2D, TF2 or TF3 coloured by the palette: `EP` (2d graph) or `L` (function), though neither is drawn; a TH2Poly drawn with `BOX` or a contour option got a box or line ROOT does not draw | No symbol where the palette colours the data, as for TH2 and TH3; a 2d graph gets `P` for markers and `L` for `LINE` and wire meshes; a TH2Poly only what ROOT draws of its bins (fill, outline, markers) | behaviour | `GetLegendEntry().SetSymbolElements(...)` for a symbol of your own |
+| A TGraphMultiErrors drawn with `band`, `band_smooth`, `boxes`, `boxes_nomarkers`, `bars` (and the x/end-line choices of the points aliases) got the ROOT option of other graphs, which a multi-error graph applies to the graph only: its errors were drawn as bars | The alias is written per set of y errors (`global;set1;set2…`), so every set is drawn as band, boxes or without errors as for other graphs; with `boxes` ROOT draws no markers over the boxes of a multi-error graph. Its legend row follows ROOT's reading of the option, also for raw options | behaviour | none |
 
 ## 3.3.3 → 4.0.0
 

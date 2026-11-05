@@ -2066,6 +2066,23 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               drawOption = "SAME ";
               return;
             } else {
+              if constexpr (is_graph_1d<data_type>()) {
+                // a graph with several sets of y errors draws them as the parts of the option after ';' say, one per set, the first part being
+                // the graph itself (TGraphPainter::PaintGraphMultiErrors): an alias gives each set the error style it gives other graphs
+                auto* multi = dynamic_cast<TGraphMultiErrors*>(data_ptr);
+                if (multi && multi->GetNYErrors() > 0 && alias != static_cast<draw_option_t>(255) && drawOption.find(';') == string::npos) {
+                  string global, errors;
+                  for (char c : drawOption) {
+                    const bool errorStyle = (c >= '2' && c <= '5');                                     // boxes and bands
+                    const bool both = std::string_view("XxZz[]|> ").find(c) != std::string_view::npos;  // no errors, no end lines, brackets, arrows
+                    if (!errorStyle) global += c;
+                    if (errorStyle || both) errors += c;
+                  }
+                  drawOption = global;
+                  for (int32_t set = 0; set < multi->GetNYErrors(); ++set)
+                    drawOption += ";" + errors;  // one part per set (with fewer, ROOT takes the first part also for the first set)
+                }
+              }
               data_ptr->Draw(drawOption.data());
             }
           } else {
@@ -4197,6 +4214,66 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
     // a function is drawn with markers at its sampling points with P, otherwise as a curve that a fill colours down to zero
     if (has('P')) return {"P"};
     return (hasFill) ? area(Outline::line) : LegendSymbol{L};
+  }
+  // the symbol of a graph painted without its errors (TGraphPainter::PaintGraphSimple) with the letters of an option
+  auto simpleGraph = [&](const string& letters) {
+    auto in = [&letters](char c) { return letters.find(c) != string::npos; };
+    const bool lineDrawn = in('L') || in('C');
+    LegendSymbol symbol;
+    if (in('F')) symbol = area((lineDrawn) ? Outline::line : Outline::none);
+    if (in('B')) symbol = join(box(), symbol.elements);
+    if (in('P') || in('*')) symbol.elements += "P";
+    if (lineDrawn) symbol.elements += L;
+    return symbol;
+  };
+  if (auto multi = dynamic_cast<TGraphMultiErrors*>(obj); multi && multi->GetNYErrors() > 0 && HasErrors(multi)) {
+    // the option split at ';' as ROOT does (TGraphPainter::PaintGraphMultiErrors): the graph itself, then one part per set of y errors
+    // (with fewer parts the first is also that of the first set, sets without a part are drawn as error bars); the graph is painted only
+    // where a set is drawn as error bars, or where no errors are drawn at all
+    const size_t nSets = static_cast<size_t>(multi->GetNYErrors());
+    std::vector<string> parts(nSets + 1);
+    string rest = option;
+    size_t filled = 0;
+    if (static_cast<size_t>(std::count(rest.begin(), rest.end(), ';')) < nSets) parts[filled++] = rest.substr(0, rest.find(';'));
+    for (size_t pos = rest.find(';'); pos != string::npos && filled <= nSets; pos = rest.find(';')) {
+      parts[filled++] = rest.substr(0, pos);
+      rest.erase(0, pos + 1);
+    }
+    if (filled <= nSets) parts[filled] = rest;
+    auto in = [](const string& part, const char* token) { return part.find(token) != string::npos; };
+    string global = parts[0];
+    for (const char* ignored : {"X0", "Y0"}) {
+      for (size_t pos = global.find(ignored); pos != string::npos; pos = global.find(ignored))
+        global.erase(pos, 2);
+    }
+    LegendSymbol symbol;
+    bool anyErrors = false, graphPainted = false, allBoxesOrBands = true;
+    for (size_t set = 1; set <= nSets; ++set) {
+      const string& part = parts[set];
+      const bool band = in(part, "3") || in(part, "4");
+      const bool boxes = in(part, "2") || in(part, "5");
+      graphPainted |= !band && !boxes && !in(part, "[]") && !in(part, "||");
+      allBoxesOrBands &= band || boxes;
+      if (in(part, "X")) continue;  // this set is not drawn
+      anyErrors = true;
+      if (band || boxes) {
+        if (!str_contains(symbol.elements, "F")) symbol = join((band) ? area(Outline::none) : box((in(part, "5")) ? Outline::thin : Outline::none), symbol.elements);
+      } else if (!str_contains(symbol.elements, "E")) {
+        symbol.elements += E;
+      }
+    }
+    if (!anyErrors && in(global, "X")) return simpleGraph(global);
+    // the x errors, left out where every set is drawn as boxes or bands (they show the x errors themselves)
+    bool xErrors = false;
+    for (int32_t i = 0; i < multi->GetN() && !xErrors; ++i)
+      xErrors = multi->GetErrorXlow(i) > 0. || multi->GetErrorXhigh(i) > 0.;
+    if (xErrors && !in(global, "X") && !allBoxesOrBands && !str_contains(symbol.elements, "E")) symbol.elements += E;
+    if (graphPainted) {
+      for (char element : simpleGraph(global).elements) {
+        if (!str_contains(symbol.elements, string(1, element))) symbol.elements += element;
+      }
+    }
+    return symbol;
   }
   if (auto graph = dynamic_cast<TGraph*>(obj)) {
     // a polar graph draws its error bars only with E (TGraphPainter::PaintGraphPolar)

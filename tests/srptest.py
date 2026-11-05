@@ -444,6 +444,15 @@ def option(text):
     return " ".join(str(text).upper().replace("SAME", "").split())
 
 
+def per_error_set(opt, sets=2):
+    """the option an alias gives a graph with several sets of y errors (TGraphMultiErrors; that of data_objects has 2), as option() reads
+    it: the graph part, then one part per set holding the error styles (boxes and bands 2-5, no errors X, no end lines Z, brackets, arrows)"""
+    drawn = "SAME " + opt
+    graph = "".join(c for c in drawn if c not in "2345")
+    errors = "".join(c for c in drawn if c in "2345XZ[]|> ")
+    return option(graph + f";{errors}" * sets)
+
+
 def no_scale(opt):
     """a drawing option without its colour scale: the Z ending a word of a 2d or 3d option (COLZ, COLZ0, LEGO2Z, CONTZ, PCOLZ, BOX2Z)"""
     return " ".join(re.sub(r"(?<=[A-Z0-9])Z(?=0?$)", "", word) for word in opt.split())

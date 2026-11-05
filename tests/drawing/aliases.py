@@ -11,7 +11,7 @@ file's first version (a TEfficiency drawn under the name ROOT gives the graph or
 
 import re
 
-from srptest import ALIASES, DATA_KINDS, Project, S, add_data, alias_table, base_of, cases, check, data_name, describe, drawn_type, finish, no_scale
+from srptest import ALIASES, DATA_KINDS, Project, S, add_data, alias_table, base_of, cases, check, data_name, describe, drawn_type, finish, no_scale, per_error_set
 
 TABLE = alias_table()
 REPRESENTATIVE = ("hist", "graph_errors", "hist2d", "graph2d_errors")  # every alias in the fast run
@@ -75,6 +75,8 @@ for i, case in enumerate(todo):
         continue
     drawnType, data, scale, nWarnings = expected(kind, alias)
     obj, opt = drawn[0]
+    if drawnType is not None and obj.InheritsFrom("TGraphMultiErrors"):
+        data = per_error_set(data)
     if drawnType is None:
         check(f"not available: drawn with the default of ROOT: {what}", opt == "", f"drawn with '{opt}'")
     else:

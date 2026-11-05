@@ -5,7 +5,7 @@ The fill of the input counts only when its style is kept (SetKeepInputStyle), an
 Covers: 7cd25b3 (ROOT's default fill of a TEfficiency).
 """
 
-from srptest import DATA_KINDS, ROOT, Project, S, add_data, alias_table, base_of, cases, check, close, data_objects, describe, drawn_type, finish, has_variant, no_scale, source_of
+from srptest import DATA_KINDS, ROOT, Project, S, add_data, alias_table, base_of, cases, check, close, data_objects, describe, drawn_type, finish, has_variant, no_scale, per_error_set, source_of
 
 TABLE = alias_table()
 STYLES = {  # style of the data: (setup, sets a fill, sets a marker)
@@ -89,6 +89,8 @@ for i, case in enumerate(todo):
     if alias and alias.startswith("points") and DATA_KINDS[case["kind"]][1] == "TGraphPolar":
         want += " E"
     obj, opt = drawn[0]
+    if alias and obj.InheritsFrom("TGraphMultiErrors"):
+        want = per_error_set(want)
     check(f"drawn as {alias or 'the default of ROOT'}: {what}", opt == want, f"drawn with '{opt}', expected '{want}'")
     if alias == "area":  # the polygon closed at zero
         check(f"area closed at zero: {what}", obj.GetN() > 2 and close(obj.GetPointY(0), 0.0) and close(obj.GetPointY(obj.GetN() - 1), 0.0), obj.ClassName())
