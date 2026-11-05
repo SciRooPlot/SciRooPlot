@@ -2,9 +2,17 @@
 SciRooPlot is a [ROOT](https://github.com/root-project/root)-based C++ and Python framework to define, organize and generate plots.
 
 <p align="center">
-  <img src="https://scirooplot.github.io/SciRooPlot/img/ex/higgs/limits/brazilPlot.png" width="32%" alt="exclusion limits with uncertainty bands">
-  <img src="https://scirooplot.github.io/SciRooPlot/img/ex/heavyion/correlations/ridge.png" width="32%" alt="two-particle correlation in 3D">
-  <img src="https://scirooplot.github.io/SciRooPlot/img/ex/animations/higgsDiscovery.gif" width="32%" alt="an animated plot">
+  <a href="https://scirooplot.github.io/SciRooPlot/"><img src="https://img.shields.io/badge/%F0%9F%8C%90%20website-scirooplot.github.io-4c7bd9?style=for-the-badge" alt="website"></a>
+  <a href="https://scirooplot.github.io/SciRooPlot/#tour"><img src="https://img.shields.io/badge/%F0%9F%A7%AD%20guided%20tour-for%20newcomers-30ae5e?style=for-the-badge" alt="guided tour"></a>
+  <a href="https://scirooplot.github.io/SciRooPlot/#examples"><img src="https://img.shields.io/badge/%F0%9F%93%8A%20examples-with%20code-e5743c?style=for-the-badge" alt="examples"></a>
+</p>
+
+<p align="center">
+  <a href="https://scirooplot.github.io/SciRooPlot/#examples">
+    <img src="https://scirooplot.github.io/SciRooPlot/img/ex/higgs/limits/brazilPlot.png" width="32%" alt="exclusion limits with uncertainty bands">
+    <img src="https://scirooplot.github.io/SciRooPlot/img/ex/heavyion/correlations/ridge.png" width="32%" alt="two-particle correlation in 3D">
+    <img src="https://scirooplot.github.io/SciRooPlot/img/ex/animations/higgsDiscovery.gif" width="32%" alt="an animated plot">
+  </a>
 </p>
 
 ## 🌟 Highlights
