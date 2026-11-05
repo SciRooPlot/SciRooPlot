@@ -914,6 +914,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             polygon->SetTitle(data_ptr->GetTitle());
             polygon->SetBit(kCanDelete);  // owned by the pad, as the copy it replaces
             CopyStyle(*data_ptr, *polygon);
+            // the area below the points needs them in the order of x: points in another order (a closed contour, a trajectory) would change their shape
+            const double_t* x = data_ptr->GetX();
+            if (dataIndex != 0 && !std::is_sorted(x, x + data_ptr->GetN())) logger::warning("The points of graph {} are not in the order of x: they are sorted to draw the area below them.", data->GetName());
             data_ptr->Sort();
             polygon->SetPoint(0, data_ptr->GetPointX(0), 0.);
             for (int32_t i = 0; i < data_ptr->GetN(); ++i) {

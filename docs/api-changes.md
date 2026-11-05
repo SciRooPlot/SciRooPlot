@@ -25,6 +25,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | An empty TGraph2D crashed `plot` | It is not drawn, with a warning, as an empty TGraph (the next data keeps its number, the frame comes from the next data) | behaviour | none |
 | An exception while painting a plot (thrown by ROOT, e.g. for a log colour scale beyond the float range) ended the `plot` run | Only that plot is lost, with an error naming it | behaviour | none |
 | A TEfficiency was drawn under the name ROOT gives the graph or histogram it makes of it (`eff_graph`, `eff_histo`: in `Plots.root`, macros and messages) | It is drawn under its own name, as all other data | behaviour | none |
+| A graph whose points are not in the order of x drawn as `area` (also the default for a graph with a fill) was sorted silently | It is sorted with a warning | behaviour | none |
 
 ## 3.3.3 → 4.0.0
 

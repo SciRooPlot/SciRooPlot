@@ -97,7 +97,7 @@ at the mean content of the cells (`SetView` turns them); the colour range follow
 with white faces and the mesh in the data's colour, or faces in the fill colour if the data sets one.
 the triangle and points aliases of 2D graphs (and `line`, the polyline through the points) are drawn in 3D: as the first data of a pad they get an empty lego frame,
 later data needs such a 3D frame (otherwise a WARNING and the data is not drawn); `points` of a graph with errors also draws the error bars;
-`area` of graphs is the polygon between the points and zero; `candle` is ROOT preset 2 (box, median, whiskers at 1.5 IQR, outliers), `candle_minmax` preset 1 (whiskers to the extremes).
+`area` of graphs is the polygon between the points and zero (points not in the order of x are sorted, with a warning); `candle` is ROOT preset 2 (box, median, whiskers at 1.5 IQR, outliers), `candle_minmax` preset 1 (whiskers to the extremes).
 `hist_clipped`, `hist_open_clipped`, `curve_clipped` draw a histogram as a graph, whose lines ROOT cuts at the frame (`HIST`, and `HIST C` on a log axis,
 move bins outside of the frame onto its edge); with a fill, the steps are the outline of filled areas cut at the lower frame edge;
 a graph is drawn by `hist_clipped`/`hist_open_clipped` as the steps of its bins and by `curve_clipped` like by `curve`; the y range of the data does not apply to histograms (a warning says so).
