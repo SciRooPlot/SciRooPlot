@@ -5,4 +5,3 @@ line-length = 300
 quote-style = "preserve"
 [tool.ruff.lint.per-file-ignores]
 "templates/*/DefinePlots.py" = ["F403", "F405"]
-".github/scripts/legend-symbols/DefinePlots.py" = ["F403", "F405"]

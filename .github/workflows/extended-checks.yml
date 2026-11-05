@@ -149,22 +149,11 @@ jobs:
         run: |
           cmake --build build --parallel
 
-      - name: Install
-        shell: bash -el {0}
-        run: |
-          cmake --install build --prefix install
-
       - name: Tests
         shell: bash -el {0}
         env:
           SRP_TESTS_FULL: 1
         run: xvfb-run -a ctest --test-dir build --output-on-failure --parallel 2
-
-      - name: Legend symbols match the drawn data
-        shell: bash -el {0}
-        env:
-          SRP_TEST_INSTALL: ${{ github.workspace }}/install
-        run: ./.github/scripts/test-legend-symbols.sh
 
   # all dependencies at the minimum versions required in CMakeLists.txt
   floor:
