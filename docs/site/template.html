@@ -464,6 +464,15 @@ tr:last-child td { border-bottom: 0 }
 .refsec h3 { font-size: 1.05rem; margin-top: 6px }
 table.cmd td:first-child { white-space: nowrap }
 table.cmd code { white-space: nowrap }
+/* phones: the commands do not wrap, so the other columns had no room left; each row becomes a block, the command on top */
+@media (max-width: 600px) {
+  table.cmd thead { display: none }
+  table.cmd, table.cmd tbody, table.cmd tr, table.cmd td { display: block }
+  table.cmd tr { border-bottom: 1px solid var(--grid); padding: 6px 0 }
+  table.cmd td { border: 0; padding: 3px 12px }
+  table.cmd td:first-child { white-space: normal; font-weight: 600 }
+  table.cmd code { white-space: normal; overflow-wrap: anywhere }
+}
 .apicls { display: grid; gap: 6px; margin-top: 18px; scroll-margin-top: calc(var(--barh) + 16px) }
 .apicls h3 small { font-weight: 400; font-family: var(--mono); font-size: 0.75rem }
 .apicls ul { list-style: none; margin: 0; padding: 0; border: 1px solid var(--hairline); border-radius: 10px; background: var(--panel); overflow-x: auto }
@@ -535,6 +544,15 @@ table.cmd code { white-space: nowrap }
 .uphead { margin: 8px 0 0; font-size: 0.95rem; color: var(--ink) }
 table.up td { font-size: 0.85rem }
 table.up td:first-child { width: 32% } table.up td:nth-child(2) { width: 32% }
+/* phones: one change per block (three columns would break every word), Now and What to do labelled */
+@media (max-width: 600px) {
+  table.up thead { display: none }
+  table.up, table.up tbody, table.up tr, table.up td { display: block; width: auto !important }
+  table.up tr { border-bottom: 1px solid var(--hairline); padding: 8px 0 }
+  table.up td { border: 0; padding: 3px 12px }
+  table.up td:nth-child(2)::before { content: "Now: "; font-weight: 700; color: var(--ink) }
+  table.up td:nth-child(3)::before { content: "What to do: "; font-weight: 700; color: var(--ink) }
+}
 .kind { display: inline-block; font-size: 0.7rem; font-weight: 700; color: var(--c); border: 1px solid var(--c); border-radius: 999px; padding: 0 7px; margin-right: 6px; white-space: nowrap }
 /* methods at a glance */
 .glance { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 12px }
