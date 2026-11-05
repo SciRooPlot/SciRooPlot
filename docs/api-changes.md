@@ -22,6 +22,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A pad range inside a function, a 2d graph or a TH2Poly that gives the frame (the first data of a pad) ended at the edges of its internal bins: the sampling of the function, the interpolation grid of the graph, the search grid of the polygons (`['X'].SetRange(2.3, 7.7)` gave a frame from 2.296 to 7.705) | The frame ends at the range, as for graphs | behaviour | none |
 | A minimum or maximum stored with 2d data that defines the frame (`Pad::SetFrame`, `Data::SetDefinesFrame`) was widened to the contents of the other 2d data of the pad | The stored z range is kept, like a range set on `'Z'` | behaviour | none |
 | A minimum or maximum stored with a function (TF1, TF2, TF3) drawn as data was kept | It is discarded as those of histograms and graphs (kept where the function defines the frame) | behaviour | Set the range on the pad axis. |
+| An empty TGraph2D crashed `plot` | It is not drawn, with a warning, as an empty TGraph (the next data keeps its number, the frame comes from the next data) | behaviour | none |
 
 ## 3.3.3 → 4.0.0
 

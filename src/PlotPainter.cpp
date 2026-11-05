@@ -618,6 +618,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         if (source == dataBuffer.end()) return false;
         auto item = source->second.find(curData->GetName() + curData->GetDataInfo().GetNameSuffix());
         if (item == source->second.end()) return false;
+        if (auto* graph2d = dynamic_cast<TGraph2D*>(item->second.get())) return graph2d->GetN() == 0;
         auto* graph = dynamic_cast<TGraph*>(item->second.get());
         return graph && graph->GetN() == 0 && !dynamic_cast<TGraphPolar*>(graph);
       };
@@ -984,7 +985,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           optional<double_t> graphPositiveMinimumX;
           // the range of the points of a 2d graph in z, including their errors
           std::pair<double_t, double_t> graphRangeZ{};
-          if constexpr (is_graph_2d<data_type>()) graphRangeZ = {data_ptr->GetZminE(), data_ptr->GetZmaxE()};
+          if constexpr (is_graph_2d<data_type>()) {
+            if (data_ptr->GetN() > 0) graphRangeZ = {data_ptr->GetZminE(), data_ptr->GetZmaxE()};  // ROOT reads the first point of an empty graph
+          }
           if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
             graphPositivePoints.emplace();
             if constexpr (is_graph_1d<data_type>()) graphPositiveMinimumX = std::numeric_limits<double_t>::infinity();
@@ -2020,7 +2023,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             for (const auto* axis : AxisSettings(pad, padDefaults, 'Z')) {
               if (axis->GetMinRange() || axis->GetMaxRange()) hasUserRangeZ = true;
             }
-            if (!hasUserRangeZ && axisHist_ptr->GetDimension() == 2 && !pad_ptr->GetView()) {
+            bool isEmpty{};
+            if constexpr (is_graph_2d<data_type>()) isEmpty = data_ptr->GetN() == 0;  // not drawn (and ROOT reads its first point)
+            if (!hasUserRangeZ && !isEmpty && axisHist_ptr->GetDimension() == 2 && !pad_ptr->GetView()) {
               double_t minimum{}, maximum{};
               if constexpr (is_hist_2d<data_type>()) {
                 minimum = data_ptr->GetMinimum();
@@ -2048,7 +2053,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             option.ReplaceAll("SAMES", "").ReplaceAll("SAME", "");
             data_ptr->SetBit(TH1::kNoTitle);
             data_ptr->AppendPad(option.Data());
-          } else if constexpr (is_graph_1d<data_type>()) {
+          } else if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
             // ROOT reports an empty graph as an error at every paint
             if (data_ptr->GetN() == 0) {
               logger::warning("Graph {} has no points: it is not drawn.", data->GetName());
