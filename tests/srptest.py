@@ -531,6 +531,10 @@ class Run:
         """the drawing option of the frame histogram of a pad (as by option()), None if it has none"""
         return next((option(opt) for obj, opt in self._links(name, group, pad) if obj.GetName() == f"axis_hist_pad_{pad}"), None)
 
+    def links(self, name, group, pad=1):
+        """every primitive of a pad as (object, drawing option as stored)"""
+        return list(self._links(name, group, pad))
+
     def _links(self, name, group, pad):
         padObj = self.pad(name, group, pad)
         link = padObj.GetListOfPrimitives().FirstLink() if padObj else None
