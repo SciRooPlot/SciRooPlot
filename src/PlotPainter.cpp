@@ -962,10 +962,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // (not at the edges of the sampled bins) and the automatic y range (1d) or colour scale (2d) is that of the visible part;
             // a pad range beyond the function widens the frame later, as for any data
             auto padRange = [&](char padLabel, double_t& min, double_t& max) {
-              optional<double_t> userMin;
+              const optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
               optional<double_t> userMax;
               for (const auto* axis : AxisSettings(pad, padDefaults, padLabel)) {
-                if (axis->GetMinRange()) userMin = axis->GetMinRange();
                 if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
               }
               const double_t newMin = (userMin && *userMin > min && *userMin < max) ? *userMin : min;
@@ -1120,14 +1119,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               if (axisLabel == 'Y' && frameDim == 1) continue;
               const char padLabel = (hbarFrame) ? ((axisLabel == 'X') ? 'Y' : 'X') : axisLabel;  // where it is drawn
               const char valueLabel = (hbarFrame) ? 'X' : 'Y';                                   // the pad axis of the contents of a 1d frame
-              optional<double_t> userMin;
+              optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
               optional<double_t> userMax;
               optional<bool> logY;
               for (const auto* axis : AxisSettings(pad, padDefaults, valueLabel)) {
                 if (axis->GetLog()) logY = axis->GetLog();
               }
               for (const auto* axis : AxisSettings(pad, padDefaults, padLabel)) {
-                if (axis->GetMinRange()) userMin = axis->GetMinRange();
                 if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
               }
               const TAxis* axis = (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis();
@@ -1296,6 +1294,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             }
 
+            // a lower end at or below zero cannot be shown on a log scale: the axis is drawn as without it (as in ROOT), with a warning below
+            optional<double_t> ignoredRangeMin;
+            if (userRangeMin && !MinRange(pad, padDefaults, axisLabel)) ignoredRangeMin = std::exchange(userRangeMin, nullopt);
+
             // the title offsets of a layout panel are those of a flat frame; a 3D view draws its axes in perspective (THistPainter::PaintLegoAxis):
             // x and y titles 1.5 title heights from the axis (ROOT's own value for y) and centred (at the end of the axis they run into the next
             // pad or the colour scale), the z title next to its labels (offset 0, see PlaceZTitle)
@@ -1453,11 +1455,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                   }
                 }
               }
-              // a lower end at or below zero cannot be shown on a log scale: the axis starts where it would without it (as in ROOT)
-              const bool stillLog = (axisLabel == 'X') ? pad_ptr->GetLogx() : ((axisLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
-              if (stillLog && userRangeMin && *userRangeMin <= 0. && !(axisLabel == 'Z' && frameDim == 1)) {
-                logger::warning("The lower range {} of the {} axis in pad {} is not positive and cannot be shown on a log scale: the axis starts at its automatic minimum.", *userRangeMin, axisLabel, padID);
-              }
+            }
+            const bool stillLog = (axisLabel == 'X') ? pad_ptr->GetLogx() : ((axisLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
+            if (stillLog && ignoredRangeMin && !(axisLabel == 'Z' && frameDim == 1)) {
+              logger::warning("The lower range {} of the {} axis in pad {} is not positive and cannot be shown on a log scale: the axis starts at its automatic minimum.", *ignoredRangeMin, axisLabel, padID);
             }
 
             if (textFontTitle) axis_ptr->SetTitleFont(*textFontTitle);
@@ -1567,9 +1568,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if constexpr (is_graph_2d<data_type>()) {
               // the interpolated histogram of a graph can stay below its highest point (and above its lowest one): the z range includes the
               // points (with their errors), as ROOT's own range of the graph (TGraph2D::GetHistogram), unless the user set that end
-              optional<double_t> userMinZ, userMaxZ;
+              const optional<double_t> userMinZ = MinRange(pad, padDefaults, 'Z');
+              optional<double_t> userMaxZ;
               for (const auto* axis : AxisSettings(pad, padDefaults, 'Z')) {
-                if (axis->GetMinRange()) userMinZ = axis->GetMinRange();
                 if (axis->GetMaxRange()) userMaxZ = axis->GetMaxRange();
               }
               // a minimum or maximum stored with the graph defining the frame is kept like a range set by the user
@@ -3472,11 +3473,11 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
   for (char axisLabel : {'X', 'Y', 'Z'}) {
     if (mCommonRanges.count({padID, axisLabel})) continue;  // the common range of a shared axis includes the room of its pads
     room_t room{axisLabel, {}, {}};
-    optional<double_t> userMin, userMax;
+    const optional<double_t> userMin = MinRange(padSettings, padDefaults, axisLabel);
+    optional<double_t> userMax;
     for (const auto* axis : AxisSettings(padSettings, padDefaults, axisLabel)) {
       if (axis->GetRoomBelowMin()) room.below = axis->GetRoomBelowMin();
       if (axis->GetRoomAboveMax()) room.above = axis->GetRoomAboveMax();
-      if (axis->GetMinRange()) userMin = axis->GetMinRange();
       if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
     }
     if (!room.below && !room.above) continue;
@@ -6755,6 +6756,22 @@ vector<const Plot::Pad::Axis*> PlotPainter::AxisSettings(const Plot::Pad& pad, c
     }
   }
   return settings;
+}
+
+//**************************************************************************************************
+/**
+ * The lower end of the range of an axis as the frame uses it: none if it is at or below zero on a log axis, which cannot show it.
+ */
+//**************************************************************************************************
+optional<double_t> PlotPainter::MinRange(const Plot::Pad& pad, const Plot::Pad& padDefaults, char axisLabel)
+{
+  optional<double_t> min;
+  bool log{};
+  for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
+    if (axis->GetMinRange()) min = axis->GetMinRange();
+    if (axis->GetLog()) log = *axis->GetLog();
+  }
+  return (log && min && *min <= 0.) ? nullopt : min;
 }
 
 //**************************************************************************************************
