@@ -1322,9 +1322,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // so feeding the drawn range back in through SetRangeUser would add the overflow bin
             if (userRangeMin || userRangeMax) {
               const bool isBinnedAxis = (histLabel == 'X') || (frameDim > 1 && histLabel == 'Y') || (frameDim == 3 && histLabel == 'Z');
-              if (is_graph_1d<data_type>() && histLabel == 'X') {
-                // the frame of a graph is an empty histogram whose bins mean nothing: its x axis is set to the user values instead of
-                // the edges of the bins containing them (the y range is the minimum and maximum, as for every 1d frame)
+              const bool isPolygonAxis = histLabel != 'Z' && axisHist_ptr->InheritsFrom(TH2Poly::Class());
+              if ((is_graph_1d<data_type>() && histLabel == 'X') || (is_graph_2d<data_type>() && histLabel != 'Z') || isPolygonAxis) {
+                // the frame of a graph is an empty histogram whose bins mean nothing (for a 2d graph the grid it is interpolated on, for a
+                // TH2Poly the grid it finds its polygons with): its x (and y) axis is set to the user values instead of the edges of the bins
+                // containing them (the dependent axis has no bins)
                 const double_t min = userRangeMin.value_or(axis_ptr->GetBinLowEdge(std::max(axis_ptr->GetFirst(), 1)));
                 const double_t max = userRangeMax.value_or(axis_ptr->GetBinUpEdge(std::min(axis_ptr->GetLast(), axis_ptr->GetNbins())));
                 if (min < max) {
