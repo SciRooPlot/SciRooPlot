@@ -13,6 +13,14 @@ What changed for users between released versions of SciRooPlot, and what to chan
 
 Names are given for C++; the Python name is the same unless stated. Saved definitions (`plots.info`, `dataSources.info`) are not converted: after updating, re-run the plotting program of each project once. `plot` re-runs a Python program only if a `.py` file is newer than `plots.info`, so touch the program or delete `plots.info`.
 
+## 4.0.0 → master
+
+### Plot definitions: changed defaults and behaviour
+
+| Old | New | Kind | Action |
+|---|---|---|---|
+| A pad range inside a function that gives the frame (the first data of a pad) ended at the edges of the function's sampling bins (`['X'].SetRange(2.3, 7.7)` gave a frame from 2.296 to 7.705) | The frame ends at the range, as for graphs | behaviour | none |
+
 ## 3.3.3 → 4.0.0
 
 ### Build, includes and logging

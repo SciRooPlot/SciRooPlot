@@ -952,8 +952,24 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // has ROOT's default range 0 to 1), narrowed or widened by the range the user gave with SetRangeX / SetRangeY
           if constexpr (is_func_1d<data_type>() || is_func_2d<data_type>()) {
             auto [rangeMinX, rangeMaxX] = funcRange('x', data_ptr->GetXmin(), data_ptr->GetXmax(), data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
+            // the frame is the function sampled over its range: a pad range inside it is sampled alone, so the frame ends exactly there
+            // (not at the edges of the sampled bins) and the automatic y range (1d) or colour scale (2d) is that of the visible part;
+            // a pad range beyond the function widens the frame later, as for any data
+            auto padRange = [&](char padLabel, double_t& min, double_t& max) {
+              optional<double_t> userMin;
+              optional<double_t> userMax;
+              for (const auto* axis : AxisSettings(pad, padDefaults, padLabel)) {
+                if (axis->GetMinRange()) userMin = axis->GetMinRange();
+                if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
+              }
+              const double_t newMin = (userMin && *userMin > min && *userMin < max) ? *userMin : min;
+              const double_t newMax = (userMax && *userMax < max && *userMax > min) ? *userMax : max;
+              if (newMin < newMax) std::tie(min, max) = std::make_pair(newMin, newMax);
+            };
+            padRange('X', rangeMinX, rangeMaxX);
             if constexpr (is_func_2d<data_type>()) {
               auto [rangeMinY, rangeMaxY] = funcRange('y', data_ptr->GetYmin(), data_ptr->GetYmax(), data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
+              padRange('Y', rangeMinY, rangeMaxY);
               data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
             } else {
               data_ptr->SetRange(rangeMinX, rangeMaxX);
