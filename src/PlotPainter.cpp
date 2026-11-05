@@ -1371,9 +1371,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             }
 
-            // a log scale needs a positive range: ROOT otherwise complains and draws nothing (or the data outside of the frame)
-            if (!pad_ptr->GetView()) {
-              const bool isDependentAxis = (histLabel == (frameDim > 1 ? 'Z' : 'Y'));
+            // a log scale needs a positive range: ROOT otherwise complains and draws nothing (or the data outside of the frame);
+            // in a 3D view only the binned axes (the height of a lego or surface is ROOT's)
+            const bool isDependentAxis = (frameDim < 3) && (histLabel == ((frameDim == 2) ? 'Z' : 'Y'));  // the z axis of 3d data is binned
+            if (!pad_ptr->GetView() || !isDependentAxis) {
               const bool isLog = (axisLabel == 'X') ? pad_ptr->GetLogx() : ((axisLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
               auto disableLog = [&]() {
                 if (axisLabel == 'X')
@@ -1450,8 +1451,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                       ++bin;
                     }
                     // start at the first positive bin edge (ROOT would otherwise draw the bins with negative edges left of the frame); set as bins:
-                    // SetRangeUser up to the last upper edge would add the overflow bin
-                    axis_ptr->SetRange(std::min(bin, lastBin), lastBin);
+                    // SetRangeUser up to the last upper edge would add the overflow bin. The empty frame of a 3d function (whose bins mean nothing)
+                    // gets an axis starting there instead: ROOT paints an empty 3d histogram on a log axis from its first bin (ROOT bug)
+                    if constexpr (is_func_3d<data_type>()) {
+                      axis_ptr->Set(axis_ptr->GetNbins(), axis_ptr->GetBinLowEdge(std::min(bin, lastBin)), axis_ptr->GetBinUpEdge(lastBin));
+                      axis_ptr->SetRange();
+                    } else {
+                      axis_ptr->SetRange(std::min(bin, lastBin), lastBin);
+                    }
                   }
                 }
               }
@@ -1781,6 +1788,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
             if constexpr (is_hist_3d<data_type>()) {
               data_ptr->GetZaxis()->SetRangeUser(minArr[2], maxArr[2]);
+            }
+            if constexpr (is_func_3d<data_type>()) {
+              // a 3d function is painted over its own range: that of the frame, which on a log axis starts at its first positive bin edge
+              const TAxis* frameZ = axisHist_ptr->GetZaxis();
+              data_ptr->SetRange(xmin, ymin, frameZ->GetBinLowEdge(frameZ->GetFirst()), xmax, ymax, frameZ->GetBinUpEdge(frameZ->GetLast()));
             }
           }
           const bool hasRangeX = data->GetMinRangeX() || data->GetMaxRangeX();
