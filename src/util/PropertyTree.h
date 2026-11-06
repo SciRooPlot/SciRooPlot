@@ -56,13 +56,14 @@ void read_from_tree(const boost::property_tree::ptree& tree, std::optional<T>& v
       var = static_cast<T>(string_to_type<typename std::underlying_type<T>::type>(*value));
     } else if constexpr (std::is_same_v<T, std::string>) {
       var = *value;
+    } else if constexpr (std::is_same_v<T, char>) {  // an axis name
+      if (value->size() != 1) logger::throw_invalid_argument("Cannot parse '{}' as a single character.", *value);
+      var = value->front();
     } else {
       var = string_to_type<T>(*value);
     }
   } catch (const std::exception& e) {
-    std::string reason = e.what();
-    if (!reason.empty() && reason.back() == '.') reason.pop_back();  // the callers end the message
-    logger::throw_invalid_argument("Bad value '{}' of {}: {}", *value, label, reason);
+    logger::throw_invalid_argument("Bad value '{}' of {}: {}", *value, label, without_final_period(e.what()));  // the callers end the message
   }
 }
 

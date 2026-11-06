@@ -1185,7 +1185,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
         AddBasePlot(std::move(basePlot));
         ++nBasePlotsLoaded;
       } catch (const std::exception& e) {
-        logger::error("Could not load base plot {} from file: {}.", plotTree.first, e.what());
+        logger::error("Could not load base plot {} from file: {}.", plotTree.first, util::without_final_period(e.what()));
       }
       continue;
     }
@@ -1198,7 +1198,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
       AddPlot(std::move(plot));
       ++nLoaded;
     } catch (const std::exception& e) {
-      logger::error("Could not load plot {} from file: {}.", plotTree.first, e.what());
+      logger::error("Could not load plot {} from file: {}.", plotTree.first, util::without_final_period(e.what()));
     }
   }
   if (nPlotsInFile == 0 && nBasePlotsLoaded > 0) {

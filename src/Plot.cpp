@@ -574,22 +574,40 @@ Plot::Plot(const ptree& plotTree)
     if (padID < 0 || padID > std::numeric_limits<uint8_t>::max()) logger::throw_invalid_argument("Pad number {} is out of range (0 to 255).", padID);
     return static_cast<uint8_t>(padID);
   };
-  auto readPads = [&checkedPadID](const string& list) {
+  // the pads of a shared axis or common title: numbers separated by spaces
+  auto readPads = [&checkedPadID](const ptree& tree) {
     vector<uint8_t> pads;
+    const string list = get_from_tree<string>(tree, "pads").value_or("");
     std::istringstream stream(list);
-    for (int64_t padID{}; stream >> padID;) {
-      pads.push_back(checkedPadID(padID));
+    for (string padID; stream >> padID;) {
+      int64_t number{};
+      try {
+        number = util::string_to_type<int32_t>(padID);
+      } catch (const std::exception&) {
+        logger::throw_invalid_argument("Bad value '{}' of pads: pad numbers separated by spaces", list);
+      }
+      pads.push_back(checkedPadID(number));
     }
     return pads;
   };
+  auto readAxis = [](const ptree& tree, const string& key) {
+    const auto axis = get_from_tree<char>(tree, "axis");
+    if (!axis) logger::throw_invalid_argument("{} has no axis", key);
+    return *axis;
+  };
   for (const auto& [key, child] : plotTree) {
     if (str_starts_with(key, "PAD_")) {
-      const uint8_t padID = checkedPadID(util::string_to_type<int32_t>(key.substr(4)));  // a key that is no PAD_<number> names its number
-      mPads[padID] = Pad(child);
+      int32_t padID{};
+      try {
+        padID = util::string_to_type<int32_t>(key.substr(4));
+      } catch (const std::exception&) {
+        logger::throw_invalid_argument("Bad key {}: a pad is PAD_<number>", key);
+      }
+      mPads[checkedPadID(padID)] = Pad(child);
     } else if (str_starts_with(key, "SHARED_AXIS_")) {
-      mSharedAxes.push_back({child.get<char>("axis"), readPads(child.get<string>("pads", "")), child.get<bool>("layout", false)});
+      mSharedAxes.push_back({readAxis(child, key), readPads(child), get_from_tree<bool>(child, "layout").value_or(false)});
     } else if (str_starts_with(key, "COMMON_TITLE_")) {
-      mCommonTitles.emplace_back(child.get<char>("axis"), readPads(child.get<string>("pads", "")));
+      mCommonTitles.emplace_back(readAxis(child, key), readPads(child));
     }
   }
   UpdateUniqueName();
@@ -1512,11 +1530,11 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_box_range");
   read_from_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whisker_range");
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
-  mIsEmptyCell = padTree.get<bool>("empty_cell", false);
+  mIsEmptyCell = get_from_tree<bool>(padTree, "empty_cell").value_or(false);
   read_from_tree(padTree, mColorScaleOf, "color_scale_of");
   if (auto layoutTree = padTree.get_child_optional("layout_values")) {
     for (const auto& [key, value] : *layoutTree) {
-      mLayoutValues[key] = value.get_value<float_t>();
+      mLayoutValues[key] = *get_from_tree<float_t>(*layoutTree, key);
     }
   }
 
@@ -1557,8 +1575,9 @@ Plot::Pad::Pad(const ptree& padTree)
     }
     // add axes
     if (str_contains(content.first, "AXIS")) {
-      char axis = content.second.get<char>("name");
-      mAxes[axis] = Axis(content.second);
+      const auto axis = get_from_tree<char>(content.second, "name");
+      if (!axis) logger::throw_invalid_argument("{} has no name", content.first);
+      mAxes[*axis] = Axis(content.second);
     }
   }
 }
@@ -2185,8 +2204,8 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
     logger::throw_invalid_argument("Could not construct data from ptree: {}", e.what());
   }
 
-  if (auto var = dataTree.get_optional<bool>("defines_frame")) mDefinesFrame = *var;
-  if (auto var = dataTree.get_optional<bool>("keep_input_style")) mKeepInputStyle = *var;
+  if (auto var = get_from_tree<bool>(dataTree, "defines_frame")) mDefinesFrame = *var;
+  if (auto var = get_from_tree<bool>(dataTree, "keep_input_style")) mKeepInputStyle = *var;
   read_from_tree(dataTree, mLegend.label, "legend_label");
   read_from_tree(dataTree, mLegend.id, "legend_id");
   if (const auto entryTree = dataTree.get_child_optional("legend_entry")) mLegend.entry = LegendEntry(*entryTree);
@@ -2913,6 +2932,7 @@ auto Plot::Pad::Data::ReadJoins(const ptree& tree, const string& label) -> optio
   if (!strs) return nullopt;
   vector<data_info_t::join_t> joins;
   for (const auto& str : *strs) {
+    if (std::count(str.begin(), str.end(), '|') != 3) logger::throw_invalid_argument("Bad value '{}' of {}: tree|data source|keys|alias", str, label);
     joins.push_back(data_info_t::join_t::FromString(str));
   }
   return joins;
@@ -3246,7 +3266,7 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
   try {
     mDenomName = dataTree.get<string>("denom_name");
     mDenomDataSource = dataTree.get<string>("denom_data_source");
-    mCorrelated = dataTree.get<bool>("is_correlated");
+    mCorrelated = get_from_tree<bool>(dataTree, "is_correlated").value_or(false);
   } catch (const std::exception& e) {
     logger::throw_invalid_argument("Could not construct ratio from ptree: {}", e.what());
   }
@@ -3457,7 +3477,9 @@ Plot::Pad::Axis::Axis(const char axisName) : Axis()
 Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
 {
   try {
-    mName = axisTree.get<char>("name");
+    const auto name = get_from_tree<char>(axisTree, "name");
+    if (!name) logger::throw_invalid_argument("the axis has no name");
+    mName = *name;
   } catch (const std::exception& e) {
     logger::throw_invalid_argument("Could not construct axis from ptree: {}", e.what());
   }
@@ -4512,10 +4534,16 @@ Plot::Pad::LegendEntry::LegendEntry(const ptree& legendEntryTree)
   read_from_tree(legendEntryTree, mSymbolElements, "symbol_elements");
   if (const auto symbolOf = get_from_tree<string>(legendEntryTree, "symbol_of")) {
     std::istringstream stream(*symbolOf);
-    for (uint16_t dataID{}; stream >> dataID;)
-      mSymbolOf.push_back(dataID);
+    for (string dataID; stream >> dataID;) {
+      try {
+        mSymbolOf.push_back(util::string_to_type<uint16_t>(dataID));
+      } catch (const std::exception&) {
+        logger::throw_invalid_argument("Bad value '{}' of symbol_of: data numbers separated by spaces", *symbolOf);
+      }
+    }
   }
   if (const auto position = get_from_tree<string>(legendEntryTree, "position")) {
+    if (*position != "top" && *position != "before" && *position != "after") logger::throw_invalid_argument("Bad value '{}' of position: top, before or after", *position);
     if (*position == "top") {
       AtTop();
     } else if (const auto dataID = get_from_tree<uint16_t>(legendEntryTree, "position_data")) {

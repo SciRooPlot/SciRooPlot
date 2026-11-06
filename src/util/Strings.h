@@ -142,6 +142,13 @@ std::string vector_to_string(const std::vector<T>& items)
   return itemString;
 }
 
+// a message without its final period, for messages that end it themselves
+inline std::string without_final_period(std::string message)
+{
+  if (!message.empty() && message.back() == '.') message.pop_back();
+  return message;
+}
+
 template <typename T>
 T string_to_type(const std::string& str)
 {
