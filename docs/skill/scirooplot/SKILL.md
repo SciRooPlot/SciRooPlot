@@ -47,7 +47,7 @@ plot myGroup .+                     # all plots of myGroup and its subgroups
 plot 'myGroup$' .+                  # without subgroups;  plot myGroup/QA ctrl.*  selects a subgroup
 plot thesis 'fig_(a|b)' pdf         # quote patterns with ( ) | in bash
 ```
-Modes: `show` (interactive, the default unless `srp plotmode` sets another; `s`/`a` next/previous, `q` closes; double-click a legend, text, image or shape to print its name and coordinates), `spread` (one window per plot), `list`, `print` (dump definition), `pdf`, `eps`, `ps`, `svg`, `png`, `jpg`, `gif` (all matching plots as one animation in the order they were defined, one plot per frame in a group of its own, e.g. a loop over `SetView` angles, see the example group `animations`; `gif+8++` 8 centiseconds per frame, looping endlessly), `html`, `json`, `xml`, `root`, `macro` (ROOT macro), `file` (canvases into a ROOT file), `data` (the input objects as read). All keys, gif timing and file naming: `reference/cli.md`.
+Modes: `show` (interactive, the default unless `srp plotmode` sets another; `s`/`a` next/previous, `q` closes; double-click a legend, text, image or shape to print its name and coordinates), `spread` (one window per plot), `list`, `print` (dump definition), `pdf`, `eps`, `ps`, `svg`, `png`, `jpg`, `gif` (all matching plots as one animation in the order they were defined, one plot per frame in a group of its own, e.g. a loop over `SetView` angles, see the example group `animations`; `gif+8++` 8 centiseconds per frame, looping endlessly), `html` (ROOT 6.42 or newer), `json`, `xml`, `root`, `macro` (ROOT macro), `file` (canvases into a ROOT file), `data` (the input objects as read). All keys, gif timing and file naming: `reference/cli.md`.
 
 ## Program skeleton
 

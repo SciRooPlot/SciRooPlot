@@ -1230,6 +1230,13 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     logger::error("Invalid plot mode '{}' (srp help lists the modes).", mode);
     return false;
   }
+  // ROOT writes html files from 6.42 on; before, TPad::SaveAs does not know the ending and writes PostScript
+  if constexpr (ROOT_VERSION_CODE < ROOT_VERSION(6, 42, 0)) {
+    if (mode == "html") {
+      logger::error("Mode html needs ROOT 6.42 or newer: ROOT {} cannot write html files.", gROOT->GetVersion());
+      return false;
+    }
+  }
   const bool isInteractiveMode = (mode == "show" || mode == "spread");
   const bool needsDisplay = isInteractiveMode || mode == "macro";
   // plotting uses multi-threading, the classic canvas and fewer ROOT messages; the settings of the calling program are restored afterwards
