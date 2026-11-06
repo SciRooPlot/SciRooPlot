@@ -1,6 +1,7 @@
 """Every colour setter takes a colour in each of its forms, a ROOT index, "#rrggbb" (any case) and (r, g, b) from 0 to 1, and the drawn
 object gets exactly that colour (rgb colours are stored in the plot definitions as "#rrggbb"), with the transparency of the alpha given
-with it (the alpha setter or the alpha of a combined setter); colour forms that are not valid raise when they are set.
+with it (the alpha setter or the alpha of a combined setter); colour forms that are not valid raise when they are set. An index ROOT
+does not know is drawn black (as by ROOT) with a warning, once per index and run.
 Covers: f943c45 (rgb colours in every colour setter).
 """
 
@@ -157,6 +158,13 @@ for i, case in enumerate(todo):
     obj = make(plot, add_data(plot[1], "hist").SetLegendLabel("data"))
     call(obj, FORMS[case["form"]], case["alpha"])
     p.pm.AddPlot(plot)
+# indices ROOT does not know, in setters of data, defaults, axes and boxes; 4999 in two plots
+UNKNOWN = [("Data.SetColor", 4999), ("Pad.SetDefaultColors", 4999), ("Axis.SetColor", -3), ("TextBox.SetTextColor", 4998), ("LegendBox.SetDefaultColor", 4997)]
+for i, (setter, index) in enumerate(UNKNOWN):
+    plot = S.Plot(f"u{i}", "unknown", "1d")
+    make, call, _ = SETTERS[setter]
+    call(make(plot, add_data(plot[1], "hist").SetLegendLabel("data")), index, None)
+    p.pm.AddPlot(plot)
 run = p.plot("forms")
 
 for i, case in enumerate(todo):
@@ -186,4 +194,10 @@ for bad, setter in itertools.product(("#12345", "#12345g", "red", "", (1.5, 0.0,
     check(f"{setter} with {bad!r} raises", bool(raised), "accepted")
 check("no warnings", not run.warnings(), " | ".join(run.warnings()[:5]))
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
+
+run = p.plot("unknown")
+for index in sorted({index for _, index in UNKNOWN}):
+    found = run.warnings(f"Colour index {index} is not defined in ROOT")
+    check(f"unknown colour index {index}: one warning", len(found) == 1, f"{len(found)} warnings | " + " | ".join(run.warnings()[:3]))
+check("unknown colour indices: plots made without other messages", all(run.pad(f"u{i}", "unknown") for i in range(len(UNKNOWN))) and len(run.warnings()) == len({index for _, index in UNKNOWN}) and not run.errors(), " | ".join(run.warnings()[:5] + run.errors()[:3]))
 finish()
