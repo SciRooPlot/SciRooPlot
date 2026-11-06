@@ -483,6 +483,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     }
     if (!inGroup) mScalesInCells.insert(shown);
   }
+  vector<std::pair<TPad*, string>> padSetups;  // the setup of each pad painted (see below)
   for (const auto& [padID, dummy] : plot.GetPads()) {
     if (padID == 0) continue;  // pad 0 is used only to define the defaults
     auto& pad = plot[padID];   // needed because processData lambda cannot capture variable from structured binding ('dummy')
@@ -3520,12 +3521,17 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       if (hide && axisHist_ptr && !polarFrame && !polargram) HideClippedLabels(pad_ptr, ((axisLabel == 'X') != hbarFrame) ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis(), axisLabel);
     }
 
-    // the setup has to be the first primitive of the pad, so that it runs before anything of the pad is painted
-    // (added only now, since drawing the frame histogram without SAME clears the pad)
-    TExec* padSetupExec = new TExec(("setup_pad_" + std::to_string(padID)).data(), padSetup.data());
+    padSetups.emplace_back(pad_ptr, std::move(padSetup));
+  }
+
+  // the setup has to be the first primitive of each pad, so that it runs before anything of the pad is painted: added once all pads are
+  // painted, since every update while the later pads are made repaints the earlier ones, and each run of a setup goes through the
+  // interpreter, which keeps about 30 kB of memory per run (ROOT bug 15); the pads paint with their final setups at the last update
+  for (auto& [setupPad, setup] : padSetups) {
+    TExec* padSetupExec = new TExec(fmt::format("setup_pad_{}", setupPad->GetNumber()).data(), setup.data());
     padSetupExec->SetBit(kCanDelete);
-    pad_ptr->GetListOfPrimitives()->AddFirst(padSetupExec);
-    pad_ptr->Modified();
+    setupPad->GetListOfPrimitives()->AddFirst(padSetupExec);
+    setupPad->Modified();
   }
 
   // what needs all pads drawn: the cells of colour scales, legends with rows for data of other pads, and the titles drawn once for
