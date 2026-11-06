@@ -5976,8 +5976,12 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
                 ptr->SetMinimum();
                 ptr->SetMaximum();
               } else if constexpr (std::is_base_of_v<TGraph, T>) {
-                // the axis histogram of a graph is stored with it once it was drawn or got axis titles (its limits are recomputed when the graph is drawn)
-                if (ptr->GetN() > 0) ptr->GetHistogram()->GetXaxis()->SetRange();
+                // the axis histogram of a graph is stored with it once it was drawn or got axis titles (its limits are recomputed when the graph is drawn);
+                // made here from points that are not finite (removed later), ROOT reports its infinite axis limits
+                if (ptr->GetN() > 0) {
+                  auto quiet = ignore_root_messages_below(kFatal);
+                  ptr->GetHistogram()->GetXaxis()->SetRange();
+                }
                 ptr->SetMinimum();
                 ptr->SetMaximum();
               } else if constexpr (std::is_base_of_v<TGraph2D, T> || std::is_base_of_v<TF1, T>) {
