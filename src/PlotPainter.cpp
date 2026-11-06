@@ -304,7 +304,7 @@ double_t PlotPainter::ClippedBase(const TGraph* graph, bool logY)
 
 TH1* PlotPainter::ToHist(TGraph* graph, bool warn, bool warnAsymmetric)
 {
-  graph->Sort();
+  SortGraph(graph);
   const int32_t n = graph->GetN();
   if (n == 0) {
     if (warn) logger::warning("Graph {} cannot be drawn as a histogram (it has no points).", graph->GetName());
@@ -917,7 +917,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             // the area below the points needs them in the order of x: points in another order (a closed contour, a trajectory) would change their shape
             const double_t* x = data_ptr->GetX();
             if (dataIndex != 0 && !std::is_sorted(x, x + data_ptr->GetN())) logger::warning("The points of graph {} are not in the order of x: they are sorted to draw the area below them.", data->GetName());
-            data_ptr->Sort();
+            SortGraph(data_ptr);
             polygon->SetPoint(0, data_ptr->GetPointX(0), 0.);
             for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
               polygon->SetPoint(i + 1, data_ptr->GetPointX(i), data_ptr->GetPointY(i));
@@ -2551,7 +2551,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (ptr->GetN() < 4) {
               warn("Smooth needs at least 4 points, {} has {}; ignoring.", ptr->GetName(), ptr->GetN());
             } else {
-              ptr->Sort();
+              SortGraph(ptr);
               TGraphSmooth smoother;
               for (uint16_t iter = 0; iter < *mods.GetNiterSmooth(); ++iter) {
                 TGraph* smoothGraph = smoother.SmoothSuper(ptr);
@@ -5985,7 +5985,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
     // spline interpolation requires sorted values
     if (!denominator->TestBit(TGraph::kIsSortedX)) {
       denominator = static_cast<TGraph*>(denominator->Clone(denominator->GetName()));  // keeps the name for messages
-      denominator->Sort();
+      SortGraph(denominator);
       denomX = denominator->GetX();
       denomY = denominator->GetY();
       denomEy = denominator->GetEY();
@@ -6367,6 +6367,47 @@ void PlotPainter::RemoveGraphPoint(TGraph* graph, int32_t i)
     for (int32_t k = i; k < multi->GetN(); ++k)
       multi->SetPointEY(k, e, low[k + 1], high[k + 1]);
   }
+}
+
+//**************************************************************************************************
+/**
+ * Sorts the points of a graph in x. TGraphMultiErrors::Sort leaves the y errors where they are (ROOT bug): its points are put in order
+ * here, each with its errors.
+ */
+//**************************************************************************************************
+void PlotPainter::SortGraph(TGraph* graph)
+{
+  auto* multi = dynamic_cast<TGraphMultiErrors*>(graph);
+  if (!multi) {
+    graph->Sort();
+    return;
+  }
+  const int32_t n = multi->GetN();
+  multi->GetEYlow();  // a graph made by the streamer has no sums of its errors yet (see RemoveGraphPoint)
+  multi->GetEYhigh();
+  vector<int32_t> order(n);
+  std::iota(order.begin(), order.end(), 0);
+  std::stable_sort(order.begin(), order.end(), [&](int32_t a, int32_t b) { return multi->GetX()[a] < multi->GetX()[b]; });
+  auto reordered = [&](const double_t* values) {
+    vector<double_t> result(n);
+    for (int32_t i = 0; i < n; ++i)
+      result[i] = values[order[i]];
+    return result;
+  };
+  const vector<double_t> x = reordered(multi->GetX()), y = reordered(multi->GetY());
+  const vector<double_t> exLow = reordered(multi->GetEXlow()), exHigh = reordered(multi->GetEXhigh());
+  vector<vector<double_t>> eyLow, eyHigh;
+  for (int32_t e = 0; e < multi->GetNYErrors(); ++e) {
+    eyLow.push_back(reordered(multi->GetEYlow(e)));
+    eyHigh.push_back(reordered(multi->GetEYhigh(e)));
+  }
+  for (int32_t i = 0; i < n; ++i) {
+    multi->SetPoint(i, x[i], y[i]);
+    multi->SetPointEX(i, exLow[i], exHigh[i]);
+    for (int32_t e = 0; e < multi->GetNYErrors(); ++e)
+      multi->SetPointEY(i, e, eyLow[e][i], eyHigh[e][i]);
+  }
+  multi->SetBit(TGraph::kIsSortedX);
 }
 
 //**************************************************************************************************

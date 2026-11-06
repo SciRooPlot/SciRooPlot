@@ -31,6 +31,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A TH2Poly divided by a function or by a TH2Poly could crash `plot` at random (ROOT's statistics of a TH2Poly read past its bins) | The polygons are divided without that read | behaviour | none |
 | `Normalize(isDensity, min, max)` and `NormalizeToMaximum(min, max)` of a TH2Poly took all polygons: the range was ignored | The polygons reaching into the range in x, as the bins of other histograms | behaviour | none |
 | A NaN or infinite value in an input of a ratio was divided by: a denominator interpolated at other positions was NaN everywhere (a histogram ratio drawn as zero, a graph ratio not drawn), and the warning named the numerator | Numerator and denominator lose their NaN or infinite values before their modifiers and the division (bins drawn as zero, points left out), with a warning naming that input | behaviour | none |
+| A TGraphMultiErrors whose points are not in the order of x kept its y errors where they were when SciRooPlot sorted it (`Smooth`, `area`, steps and other histogram aliases, as interpolated ratio denominator): the errors belonged to other points | Each point keeps its errors (`TGraphMultiErrors::Sort` of ROOT does not move them) | behaviour | none |
 
 ## 3.3.3 → 4.0.0
 
