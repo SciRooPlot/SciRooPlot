@@ -1028,12 +1028,15 @@ vector<tuple<float_t, float_t, float_t, float_t>> Plot::Pad::GradientEndpoints(c
 
 //**************************************************************************************************
 /**
- * Warn about gradient stops that cannot give the intended colours: positions outside [0, 1] or decreasing (equal neighbours are a hard
- * step), colour components outside [0, 1]. Run once when the gradient is set; the painter clamps the interpolation to the end colours.
+ * Warn about gradient stops that cannot give the intended colours: fewer than two stops or colours, positions outside [0, 1] or decreasing
+ * (equal neighbours are a hard step), colour components outside [0, 1]. Run once when the gradient is set; the painter clamps the
+ * interpolation to the end colours.
  */
 //**************************************************************************************************
-void Plot::Pad::CheckGradient(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, const string& setter)
+void Plot::Pad::CheckGradient(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<int32_t> nColors, const string& setter)
 {
+  if (rgbEndpoints.size() < 2) logger::warning("{}: a gradient needs at least two stops, got {}: the default colours are used.", setter, rgbEndpoints.size());
+  if (nColors && *nColors < 1) logger::warning("{}: the number of gradient colours must be positive, got {}: the default colours are used.", setter, *nColors);
   auto inUnitRange = [](float_t value) { return value >= 0.f && value <= 1.f; };
   for (size_t i = 0; i < rgbEndpoints.size(); ++i) {
     const auto& [red, green, blue, position] = rgbEndpoints[i];
@@ -1112,7 +1115,7 @@ auto Plot::Pad::SetDefaultMarkerColors(const vector<color_t>& colors) -> decltyp
 auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   if (alpha) Plot::CheckAlpha(*alpha);
-  CheckGradient(rgbEndpoints, "SetDefaultMarkerColors");
+  CheckGradient(rgbEndpoints, nColors, "SetDefaultMarkerColors");
   mMarkerDefaults.SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
 }
@@ -1128,7 +1131,7 @@ auto Plot::Pad::SetDefaultLineColors(const vector<color_t>& colors) -> decltype(
 auto Plot::Pad::SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   if (alpha) Plot::CheckAlpha(*alpha);
-  CheckGradient(rgbEndpoints, "SetDefaultLineColors");
+  CheckGradient(rgbEndpoints, nColors, "SetDefaultLineColors");
   mLineDefaults.SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
 }
@@ -1144,7 +1147,7 @@ auto Plot::Pad::SetDefaultFillColors(const vector<color_t>& colors) -> decltype(
 auto Plot::Pad::SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   if (alpha) Plot::CheckAlpha(*alpha);
-  CheckGradient(rgbEndpoints, "SetDefaultFillColors");
+  CheckGradient(rgbEndpoints, nColors, "SetDefaultFillColors");
   mFillDefaults.SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
 }
@@ -1161,7 +1164,7 @@ auto Plot::Pad::SetDefaultColors(const vector<color_t>& colors) -> decltype(*thi
 auto Plot::Pad::SetDefaultColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   if (alpha) Plot::CheckAlpha(*alpha);
-  CheckGradient(rgbEndpoints, "SetDefaultColors");
+  CheckGradient(rgbEndpoints, nColors, "SetDefaultColors");
   for (auto* defaults : {&mMarkerDefaults, &mLineDefaults, &mFillDefaults})
     defaults->SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
@@ -1349,7 +1352,7 @@ auto Plot::Pad::SetPalette(int32_t palette, optional<float_t> alpha) -> decltype
 auto Plot::Pad::SetPalette(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
   if (alpha) Plot::CheckAlpha(*alpha);
-  CheckGradient(rgbEndpoints, "SetPalette");
+  CheckGradient(rgbEndpoints, nColors, "SetPalette");
   mPalette.index = {};
   mPalette.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;

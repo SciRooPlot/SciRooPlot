@@ -42,6 +42,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A TF3 without a fill colour of its own drew its faces opaque white whatever its alpha (`SetAlpha`, `SetFillAlpha`, the alpha defaults of the pad) | The white faces take the alpha | behaviour | none |
 | `SetContours` of a TGraph2D or a function of two variables was ignored (its map, and the colour scale where it came first, had ROOT's 20 levels), and contour lines drawn over such a map gave the colour scale their levels | They take the levels as 2d histograms do: the first map of a pad gives the colour scale its levels | behaviour | none |
 | Pads sharing one colour scale warned about different palettes when one set ROOT's default palette (kBird) or an alpha of 1 and the other nothing | They warn only when painted with different palettes | behaviour | none |
+| A colour gradient of fewer than two stops or with a number of colours below 1 was accepted silently when set (an error when plotted, the default colours used) | A warning when set, naming the setter | behaviour | none |
 
 ### Files
 

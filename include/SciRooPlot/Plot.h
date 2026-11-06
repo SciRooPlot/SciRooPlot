@@ -599,7 +599,7 @@ class Plot::Pad : public FillSetters<Pad>
   auto& GetShapes() { return mShapes; }
   auto& GetImageBoxes() { return mImageBoxes; }
   static std::vector<std::tuple<float_t, float_t, float_t, float_t>> GradientEndpoints(const std::vector<std::pair<color_t, float_t>>& gradient);
-  static void CheckGradient(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, const std::string& setter);
+  static void CheckGradient(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<int32_t> nColors, const std::string& setter);
   uint16_t GetDataCount() const { return mData.size(); }
 
   const auto& GetAxes() const { return mAxes; }
