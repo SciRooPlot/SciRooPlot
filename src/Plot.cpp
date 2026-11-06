@@ -577,27 +577,8 @@ Plot::Plot(const ptree& plotTree)
   ReadFill(plotTree);
 
   // loop over all pads defined in property tree
-  // a pad number above 255 would wrap around and replace another pad
-  auto checkedPadID = [](int64_t padID) {
-    if (padID < 0 || padID > std::numeric_limits<uint8_t>::max()) logger::throw_invalid_argument("Pad number {} is out of range (0 to 255).", padID);
-    return static_cast<uint8_t>(padID);
-  };
-  // the pads of a shared axis or common title: numbers separated by spaces
-  auto readPads = [&checkedPadID](const ptree& tree) {
-    vector<uint8_t> pads;
-    const string list = get_from_tree<string>(tree, "pads").value_or("");
-    std::istringstream stream(list);
-    for (string padID; stream >> padID;) {
-      int64_t number{};
-      try {
-        number = util::string_to_type<int32_t>(padID);
-      } catch (const std::exception&) {
-        logger::throw_invalid_argument("Bad value '{}' of pads: pad numbers separated by spaces", list);
-      }
-      pads.push_back(checkedPadID(number));
-    }
-    return pads;
-  };
+  // the pads of a shared axis or common title
+  auto readPads = [](const ptree& tree) { return ReadPadList(get_from_tree<string>(tree, "pads").value_or(""), "pads"); };
   auto readAxis = [](const ptree& tree, const string& key) {
     const auto axis = get_from_tree<char>(tree, "axis");
     if (!axis) logger::throw_invalid_argument("{} has no axis", key);
@@ -611,7 +592,7 @@ Plot::Plot(const ptree& plotTree)
       } catch (const std::exception&) {
         logger::throw_invalid_argument("Bad key {}: a pad is PAD_<number>", key);
       }
-      mPads[checkedPadID(padID)] = Pad(child);
+      mPads[CheckedPadID(padID)] = Pad(child);
     } else if (str_starts_with(key, "SHARED_AXIS_")) {
       mSharedAxes.push_back({readAxis(child, key), readPads(child), get_from_tree<bool>(child, "layout").value_or(false)});
     } else if (str_starts_with(key, "COMMON_TITLE_")) {
@@ -633,6 +614,52 @@ void Plot::UpdateUniqueName()
 
 //**************************************************************************************************
 /**
+ * A pad number read from a saved plot: a number above 255 would wrap around and replace another pad.
+ */
+//**************************************************************************************************
+uint8_t Plot::CheckedPadID(int64_t padID)
+{
+  if (padID < 0 || padID > std::numeric_limits<uint8_t>::max()) logger::throw_invalid_argument("Pad number {} is out of range (0 to 255).", padID);
+  return static_cast<uint8_t>(padID);
+}
+
+//**************************************************************************************************
+/**
+ * The pads of a list read from a saved plot (the value of the given key): pad numbers separated by spaces.
+ */
+//**************************************************************************************************
+vector<uint8_t> Plot::ReadPadList(const string& list, const string& key)
+{
+  vector<uint8_t> pads;
+  std::istringstream stream(list);
+  for (string padID; stream >> padID;) {
+    int64_t number{};
+    try {
+      number = util::string_to_type<int32_t>(padID);
+    } catch (const std::exception&) {
+      logger::throw_invalid_argument("Bad value '{}' of {}: pad numbers separated by spaces", list, key);
+    }
+    pads.push_back(CheckedPadID(number));
+  }
+  return pads;
+}
+
+//**************************************************************************************************
+/**
+ * A list of pads as saved: pad numbers separated by spaces.
+ */
+//**************************************************************************************************
+string Plot::WritePadList(const vector<uint8_t>& pads)
+{
+  string list;
+  for (uint8_t padID : pads) {
+    list += (list.empty() ? "" : " ") + std::to_string(padID);
+  }
+  return list;
+}
+
+//**************************************************************************************************
+/**
  * Get representation of plot as property tree.
  */
 //**************************************************************************************************
@@ -650,24 +677,17 @@ ptree Plot::GetPropertyTree() const
   for (const auto& [padID, pad] : mPads) {
     plotTree.put_child("PAD_" + std::to_string(padID), pad.GetPropertyTree());
   }
-  auto writePads = [](const vector<uint8_t>& pads) {
-    string list;
-    for (uint8_t padID : pads) {
-      list += (list.empty() ? "" : " ") + std::to_string(padID);
-    }
-    return list;
-  };
   for (size_t i = 0; i < mSharedAxes.size(); ++i) {
     ptree group;
     group.put("axis", mSharedAxes[i].axis);
-    group.put("pads", writePads(mSharedAxes[i].pads));
+    group.put("pads", WritePadList(mSharedAxes[i].pads));
     if (mSharedAxes[i].fromLayout) group.put("layout", true);
     plotTree.put_child("SHARED_AXIS_" + std::to_string(i + 1), group);
   }
   for (size_t i = 0; i < mCommonTitles.size(); ++i) {
     ptree group;
     group.put("axis", mCommonTitles[i].first);
-    group.put("pads", writePads(mCommonTitles[i].second));
+    group.put("pads", WritePadList(mCommonTitles[i].second));
     plotTree.put_child("COMMON_TITLE_" + std::to_string(i + 1), group);
   }
   return plotTree;
@@ -1460,7 +1480,7 @@ Plot::Pad::Pad(const Pad& other)
     mMarkerDefaults(other.mMarkerDefaults), mLineDefaults(other.mLineDefaults), mFillDefaults(other.mFillDefaults),
     mCandleOptionDefaults(other.mCandleOptionDefaults),
     mPalette(other.mPalette), mRedrawAxes(other.mRedrawAxes), mIsEmptyCell(other.mIsEmptyCell), mColorScaleOf(other.mColorScaleOf),
-    mLayoutValues(other.mLayoutValues), mAxes(other.mAxes)
+    mLayoutValues(other.mLayoutValues), mHiddenNextTo(other.mHiddenNextTo), mAxes(other.mAxes)
 {
   mData.reserve(other.mData.size());
   for (const auto& data : other.mData) {
@@ -1540,6 +1560,12 @@ Plot::Pad::Pad(const ptree& padTree)
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
   mIsEmptyCell = get_from_tree<bool>(padTree, "empty_cell").value_or(false);
   read_from_tree(padTree, mColorScaleOf, "color_scale_of");
+  if (auto hiddenTree = padTree.get_child_optional("hidden_next_to")) {
+    for (const auto& [key, pads] : *hiddenTree) {
+      if (key != "x" && key != "y") logger::throw_invalid_argument("Bad key hidden_next_to.{}: x or y", key);
+      mHiddenNextTo[static_cast<char>(std::toupper(key[0]))] = ReadPadList(pads.data(), "hidden_next_to." + key);
+    }
+  }
   if (auto layoutTree = padTree.get_child_optional("layout_values")) {
     for (const auto& [key, value] : *layoutTree) {
       mLayoutValues[key] = *get_from_tree<float_t>(*layoutTree, key);
@@ -1631,6 +1657,9 @@ ptree Plot::Pad::GetPropertyTree() const
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
   if (mIsEmptyCell) padTree.put("empty_cell", true);
   put_in_tree(padTree, mColorScaleOf, "color_scale_of");
+  for (const auto& [axisLabel, pads] : mHiddenNextTo) {
+    padTree.put(string("hidden_next_to.") + static_cast<char>(std::tolower(axisLabel)), WritePadList(pads));
+  }
   for (const auto& [key, value] : mLayoutValues) {
     padTree.put("layout_values." + key, value);
   }
@@ -1726,6 +1755,9 @@ void Plot::Pad::operator+=(const Pad& pad)
   if (pad.mRedrawAxes) mRedrawAxes = pad.mRedrawAxes;
   if (pad.mIsEmptyCell) mIsEmptyCell = true;
   if (pad.mColorScaleOf) mColorScaleOf = pad.mColorScaleOf;
+  for (const auto& [axisLabel, pads] : pad.mHiddenNextTo) {
+    mHiddenNextTo[axisLabel] = pads;
+  }
   for (const auto& [key, value] : pad.mLayoutValues) {
     mLayoutValues[key] = value;
   }

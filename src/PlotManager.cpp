@@ -1955,7 +1955,10 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   for (auto it = sharedAxes.begin(); it != sharedAxes.end();) {
     it = (it->second.empty()) ? sharedAxes.erase(it) : std::next(it);
   }
-  if (sharedAxes.empty()) {
+  // labels and titles a layout hides towards touching panels: shown where a panel has no flat frame, which is known after a first paint
+  const auto& allPads = fullPlot.GetPads();
+  const bool hidesLabels = std::any_of(allPads.begin(), allPads.end(), [](const auto& pad) { return !pad.second.GetHiddenNextTo().empty(); });
+  if (sharedAxes.empty() && !hidesLabels) {
     canvas.reset(paint(fullPlot).release());
   } else {
     // pads sharing an axis: a log scale, time format or range set in one of them (else in pad 0) holds for all of them
@@ -2059,6 +2062,14 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
         }
       }
     }
+    const auto flatPads = painter.GetFlatPads();
+    auto isFlat = [&](uint8_t padID) { return flatPads.count(padID) > 0; };
+    for (const auto& [padID, pad] : allPads) {
+      for (const auto& [axisLabel, touching] : pad.GetHiddenNextTo()) {
+        if (!isFlat(padID) || !std::all_of(touching.begin(), touching.end(), isFlat)) paintAgain = true;
+      }
+    }
+    if (paintAgain) painter.SetFlatPads(flatPads);
     if (!paintAgain) {
       canvas.reset(firstCanvas.release());
     } else {

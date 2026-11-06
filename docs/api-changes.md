@@ -46,6 +46,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A value of a saved definition (`plots.info`) that could not be read was taken as the default, read in part or reported without its key for flags (`defines_frame`, `keep_input_style`, `empty_cell`, `is_correlated`, the `layout` of a shared axis), axis names, the pads of shared axes and common titles, the rows a legend entry shows (`symbol_of`), its `position`, joins and the lengths of base plots; a pad key without number named only the number | The plot is not loaded, with an error naming the value and its key, as for every other value | input validation | Re-run the plotting program to write the file again. |
 | A group set on a base plot was replaced silently (base plots have none) | It is replaced with a warning | behaviour | none |
 | A colour index ROOT does not know (`SetColor(4999)`, a negative index, an index made by the definition program, which does not exist when plotting) was drawn black without a word, in every colour setter | Drawn black with a warning, once per index, naming the forms to use instead | behaviour | none |
+| Touching panels of a layout hid the labels and the title of the axis between them also where one of them is a 3D view or a polar drawing, which share no axis: a 3D view lost the labels and title of its x or y axis | They are hidden only between flat frames: a 3D view, a polar drawing and the panels touching them keep their labels and titles (those of a flat panel then reach into the touching one) | behaviour | Check multi-panel plots with 3D views or polar drawings; hide labels and titles with `Axis::SetLabelSize(0)` and `SetTitleSize(0)` of the pad, or separate the panels with a `Gap()`. |
 
 ### Files
 
@@ -53,6 +54,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 |---|---|---|---|
 | The macro (mode `macro`) of a plot with a TGraph2D did not compile: the frame held the triangulation of the graph, for which ROOT writes a line that is no C++ | The frame has no triangulation, the macro compiles | file format | Write the macros again. |
 | A macro lost the setup of each pad (its palette or gradient, the axis ranges kept for histograms drawn in it, the text format): the frame, drawn first in the macro, cleared the pad | The setup runs before the pad is painted, as in the other modes | file format | Write the macros again. |
+| A layout saved the hiding of the labels and titles between touching panels as label and title size 0 of their axes (`plots.info`) | It is saved as `hidden_next_to` of the pad: the touching panels, by axis | file format | Re-run the plotting programs: plots saved before keep their labels hidden everywhere. |
 
 ## 3.3.3 → 4.0.0
 

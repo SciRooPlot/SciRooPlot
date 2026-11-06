@@ -431,6 +431,10 @@ class Plot : public FillSetters<Plot>
   static void PutLayout(boost::property_tree::ptree& tree, const layout_t& layout, const std::string& prefix, const char* style, const char* scale = nullptr);
   static void ReadDrawOption(const boost::property_tree::ptree& tree, std::optional<draw_option_t>& option, const char* key);
   static void PutDrawOption(boost::property_tree::ptree& tree, const std::optional<draw_option_t>& option, const char* key);
+  // a pad number of a saved plot (a number above 255 would wrap around and replace another pad), and lists of them: numbers separated by spaces
+  static uint8_t CheckedPadID(int64_t padID);
+  static std::vector<uint8_t> ReadPadList(const std::string& list, const std::string& key);
+  static std::string WritePadList(const std::vector<uint8_t>& pads);
 
   std::string mName;
   std::string mGroup;
@@ -645,6 +649,7 @@ class Plot::Pad : public FillSetters<Pad>
   const auto& GetRedrawAxes() const { return mRedrawAxes; }
   bool GetIsEmptyCell() const { return mIsEmptyCell; }
   const auto& GetColorScaleOf() const { return mColorScaleOf; }
+  const auto& GetHiddenNextTo() const { return mHiddenNextTo; }
   const auto& GetRefFunc() const { return mRefFunc; }
   const auto& GetFrame() const { return mFrame; }
 
@@ -712,6 +717,10 @@ class Plot::Pad : public FillSetters<Pad>
   std::optional<uint8_t> mColorScaleOf;          // a ColorScale() cell of a PanelLayout: shows the colour scale of the z group of this pad
   std::map<std::string, float_t> mLayoutValues;  // set by a PanelLayout, kept apart from the axis settings: title offsets for a flat frame (a 3D view
                                                  // has its own) and the defaults of the colour scale (also of a 3d histogram, whose scale is the C axis)
+
+  // a panel of a PanelLayout: the axes whose labels and title are hidden, with the panels touching there (x: below, y: on the left);
+  // hidden only where all of them have flat frames
+  std::map<char, std::vector<uint8_t>> mHiddenNextTo;
 
   std::map<char, Axis> mAxes;
   std::vector<std::shared_ptr<Data>> mData;

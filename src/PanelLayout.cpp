@@ -566,14 +566,31 @@ void PanelLayout::ApplyTo(Plot& plot) const
     const double_t frameHeight = frameBottom[r1] - frameTop[r0];
     target.SetMargins((frameTop[r0] - y0) / height, (y1 - frameBottom[r1]) / height, (frameLeft[c0] - x0) / width, (x1 - frameRight[c1]) / width);
     target.SetDefaultTextSize(mTextSize / minSide);
+    // axes shared with a touching panel: labels and title are only shown once (a label next to a panel would run into its frame); the painter
+    // hides them where this panel and the touching ones have flat frames (a 3D view or a polar drawing shares no axis), so they are kept apart
+    // from the axis settings: the panels touching below (x) and on the left (y)
+    auto touching = [&](size_t rFirst, size_t rLast, size_t cFirst, size_t cLast) {
+      vector<uint8_t> pads;
+      for (size_t r = rFirst; r <= rLast; ++r) {
+        for (size_t c = cFirst; c <= cLast; ++c) {
+          const auto other = static_cast<size_t>(owner[r][c]);
+          if (cells[other].panel->IsPanel() && std::find(pads.begin(), pads.end(), padOf[other]) == pads.end()) pads.push_back(padOf[other]);
+        }
+      }
+      return pads;
+    };
+    const bool hideX = below.panel && rowSep[r1].shared;
+    const bool hideY = left.panel && colSep[c0 - 1].shared;
+    if (hideX) pad.mHiddenNextTo['X'] = touching(r1 + 1, r1 + 1, c0, c1);
+    if (hideY) pad.mHiddenNextTo['Y'] = touching(r0, r1, c0 - 1, c0 - 1);
     target['X']
-      .SetTitleSize(mTitleSize / minSide)
       .SetTickLength(mTickLength * width / (frameWidth * height))
       .SetLabelOffset(mLabelOffset / height);
     target['Y']
-      .SetTitleSize(mTitleSize / minSide)
       .SetTickLength(mTickLength * height / (frameHeight * width))
       .SetLabelOffset(mLabelOffset / width);
+    if (!hideX) target['X'].SetTitleSize(mTitleSize / minSide);  // a hidden title gets it from the layout values where it is shown after all
+    if (!hideY) target['Y'].SetTitleSize(mTitleSize / minSide);
     target['Z'].SetTitleSize(mTitleSize / minSide);  // also for the z axis of 3D views in panels without a colour scale
     // kept apart from the axis settings (see PlotPainter): the title offsets of a flat frame (a 3D view places its titles itself), and the look
     // of the colour scale, which for a 3d histogram is the C axis
@@ -585,9 +602,6 @@ void PanelLayout::ApplyTo(Plot& plot) const
       target.mLayoutValues["color_scale_offset"] = static_cast<float_t>(mColorScaleOffset / width);
       target.mLayoutValues["color_scale_width"] = static_cast<float_t>(mColorScaleWidth / width);
     }
-    // axes shared with a touching panel: labels and title are only shown once (a label next to a panel would run into its frame)
-    if (left.panel && colSep[c0 - 1].shared) pad['Y'].SetTitleSize(0.).SetLabelSize(0.);
-    if (below.panel && rowSep[r1].shared) pad['X'].SetTitleSize(0.).SetLabelSize(0.);
     // touching panels of another length share no axis (see below), but the labels between them are hidden all the same
     auto otherLength = [&, cell = cell, r0 = r0, c0 = c0](size_t r, size_t c, bool sameRows) {
       const auto& [other, rr, cc] = cells[owner[r][c]];

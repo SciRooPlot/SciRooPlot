@@ -1307,6 +1307,22 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               }
             }
 
+            // labels and title a layout hides towards touching panels (see PanelLayout::ApplyTo): only where the axis is shared, i.e. this panel and
+            // the touching ones have flat frames (known from an earlier paint, see SetFlatPads), and unless the pad sets their size itself
+            if (auto hidden = pad.GetHiddenNextTo().find(axisLabel); hidden != pad.GetHiddenNextTo().end()) {
+              auto isFlat = [&](uint8_t other) { return mFlatPads->count(other) > 0; };
+              const bool shared = !mFlatPads || (isFlat(padID) && std::all_of(hidden->second.begin(), hidden->second.end(), isFlat));
+              const auto own = pad.GetAxes().find(axisLabel);
+              const bool ownTitleSize = own != pad.GetAxes().end() && own->second.GetTitleSize();
+              const bool ownLabelSize = own != pad.GetAxes().end() && own->second.GetLabelSize();
+              if (shared) {
+                if (!ownTitleSize) textSizeTitle = 0.f;
+                if (!ownLabelSize) textSizeLabel = 0.f;
+              } else if (auto titleSize = LayoutValue(pad, padDefaults, "title_size"); titleSize && !ownTitleSize) {
+                textSizeTitle = titleSize;
+              }
+            }
+
             // a lower end at or below zero cannot be shown on a log scale: the axis is drawn as without it (as in ROOT), with a warning below
             optional<double_t> ignoredRangeMin;
             if (userRangeMin && !MinRange(pad, padDefaults, axisLabel)) ignoredRangeMin = std::exchange(userRangeMin, nullopt);

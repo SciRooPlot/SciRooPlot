@@ -101,7 +101,8 @@ Panel ColorScale(uint8_t padID);
  * standard plot. All lengths are pixels of the plot at scale 1 (see srp screenscale and srp bitmapscale);
  * a plot made from a layout has them in every panel, so that plots of different layouts look the same.
  * Panels that touch share the axis between them (Plot::ShareAxis: x within a column, y within a row) and their inner labels and
- * titles are hidden; the outer title of a row (x) or column (y) of touching panels is drawn once for all of them (SetCommonTitles).
+ * titles are hidden (between flat frames: a 3D view or a polar drawing shares no axis, it and its neighbours keep them); the outer
+ * title of a row (x) or column (y) of touching panels is drawn once for all of them (SetCommonTitles).
  * All panels of a column share the width, all panels of a row the height (cells spanning several columns or rows excepted).
  * The pads of the resulting plot are numbered in reading order, gaps and holes have no pad.
  * Lengths are floating-point pixels of the canvas (the unit of ROOT's line widths and pixel fonts), the defaults are

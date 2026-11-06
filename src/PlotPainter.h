@@ -278,6 +278,17 @@ class PlotPainter
     mSharedAxes = std::move(groups);
     mCommonRanges = std::move(commonRanges);
   }
+  // the pads with flat frames, from an earlier paint of the plot (see GetFlatPads): the labels and titles a layout hides towards touching panels
+  // stay where one of them has none (unknown: hidden everywhere)
+  void SetFlatPads(std::set<uint8_t> flatPads) { mFlatPads = std::move(flatPads); }
+  std::set<uint8_t> GetFlatPads() const
+  {
+    std::set<uint8_t> pads;
+    for (const auto& [padID, frame] : mFrameHists) {
+      pads.insert(padID);
+    }
+    return pads;
+  }
   // the ranges of the frames as drawn (x and y of flat frames, z of 2d frames), keyed by pad and axis
   const std::map<std::pair<uint8_t, char>, std::pair<double_t, double_t>>& GetFrameRanges() const { return mFrameRanges; }
 
@@ -393,6 +404,7 @@ class PlotPainter
   std::map<char, std::vector<std::vector<uint8_t>>> mSharedAxes;
   std::set<std::pair<uint8_t, char>> mCommonRanges;
   std::map<std::pair<uint8_t, char>, std::pair<double_t, double_t>> mFrameRanges;
+  std::optional<std::set<uint8_t>> mFlatPads;
   std::map<uint8_t, TH1*> mFrameHists;  // the frame histograms of the flat frames (owned by their pads)
   std::map<uint8_t, TH1*> mScaleHists;  // the frame histograms with a z axis, also in 3D views (owned by their pads)
   std::set<uint8_t> mScalesInCells;     // pads whose colour scale a ColorScale() cell shows instead of the pad
