@@ -1917,18 +1917,22 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                 dataAxis->SetTitle(frameAxis->GetTitle());
               }
             }
-            // colour levels: the frame, whose colour scale is drawn (and from which COL drawn SAME takes its colours), takes those of the first
-            // 2d or 3d histogram of the pad, the one it is made from, also fewer than ROOT's 20, so that the scale shows the levels of the map; levels of later data
-            // (e.g. contour lines over a map) are their own, the frame takes them only if they are more
+          }
+          // colour levels: the frame, whose colour scale is drawn (and from which COL drawn SAME takes its colours), takes those of the first
+          // map of the pad (a 2d or 3d histogram, a 2d graph or a 2d function), the one it is made from, also fewer than ROOT's 20, so that the
+          // scale shows the levels of the map; levels of later data (e.g. contour lines over a map) are their own, the frame takes them only if they are more
+          if constexpr (is_2d<data_type>() || is_hist_3d<data_type>()) {
             const bool firstMap = !mapDrawn;
             mapDrawn = true;
             const auto& contours = data->GetContours();
             const int32_t nLevels = contours ? static_cast<int32_t>(contours->size()) : data->GetNContours().value_or(0);
             if (nLevels > 0) {
-              if (contours) {
-                data_ptr->SetContour(nLevels, contours->data());
-              } else {
-                data_ptr->SetContour(nLevels);
+              if constexpr (!is_graph_2d<data_type>()) {  // a 2d graph gets them when painted (below)
+                if (contours) {
+                  data_ptr->SetContour(nLevels, contours->data());
+                } else {
+                  data_ptr->SetContour(nLevels);
+                }
               }
               if (firstMap || axisHist_ptr->GetContour() < nLevels) {
                 if (contours) {
@@ -2000,6 +2004,25 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // named as in the plot definition (<name>), without data source, request and projection
           data_ptr->SetName((std::to_string(dataIndex - hasRefFunc) + ":" + data_ptr->GetName()).data());
           mDataDefinitions[data_ptr] = data;
+          if constexpr (is_graph_2d<data_type>()) {
+            // ROOT paints a 2d graph through a histogram it makes when painting and does not store with the graph: it gets the colour levels at every paint
+            const auto& contours = data->GetContours();
+            if (contours ? !contours->empty() : data->GetNContours().value_or(0) > 0) {
+              string levels = (contours) ? fmt::format("{}, std::vector<Double_t>{{", contours->size()) : std::to_string(*data->GetNContours());
+              if (contours) {
+                for (const double_t level : *contours)
+                  levels += fmt::format("{}, ", level);
+                levels += "}.data()";
+              }
+              string quoted;  // the name goes into interpreted code
+              for (const char c : string(data_ptr->GetName())) {
+                if (c == '"' || c == '\\') quoted += '\\';
+                quoted += c;
+              }
+              drawExec("levels_" + std::to_string(dataIndex - hasRefFunc),
+                       fmt::format("if (auto* graph = dynamic_cast<TGraph2D*>(gPad->GetPrimitive(\"{}\"))) graph->GetHistogram()->SetContour({});", quoted, levels));
+            }
+          }
           if constexpr (!is_hist<data_type>()) {
             if (statsHist) {
               statsHist->SetName(data_ptr->GetName());  // for <name> and the title line of the statistics box
