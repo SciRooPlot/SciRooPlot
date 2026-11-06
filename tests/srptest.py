@@ -1212,9 +1212,13 @@ def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
                 exp.error(f"Cannot divide {exp.num} by {exp.den}: their binnings differ")
                 return None
             return graph_to_hist(num, divide_points(x_errors(num, Points(num)), x_errors(den, Points(den)), binomial, exp))
+        if num.InheritsFrom("TH2Poly"):
+            return divide_polygons(num, den, binomial)
+        for operand in (num, den):  # without stored errors TH1::Divide gives sqrt(ratio) as error, NaN for a negative denominator
+            if not operand.GetSumw2N():
+                operand.Sumw2()
         num.Divide(num, den, 1.0, 1.0, "B" if binomial else "")
-        if not num.InheritsFrom("TH2Poly"):
-            num.ClearUnderflowAndOverflow()
+        num.ClearUnderflowAndOverflow()
         return num
     # a graph numerator
     if df == "graph" or df == "hist1":
@@ -1225,6 +1229,24 @@ def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
         return divide_by_function_graph(numObj, denFunc, binomial, exp)
     exp.error(f"Unsupported division of {as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}")
     return None
+
+
+def divide_polygons(num, den, binomial):
+    """a TH2Poly by one of the same polygons with the formulas of TH1::Divide, whose ResetStats reads past the arrays of a TH2Poly"""
+    entries = den.GetEntries() if binomial else num.GetEntries()
+    for b in range(1, num.GetNumberOfBins() + 1):
+        b1, b2 = num.GetBinContent(b), den.GetBinContent(b)
+        e1sq, e2sq = num.GetBinError(b) ** 2, den.GetBinError(b) ** 2
+        if not b2:
+            errsq = 0.0
+        elif binomial:
+            errsq = 0.0 if b1 == b2 else abs(((1 - 2 * b1 / b2) * e1sq + b1 * b1 * e2sq / (b2 * b2)) / (b2 * b2))
+        else:
+            errsq = (e1sq * b2 * b2 + e2sq * b1 * b1) / b2**4
+        num.SetBinContent(b, b1 / b2 if b2 else 0.0)
+        num.SetBinError(b, math.sqrt(errsq))
+    num.SetEntries(entries)
+    return num
 
 
 def same_binning(a, b):

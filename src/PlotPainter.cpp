@@ -2308,7 +2308,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         scaleAxis(2, mods.GetScaleAxisZ());
 
         if constexpr (is_hist<ptr_type>()) {
-          if (!ptr->GetSumw2N()) ptr->Sumw2();
           // a TProfile3D is held as a TH3, a TH2Poly as a TH2
           [[maybe_unused]] TH2Poly* poly = (is_hist_2d<ptr_type>()) ? dynamic_cast<TH2Poly*>(ptr) : nullptr;
           constexpr bool isProfileType = is_one_of_v<ptr_type, TProfile*, TProfile2D*>();
@@ -2882,7 +2881,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if constexpr (!isHist) singlePoint = (data_ptr->GetN() == 1);
             if (fillStyle != 0 && fillColor != 0) {
               optionAlias = (isHist) ? hist : area;
-            } else if (data->GetMarkerStyle() || data->GetMarkerSize() || HasErrors(data_ptr) || singlePoint) {
+            } else if (data->GetMarkerStyle() || data->GetMarkerSize() || HasErrors(data_ptr, true) || singlePoint) {
               optionAlias = points;
             } else {
               optionAlias = (isHist) ? hist : line;
@@ -4165,13 +4164,14 @@ void PlotPainter::CheckFontSizes(TList* list)
 //**************************************************************************************************
 /**
  * Whether data has errors as ROOT draws them by default: a histogram with stored errors of which at least one is not zero
- * (a profile always computes them), a graph with a y error that is not zero.
+ * (a profile always computes them), a graph with a y error that is not zero. With countErrors, also a histogram without stored
+ * errors whose contents give it errors (the square roots of the contents, which ROOT draws only when asked to).
  */
 //**************************************************************************************************
-bool PlotPainter::HasErrors(const TObject* obj)
+bool PlotPainter::HasErrors(const TObject* obj, bool countErrors)
 {
   if (auto hist = dynamic_cast<const TH1*>(obj)) {
-    if (hist->GetSumw2N() == 0 && !hist->InheritsFrom(TProfile::Class())) return false;
+    if (hist->GetSumw2N() == 0 && !hist->InheritsFrom(TProfile::Class()) && !countErrors) return false;
     for (int32_t bin = 1; bin <= hist->GetNbinsX(); ++bin) {
       if (hist->GetBinError(bin) != 0.) return true;
     }
@@ -6227,6 +6227,10 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, 
   if (numerator->GetDimension() >= 2) sameBinning = sameBinning && sameAxisBinning(numerator->GetYaxis(), denominator->GetYaxis());
   if (numerator->GetDimension() >= 3) sameBinning = sameBinning && sameAxisBinning(numerator->GetZaxis(), denominator->GetZaxis());
   if (sameBinning) {
+    // without stored errors TH1::Divide takes the content, not its absolute value, as squared error: a negative bin gets a NaN error
+    for (TH1* operand : {numerator, denominator}) {
+      if (!operand->GetSumw2N()) operand->Sumw2();
+    }
     return numerator->Divide(numerator, denominator, 1., 1., (binomialErrors) ? "B" : "");
   }
   for (TAxis* axis : {numerator->GetXaxis(), numerator->GetYaxis(), numerator->GetZaxis(), denominator->GetXaxis(), denominator->GetYaxis(), denominator->GetZaxis()}) {

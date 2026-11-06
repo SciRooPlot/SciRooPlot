@@ -7,16 +7,18 @@ first data drawn the same way; only SciRooPlot's own cleanups change it:
 - a TH2Poly asked for LEGO or SURF is drawn as COL (COLZ) with a warning (ROOT draws polygon bins in 3d only with OpenGL);
 - SetTextAngle is written after TEXT (an angle already in the option is kept, angles outside 0-90 are clamped with a warning);
 - arrows (ARR) get ROOT's line width 1 unless the data sets one.
+A histogram is drawn with stored errors (Sumw2) only where its input has them, so the empty option draws a histogram filled without
+weights as ROOT does: as steps, without its errors.
 The colour scale Z of 2d and 3d data is drawn by the frame (see aliases.py), so it is compared without it.
 Covers: 54eff86 (SAME, RX/RY), 6c87cc7 (A of graphs), 9c7c462 (polar grid letters), arrow width (backlog 47), AXIS/AXIG.
 """
 
 import re
 
-from srptest import DATA_KINDS, Project, S, add_data, base_of, cases, check, data_name, describe, drawn_type, finish, no_scale, option
+from srptest import DATA_KINDS, Project, S, add_data, base_of, cases, check, data_name, data_objects, describe, drawn_type, finish, no_scale, option
 
 RAW = {  # raw ROOT options without an alias, by what the data is drawn as
-    "hist1d": ["E", "E0", "E1", "E2", "E3", "E4", "E5", "E6", "HIST", "L", "C", "P", "P0", "B", "BAR", "HBAR", "LF2", "HIST F", "HIST P", "E P", "E2 P", "*H", "HIST LP", "HIST E", "HIST E1", "HIST E2", "HIST E3", "TEXT", "X0 E"],
+    "hist1d": ["", "E", "E0", "E1", "E2", "E3", "E4", "E5", "E6", "HIST", "L", "C", "P", "P0", "B", "BAR", "HBAR", "LF2", "HIST F", "HIST P", "E P", "E2 P", "*H", "HIST LP", "HIST E", "HIST E1", "HIST E2", "HIST E3", "TEXT", "X0 E"],
     "graph": ["P", "L", "C", "B", "F", "LP", "CP", "PZ", "2", "3", "4", "5", "3L", "4C", "3PL", "LF", "E", "E1", "||", "[]", "0", "X P", "*", "P >", "P |>"],
     "function": ["L", "C", "P", "LF2", "FC", "*"],
     "hist2d": ["COL", "COLZ", "COL0", "BOX", "BOX1", "SCAT", "TEXT", "ARR", "CONT", "CONT0", "CONT1", "CONT2", "CONT3", "CONT4", "LEGO", "LEGO1", "LEGO2", "SURF", "SURF1", "SURF2", "SURF3", "SURF4", "CANDLE", "VIOLIN", "COL POL"],
@@ -103,6 +105,7 @@ def warnings_of(kind, text=""):
     return [w for w in run.warnings(text) if name.search(w)]
 
 
+inputs = data_objects()
 counted = {}  # warnings expected per (kind, text) over the run
 
 
@@ -118,6 +121,10 @@ for i, case in enumerate(passing):
         check(f"plot made: {what}", False, " | ".join(run.errors()[:2]))
         continue
     opts = [opt for _, opt in drawn]
+    _, cls, props = DATA_KINDS[case["kind"]]
+    if cls.startswith(("TH1", "TH2", "TH3")) and "projected" not in props:
+        stored = inputs[case["kind"]].GetSumw2N() > 0
+        check(f"stored errors only as in the input ({stored}): {what}", all((obj.GetSumw2N() > 0) == stored for obj, _ in drawn), [obj.GetSumw2N() for obj, _ in drawn])
     check(f"raw option reaches ROOT: {what}", opts == [want] * len(opts) and len(opts) == (2 if case["position"] == "second" else 1), f"drawn with {opts}, expected '{want}'")
     expect_warnings(case["kind"], "is not available for TH2Poly", nWarnings * len(opts))
 for i, case in enumerate(cleanups):

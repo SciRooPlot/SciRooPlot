@@ -34,6 +34,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A TGraphMultiErrors whose points are not in the order of x kept its y errors where they were when SciRooPlot sorted it (`Smooth`, `area`, steps and other histogram aliases, as interpolated ratio denominator): the errors belonged to other points | Each point keeps its errors (`TGraphMultiErrors::Sort` of ROOT does not move them) | behaviour | none |
 | `Normalize` or `NormalizeToMaximum` of a graph whose values sum up (or reach their maximum) below zero multiplied its errors by the negative factor: negative error bars, drawn as a line by the default rule | Errors stay positive, low and high errors swap as the values turn upside down (as for histograms) | behaviour | none |
 | `Cumulative()` drew a histogram as `<name>_cumulative` (in `Plots.root`, macros and messages) | Under its own name | behaviour | none |
+| Every histogram was given stored errors (`Sumw2`) before drawing: one filled without weights drawn with ROOT's default option (`SetDrawOption("")`) showed its √N error bars, and the copies in `Plots.root` and macros had `Sumw2` | A histogram has stored errors only where its input has them or a modifier needs them (as in ROOT): `""` draws it as steps, as plain ROOT does; the default drawing rule still draws it as points with its √N errors | behaviour | `SetDrawOption("E")` (or the `points` alias) to show the errors |
 
 ## 3.3.3 → 4.0.0
 

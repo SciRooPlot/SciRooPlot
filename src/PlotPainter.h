@@ -357,7 +357,7 @@ class PlotPainter
   static LegendSymbol GetLegendSymbol(TObject* obj, std::string option);
   // parts of a drawing option that contain the letters of markers, lines, fills and error bars but draw nothing of that kind
   static constexpr std::array<const char*, 7> kNonSymbolTokens{"SAME", "TEXT", "PFC", "PLC", "PMC", "X0", "]["};
-  static bool HasErrors(const TObject* obj);
+  static bool HasErrors(const TObject* obj, bool countErrors = false);
   void DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const std::string& name);
   bool DrawBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, const Plot::Pad& pad, const Plot::Pad& padDefaults, TPad* pad_ptr,
                const std::string& name);
