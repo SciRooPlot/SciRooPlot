@@ -76,27 +76,47 @@ def DefineTour(pm: PlotManager):
 
 def DefineGallery(pm: PlotManager):
     rng = random.Random(4)
-    pm.AddDataSource("hist", histo("h", [rng.gauss(0.0, 1.0) for _ in range(600)], 14, (-3.5, 3.5)))
-    x = [0.5 + i for i in range(8)]
-    pm.AddDataSource("graph", graph("g", x, [2.0 + 6.0 * (xi / 8.0) ** 1.5 + rng.uniform(-0.4, 0.4) for xi in x],
-                                    [0.5] * 8, [0.3 + 0.1 * xi for xi in x]))
+    # one spectrum for all 1D kinds: a peak on a falling background, as histogram, as graph (the bin centres) and as function;
+    # the frame leaves room beside the bins, so that the outer edges of the steps (hist vs. hist_open) do not hide in the frame
+    frameX = (-0.5, 8.5)
+    peak = "55*exp(-x/3.2)+45*exp(-0.5*((x-4.5)/0.7)^2)"
+    spectrum = ROOT.TF1("spectrum", peak, 0.0, 8.0)
+    h = ROOT.TH1D("h", "", 16, 0.0, 8.0)
+    bins = range(1, h.GetNbinsX() + 1)
+    for i in bins:  # whole counts with their sqrt(N) errors
+        h.SetBinContent(i, round(spectrum.Eval(h.GetBinCenter(i))))
+        h.SetBinError(i, math.sqrt(h.GetBinContent(i)))
+    pm.AddDataSource("hist", h)
+    pm.AddDataSource("graph", graph("g", [h.GetBinCenter(i) for i in bins], [h.GetBinContent(i) for i in bins],
+                                    [0.5 * h.GetBinWidth(i) for i in bins], [h.GetBinError(i) for i in bins]))
     for alias in ALIASES_1D:
         for kind in ["hist", "graph"]:
-            plot = Plot(alias, "gallery/" + kind, "1d")
             name = "h" if kind == "hist" else "g"
+            clipped = alias.endswith("_clipped")
+            if clipped:
+                # ROOT moves what lies beyond a log frame onto its edge (on a linear axis both look the same): the alias without
+                # _clipped above runs along the edges where the peak and the tail leave the frame, the clipped one below has no line there
+                plot = Plot(alias, PanelLayout([[Panel(1.0, 0.5)], [Panel(1.0, 0.5)]]))
+                plot.SetGroup("gallery/" + kind)
+                for pad, shown in [(1, alias.removesuffix("_clipped")), (2, alias)]:
+                    plot[pad].AddData(name, kind).SetDrawOption(globals()[shown]).SetColor(kAzure + 2)
+                    plot[pad].AddText(0.3, 0.5, shown)  # below the dip, clear of the outer edge of the first bin
+                    plot[pad]['Y'].SetLog().SetRange(7.5, 35.0).SetTitle("")
+                plot[0]['X'].SetRange(*frameX).SetTitle("")
+                pm.AddPlot(plot)
+                continue
+            plot = Plot(alias, "gallery/" + kind, "1d")
             data = plot[1].AddData(name, kind).SetDrawOption(globals()[alias]).SetColor(kAzure + 2).SetFill(1001, kAzure + 2)
             if alias != "points_arrows":  # the arrowheads are filled with the fill colour: transparent ones are hardly visible
                 data.SetFillAlpha(0.35)
             if alias in ("text", "points_text"):
-                data.SetTextFormat("g" if kind == "hist" else ".1f")  # "g" would show the graph's values with six digits
+                data.SetTextFormat("g")
                 plot[1]['Y'].SetRoomAboveMax(0.12)  # the value of the highest bin stays inside the frame
             plot[1]['X'].SetTitle("")
             plot[1]['Y'].SetTitle("")
-            if alias.startswith(("curve", "hist")):  # bins beyond the frame show what the clipped variants change
-                if kind == "hist":
-                    plot[1]['Y'].SetLog().SetRange(4.0, 90.0)
-                else:
-                    plot[1]['Y'].SetRange(2.5, 6.0)
+            if alias != "hbars":  # (the bins of hbars go up the y axis)
+                plot[1]['X'].SetRange(*frameX)
+                plot[1]['Y'].SetMinRange(0.0)  # counts: bars, areas and steps start at zero
             pm.AddPlot(plot)
     pm.AddDataSource("heavyion", EXAMPLE + "/heavyion.root")
     # a two-particle correlation for the 2D aliases, filled with its expectation (smooth, no empty cells): the jet peak at the
@@ -149,9 +169,9 @@ def DefineGallery(pm: PlotManager):
         pm.AddPlot(plot)
     for alias in ALIASES_FUNC:
         plot = Plot(alias, "gallery/func", "1d")
-        plot[1].AddFunction("sin(x)/x").SetRangeX(0.5, 15.0).SetDrawOption(globals()[alias]).SetColor(kAzure + 2).SetFill(1001, kAzure + 2).SetFillAlpha(0.35)
-        plot[1]['X'].SetRange(0.5, 15.0).SetTitle("")
-        plot[1]['Y'].SetRange(-0.3, 1.1).SetTitle("")
+        plot[1].AddFunction(peak).SetRangeX(0.0, 8.0).SetDrawOption(globals()[alias]).SetColor(kAzure + 2).SetFill(1001, kAzure + 2).SetFillAlpha(0.35)
+        plot[1]['X'].SetRange(*frameX).SetTitle("")
+        plot[1]['Y'].SetMinRange(0.0).SetTitle("")
         pm.AddPlot(plot)
     # a 2d graph: points scattered over a peak
     graph2d = ROOT.TGraph2D(150)
