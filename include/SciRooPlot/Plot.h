@@ -184,7 +184,8 @@ inline std::optional<box_placement_t> box_placement_from_name(const std::string&
 }
 
 // coordinate system of the position of a box or a shape: fractions of the pad (0 to 1), fractions of the frame ((0, 0) lower left,
-// (1, 1) upper right corner) or axis values; for all boxes or shapes of a pad (Pad::SetDefaultBoxCoordinates, SetDefaultShapeCoordinates)
+// (1, 1) upper right corner, beyond them outside of the frame; a 3d view: the pad within its margins, an empty layout cell: the whole
+// pad) or axis values; for all boxes or shapes of a pad (Pad::SetDefaultBoxCoordinates, SetDefaultShapeCoordinates)
 #define COORDINATE_SYSTEMS       \
   COORDINATES(pad_coordinates)   \
   COORDINATES(frame_coordinates) \
@@ -544,7 +545,7 @@ class Plot::Pad : public FillSetters<Pad>
   LegendBox& AddLegend(double_t xPos, double_t yPos, const std::optional<std::string>& title = {});
   LegendBox& AddLegend(const std::optional<std::string>& title = {});
   LegendBox& AddLegend(box_placement_t placement, const std::optional<std::string>& title = {});
-  // image file (png, jpg, ...) drawn at the given upper left corner or placed automatically; by default 0.2 of the pad width wide
+  // image file (png, jpg, ...) drawn at the given upper left corner or placed automatically; by default 0.2 of the frame width wide
   ImageBox& AddImage(double_t xPos, double_t yPos, const std::string& path);
   ImageBox& AddImage(const std::string& path);
   ImageBox& AddImage(box_placement_t placement, const std::string& path);
@@ -609,7 +610,7 @@ class Plot::Pad : public FillSetters<Pad>
   Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles);
   Pad& SetDefaultCandleBoxRange(float_t range);
   Pad& SetDefaultCandleWhiskerRange(float_t range);
-  Pad& SetDefaultBoxCoordinates(coordinates_t coordinates);    // of the legends, texts, statistics boxes and images that set none (default: pad_coordinates)
+  Pad& SetDefaultBoxCoordinates(coordinates_t coordinates);    // of the legends, texts, statistics boxes and images that set none (default: frame_coordinates)
   Pad& SetDefaultShapeCoordinates(coordinates_t coordinates);  // of the shapes that set none (default: user_coordinates)
   Pad& SetTransparent();
   Pad& SetFrameFill(int16_t style, color_t color, float_t alpha = 1.f);
@@ -1477,8 +1478,8 @@ class Plot::Pad::Box : public BorderSetters<BoxType>, public TextSetters<BoxType
 
   BoxType& SetPosition(double_t x, double_t y);
   BoxType& SetSize(double_t width, double_t height);
-  BoxType& SetPadCoordinates();    // position and size as fractions of the pad (0 to 1; default, see Pad::SetDefaultBoxCoordinates)
-  BoxType& SetFrameCoordinates();  // position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner)
+  BoxType& SetPadCoordinates();    // position and size as fractions of the pad (0 to 1)
+  BoxType& SetFrameCoordinates();  // position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner; default, see Pad::SetDefaultBoxCoordinates)
   BoxType& SetUserCoordinates();   // position as axis values (size as fractions of the pad)
   BoxType& SetAutoPlacement(box_placement_t placement = best_corner);
   BoxType& SetTransparent();
@@ -1584,10 +1585,10 @@ class Plot::Pad::ImageBox
   void Print() const { Plot::Print(GetPropertyTree(), "ImageBox"); }
 
   ImageBox& SetPosition(double_t x, double_t y);
-  ImageBox& SetWidth(double_t width);    // fraction of the pad width, of the frame width in frame coordinates (no SetSize: one side may follow from the aspect ratio)
-  ImageBox& SetHeight(double_t height);  // fraction of the pad height, of the frame height in frame coordinates
-  ImageBox& SetPadCoordinates();         // position and size as fractions of the pad (0 to 1; default, see Pad::SetDefaultBoxCoordinates)
-  ImageBox& SetFrameCoordinates();       // position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner)
+  ImageBox& SetWidth(double_t width);    // fraction of the frame width, of the pad width in pad and user coordinates (no SetSize: one side may follow from the aspect ratio)
+  ImageBox& SetHeight(double_t height);  // fraction of the frame height, of the pad height in pad and user coordinates
+  ImageBox& SetPadCoordinates();         // position and size as fractions of the pad (0 to 1)
+  ImageBox& SetFrameCoordinates();       // position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner; default, see Pad::SetDefaultBoxCoordinates)
   ImageBox& SetUserCoordinates();        // position as axis values
   ImageBox& SetAutoPlacement(box_placement_t placement = best_corner);
 

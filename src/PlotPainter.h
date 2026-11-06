@@ -271,7 +271,7 @@ class PlotPainter
   static bool IsContentScale(const Plot::Pad& pad, const data_buffer_t& dataBuffer);  // the colour axis of the pad is the contents of a 3d histogram (C)
   // the colours the n-th data item of a pad takes when neither the data nor its pad nor pad 0 sets one
   static const std::vector<color_t>& DefaultColors();
-  // the frame of a pad as fractions of the pad (x1, y1, x2, y2); a 3d view has none: the pad within its margins
+  // the frame of a pad as fractions of the pad (x1, y1, x2, y2); a 3d view: the pad within its margins; an empty layout cell: the pad
   static std::array<double_t, 4> FrameInPad(const TVirtualPad* pad);
   // the red, green and blue of nColors spread evenly over a gradient
   static std::vector<std::tuple<double_t, double_t, double_t>> GradientRGB(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints);

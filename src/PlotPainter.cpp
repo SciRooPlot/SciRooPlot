@@ -3439,7 +3439,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       for (const auto& box : pad.GetImageBoxes()) {
         ++imageIndex;
         if (box->IsAutoPlacement() == fixedPositions) continue;
-        DrawImage(*box, get_first_or(pad_coordinates, box->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates()), pad_ptr, "ImageBox_" + std::to_string(imageIndex));
+        DrawImage(*box, get_first_or(frame_coordinates, box->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates()), pad_ptr, "ImageBox_" + std::to_string(imageIndex));
       }
     };
     placeBoxes(true);
@@ -3484,7 +3484,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       // the margin of TPaveStats is a fraction of the box width, the one set for a box is in NDC (as for legends and texts)
       double_t widthNDC = (statsBox->GetMargin()) ? contentWidthPixel / padWidthPixel + 2. * *statsBox->GetMargin() : contentWidthPixel / (1. - 2. * stats->GetMargin()) / padWidthPixel;
       double_t heightNDC = (1. + lineSpacing) * lineHeightPixel * stats->GetListOfLines()->GetSize() / padHeightPixel;
-      const coordinates_t coordinates = get_first_or(pad_coordinates, statsBox->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
+      const coordinates_t coordinates = get_first_or(frame_coordinates, statsBox->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
       const auto [unitX, unitY] = SizeUnit(coordinates, pad_ptr);
       if (statsBox->GetWidth()) widthNDC = *statsBox->GetWidth() * unitX;
       if (statsBox->GetHeight()) heightNDC = *statsBox->GetHeight() * unitY;
@@ -4803,7 +4803,7 @@ bool PlotPainter::DrawBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<P
     if (!box->GetTextAlpha()) {
       if (auto alpha = get_first(pad.GetDefaultTextAlpha(), padDefaults.GetDefaultTextAlpha())) box->SetTextAlpha(*alpha);
     }
-    const coordinates_t coordinates = get_first_or(pad_coordinates, box->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
+    const coordinates_t coordinates = get_first_or(frame_coordinates, box->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
     TPave* generated = GenerateBox(box, coordinates, pad_ptr);
     if (generated) generated->SetUniqueID(coordinates);  // a double-click in show mode reports the position as given
     return generated;
@@ -5217,7 +5217,7 @@ void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, coordinates_t coordi
   const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad);
   const double_t aspect = static_cast<double_t>(image->GetHeight()) / image->GetWidth() * padWidthPixel / padHeightPixel;  // height / width in NDC
   const auto [unitX, unitY] = SizeUnit(coordinates, pad);
-  double_t widthNDC = (box.GetWidth()) ? *box.GetWidth() * unitX : 0.2;
+  double_t widthNDC = box.GetWidth().value_or(0.2) * unitX;
   double_t heightNDC = (box.GetHeight()) ? *box.GetHeight() * unitY : widthNDC * aspect;
   if (box.GetHeight() && !box.GetWidth()) widthNDC = heightNDC / aspect;
 
@@ -5252,7 +5252,8 @@ void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, coordinates_t coordi
 
 //**************************************************************************************************
 /**
- * The frame of a pad as fractions of the pad (x1, y1, x2, y2); a 3d view has none: the pad within its margins.
+ * The frame of a pad as fractions of the pad (x1, y1, x2, y2); a 3d view has none: the pad within its margins; a pad without data (an
+ * empty layout cell) keeps ROOT's range 0 to 1 for the pad and the frame: the whole pad.
  */
 //**************************************************************************************************
 std::array<double_t, 4> PlotPainter::FrameInPad(const TVirtualPad* pad)

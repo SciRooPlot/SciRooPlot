@@ -131,7 +131,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles)`
 - `Pad& SetDefaultCandleBoxRange(float_t range)`
 - `Pad& SetDefaultCandleWhiskerRange(float_t range)`
-- `Pad& SetDefaultBoxCoordinates(coordinates_t coordinates)` — of the legends, texts, statistics boxes and images that set none (default: pad_coordinates)
+- `Pad& SetDefaultBoxCoordinates(coordinates_t coordinates)` — of the legends, texts, statistics boxes and images that set none (default: frame_coordinates)
 - `Pad& SetDefaultShapeCoordinates(coordinates_t coordinates)` — of the shapes that set none (default: user_coordinates)
 - `Pad& SetTransparent()`
 - `Pad& SetFrameFill(int16_t style, color_t color, float_t alpha = 1.f)`
@@ -301,8 +301,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 
 - `BoxType& SetPosition(double_t x, double_t y)`
 - `BoxType& SetSize(double_t width, double_t height)`
-- `BoxType& SetPadCoordinates()` — position and size as fractions of the pad (0 to 1; default, see Pad::SetDefaultBoxCoordinates)
-- `BoxType& SetFrameCoordinates()` — position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner)
+- `BoxType& SetPadCoordinates()` — position and size as fractions of the pad (0 to 1)
+- `BoxType& SetFrameCoordinates()` — position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner; default, see Pad::SetDefaultBoxCoordinates)
 - `BoxType& SetUserCoordinates()` — position as axis values (size as fractions of the pad)
 - `BoxType& SetAutoPlacement(box_placement_t placement = best_corner)`
 - `BoxType& SetTransparent()`
@@ -326,10 +326,10 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `ImageBox(double_t xPos, double_t yPos, const std::string& path)` — C++ only
 - `ImageBox(const std::string& path)` — C++ only
 - `ImageBox& SetPosition(double_t x, double_t y)`
-- `ImageBox& SetWidth(double_t width)` — fraction of the pad width, of the frame width in frame coordinates (no SetSize: one side may follow from the aspect ratio)
-- `ImageBox& SetHeight(double_t height)` — fraction of the pad height, of the frame height in frame coordinates
-- `ImageBox& SetPadCoordinates()` — position and size as fractions of the pad (0 to 1; default, see Pad::SetDefaultBoxCoordinates)
-- `ImageBox& SetFrameCoordinates()` — position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner)
+- `ImageBox& SetWidth(double_t width)` — fraction of the frame width, of the pad width in pad and user coordinates (no SetSize: one side may follow from the aspect ratio)
+- `ImageBox& SetHeight(double_t height)` — fraction of the frame height, of the pad height in pad and user coordinates
+- `ImageBox& SetPadCoordinates()` — position and size as fractions of the pad (0 to 1)
+- `ImageBox& SetFrameCoordinates()` — position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner; default, see Pad::SetDefaultBoxCoordinates)
 - `ImageBox& SetUserCoordinates()` — position as axis values
 - `ImageBox& SetAutoPlacement(box_placement_t placement = best_corner)`
 

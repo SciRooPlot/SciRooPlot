@@ -1,12 +1,13 @@
 """Boxes (legends, texts, statistics boxes, images) and shapes (lines, arrows, vertical and horizontal lines, regions, ellipses,
-polygons) are drawn at the position given in their coordinate system: fractions of the pad (SetPadCoordinates, the default of boxes),
-fractions of the frame (SetFrameCoordinates: (0, 0) its lower left, (1, 1) its upper right corner; in a 3d view the pad within its
-margins) or axis values (SetUserCoordinates, the default of shapes); a pad sets them for all its boxes and shapes that set none
-(SetDefaultBoxCoordinates, SetDefaultShapeCoordinates), plot[0] for all pads, a pad's own default before the one of plot[0]. In frame coordinates the size set for a box (SetSize, SetWidth)
+polygons) are drawn at the position given in their coordinate system: fractions of the pad (SetPadCoordinates), fractions of the
+frame (SetFrameCoordinates, the default of boxes: (0, 0) its lower left, (1, 1) its upper right corner; in a 3d view the pad within its
+margins, in an empty layout cell the whole pad) or axis values (SetUserCoordinates, the default of shapes); a pad sets them for all its
+boxes and shapes that set none (SetDefaultBoxCoordinates, SetDefaultShapeCoordinates), plot[0] for all pads, a pad's own default
+before the one of plot[0]. In frame coordinates the size set for a box (SetSize, SetWidth)
 and the radii of an ellipse are fractions of the frame too, so a box or shape sits at the same place relative to the frame in every
 panel of a layout, whose pads differ in size; a region in frame or user coordinates is cut at the frame, one in pad coordinates is not.
 Cases: a single panel, a grid of touching panels (pads with and without margins), the main and ratio pad of 1d_ratio, log axes, a 3d
-view (boxes only); each coordinate system, the built-in defaults and the defaults of the pads.
+view (boxes only), an empty layout cell (boxes only); each coordinate system, the built-in defaults and the defaults of the pads.
 Reference: the frame of each drawn pad (its axis range within the pad, the margins for a 3d view) and the coordinates of the drawn objects.
 Covers: the commit of this file's first version (boxes in a multi-panel layout moved against the frame from pad to pad).
 """
@@ -52,7 +53,7 @@ VALUE = {  # x from 1 to 9, y from 1 to 100 (also on log axes)
 }
 SHAPES = ("line", "arrow", "vertical_line", "horizontal_line", "region", "region_x", "region_y", "ellipse", "polygon", "region_cut")
 LAYOUTS = ("single", "grid", "ratio", "log", "view")
-SYSTEMS = ("default", "pad", "frame", "user", "pad_defaults")  # pad_defaults: plot[0] sets frame for boxes, pad for shapes; pad 2 its own user for boxes
+SYSTEMS = ("default", "pad", "frame", "user", "pad_defaults")  # pad_defaults: plot[0] sets pad for boxes, frame for shapes; pad 2 its own user for boxes
 
 
 def valid(case):
@@ -91,12 +92,12 @@ def setter(obj, kind, system, padID):
 
 
 def effective(kind, system, padID):
-    """the coordinate system an object ends up with: as set, or the default of its pad, of plot[0] or the built-in one (boxes: pad, shapes: user)"""
+    """the coordinate system an object ends up with: as set, or the default of its pad, of plot[0] or the built-in one (boxes: frame, shapes: user)"""
     if system == "pad_defaults":
-        return "pad" if kind in SHAPES else ("user" if padID == 2 else "frame")
+        return "frame" if kind in SHAPES else ("user" if padID == 2 else "pad")
     if system != "default":
         return system
-    return "user" if kind in SHAPES else "pad"
+    return "user" if kind in SHAPES else "frame"
 
 
 def given(kind, system, padID):
@@ -112,7 +113,7 @@ for i, case in enumerate(todo):
     else:
         plot = S.Plot(f"c{i}", "coords", {"ratio": "1d_ratio", "view": "2d"}.get(layout, "1d"))
     if system == "pad_defaults":
-        plot[0].SetDefaultBoxCoordinates(S.frame_coordinates).SetDefaultShapeCoordinates(S.pad_coordinates)
+        plot[0].SetDefaultBoxCoordinates(S.pad_coordinates).SetDefaultShapeCoordinates(S.frame_coordinates)
         if 2 in pads_of(layout):
             plot[2].SetDefaultBoxCoordinates(S.user_coordinates)
     systems = {}
@@ -157,7 +158,16 @@ for i, case in enumerate(todo):
     expected[f"c{i}"] = systems
     p.pm.AddPlot(plot)
 
-run = p.plot("coords")
+# an empty layout cell has no frame: frame coordinates are fractions of the whole cell
+plot = S.Plot("empty", S.PanelLayout([[S.Panel(), S.Empty(1.0, 1.0)]]))
+plot.SetGroup("coords_empty")
+plot[1].AddData("h1", "src", "data")
+EMPTY_TEXTS = ((0.1, 0.8), (-0.05, 0.3))  # the second beyond the left edge of the cell
+for x, y in EMPTY_TEXTS:
+    plot[2].AddText(x, y, "text")
+p.pm.AddPlot(plot)
+
+run = p.plot("coords|coords_empty")
 check("the plots are drawn without errors", not run.errors(), " | ".join(run.errors()[:3]))
 
 
@@ -264,5 +274,11 @@ for i, case in enumerate(todo):
         for k in range(polygon.GetN() - 1):  # the last point closes it
             pts += point(polygon.GetX()[k], polygon.GetY()[k])
         same(tuple(pts), given("polygon", s, padID), "polygon")
+
+padObj = run.pad("empty", "coords_empty", 2)
+texts = [o for o in padObj.GetListOfPrimitives() if o.GetName().startswith("TextBox_")] if padObj else []
+check("an empty cell: the boxes are drawn", len(texts) == len(EMPTY_TEXTS), f"{len(texts)} texts")
+for text, (x, y) in zip(texts, EMPTY_TEXTS):
+    check(f"an empty cell: a text at frame ({x}, {y}) is at that fraction of the cell", abs(text.GetX1NDC() - x) < TOL and abs(text.GetY2NDC() - y) < TOL, f"{text.GetX1NDC()} {text.GetY2NDC()}")
 
 finish()
