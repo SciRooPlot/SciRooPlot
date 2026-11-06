@@ -14,11 +14,9 @@ pieces)."""
 
 import collections
 import hashlib
-import os
-import pickle
 import re
 
-from srptest import DATA_KINDS, WORK, Project, ROOT, S, add_data, cases, check, describe, drawn_type, finish
+from srptest import DATA_KINDS, WORK, Project, ROOT, S, add_data, cases, describe, drawn_type, finish, in_chunks
 
 ALIASES_POINTS_LINES = ["default", "points", "points_xerr", "points_endcaps", "points_xerr_endcaps", "points_line", "points_arrows", "line", "curve", "curve_clipped"]
 ALIASES_1D = ALIASES_POINTS_LINES + ["hist", "hist_open", "hist_clipped", "hist_open_clipped", "bars", "hbars", "area", "area_smooth", "band", "band_smooth", "boxes", "boxes_nomarkers", "brackets"]
@@ -238,24 +236,5 @@ def legend_check(i, case):
     return f"legend symbol shows the drawn data: {what}", not detail, detail
 
 
-# the cases are compared in chunks, each in a child process: ROOT keeps memory at every paint (about 65 kB), which would run out over the
-# thousands of paints of the full list
-CHUNK = 500
-for start in range(0, len(todo), CHUNK):
-    chunk = range(start, min(start + CHUNK, len(todo)))
-    reader, writer = os.pipe()
-    if (pid := os.fork()) == 0:
-        os.close(reader)
-        with os.fdopen(writer, "wb") as out:
-            pickle.dump([legend_check(i, todo[i]) for i in chunk], out)
-        os._exit(0)
-    os.close(writer)
-    try:
-        with os.fdopen(reader, "rb") as results:
-            for title, passed, detail in pickle.load(results):
-                check(title, passed, detail)
-    except EOFError:
-        check(f"comparison of cases {chunk.start} to {chunk.stop - 1} ran", False, f"the process comparing them ended with status {os.waitpid(pid, 0)[1]}")
-        continue
-    os.waitpid(pid, 0)
+in_chunks(todo, lambda i, case: [legend_check(i, case)])
 finish()

@@ -14,7 +14,10 @@ import itertools
 import math
 import operator
 import os
+import pickle
+import pty
 import re
+import select
 import shutil
 import subprocess
 import sys
@@ -1425,7 +1428,7 @@ class Run:
 
     def __init__(self, proc, plotsFile, snapshot):
         self.rc = proc.returncode
-        self.log = re.sub(r"\x1b\[[0-9;]*m", "", proc.stdout + proc.stderr)
+        self.log = re.sub(r"\x1b\[[0-9;]*m", "", proc.stdout + proc.stderr).replace("\r\n", "\n")
         self.file = None
         if os.path.exists(plotsFile):
             shutil.copyfile(plotsFile, snapshot)  # the next run deletes the output folder
@@ -1500,6 +1503,107 @@ class Run:
         """the warnings of the run containing text"""
         return [line for line in self.lines("WARN") if text in line]
 
+    def messages(self, name, group):
+        """the messages logged while a plot was made (the plots are made one after the other, each ending with "Created plot ...")"""
+        if not hasattr(self, "_messages"):
+            self._messages, pending = {}, []
+            for line in self.log.splitlines():
+                made = re.search(r"Created plot (\S+) from group (\S+)\.$", line)
+                if made:
+                    self._messages[made.groups()] = pending
+                    pending = []
+                else:
+                    pending.append(line)
+        return self._messages.get((name, group), [])
+
+
+# ---------------------------------------------------------------------------------------------
+# painting read-back canvases
+# ---------------------------------------------------------------------------------------------
+_PNG = os.path.join(WORK, "painted.png")
+
+
+def is_data(obj):
+    """whether a primitive of a pad shows data: the data (named <data number>:..., the fill of steps fill_<data number>:...), the polar grid
+    of polar graphs and the shapes (lines, arrows, regions, polygons, ellipses), not the frame, axes, colour scale or boxes"""
+    if re.match(r"(fill_)?\d+:", obj.GetName()) or obj.InheritsFrom("TGraphPolargram"):
+        return True
+    shape = any(obj.InheritsFrom(cls) for cls in ("TLine", "TBox", "TPolyLine", "TEllipse"))
+    return shape and not obj.InheritsFrom("TFrame") and not obj.InheritsFrom("TPave")
+
+
+def is_box(obj):
+    """whether a primitive of a pad is a box: legend, text, statistics box or image"""
+    return (obj.InheritsFrom("TPave") and not obj.InheritsFrom("TPaletteAxis")) or obj.GetName().startswith("ImageBox_")
+
+
+def pixels(canvas, keep, pad=1):
+    """Paints a canvas read from Plots.root (Run.canvas gives a fresh copy, which is deleted here) with only the primitives of the pad
+    keep(obj) is true for, and returns its pixels as an array of ARGB values (rows from the top) and a function giving the pixel
+    (column, row) of a point of the pad in NDC. TExec is left out: ROOT compiles its command at every paint and keeps the code (memory
+    runs out over thousands of paints); it only sets colours and styles, which no comparison of two paints depends on."""
+    ROOT.SetOwnership(canvas, True)
+    padObj = canvas.GetPrimitive(f"Pad_{pad}")
+    primitives = padObj.GetListOfPrimitives()
+    for obj in list(primitives):
+        if not keep(obj) or obj.InheritsFrom("TExec"):
+            primitives.Remove(obj)
+    level, ROOT.gErrorIgnoreLevel = ROOT.gErrorIgnoreLevel, ROOT.kWarning
+    canvas.Print(_PNG)
+    ROOT.gErrorIgnoreLevel = level
+    image = ROOT.TASImage.Open(_PNG)
+    width, height = image.GetWidth(), image.GetHeight()
+    argb = np.frombuffer(image.GetArgbArray(), dtype=np.uint32, count=width * height).reshape(height, width).copy()
+    x0, y0, w, h = padObj.GetAbsXlowNDC(), padObj.GetAbsYlowNDC(), padObj.GetAbsWNDC(), padObj.GetAbsHNDC()
+    del image, canvas
+    return argb, lambda x, y: ((x0 + x * w) * width, (1.0 - (y0 + y * h)) * height)
+
+
+def in_chunks(todo, compare, size=500):
+    """Calls compare(index, case) for every case and checks what it returns (a list of (title, passed, detail)), size cases at a time in a
+    child process each: ROOT keeps memory at every paint (about 65 kB), which runs out over the thousands of paints of a full list."""
+    for start in range(0, len(todo), size):
+        chunk = range(start, min(start + size, len(todo)))
+        reader, writer = os.pipe()
+        if (pid := os.fork()) == 0:
+            os.close(reader)
+            with os.fdopen(writer, "wb") as out:
+                pickle.dump([result for i in chunk for result in compare(i, todo[i])], out)
+            os._exit(0)
+        os.close(writer)
+        try:
+            with os.fdopen(reader, "rb") as results:
+                for title, passed, detail in pickle.load(results):
+                    check(title, passed, detail)
+        except EOFError:
+            check(f"comparison of cases {chunk.start} to {chunk.stop - 1} ran", False, f"the process comparing them ended with status {os.waitpid(pid, 0)[1]}")
+            continue
+        os.waitpid(pid, 0)
+
+
+def run_in_terminal(command, timeout):
+    """Runs a command with its output and errors going to one terminal (a pseudo-terminal): a program writes line by line into a terminal,
+    so the messages come in the order they were written (into a pipe, standard output is written in blocks, after the errors)."""
+    master, slave = pty.openpty()
+    proc = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=slave, stderr=slave, close_fds=True)
+    os.close(slave)
+    chunks, deadline = [], time.time() + timeout
+    while True:
+        ready, _, _ = select.select([master], [], [], max(deadline - time.time(), 0))
+        if not ready:
+            proc.kill()
+            break
+        try:
+            chunk = os.read(master, 65536)
+        except OSError:  # the terminal is closed once the program ended
+            break
+        if not chunk:
+            break
+        chunks.append(chunk)
+    os.close(master)
+    proc.wait()
+    return subprocess.CompletedProcess(command, proc.returncode, b"".join(chunks).decode(errors="replace"), "")
+
 
 class Project:
     """one isolated project with its own configuration, inputs and output"""
@@ -1539,7 +1643,7 @@ class Project:
                 sys.exit(f"cannot select project {self.name}: {selected.stdout}{selected.stderr}")
             self.saved = True
         shutil.rmtree(self.path("out"), ignore_errors=True)
-        proc = subprocess.run([os.path.join(PREFIX, "bin", "plot"), group, name, mode], capture_output=True, text=True, timeout=timeout, check=False)
+        proc = run_in_terminal([os.path.join(PREFIX, "bin", "plot"), group, name, mode], timeout)
         self.nRuns += 1
         return Run(proc, self.path("out", "Plots.root"), self.path(f"run{self.nRuns}_Plots.root"))
 
