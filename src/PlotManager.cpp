@@ -639,12 +639,11 @@ vector<string> PlotManager::MatchFolders(TDirectory* topDir, const string& patte
       folders.push_back(path);
       return;
     }
-    set<string> visited;  // keys can appear in several cycles
+    set<string> visited;  // keys can appear in several cycles: the latest directory of a name (newer data of the name does not hide it)
     for (auto* key : TRangeDynCast<TKey>(dir->GetListOfKeys())) {
-      if (!key || !visited.insert(key->GetName()).second) continue;
+      if (!key || !KeyInherits(key, TDirectory::Class()) || !visited.insert(key->GetName()).second) continue;
       if (fnmatch(levels[level].data(), key->GetName(), 0) != 0) continue;
-      if (!KeyInherits(key, TDirectory::Class())) continue;
-      if (auto* subDir = dir->GetDirectory(key->GetName())) {
+      if (auto* subDir = OpenDirectory(dir, key)) {
         match(subDir, levels, level + 1, path.empty() ? key->GetName() : path + "/" + key->GetName());
       }
     }
@@ -2790,6 +2789,34 @@ bool PlotManager::KeyInherits(TKey* key, const TClass* base)
 
 //**************************************************************************************************
 /**
+ * The latest key of a name in a directory that holds a directory, folder or collection: a newer key of the same name holding data
+ * does not hide it (open a directory found this way with OpenDirectory).
+ */
+//**************************************************************************************************
+TKey* PlotManager::FindContainerKey(TDirectory* directory, const string& name)
+{
+  TKey* latest = directory->FindKey(name.data());
+  if (!latest || IsContainer(ReadableClass(latest))) return latest;
+  for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {  // the cycles of a name are listed from the latest
+    if (key && name == key->GetName() && IsContainer(ReadableClass(key))) return key;
+  }
+  return latest;
+}
+
+//**************************************************************************************************
+/**
+ * The sub-directory behind a key of a directory: by its name (the instance ROOT keeps in memory), by name and cycle only where a newer
+ * key of the name hides it from a lookup by name (ROOT then reads it again).
+ */
+//**************************************************************************************************
+TDirectory* PlotManager::OpenDirectory(TDirectory* directory, TKey* key)
+{
+  const bool isLatest = (directory->FindKey(key->GetName()) == key);
+  return directory->GetDirectory(isLatest ? key->GetName() : fmt::format("{};{}", key->GetName(), key->GetCycle()).data());
+}
+
+//**************************************************************************************************
+/**
  * Call func(name, item) for the items of an in-memory folder or collection (values of maps under the name of their key) until it returns true.
  */
 //**************************************************************************************************
@@ -2929,9 +2956,7 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
         if (traverse) {
           if (!IsContainer(keyClass) || !visited.insert(name).second) continue;
           if (keyClass->InheritsFrom(TDirectory::Class())) {
-            // a newer key of the same name (e.g. data) hides the directory from a lookup by name only: then it is looked up with its cycle
-            const bool isLatest = (directory->FindKey(name.data()) == key);
-            if (auto* subDir = directory->GetDirectory(isLatest ? name.data() : fmt::format("{};{}", name, key->GetCycle()).data())) {
+            if (auto* subDir = OpenDirectory(directory, key)) {
               ReadData(subDir, dataNames, prefix, suffix, dataSource, readCache);
             }
           } else if (auto cached = readCache.find(key); cached != readCache.end()) {
@@ -3255,12 +3280,12 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, const vector<string>& su
   for (const auto& subDir : subDirs) {
     TObject* subFolder{nullptr};
     if (auto* directory = dynamic_cast<TDirectory*>(folder)) {
-      TKey* key = directory->FindKey(subDir.data());
+      TKey* key = FindContainerKey(directory, subDir);
       TClass* keyClass = (key) ? ReadableClass(key) : nullptr;
       if (key && !keyClass) {
         logger::warning("Cannot look into {} in {}: objects of class {} cannot be read (no dictionary loaded or not a TObject).", subDir, directory->GetPath(), key->GetClassName());
       } else if (keyClass && keyClass->InheritsFrom(TDirectory::Class())) {
-        subFolder = directory->GetDirectory(subDir.data());
+        subFolder = OpenDirectory(directory, key);
       } else if (IsContainer(keyClass)) {
         auto& container = readCache[key];
         if (!container) container.reset(key->ReadObj());
@@ -3298,14 +3323,22 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
       dirPath.erase(0, dirPath.find(":/") + 2);
       return (dirPath.empty() ? "" : dirPath + "/") + name;
     }
-    set<string> visited;  // keys can appear in several cycles
+    set<string> visited;  // keys can appear in several cycles: the latest directory of a name (newer data of the name does not hide it)
     for (auto* key : TRangeDynCast<TKey>(dir->GetListOfKeys())) {
-      if (!key || !visited.insert(key->GetName()).second || !KeyInherits(key, TDirectory::Class())) continue;
-      if (auto* subDir = dir->GetDirectory(key->GetName())) {
+      if (!key || !KeyInherits(key, TDirectory::Class()) || !visited.insert(key->GetName()).second) continue;
+      if (auto* subDir = OpenDirectory(dir, key)) {
         if (auto treePath = find(subDir)) return treePath;
       }
     }
     return nullopt;
+  };
+  // the directory at a path below dir, level by level as when reading
+  auto subDirectory = [](TDirectory* dir, const string& subPath) -> TDirectory* {
+    for (const auto& level : split_string(subPath, '/')) {
+      TKey* key = (dir) ? FindContainerKey(dir, level) : nullptr;
+      dir = (key && KeyInherits(key, TDirectory::Class())) ? OpenDirectory(dir, key) : nullptr;
+    }
+    return dir;
   };
   auto expandedIt = mExpandedInputs.find(dataSource);
   for (const auto& inputRaw : (expandedIt != mExpandedInputs.end()) ? expandedIt->second : ExpandInputs(dataSource)) {
@@ -3316,8 +3349,8 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
     TFile file(fileName.data(), "READ");
     if (file.IsZombie()) continue;
     TDirectory* dir = &file;
-    if (fileNamePath.size() > 1) dir = dir->GetDirectory(fileNamePath[1].data());
-    if (dir && !path.empty()) dir = dir->GetDirectory(path.data());
+    if (fileNamePath.size() > 1) dir = subDirectory(dir, fileNamePath[1]);
+    if (dir && !path.empty()) dir = subDirectory(dir, path);
     if (!dir) continue;
     if (auto treePath = find(dir)) treeInputs.push_back({fileName, *treePath, fileNamePath.size() > 1, false});
   }
