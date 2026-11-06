@@ -10,6 +10,7 @@ SRP_TESTS_FULL=1 for the full case lists (weekly), otherwise a subset holding ev
 
 import glob
 import itertools
+import math
 import os
 import re
 import shutil
@@ -213,6 +214,13 @@ def _declare():
     ROOT.gInterpreter.Declare(code)
 
 
+def sized(cls, n):
+    """a graph of n points: cls(0) may be taken as the constructor from a null histogram (cppyy picks the overload)"""
+    graph = cls()
+    graph.Set(n)
+    return graph
+
+
 def data_objects(variant="normal"):
     """one object of every data kind that has the variant (see VARIANTS), by kind; the formula kinds need none"""
     _declare()
@@ -290,11 +298,8 @@ def data_objects(variant="normal"):
                 nd.Fill(np.array(c), outside)
     xs = [1.0 + 0.5 * i for i in range(19)]
     kept = order([(i, x) for i, x in enumerate(xs) if keep(i)])
-    g = ROOT.TGraph(len(kept))
-    ge = ROOT.TGraphErrors(len(kept))
-    ga = ROOT.TGraphAsymmErrors(len(kept))
+    g, ge, ga, gp = (sized(cls, len(kept)) for cls in (ROOT.TGraph, ROOT.TGraphErrors, ROOT.TGraphAsymmErrors, ROOT.TGraphPolar))
     gm = ROOT.TGraphMultiErrors("graph_multi", "", len(kept), 2)
-    gp = ROOT.TGraphPolar(len(kept))
     for n, (i, x) in enumerate(kept):
         y = value(i, x)
         for graph in (g, ge, ga, gm):
@@ -354,8 +359,7 @@ def data_objects(variant="normal"):
             hist.Fill(0.0, 5.0, 5.0, outside)
             hist.Fill(11.0, 5.0, 5.0, outside)
     points = order([(n, 1.0 + (n % 10), 1.0 + (n // 10)) for n in range(100) if keep(n)])
-    g2 = ROOT.TGraph2D(len(points))
-    g2e = ROOT.TGraph2DErrors(len(points))
+    g2, g2e = sized(ROOT.TGraph2D, len(points)), sized(ROOT.TGraph2DErrors, len(points))
     for m, (n, x, y) in enumerate(points):
         for graph in (g2, g2e):
             graph.SetPoint(m, x, y, value(n, x, y))
@@ -475,6 +479,95 @@ def alias_table():
                 values = [{"*as graph*": "graph", "*as histogram*": "hist1d", "–": "-"}.get(c, c.strip("`")) for c in cells[1:]]
                 table[cells[0].strip("`")] = dict(zip(header, values))
     return table
+
+
+# ---------------------------------------------------------------------------------------------
+# references: differences between a drawn object and the one plain ROOT gives ("" if equal)
+# ---------------------------------------------------------------------------------------------
+def _close_all(name, ref, obs, rel):
+    for i, (a, b) in enumerate(zip(ref, obs)):
+        if not close(a, b, rel) and not (math.isnan(a) and math.isnan(b)):
+            return f"{name}[{i}] {b:g}, expected {a:g}"
+    return ""
+
+
+def hist_diff(ref, obs, rel=1e-9):
+    """bin edges, contents and errors of every cell (with under- and overflow) of two histograms of any dimension, TH2Poly by bin"""
+    if not obs:
+        return "not drawn"
+    if ref.GetDimension() != obs.GetDimension() or ref.InheritsFrom("TH2Poly") != obs.InheritsFrom("TH2Poly"):
+        return f"{obs.ClassName()}, expected {ref.ClassName()}"
+    if ref.InheritsFrom("TH2Poly"):
+        bins = range(1, ref.GetNumberOfBins() + 1)
+    else:
+        for axis in "XYZ"[: ref.GetDimension()]:
+            a, b = getattr(ref, f"Get{axis}axis")(), getattr(obs, f"Get{axis}axis")()
+            if a.GetNbins() != b.GetNbins():
+                return f"{b.GetNbins()} bins in {axis}, expected {a.GetNbins()}"
+            edges = _close_all(f"{axis} edge", [a.GetBinLowEdge(i) for i in range(1, a.GetNbins() + 2)], [b.GetBinLowEdge(i) for i in range(1, b.GetNbins() + 2)], rel)
+            if edges:
+                return edges
+        bins = range(ref.GetNcells())
+    return _close_all("content", [ref.GetBinContent(i) for i in bins], [obs.GetBinContent(i) for i in bins], rel) or _close_all("error", [ref.GetBinError(i) for i in bins], [obs.GetBinError(i) for i in bins], rel)
+
+
+def graph_values(graph):
+    """the points of a 1d or 2d graph as lists of values by name (x, y, z and the errors it has; per error dimension of a TGraphMultiErrors)"""
+    n = graph.GetN()
+    if graph.InheritsFrom("TGraph2D"):
+        values = {k: [getattr(graph, f"Get{k.upper()}")()[i] for i in range(n)] for k in "xyz"} if n else {k: [] for k in "xyz"}
+        if graph.InheritsFrom("TGraph2DErrors"):
+            values.update({f"e{k}": [getattr(graph, f"GetError{k.upper()}")(i) for i in range(n)] for k in "xyz"})
+        return values
+    values = {"x": [graph.GetPointX(i) for i in range(n)], "y": [graph.GetPointY(i) for i in range(n)]}
+    if graph.GetEY() or graph.GetEYlow():  # a TGraph has no errors (its getters give -1)
+        for e in ("ErrorXlow", "ErrorXhigh", "ErrorYlow", "ErrorYhigh"):
+            values[e] = [getattr(graph, f"Get{e}")(i) for i in range(n)]
+    if graph.InheritsFrom("TGraphMultiErrors"):
+        for d in range(graph.GetNYErrors()):
+            values[f"ey{d}low"] = [graph.GetErrorYlow(i, d) for i in range(n)]
+            values[f"ey{d}high"] = [graph.GetErrorYhigh(i, d) for i in range(n)]
+    return values
+
+
+def values_diff(ref, obs, rel=1e-9):
+    """differences between two dicts of value lists (see graph_values)"""
+    for key, values in ref.items():
+        if key not in obs:
+            return f"no {key}"
+        if len(values) != len(obs[key]):
+            return f"{len(obs[key])} points, expected {len(values)}"
+        found = _close_all(key, values, obs[key], rel)
+        if found:
+            return found
+    return ""
+
+
+def graph_diff(ref, obs, rel=1e-9):
+    """points and errors of two 1d or 2d graphs (ref may also be a dict as by graph_values)"""
+    if not obs:
+        return "not drawn"
+    return values_diff(ref if isinstance(ref, dict) else graph_values(ref), graph_values(obs), rel)
+
+
+def func_points(func):
+    """points inside the range of a function where it is compared: 5 per axis, away from the edges, on the points it is sampled at (a
+    function stored as samples gives its exact values there)"""
+    dim = func.GetNdim()
+    lows = [getattr(func, f"Get{axis}min")() for axis in "XYZ"[:dim]]
+    highs = [getattr(func, f"Get{axis}max")() for axis in "XYZ"[:dim]]
+    counts = [func.GetNpx(), func.GetNpy() if dim > 1 else 0, func.GetNpz() if dim > 2 else 0][:dim]
+    steps = [[lo + (hi - lo) * round(n * (k + 1) / 6) / n for k in range(5)] for lo, hi, n in zip(lows, highs, counts)]
+    return list(itertools.product(*steps))
+
+
+def func_diff(ref, obs, rel=1e-9):
+    """values of two functions at func_points(obs); ref a function or a callable taking the coordinates"""
+    if not obs:
+        return "not drawn"
+    points = func_points(obs)
+    evaluate = ref if callable(ref) and not hasattr(ref, "Eval") else (lambda *c: ref.Eval(*c))
+    return _close_all("value", [evaluate(*c) for c in points], [obs.Eval(*c) for c in points], rel)
 
 
 # ---------------------------------------------------------------------------------------------
