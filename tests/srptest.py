@@ -1819,3 +1819,591 @@ def config_files(config):
 def listed(output):
     """the plots plot ... list prints, as (group, name)"""
     return {(group, name) for name, group in re.findall(r"^ - (.*) in group (.*)$", output.stdout, re.M)}
+
+
+# ---------------------------------------------------------------------------------------------
+# the plot definition: the interface in both languages, calls written in either, the saved file
+# ---------------------------------------------------------------------------------------------
+SOURCE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+API_REFERENCE = os.path.join(SOURCE, "docs", "skill", "scirooplot", "reference", "api.md")  # generated from the public headers
+
+
+def split_args(text):
+    """the arguments of a signature or call, split at the commas outside of brackets and quotes"""
+    parts, depth, current, quote = [], 0, "", None
+    for ch in text:
+        if quote:
+            quote = None if ch == quote and not current.endswith("\\") else quote
+        elif ch in "'\"":
+            quote = ch
+        elif ch in "<([{":
+            depth += 1
+        elif ch in ">)]}":
+            depth -= 1
+        if ch == "," and depth == 0 and not quote:
+            parts.append(current.strip())
+            current = ""
+        else:
+            current += ch
+    return parts + ([current.strip()] if current.strip() else [])
+
+
+PY_SPECIAL = ("__init__", "__call__", "__getitem__", "__iadd__")
+
+
+def python_interface():
+    """every overload of the Python bindings: (class, method, ((parameter, type, default or None), ...)), in binding order"""
+    overloads = []
+    for className in dir(S):
+        cls = getattr(S, className)
+        if not isinstance(cls, type) or className.endswith("_t"):
+            continue
+        for method in cls.__dict__:
+            if method.startswith("_") and method not in PY_SPECIAL:
+                continue
+            func = getattr(cls, method)
+            for line in (getattr(func, "__doc__", "") or "").splitlines():
+                found = re.match(r"^(?:\d+\. )?(\w+)\((.*)\) -> (.*)$", line.strip())
+                if found and found.group(1) == method:
+                    params = []
+                    args = split_args(found.group(2))
+                    for arg in args[1:] if args and args[0].startswith("self") else args:
+                        name, _, rest = arg.partition(":")
+                        typ, _, default = rest.partition(" = ")
+                        params.append((name.strip(), typ.strip(), default.strip() or None))
+                    overloads.append((className, method, tuple(params)))
+    return overloads
+
+
+def cpp_interface():
+    """every public method of the headers as listed in the API reference: (class, method, parameter names, C++ only, default values as
+    written, None where there is none); the classes of the setter groups (marker setters, Box<BoxType>, ...) get their methods, Ratio
+    those of Data"""
+    sections, groups = {}, []
+    with open(API_REFERENCE) as f:
+        text = f.read()
+    for block in re.split(r"^## ", text, flags=re.M)[1:]:
+        head, *lines = block.splitlines()
+        cls = head.split("::")[-1].split("<")[0].strip()
+        entries = []
+        for line in lines:
+            found = re.match(r"^- `(?:[\w:<>,&* ]+? )?(operator\(\)|operator\[\]|operator\+=|\w+)\((.*)\)`(.*)$", line)
+            if found:
+                method, params, rest = found.groups()
+                args = split_args(params)
+                names = tuple(re.findall(r"(\w+)$", arg.split("=")[0].strip())[0] for arg in args)
+                defaults = tuple(arg.partition("=")[2].strip() or None for arg in args)
+                entries.append((method, names, "C++ only" in rest, defaults))
+        remark = next((line for line in lines if line.startswith("*")), "")
+        if head.endswith("setters") or cls == "Box":
+            targets = ["TextBox", "LegendBox", "StatsBox"] if cls == "Box" else [t.strip() for t in remark.strip("*").split(";")[0].split(",")]
+            groups.append((targets, entries))
+        else:
+            sections.setdefault(cls, []).extend(entries)
+    for targets, entries in groups:
+        for target in targets:
+            sections.setdefault(target, []).extend(entries)
+    # a Ratio has the methods of Data except Scatter(x, y, z)
+    sections["Ratio"] = sections.get("Ratio", []) + [e for e in sections.get("Data", []) if e[0] not in ("Data", "AsRatio", "operator()") and e[:2] != ("Scatter", ("x", "y", "z"))]
+    return [(cls, "__init__" if method == cls else method, names, only, defaults) for cls, entries in sections.items() for method, names, only, defaults in entries]
+
+
+class Code:
+    """an expression written differently in Python and C++ (an object of the interface, an enumeration value)"""
+
+    def __init__(self, py, cpp=None):
+        self.py, self.cpp = py, cpp if cpp is not None else py
+
+    def __repr__(self):
+        return self.py
+
+
+class Char(str):
+    """a single character (C++ char, Python str)"""
+
+
+def literal(value, lang):
+    """a value written as literal in Python (lang "py") or C++ ("cpp")"""
+    if isinstance(value, Code):
+        return value.py if lang == "py" else value.cpp
+    if isinstance(value, Char):
+        return repr(str(value)) if lang == "py" else "'" + value + "'"
+    if isinstance(value, bool):
+        return ("True" if value else "False") if lang == "py" else ("true" if value else "false")
+    if isinstance(value, int):
+        return str(value)
+    if isinstance(value, float):
+        if math.isinf(value):
+            sign = "-" if value < 0 else ""
+            return f"{sign}float('inf')" if lang == "py" else f"{sign}std::numeric_limits<double>::infinity()"
+        text = repr(value)
+        return text if lang == "py" or "." in text or "e" in text else text + "."
+    if isinstance(value, str):
+        if lang == "py":
+            return repr(value)
+        return '"' + value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\t", "\\t") + '"'
+    if isinstance(value, (tuple, list)):
+        inner = ", ".join(literal(v, lang) for v in value)
+        if lang == "cpp":
+            return "{" + inner + "}"
+        return f"({inner}{',' if len(value) == 1 else ''})" if isinstance(value, tuple) else f"[{inner}]"
+    raise TypeError(f"no literal for {value!r}")
+
+
+def call(method, args, lang):
+    """a call of a method on the expression before it"""
+    return f".{method}({', '.join(literal(a, lang) for a in args)})"
+
+
+def read_info(path):
+    """a file written by SavePlots as a tree: a list of (key, value, children) with the values unescaped"""
+    with open(path, encoding="utf-8", errors="replace") as f:
+        lines = f.read().splitlines()
+    root, stack = [], []
+    current = root
+    for line in lines:
+        text = line.strip()
+        if not text:
+            continue
+        if text == "{":
+            stack.append(current)
+            current = current[-1][2]
+            continue
+        if text == "}":
+            current = stack.pop()
+            continue
+        key, _, value = text.partition(" ")
+        value = value.strip()
+        if value.startswith('"') and value.endswith('"') and len(value) >= 2:
+            value = re.sub(r'\\(.)', lambda m: {"n": "\n", "t": "\t", "0": "\0", "r": "\r", "a": "\a", "b": "\b", "f": "\f", "v": "\v"}.get(m.group(1), m.group(1)), value[1:-1])
+        current.append((key, value, []))
+    return root
+
+
+def info_values(tree, prefix=""):
+    """the values of a tree by path (a key appearing twice gets #2, #3 ...)"""
+    values, seen = {}, {}
+    for key, value, children in tree:
+        seen[key] = seen.get(key, 0) + 1
+        path = prefix + key + (f"#{seen[key]}" if seen[key] > 1 else "")
+        if children:
+            values.update(info_values(children, path + "/"))
+        else:
+            values[path] = value
+    return values
+
+
+def info_plots(path):
+    """the plots of a saved file by name:group, each as its values by path"""
+    return {key: info_values(children) for key, _, children in read_info(path)}
+
+
+def captured(func):
+    """runs func and returns (its result or the exception, everything printed meanwhile, also by C++ code)"""
+    sys.stdout.flush()
+    sys.stderr.flush()
+    with __import__("tempfile").TemporaryFile() as tmp:
+        saved = os.dup(1), os.dup(2)
+        os.dup2(tmp.fileno(), 1)
+        os.dup2(tmp.fileno(), 2)
+        try:
+            result = func()
+        except Exception as ex:  # noqa: BLE001  the caller checks what was raised
+            result = ex
+        finally:
+            sys.stdout.flush()
+            sys.stderr.flush()
+            os.dup2(saved[0], 1)
+            os.dup2(saved[1], 2)
+            os.close(saved[0])
+            os.close(saved[1])
+        tmp.seek(0)
+        text = re.sub(r"\x1b\[[0-9;]*m", "", tmp.read().decode(errors="replace"))
+    return result, text
+
+
+# The test values of the parameters of the interface, by parameter name (or Class.method.parameter, method.parameter, which win), and
+# by variant: plain (a value that differs from the default), precise (needs every digit: 1/3), extreme (at the ends of the range of
+# double), text (a text with every character the file format has to escape or could misread), empty (an empty text), false.
+HOSTILE_TEXT = '  a "b" \\c $d; e, f {g} #h µ² \ttab\nline:end  '
+TEXT = {"plain": "some text", "text": HOSTILE_TEXT, "empty": ""}
+FLAG = {"plain": True, "false": False}
+COLOR = {"plain": 633, "precise": (1 / 3, 0.5, 0.25), "text": "#1a2b3c"}
+SETTER_VALUES = {
+    "alias": {"plain": "j"},
+    "align": {"plain": 12},
+    "alpha": {"plain": 0.37, "precise": 1 / 3},
+    "angle": {"plain": 30.0, "precise": 100 / 3},
+    "axis": {"plain": Char("Y")},
+    "basePlot": {"plain": "2d"},
+    "bottom": {"plain": 0.13, "precise": 1 / 7},
+    "top": {"plain": 0.05, "precise": 1 / 11},
+    "left": {"plain": 0.11, "precise": 1 / 9},
+    "right": {"plain": 0.07, "precise": 1 / 13},
+    "center": FLAG,
+    "AddEllipse.center": {"plain": (5.0, 0.5), "precise": (1 / 3, 2 / 3), "extreme": (-1e300, 1e-300)},
+    "color": COLOR,
+    "colors": {"plain": [633, "#00ff00", (0.0, 0.0, 1.0)]},
+    "columns": {"plain": 2},
+    "Span.rows": {"plain": 1},
+    "common": {"plain": False},  # true by default
+    "contours": {"plain": [1.0, 2.5, 7.0], "precise": [1 / 3, 2 / 3, 1.0]},
+    "correlated": FLAG,
+    "data": {"plain": Code('Data("h2", "s2")')},
+    "numerator": {"plain": Code('Data("h", "s")')},
+    "denominator": {"plain": Code('Data("h2", "s2")')},
+    "dataDims": {"plain": ["x", ("y", 20), ("z", 10, (0.0, 5.0))], "precise": [("x", (1 / 3, 0.5, 4.0)), ("y", 7, (-1e300, 1e300))]},
+    "dims": {"plain": [2, 0]},
+    "ranges": {"plain": [(0, 2.0, 7.0)], "precise": [(1, 1 / 3, 2 / 3)]},
+    "dataID": {"plain": 2},
+    "dataIDs": {"plain": [1, 2]},
+    "dataLayout": {"plain": Code("Data().SetMarkerStyle(33).SetLineWidth(3.)")},
+    "dataSource": {"plain": "s2"},
+    "numeratorName": {"plain": "h"},
+    "numeratorDataSource": {"plain": "s"},
+    "denominatorName": {"plain": "h2"},
+    "denominatorDataSource": {"plain": "s2"},
+    "define": FLAG,
+    "divideBinWidth": FLAG,
+    "drawOption": {"plain": "e1 x0", "text": "  hist e  "},
+    "optionAlias": {"plain": Code("points_line")},
+    "startX": {"plain": 2.5, "precise": 1 / 3},
+    "endX": {"plain": 7.5, "precise": 22 / 3},
+    "startY": {"plain": 1.5},
+    "endY": {"plain": 8.5},
+    "entryMin": {"plain": 10},
+    "entryMax": {"plain": 50, "extreme": 4294967295},
+    "nEntries": {"plain": 1000, "extreme": 4294967295},
+    "filter": {"plain": "x > 2 && y < 5", "text": 'std::string("$\\\\;") == "$\\\\;" && x > 1'},
+    "fixAspectRatio": FLAG,
+    "font": {"plain": 62},
+    "format": {"plain": "emr"},
+    "forward": {"plain": False},
+    "frameFraction": {"plain": 0.15, "precise": 1 / 3},
+    "function": {"plain": "2*x + 1", "text": "TMath::Gaus(x, 5, 1.5) * (x > 1 ? 1 : 0.5)"},
+    "gradient": {"plain": [(633, 0.0), ("#00ff00", 0.5), ((0.0, 0.0, 1.0), 1.0)], "precise": [(633, 0.0), (600, 1 / 3), (416, 1.0)]},
+    "rgbEndpoints": {"plain": [(0.0, 1.0, 0.0, 0.0), (1.0, 0.0, 0.0, 1.0)], "precise": [(0.0, 1 / 3, 0.0, 0.0), (1.0, 0.0, 2 / 3, 1.0)]},
+    "nColors": {"plain": 7},
+    "group": {"plain": "g/sub"},
+    "subgroup": {"plain": "sub"},
+    "height": {"plain": 0.25, "precise": 1 / 3},
+    "Plot.SetDimensions.height": {"plain": 600},
+    "Plot.SetHeight.height": {"plain": 600},
+    "BasePlotShape.SetRatioHeight.height": {"plain": 0.5, "precise": 1 / 3},
+    "BasePlotShape.SetPullHeight.height": {"plain": 0.5, "precise": 1 / 3},
+    "width": {"plain": 3.0},
+    "Plot.SetDimensions.width": {"plain": 800},
+    "Plot.SetWidth.width": {"plain": 800},
+    "ImageBox.SetWidth.width": {"plain": 0.25, "precise": 1 / 3},
+    "SetSize.width": {"plain": 0.3, "precise": 1 / 3},
+    "Axis.SetColorScaleWidth.width": {"plain": 0.04, "precise": 1 / 30},
+    "hide": FLAG,
+    "isDensity": FLAG,
+    "isGrid": FLAG,
+    "isLog": FLAG,
+    "isNoExponent": FLAG,
+    "isOppositeTicks": FLAG,
+    "isUserCoord": FLAG,
+    "keep": FLAG,
+    "redraw": FLAG,
+    "showOverflowBins": FLAG,
+    "topDown": FLAG,
+    "key": {"plain": "xx"},
+    "value": {"plain": "x*2", "text": 'std::string("a;b$") == "a;b$" ? x : 0.'},
+    "keys": {"plain": ["k1", "k2"]},
+    "label": TEXT,
+    "legendLabel": TEXT,
+    "text": TEXT,
+    "title": TEXT,
+    "lines": {"plain": ["first", "second"], "text": [HOSTILE_TEXT, ""]},
+    "legendEntry": {"plain": Code("LegendEntry().SetMarkerStyle(33).SetLineWidth(3.)")},
+    "legendID": {"plain": 2},
+    "lineSpacing": {"plain": 0.8},
+    "margin": {"plain": 0.3},
+    "min": {"plain": 2.5, "precise": 1 / 3, "extreme": -1e300},
+    "max": {"plain": 7.5, "precise": 22 / 3, "extreme": 1e300},
+    "maxDigits": {"plain": 3},
+    "numColumns": {"plain": 2},
+    "numDivisions": {"plain": 506, "extreme": -510},
+    "nContours": {"plain": 12},
+    "nGroup": {"plain": 2},
+    "nGroupX": {"plain": 2},
+    "nGroupY": {"plain": 3},
+    "nGroupZ": {"plain": 4},
+    "nIterSmooth": {"plain": 2},
+    "nx": {"plain": 250},
+    "ny": {"plain": 120},
+    "name": {"plain": "h2"},
+    "Plot.SetName.name": {"plain": "{name}_renamed"},
+    "offset": {"plain": 0.05, "precise": 1 / 30},
+    "padID": {"plain": 1},
+    "pads": {"plain": [1, 2]},
+    "palette": {"plain": 112},
+    "phi": {"plain": 45.0},
+    "theta": {"plain": 25.0, "precise": 100 / 3},
+    "phiMin": {"plain": 30.0},
+    "phiMax": {"plain": 300.0},
+    "pixel": {"plain": 50.0, "precise": 100 / 3},
+    "placement": {"plain": Code("top_left")},
+    "points": {"plain": [(1.0, 2.0), (3.0, 4.0), (5.0, 1.0)], "extreme": [(-1e300, 1e-300), (1e300, 1.0), (0.0, -1e300)]},
+    "positions": {"plain": [(1.0, 2.0), (3.0, 4.0)], "precise": [(1 / 3, 2 / 3), (4.0, 1 / 7)]},
+    "pos1": {"plain": (1.0, 2.0), "extreme": (-1e300, 1e-300)},
+    "pos2": {"plain": (3.0, 4.0), "extreme": (1e300, -1e-300)},
+    "profile": {"plain": "y"},
+    "radiusX": {"plain": 2.0},
+    "radiusY": {"plain": 0.3, "precise": 1 / 3},
+    "range": {"plain": 0.5},
+    "ratio": {"plain": 1.25},
+    "AddRatio.ratio": {"plain": Code('Ratio(Data("h", "s"), Data("h2", "s2"))')},
+    "path": {"plain": "/srptest/logo.png"},
+    "Span.columns": {"plain": 2},
+    "refDataID": {"plain": 1},
+    "refFunc": {"plain": "1"},
+    "scale": {"plain": 0.8},
+    "scaleFactor": {"plain": 2.5, "precise": 1 / 3, "extreme": 1e-300},
+    "size": {"plain": 1.3, "precise": 1 / 3},
+    "spacing": {"plain": 0.1},
+    "statsBox": {"plain": Code("StatsBox().SetPosition(0.3, 0.4)")},
+    "style": {"plain": 2},
+    "styles": {"plain": [2, 7]},
+    "symbolElements": {"plain": "lp"},
+    "textFormat": {"plain": "%.3g", "text": '%.2f "a" $'},
+    "tickLength": {"plain": 0.04},
+    "tickOrientation": {"plain": "+-"},
+    "timeFormat": {"plain": "%d.%m.%y %H:%M"},
+    "tree": {"plain": "t2", "text": ["t2", "s2"]},
+    "weight": {"plain": "w"},
+    "x": {"plain": 0.3, "precise": 1 / 3},
+    "y": {"plain": 0.6, "precise": 2 / 3},
+    "AddVerticalLine.x": {"plain": 4.5, "extreme": 1e300},
+    "AddHorizontalLine.y": {"plain": 0.5, "extreme": -1e300},
+    "AddPoints.x": {"plain": [1.0, 2.0, 3.0], "precise": [1 / 3, 2 / 3, 1.0]},
+    "AddPoints.y": {"plain": [3.0, 1.0, 2.0], "extreme": [1e300, -1e300, 1e-300]},
+    "x1": {"plain": 2.0},
+    "x2": {"plain": 4.0},
+    "y1": {"plain": 0.2},
+    "y2": {"plain": 0.6},
+    "xPos": {"plain": 0.3, "precise": 1 / 3},
+    "yPos": {"plain": 0.7},
+    "xlow": {"plain": 0.1},
+    "ylow": {"plain": 0.2},
+    "xup": {"plain": 0.9},
+    "yup": {"plain": 0.95},
+}
+# the setters of styles take the style of what they set
+for _part, _style, _styles in (("Marker", 33, [33, 21]), ("Line", 7, [7, 2]), ("Fill", 3004, [3004, 3005]), ("Border", 2, [2, 3])):
+    for _method in (f"Set{_part}", f"Set{_part}Style", f"SetDefault{_part}Style", f"SetFrame{_part}", f"SetFrame{_part}Style"):
+        SETTER_VALUES[f"{_method}.style"] = {"plain": _style}
+    SETTER_VALUES[f"SetDefault{_part}Styles.styles"] = {"plain": _styles}
+SETTER_VALUES["SetArrowHead.style"] = {"plain": "<|>"}
+# the parameters of the data selections are column names and expressions
+for _method in ("Project1D", "Project2D", "Profile1D", "Profile2D"):
+    SETTER_VALUES[f"{_method}.x"] = {"plain": "x", "precise": ("x", 7, (1 / 3, 22 / 3))}
+    SETTER_VALUES[f"{_method}.y"] = {"plain": ("y", 20), "precise": ("y", (1 / 3, 0.5, 4.0))}
+for _param in ("x", "y", "z", "xErr", "yErr", "xErrLow", "xErrHigh", "yErrLow", "yErrHigh"):
+    SETTER_VALUES[f"Scatter.{_param}"] = {"plain": _param, "text": f'{_param} * (std::string("$;") == "$;")'}
+SETTER_VARIANTS = ("plain", "precise", "extreme", "text", "empty", "false")
+
+
+def setter_value(cls, method, param, variant):
+    """the test value of a parameter in a variant, None if it has none (the plain value if only the variant is missing)"""
+    for key in (f"{cls}.{method}.{param}", f"{method}.{param}", param):
+        if key in SETTER_VALUES:
+            values = SETTER_VALUES[key]
+            return values.get(variant, values.get("plain"))
+    return None
+
+
+# Where each class of the interface is set: statements written in both languages, with {name} (the plot) and {call} (the call).
+# The plot statements are put between those making the plot p and adding it.
+def _in_plot(expr_py, expr_cpp=None):
+    return (f'p = Plot("{{name}}", "g", "1d")\n{expr_py}{{call}}\npm.AddPlot(p)', f'{{\n  Plot p("{{name}}", "g", "1d");\n  {expr_cpp or expr_py}{{call}};\n  pm.AddPlot(p);\n}}')
+
+
+def _in_base(expr_py, expr_cpp=None):
+    return (f'p = Plot("{{name}}")\n{expr_py}{{call}}\npm.AddBasePlot(p)', f'{{\n  Plot p("{{name}}");\n  {expr_cpp or expr_py}{{call}};\n  pm.AddBasePlot(p);\n}}')
+
+
+SETTER_HOSTS = {
+    "Plot": {"plot": _in_plot("p"), "base": _in_base("p")},
+    "Pad": {"pad": _in_plot("p[1]"), "pad0": _in_plot("p[0]"), "base_pad": _in_base("p[1]")},
+    "Axis": {axis: _in_plot(f'p[{pad}]["{name}"]', f"p[{pad}]['{name}']") for axis, pad, name in (("x", 1, "X"), ("y", 1, "Y"), ("z", 1, "Z"), ("c", 1, "C"), ("pad0_x", 0, "X"))},
+    "Data": {"data": _in_plot('p[1].AddData("h", "s")'), "tree": _in_plot('p[1].AddData("t", "s").Project1D("x")')},
+    "Ratio": {
+        **{side: _in_plot(f'p[1].AddRatio("h", "s", "h2", "s2"){sel}') for side, sel in (("ratio", ""), ("numer", ".Numer()"), ("denom", ".Denom()"), ("both", ".Both()"), ("result", ".Result()"))},
+        **{f"tree_{side}": _in_plot(f'p[1].AddRatio("t", "s", "t2", "s2").Both().Project1D("x").{sel}()') for side, sel in (("numer", "Numer"), ("denom", "Denom"), ("both", "Both"))},
+    },
+    "LegendEntry": {"data_row": _in_plot('p[1].AddData("h", "s").GetLegendEntry()'), "added_row": _in_plot('p[1].AddLegend().AddEntry("row")')},
+    "LegendBox": {"legend": _in_plot("p[1].AddLegend()")},
+    "TextBox": {"text": _in_plot('p[1].AddText(0.2, 0.3, "t")')},
+    "StatsBox": {"stats": ('p = Plot("{name}", "g", "1d")\np[1].AddData("h", "s").SetStatsBox(StatsBox(){call})\npm.AddPlot(p)', '{\n  Plot p("{name}", "g", "1d");\n  p[1].AddData("h", "s").SetStatsBox(StatsBox(){call});\n  pm.AddPlot(p);\n}')},
+    "ImageBox": {"image": _in_plot('p[1].AddImage("/srptest/logo.png")')},
+    "Shape": {
+        "line": _in_plot("p[1].AddLine((1., 2.), (3., 4.))", "p[1].AddLine({1., 2.}, {3., 4.})"),
+        "arrow": _in_plot("p[1].AddArrow((1., 2.), (3., 4.))", "p[1].AddArrow({1., 2.}, {3., 4.})"),
+        "ellipse": _in_plot("p[1].AddEllipse((5., 0.5), 2., 0.3)", "p[1].AddEllipse({5., 0.5}, 2., 0.3)"),
+        "region": _in_plot("p[1].AddRegionX(2., 4.)"),
+    },
+    "PanelLayout": {"layout": ('pm.AddBasePlot(Plot("{name}", PanelLayout([[Panel(), Panel().ColorScale()], [Panel(), Panel()]]){call}))', '{\n  pm.AddBasePlot(Plot("{name}", PanelLayout({{Panel(), Panel().ColorScale()}, {Panel(), Panel()}}){call}));\n}')},
+    "Panel": {
+        "panel": ('pm.AddBasePlot(Plot("{name}", PanelLayout([[Panel(), Panel()], [Panel(), Panel(){call}]])))', '{\n  pm.AddBasePlot(Plot("{name}", PanelLayout({{Panel(), Panel()}, {Panel(), Panel(){call}}})));\n}'),
+        "strip": ('pm.AddBasePlot(Plot("{name}", PanelLayout([[Empty(2., 0.25){call}], [Panel(), Panel()]])))', '{\n  pm.AddBasePlot(Plot("{name}", PanelLayout({{Empty(2., 0.25){call}}, {Panel(), Panel()}})));\n}'),
+    },
+    "BasePlotShape": {
+        "shape": (
+            'p = PlotManager.MakeBasePlot("1d_wide_ratio_pull", PanelLayout(), BasePlotShape(){call})\np.SetName("{name}")\npm.AddBasePlot(p)',
+            '{\n  Plot p = PlotManager::MakeBasePlot("1d_wide_ratio_pull", PanelLayout(), BasePlotShape(){call});\n  p.SetName("{name}");\n  pm.AddBasePlot(p);\n}',
+        )
+    },
+}
+# The hosts each call is meant for (the others are misplaced: the call must be stored there too, or reported)
+SELECTIONS = ("Project", "ProjectX", "ProjectY", "Profile", "ProfileX", "ProfileY", "Project1D", "Project2D", "Profile1D", "Profile2D", "Scatter")
+TREE_SELECTIONS = ("Filter", "Define", "Join", "Entries")
+PAD_ADDERS = ("AddData", "AddFunction", "AddPoints", "AddRatio", "SetFrame")
+
+
+def setter_meant_for(cls, method, host):
+    """the call is meant for the host (not misplaced)"""
+    if cls == "Shape" and method in ("SetArrowHead", "SetArrowSize"):
+        return host == "arrow"
+    if cls == "Shape" and method in ("SetArc", "SetRotation"):
+        return host == "ellipse"
+    if cls == "Pad" and method.startswith("Add") or method == "SetFrame":
+        return host != "pad0" and not (host == "base_pad" and method in PAD_ADDERS)
+    if cls == "Plot" and method in ("SetGroup", "AppendGroup"):
+        return host != "base"
+    if cls == "Panel" and method == "Span":
+        return host == "strip"
+    if cls == "Data" and method in SELECTIONS + TREE_SELECTIONS:
+        return host == ("tree" if method in TREE_SELECTIONS else "data")
+    if cls == "Ratio" and method in SELECTIONS + TREE_SELECTIONS:
+        return host in (("tree_numer", "tree_denom", "tree_both") if method in TREE_SELECTIONS else ("numer", "denom", "both"))
+    return not (cls == "Data" and host == "tree") and not (cls == "Ratio" and host.startswith("tree_")) and not (cls == "Panel" and host == "strip")
+
+
+# methods that give access to parts of the definition (their results are the hosts) or select what later calls change: no case of their own
+SETTER_ACCESS = {
+    ("Plot", "__getitem__"),
+    ("Plot", "GetPad"),
+    ("Pad", "__getitem__"),
+    ("Pad", "__call__"),
+    ("Pad", "GetAxis"),
+    ("Pad", "GetData"),
+    ("Pad", "GetText"),
+    ("Pad", "GetLegend"),
+    ("Pad", "GetShape"),
+    ("Pad", "GetImage"),
+    ("Data", "GetLegendEntry"),
+    ("Ratio", "GetLegendEntry"),
+    ("Data", "GetDataSource"),
+    ("Data", "AsRatio"),
+    ("Ratio", "Numer"),
+    ("Ratio", "Denom"),
+    ("Ratio", "Both"),
+    ("Ratio", "Result"),
+}
+# whole statements for the constructors and operators (Python, C++; None: not in that language)
+SETTER_STATEMENTS = {
+    ("Plot", "__init__", ("name", "group", "basePlot")): ('pm.AddPlot(Plot("{name}", "g/x", "2d"))', '{\n  pm.AddPlot(Plot("{name}", "g/x", "2d"));\n}'),
+    ("Plot", "__init__", ("name", "layout")): ('pm.AddBasePlot(Plot("{name}", PanelLayout([[Panel(), Panel(0.5, 1.)]])))', '{\n  pm.AddBasePlot(Plot("{name}", PanelLayout({{Panel(), Panel(0.5, 1.)}})));\n}'),
+    ("Plot", "__init__", ("other", "name", "group")): ('q = Plot("{name}_source", "g", "1d")\nq[1].AddData("h", "s").SetColor(633)\npm.AddPlot(Plot(q, "{name}", "g2"))', '{\n  Plot q("{name}_source", "g", "1d");\n  q[1].AddData("h", "s").SetColor(633);\n  pm.AddPlot(Plot(q, "{name}", "g2"));\n}'),
+    ("Plot", "__iadd__", ("arg0",)): (
+        'p = Plot("{name}_base", "g", "1d")\np[1].AddData("h", "s").SetColor(633)\nq = Plot("{name}", "g", "1d")\nq[1].AddData("h2", "s").SetColor(600)\nq[1].AddText(0.2, 0.3, "t")\np += q\npm.AddPlot(p)',
+        '{\n  Plot p("{name}_base", "g", "1d");\n  p[1].AddData("h", "s").SetColor(633);\n  Plot q("{name}", "g", "1d");\n  q[1].AddData("h2", "s").SetColor(600);\n  q[1].AddText(0.2, 0.3, "t");\n  p += q;\n  pm.AddPlot(p);\n}',
+    ),
+    ("Data", "__init__", ()): ('p = Plot("{name}", "g", "1d")\np[1].AddData("h2", "s2").SetLayout(Data().SetColor(633))\npm.AddPlot(p)', '{\n  Plot p("{name}", "g", "1d");\n  p[1].AddData("h2", "s2").SetLayout(Data().SetColor(633));\n  pm.AddPlot(p);\n}'),
+    ("Ratio", "__init__", ("numerator", "denominator")): ('p = Plot("{name}", "g", "1d")\np[1].AddRatio(Ratio(Data("h", "s"), Data("h2", "s2")))\npm.AddPlot(p)', '{\n  Plot p("{name}", "g", "1d");\n  p[1].AddRatio(Ratio(Data("h", "s"), Data("h2", "s2")));\n  pm.AddPlot(p);\n}'),
+    ("Ratio", "__init__", ("numeratorName", "numeratorDataSource", "denominatorName", "denominatorDataSource", "label")): (
+        'p = Plot("{name}", "g", "1d")\np[1].AddRatio(Ratio("h", "s", "h2", "s2", "lab"))\npm.AddPlot(p)',
+        '{\n  Plot p("{name}", "g", "1d");\n  p[1].AddRatio(Ratio("h", "s", "h2", "s2", "lab"));\n  pm.AddPlot(p);\n}',
+    ),
+    ("Data", "__init__", ("name", "dataSource", "label")): ('p = Plot("{name}", "g", "1d")\np[1].AddData(Data("h2", "s2", "lab"))\npm.AddPlot(p)', '{\n  Plot p("{name}", "g", "1d");\n  p[1].AddData(Data("h2", "s2", "lab"));\n  pm.AddPlot(p);\n}'),
+    ("Data", "__init__", ("nameAndSource",)): ('p = Plot("{name}", "g", "1d")\np[1].AddData(["h2", "s2"])\npm.AddPlot(p)', None),
+    ("Data", "__call__", ("name", "dataSource")): ('p = Plot("{name}", "g", "1d")\np[1].AddData(Data().SetColor(633)("h2", "s2"))\npm.AddPlot(p)', '{\n  Plot p("{name}", "g", "1d");\n  p[1].AddData(Data().SetColor(633)("h2", "s2"));\n  pm.AddPlot(p);\n}'),
+    ("Panel", "__init__", ("width", "height")): ('pm.AddBasePlot(Plot("{name}", PanelLayout([[Panel(1.5, 1.), Panel()]])))', '{\n  pm.AddBasePlot(Plot("{name}", PanelLayout({{Panel(1.5, 1.), Panel()}})));\n}'),
+    ("PanelLayout", "__init__", ("rows",)): (
+        'pm.AddBasePlot(Plot("{name}", PanelLayout([[Panel(), Gap(), Panel(), ColorScale()], [Panel(), Gap(), Hole(), Hole()]])))',
+        '{\n  pm.AddBasePlot(Plot("{name}", PanelLayout({{Panel(), Gap(), Panel(), ColorScale()}, {Panel(), Gap(), Hole(), Hole()}})));\n}',
+    ),
+    ("PanelLayout", "__init__", ("sizes", "rows")): ('pm.AddBasePlot(Plot("{name}", PanelLayout(PanelLayout().SetTextSize(40.), [[Panel(), Panel()]])))', '{\n  pm.AddBasePlot(Plot("{name}", PanelLayout(PanelLayout().SetTextSize(40.), {{Panel(), Panel()}})));\n}'),
+}
+# constructors without arguments make the hosts (LegendEntry(), StatsBox(), BasePlotShape(), PanelLayout() ...); PlotManager is the project
+SETTER_NOT_DEFINITION = {("LegendEntry", "__init__", ()), ("StatsBox", "__init__", ()), ("BasePlotShape", "__init__", ())}
+
+
+def setter_cases():
+    """The calls of the plot definition: every overload of the interface (except the PlotManager's) on each of its hosts, in each
+    variant of its values. Returns (cases, problems): a case is a dict with cls, method, params, host, variant, py, cpp (statements with
+    {name}), unset (a call that clears a value: the plot must be the same as without any call); problems lists overloads without values."""
+    found, problems = [], []
+    overloads = python_interface()
+    for cls, method, params in overloads:
+        names = tuple(p[0] for p in params)
+        if cls == "PlotManager" or (cls, method) in SETTER_ACCESS or (cls, method, names) in SETTER_NOT_DEFINITION or method == "Print":
+            continue
+        if (cls, method, names) in SETTER_STATEMENTS:
+            py, cpp = SETTER_STATEMENTS[(cls, method, names)]
+            found.append({"cls": cls, "method": method, "params": names, "host": "statement", "variant": "plain", "py": py, "cpp": cpp, "unset": False, "meant": True})
+            continue
+        if method in PY_SPECIAL or cls not in SETTER_HOSTS:
+            problems.append(f"{cls}.{method}({', '.join(names)}): no statement and no host for it")
+            continue
+        # a setter without arguments next to one with arguments clears the value: set it first
+        unset = not params and method.startswith("Set") and any(c == cls and m == method and p for c, m, p in overloads)
+        first = next((p for c, m, p in overloads if c == cls and m == method and p), ()) if unset else None
+        for host, (py, cpp) in SETTER_HOSTS[cls].items():
+            meant = setter_meant_for(cls, method, host)
+            if not meant and (cls, host) in (("Data", "tree"), ("Panel", "strip")) or not meant and host.startswith("tree_"):
+                continue  # hosts only made for some calls
+            for variant in SETTER_VARIANTS if meant else ("plain",):
+                values = [setter_value(cls, method, p[0], variant) for p in (first if unset else params)]
+                if None in values:
+                    if variant == "plain":
+                        missing = [p[0] for p, v in zip(first if unset else params, values) if v is None]
+                        problems.append(f"{cls}.{method}({', '.join(names)}): no test value for {', '.join(missing)}")
+                    break
+                if variant != "plain" and values == [setter_value(cls, method, p[0], "plain") for p in (first if unset else params)]:
+                    continue
+                calls = {lang: (call(method, values, lang) if not unset else call(method, values, lang) + call(method, [], lang)) for lang in ("py", "cpp")}
+                found.append({"cls": cls, "method": method, "params": names, "host": host, "variant": variant, "values": values, "unset": unset, "meant": meant, "py": py.replace("{call}", calls["py"]), "cpp": cpp.replace("{call}", calls["cpp"])})
+    return found, problems
+
+
+def cpp_program(folder, source, name="definePlots"):
+    """builds a C++ program of the plot definition with the CMake file of the templates (ROOT found through CMAKE_PREFIX_PATH);
+    returns (the program or None, the output of the build, the compile command of the source and its folder)"""
+    import json
+    import shlex
+
+    os.makedirs(folder, exist_ok=True)
+    with open(os.path.join(folder, "DefinePlots.cpp"), "w") as f:
+        f.write(source)
+    with open(os.path.join(PREFIX, "share", "scirooplot", "templates", "CMakeLists.txt")) as f:
+        cmake = f.read().replace("PROJECT_NAME", name).replace("definePlots", name)
+    with open(os.path.join(folder, "CMakeLists.txt"), "w") as f:
+        f.write(cmake)
+    build = os.path.join(folder, "build")
+    out = run("bash", "-c", f'cmake -S "{folder}" -B "{build}" -DSciRooPlot_DIR="{os.path.abspath(PREFIX)}" -Wno-dev >/dev/null && cmake --build "{build}" -j2', timeout=1800)
+    program = os.path.join(build, name)
+    command, directory = [], build
+    commands = os.path.join(build, "compile_commands.json")
+    if os.path.exists(commands):
+        with open(commands) as f:
+            entry = next((e for e in json.load(f) if e["file"].endswith("DefinePlots.cpp")), None)
+        if entry:
+            command, directory = entry.get("arguments") or shlex.split(entry["command"]), entry["directory"]
+    return (program if out.rc == 0 and os.path.exists(program) else None), out, (command, directory)
+
+
+def syntax_check(compiler, command):
+    """compiles a source again with another compiler (the compile command of cpp_program), only checking it, with -Wall -Wextra"""
+    args, directory = command
+    flags, drop = [], False
+    for arg in args[1:]:
+        if drop:
+            drop = False
+        elif arg in ("-o", "-MF", "-MT", "-MQ"):
+            drop = True
+        elif arg not in ("-c", "-MD") and not arg.startswith("-Wno-maybe-uninitialized"):
+            flags.append(arg)
+    return run(compiler, "-fsyntax-only", "-Wall", "-Wextra", *flags, cwd=directory, timeout=1800)
