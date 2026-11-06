@@ -1680,6 +1680,53 @@ def missing(run):
     return set(re.findall(r"^\s*- missing (.+?)(?: \[[^]]*\])? \(", run.log, re.M))  # without the description of a request [...]
 
 
+class Chunks:
+    """The plots of a test spread over the groups <group>/0, <group>/1, ... of CHUNK plots each, every group painted by a plot run of its
+    own: a run keeps the interpreter memory of every pad it paints (ROOT runs the pad setups through its interpreter, about 0.3 MB per pad
+    of a layout), so that thousands of plots in one run exhaust the memory. Read back by plot name, as from a Run."""
+
+    CHUNK = 300
+
+    def __init__(self, group):
+        self.group = group
+        self.groupOf = {}  # plot name: its group
+        self.runs = {}  # group: its Run
+
+    def add(self, name):
+        """the group of the plot of that name, the next one defined"""
+        self.groupOf[name] = f"{self.group}/{len(self.groupOf) // self.CHUNK}"
+        return self.groupOf[name]
+
+    def plot(self, project, mode="file"):
+        for group in dict.fromkeys(self.groupOf.values()):
+            self.runs[group] = project.plot(f"^{group}$", mode=mode)
+        return self
+
+    def unwritten(self):
+        """the runs that wrote no file, with their exit status and the end of their output"""
+        return [f"{group}: exit status {run.rc}: {run.log[-300:]}" for group, run in self.runs.items() if not run.file]
+
+    def errors(self):
+        return [line for run in self.runs.values() for line in run.errors()]
+
+    def lines(self, kind):
+        return [line for run in self.runs.values() for line in run.lines(kind)]
+
+    def warnings(self, text=""):
+        return [line for run in self.runs.values() for line in run.warnings(text)]
+
+    def __getattr__(self, method):
+        """the readers of a Run (canvas, pad, objects, frame, frame_hist, ...) by plot name, without the group: run.canvas(name)"""
+        if method.startswith("_"):
+            raise AttributeError(method)
+
+        def read(name, *args, **kwargs):
+            group = self.groupOf[name]
+            return getattr(self.runs[group], method)(name, group, *args, **kwargs)
+
+        return read
+
+
 class Project:
     """one isolated project with its own configuration, inputs and output"""
 
