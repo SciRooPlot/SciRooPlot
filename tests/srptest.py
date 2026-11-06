@@ -2208,6 +2208,7 @@ SETTER_VALUES = {
     "phiMax": {"plain": 300.0},
     "pixel": {"plain": 50.0, "precise": 100 / 3},
     "placement": {"plain": Code("top_left")},
+    "coordinates": {"plain": Code("frame_coordinates")},
     "points": {"plain": [(1.0, 2.0), (3.0, 4.0), (5.0, 1.0)], "extreme": [(-1e300, 1e-300), (1e300, 1.0), (0.0, -1e300)]},
     "positions": {"plain": [(1.0, 2.0), (3.0, 4.0)], "precise": [(1 / 3, 2 / 3), (4.0, 1 / 7)]},
     "pos1": {"plain": (1.0, 2.0), "extreme": (-1e300, 1e-300)},

@@ -134,7 +134,7 @@ plot[1].AddFunction("sin(x)/x", "label");  plot[1].AddPoints({x...}, {y...});  p
 // shapes are not data (never in the axis ranges, not numbered, no default colours, no legend row), drawn after the data unless SetBehindData()/SetOnTop():
 plot[1].AddVerticalLine(125.);  plot[1].AddHorizontalLine(1.);  plot[1].AddRegionX(120., 130.).SetBehindData();  plot[1].AddRegionY(y1, y2);
 plot[1].AddLine({x1, y1}, {x2, y2});  plot[1].AddArrow({x1, y1}, {x2, y2}).SetArrowHead("|>").SetArrowSize(0.03);  plot[1].AddRegion({x1, y1}, {x2, y2});
-plot[1].AddEllipse({x, y}, rx, ry).SetArc(0., 180.).SetRotation(30.);  plot[1].AddPolygon({{x1, y1}, {x2, y2}, {x3, y3}});  // line and fill setters as for data; SetUserCoordinates(false): fractions of the pad
+plot[1].AddEllipse({x, y}, rx, ry).SetArc(0., 180.).SetRotation(30.);  plot[1].AddPolygon({{x1, y1}, {x2, y2}, {x3, y3}});  // line and fill setters as for data; SetPadCoordinates()/SetFrameCoordinates(): fractions of the pad or the frame instead of axis values
 plot[1].AddFunction("[](double* x, double* p) { return std::exp(-x[0] * x[1]); }");  // C++ lambda as text: x[0..2] set the dimension, no parameters
 // any callable (with captures, also from python): TF1 f("f", callable, xmin, xmax, 0); f.SetNpx(n); pm.AddDataSource("src", &f); then AddData("f", "src")
 plot[1].AddData(myTemplate("hist"), "label");               // Data template: Data().SetDrawOption(curve).SetColor(kRed) then template("name"[, "src"])
@@ -222,7 +222,7 @@ plot[1](1).SetLegendEntry(LegendEntry().AfterData(2));       // the row of a dat
 plot[1].AddText({"line one", "line two"});  AddText(top_left, "text");  AddText(0.2, 0.9, "text").SetTextFont(43).SetTextSize(20).SetTextAlign(13);   // font 43: size in pixels
 plot[1].AddImage(0.2, 0.7, "/path/logo.png").SetWidth(0.3);  AddImage(top_right, "logo.png");   // default width 0.2 of the pad, height from the image; in pdf files only with ROOT >= 6.42
 ```
-Positions are pad coordinates (0–1) of the upper left corner, `.SetUserCoordinates()` switches to axis units. Box geometry (legends, texts, stats boxes): `.SetSize(w, h)` instead of the measured size, `.SetMargin(m)`, `.SetLineSpacing(s)` (in text heights), `.SetBorder(style, width, color)`; `GetLegend(1).SetSymbolColScale(f)` widens or narrows the symbol column. Legend symbols are derived from what is actually drawn; override with `SetSymbolElements`/`SetDefaultSymbolElements`.
+Positions are pad coordinates (0–1) of the upper left corner, `.SetFrameCoordinates()` switches to fractions of the frame (the same place in every panel of a multi-panel layout, whose pads differ in size; also for `SetSize`), `.SetUserCoordinates()` to axis units; for all boxes of a plot: `plot[0].SetDefaultBoxCoordinates(frame_coordinates)` (shapes: `SetDefaultShapeCoordinates`). Box geometry (legends, texts, stats boxes): `.SetSize(w, h)` instead of the measured size, `.SetMargin(m)`, `.SetLineSpacing(s)` (in text heights), `.SetBorder(style, width, color)`; `GetLegend(1).SetSymbolColScale(f)` widens or narrows the symbol column. Legend symbols are derived from what is actually drawn; override with `SetSymbolElements`/`SetDefaultSymbolElements`.
 
 ## Practices to suggest (this is where SciRooPlot saves work)
 

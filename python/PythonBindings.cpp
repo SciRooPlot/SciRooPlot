@@ -250,6 +250,9 @@ void exportDrawOptions(py::module_& m)
 #define PLACEMENT(name) .value(#name, box_placement_t::name)
   py::enum_<box_placement_t>(m, "box_placement_t") BOX_PLACEMENTS.export_values();
 #undef PLACEMENT
+#define COORDINATES(name) .value(#name, coordinates_t::name)
+  py::enum_<coordinates_t>(m, "coordinates_t") COORDINATE_SYSTEMS.export_values();
+#undef COORDINATES
 }
 
 void exportRootConstants(py::module_& m)
@@ -494,7 +497,9 @@ void exportPad(py::module_& m)
     .def("SetDefaultFillColors", overload_cast<const vector<pair<color_t, float_t>>&, optional<float_t>, optional<int32_t>>(&Pad::SetDefaultFillColors), arg("gradient"), arg("alpha") = nullopt, arg("nColors") = nullopt, ref_int)
     .def("SetDefaultFillStyles", &Pad::SetDefaultFillStyles, arg("styles"), ref_int)
     .def("SetDefaultCandleBoxRange", &Pad::SetDefaultCandleBoxRange, arg("range"), ref_int)
-    .def("SetDefaultCandleWhiskerRange", &Pad::SetDefaultCandleWhiskerRange, arg("range"), ref_int);
+    .def("SetDefaultCandleWhiskerRange", &Pad::SetDefaultCandleWhiskerRange, arg("range"), ref_int)
+    .def("SetDefaultBoxCoordinates", &Pad::SetDefaultBoxCoordinates, arg("coordinates"), ref_int)
+    .def("SetDefaultShapeCoordinates", &Pad::SetDefaultShapeCoordinates, arg("coordinates"), ref_int);
   defFillSetters(pad);
   pad
     .def("SetTransparent", &Pad::SetTransparent, ref_int)
@@ -717,7 +722,9 @@ void exportImageBox(py::module_& m)
     .def("SetPosition", &ImageBox::SetPosition, arg("x"), arg("y"), ref_int)
     .def("SetWidth", &ImageBox::SetWidth, arg("width"), ref_int)
     .def("SetHeight", &ImageBox::SetHeight, arg("height"), ref_int)
-    .def("SetUserCoordinates", &ImageBox::SetUserCoordinates, arg("isUserCoord") = true, ref_int)
+    .def("SetPadCoordinates", &ImageBox::SetPadCoordinates, ref_int)
+    .def("SetFrameCoordinates", &ImageBox::SetFrameCoordinates, ref_int)
+    .def("SetUserCoordinates", &ImageBox::SetUserCoordinates, ref_int)
     .def("SetAutoPlacement", &ImageBox::SetAutoPlacement, arg("placement") = best_corner, ref_int);
 }
 
@@ -731,7 +738,9 @@ void exportTextBox(py::module_& m)
     .def("SetTextAlign", &TextBox::SetTextAlign, arg("align"), ref_int)
     .def("SetPosition", &TextBox::SetPosition, arg("x"), arg("y"), ref_int)
     .def("SetSize", &TextBox::SetSize, arg("width"), arg("height"), ref_int)
-    .def("SetUserCoordinates", &TextBox::SetUserCoordinates, arg("isUserCoord") = true, ref_int)
+    .def("SetPadCoordinates", &TextBox::SetPadCoordinates, ref_int)
+    .def("SetFrameCoordinates", &TextBox::SetFrameCoordinates, ref_int)
+    .def("SetUserCoordinates", &TextBox::SetUserCoordinates, ref_int)
     .def("SetAutoPlacement", &TextBox::SetAutoPlacement, arg("placement") = best_corner, ref_int);
   defBorderSetters(textBox);
   defTextSetters(textBox);
@@ -751,7 +760,9 @@ void exportStatsBox(py::module_& m)
     .def("Print", &StatsBox::Print)
     .def("SetPosition", &StatsBox::SetPosition, arg("x"), arg("y"), ref_int)
     .def("SetSize", &StatsBox::SetSize, arg("width"), arg("height"), ref_int)
-    .def("SetUserCoordinates", &StatsBox::SetUserCoordinates, arg("isUserCoord") = true, ref_int)
+    .def("SetPadCoordinates", &StatsBox::SetPadCoordinates, ref_int)
+    .def("SetFrameCoordinates", &StatsBox::SetFrameCoordinates, ref_int)
+    .def("SetUserCoordinates", &StatsBox::SetUserCoordinates, ref_int)
     .def("SetAutoPlacement", &StatsBox::SetAutoPlacement, arg("placement") = best_corner, ref_int);
   defBorderSetters(statsBox);
   defTextSetters(statsBox);
@@ -791,7 +802,9 @@ void exportLegendBox(py::module_& m)
     .def("SetSymbolColScale", &LegendBox::SetSymbolColScale, arg("scale"), ref_int)
     .def("SetPosition", &LegendBox::SetPosition, arg("x"), arg("y"), ref_int)
     .def("SetSize", &LegendBox::SetSize, arg("width"), arg("height"), ref_int)
-    .def("SetUserCoordinates", &LegendBox::SetUserCoordinates, arg("isUserCoord") = true, ref_int)
+    .def("SetPadCoordinates", &LegendBox::SetPadCoordinates, ref_int)
+    .def("SetFrameCoordinates", &LegendBox::SetFrameCoordinates, ref_int)
+    .def("SetUserCoordinates", &LegendBox::SetUserCoordinates, ref_int)
     .def("SetAutoPlacement", &LegendBox::SetAutoPlacement, arg("placement") = best_corner, ref_int);
   defBorderSetters(legendBox);
   defTextSetters(legendBox);
@@ -830,7 +843,9 @@ void exportShape(py::module_& m)
   py::class_<Shape> shape(m, "Shape", "A line, arrow, region, ellipse or polygon in a pad that is not data (Pad.AddLine, AddArrow, AddRegion, ...).");
   shape
     .def("Print", &Shape::Print)
-    .def("SetUserCoordinates", &Shape::SetUserCoordinates, arg("isUserCoord") = true, ref_int)
+    .def("SetPadCoordinates", &Shape::SetPadCoordinates, ref_int)
+    .def("SetFrameCoordinates", &Shape::SetFrameCoordinates, ref_int)
+    .def("SetUserCoordinates", &Shape::SetUserCoordinates, ref_int)
     .def("SetBehindData", &Shape::SetBehindData, ref_int)
     .def("SetOnTop", &Shape::SetOnTop, ref_int)
     .def("SetArrowHead", &Shape::SetArrowHead, arg("style"), ref_int)

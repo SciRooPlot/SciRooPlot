@@ -271,6 +271,8 @@ class PlotPainter
   static bool IsContentScale(const Plot::Pad& pad, const data_buffer_t& dataBuffer);  // the colour axis of the pad is the contents of a 3d histogram (C)
   // the colours the n-th data item of a pad takes when neither the data nor its pad nor pad 0 sets one
   static const std::vector<color_t>& DefaultColors();
+  // the frame of a pad as fractions of the pad (x1, y1, x2, y2); a 3d view has none: the pad within its margins
+  static std::array<double_t, 4> FrameInPad(const TVirtualPad* pad);
   // the red, green and blue of nColors spread evenly over a gradient
   static std::vector<std::tuple<double_t, double_t, double_t>> GradientRGB(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints);
 
@@ -376,15 +378,16 @@ class PlotPainter
   // parts of a drawing option that contain the letters of markers, lines, fills and error bars but draw nothing of that kind
   static constexpr std::array<const char*, 7> kNonSymbolTokens{"SAME", "TEXT", "PFC", "PLC", "PMC", "X0", "]["};
   static bool HasErrors(const TObject* obj, bool countErrors = false);
-  void DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const std::string& name);
+  void DrawImage(const Plot::Pad::ImageBox& box, coordinates_t coordinates, TPad* pad, const std::string& name);
   bool DrawBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, const Plot::Pad& pad, const Plot::Pad& padDefaults, TPad* pad_ptr,
                const std::string& name);
-  TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, TPad* pad);
+  TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, coordinates_t coordinates, TPad* pad);
   static void DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot::Pad& padDefaults, Plot::Pad::Shape::layer_t layer, TObject* insertAfter, uint8_t padID);
   bool FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY, bool& coversData);
   void FindBoxPosition(TPad* pad, double_t width, double_t height, box_placement_t placement, const std::string& boxType, double_t& lowerLeftX, double_t& lowerLeftY);
+  static std::pair<double_t, double_t> SizeUnit(coordinates_t coordinates, const TVirtualPad* pad);  // the NDC of a size of 1 set for a box
   template <typename BoxType>
-  std::pair<double_t, double_t> PlaceBox(const BoxType& box, TPad* pad, double_t widthNDC, double_t heightNDC, double_t borderX, double_t borderY, const std::string& boxType);
+  std::pair<double_t, double_t> PlaceBox(const BoxType& box, coordinates_t coordinates, TPad* pad, double_t widthNDC, double_t heightNDC, double_t borderX, double_t borderY, const std::string& boxType);
   template <typename BoxType>
   static void ApplyBoxStyle(const BoxType& box, TPave* pave);
   static std::string HistCommand(const std::string& histName, const std::string& commands);

@@ -15,6 +15,12 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 ## 4.0.0 → master
 
+### Plot definitions: renamed, removed, changed signatures
+
+| Old | New | Kind | Action |
+|---|---|---|---|
+| `SetUserCoordinates(bool isUserCoord = true)` of `TextBox`, `LegendBox`, `StatsBox`, `ImageBox` and `Shape` | `SetPadCoordinates()`, `SetFrameCoordinates()` (new: fractions of the frame, (0, 0) its lower left and (1, 1) its upper right corner, also the size set for a box and the radii of an ellipse) and `SetUserCoordinates()`; for all boxes or shapes of a pad (or of all pads with `plot[0]`): `Pad::SetDefaultBoxCoordinates(coordinates_t)` and `Pad::SetDefaultShapeCoordinates(coordinates_t)` (`pad_coordinates`, `frame_coordinates`, `user_coordinates`) | signature | Replace `SetUserCoordinates(false)` by `SetPadCoordinates()` and `SetUserCoordinates(true)` by `SetUserCoordinates()`. |
+
 ### Plot definitions: changed defaults and behaviour
 
 | Old | New | Kind | Action |
@@ -60,6 +66,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 |---|---|---|---|
 | The macro (mode `macro`) of a plot with a TGraph2D did not compile: the frame held the triangulation of the graph, for which ROOT writes a line that is no C++ | The frame has no triangulation, the macro compiles | file format | Write the macros again. |
 | A macro lost the setup of each pad (its palette or gradient, the axis ranges kept for histograms drawn in it, the text format): the frame, drawn first in the macro, cleared the pad | The setup runs before the pad is painted, as in the other modes | file format | Write the macros again. |
+| The coordinate system of boxes and shapes was saved as `is_user_coordinates` (`plots.info`) | It is saved as `coordinate_system` (`pad_coordinates`, `frame_coordinates` or `user_coordinates`) | file format | Re-run the plotting programs. |
 | A layout saved the hiding of the labels and titles between touching panels as label and title size 0 of their axes (`plots.info`) | It is saved as `hidden_next_to` of the pad: the touching panels, by axis | file format | Re-run the plotting programs: plots saved before keep their labels hidden everywhere. |
 
 ## 3.3.3 → 4.0.0

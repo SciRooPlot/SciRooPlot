@@ -2082,6 +2082,7 @@
         [`SetDefaultAlpha(alpha)`], [Default transparency for marker, line, *and* fill together.],
         [`SetDefaultFillAlpha(alpha)`], [Default fill transparency only.],
         [#names("SetDefaultCandleBoxRange(range)", "SetDefaultCandleWhiskerRange(range)")], [Box and whisker range of candle plots.],
+        [#names("SetDefaultBoxCoordinates(coordinates)", "SetDefaultShapeCoordinates(coordinates)")], [Coordinate system of the boxes and of the shapes that set none (`pad_coordinates`, `frame_coordinates`, `user_coordinates`).],
       ))
     ],
   )
@@ -2218,7 +2219,7 @@
       #api-section("Box (shared by TextBox, LegendBox and StatsBox)", (
         [`SetPosition(x, y)` / `SetSize(w, h)`], [Position of the upper left corner, or dimensions of the box.],
         [`SetAutoPlacement(placement = best_corner)`], [Let SciRooPlot place the box: as close as possible to the corner of the frame where it fits best, or to a given one (`top_left`, `top_right`, `bottom_right`, `bottom_left`).],
-        [`SetUserCoordinates(isUserCoord = true)`], [Interpret position/size as user (data) coordinates instead of relative pad coordinates.],
+        [#names("SetPadCoordinates()", "SetFrameCoordinates()", "SetUserCoordinates()")], [Position as fractions of the pad (default) or of the frame, or as axis values.],
         [#names("SetBorder(style, width, color, alpha = 1)", "SetBorderColor(color)", "SetBorderStyle(style)", "SetBorderWidth(width)", "SetBorderAlpha(alpha)")], [Border, all at once or individually.],
         [#names("SetText(font, size, color, alpha = 1)", "SetTextColor(color)", "SetTextFont(font)", "SetTextSize(size)", "SetTextAlpha(alpha)")], [Text styling, all at once or individually.],
         [#names("SetFill(style, color, alpha = 1)", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Background fill, all at once or individually.],

@@ -3439,7 +3439,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       for (const auto& box : pad.GetImageBoxes()) {
         ++imageIndex;
         if (box->IsAutoPlacement() == fixedPositions) continue;
-        DrawImage(*box, pad_ptr, "ImageBox_" + std::to_string(imageIndex));
+        DrawImage(*box, get_first_or(pad_coordinates, box->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates()), pad_ptr, "ImageBox_" + std::to_string(imageIndex));
       }
     };
     placeBoxes(true);
@@ -3484,20 +3484,22 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       // the margin of TPaveStats is a fraction of the box width, the one set for a box is in NDC (as for legends and texts)
       double_t widthNDC = (statsBox->GetMargin()) ? contentWidthPixel / padWidthPixel + 2. * *statsBox->GetMargin() : contentWidthPixel / (1. - 2. * stats->GetMargin()) / padWidthPixel;
       double_t heightNDC = (1. + lineSpacing) * lineHeightPixel * stats->GetListOfLines()->GetSize() / padHeightPixel;
-      if (statsBox->GetWidth()) widthNDC = *statsBox->GetWidth();
-      if (statsBox->GetHeight()) heightNDC = *statsBox->GetHeight();
+      const coordinates_t coordinates = get_first_or(pad_coordinates, statsBox->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
+      const auto [unitX, unitY] = SizeUnit(coordinates, pad_ptr);
+      if (statsBox->GetWidth()) widthNDC = *statsBox->GetWidth() * unitX;
+      if (statsBox->GetHeight()) heightNDC = *statsBox->GetHeight() * unitY;
       if (statsBox->GetMargin()) stats->SetMargin(*statsBox->GetMargin() / widthNDC);
 
       // the border is drawn centered on the edges of the box, so half of it sticks out on each side
       const double_t borderX = mScale * stats->GetLineWidth() / padWidthPixel;
       const double_t borderY = mScale * stats->GetLineWidth() / padHeightPixel;
-      const auto [upperLeftX, upperLeftY] = PlaceBox(*statsBox, pad_ptr, widthNDC, heightNDC, borderX, borderY, "statistics box");
+      const auto [upperLeftX, upperLeftY] = PlaceBox(*statsBox, coordinates, pad_ptr, widthNDC, heightNDC, borderX, borderY, "statistics box");
       stats->SetX1NDC(upperLeftX);
       stats->SetY1NDC(upperLeftY - heightNDC);
       stats->SetX2NDC(upperLeftX + widthNDC);
       stats->SetY2NDC(upperLeftY);
       pad_ptr->cd();
-      stats->SetUniqueID((statsBox->IsUserCoordinates()) ? 1u : 0u);
+      stats->SetUniqueID(coordinates);  // a double-click in show mode reports the position as given
       stats.release()->Draw();
     }
 
@@ -4593,12 +4595,16 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
     const uint16_t number = ++numberOfKind[kind];
     if (shape->GetLayer() != layer) continue;
     const auto& c = shape->GetCoordinates();
-    const bool isUser = shape->IsUserCoordinates();
+    const coordinates_t coordinates = get_first_or(user_coordinates, shape->GetCoordinateSystem(), padSettings.GetDefaultShapeCoordinates(), padDefaults.GetDefaultShapeCoordinates());
+    const bool isUser = (coordinates == user_coordinates);
+    const bool cutAtFrame = (coordinates != pad_coordinates);  // in fractions of the pad a shape may lie outside of the frame on purpose
+    // fractions of the frame or the pad: the part of the pad they span
+    const std::array<double_t, 4> span = (coordinates == frame_coordinates) ? FrameInPad(pad) : std::array<double_t, 4>{0., 0., 1., 1.};  // x1, y1, x2, y2
     const size_t nExpected = (kind == kind_t::vertical_line || kind == kind_t::horizontal_line) ? 1u : ((kind == kind_t::region_x || kind == kind_t::region_y) ? 2u : 4u);
     if ((kind == kind_t::polygon) ? (c.size() < 6 || c.size() % 2) : (c.size() != nExpected)) continue;  // a polygon with too few points was reported when it was added
-    // positions as axis values: given so, or fractions of the pad converted; a log axis cannot show values that are not positive
-    auto valueX = [&](double_t x) { return (!isUser) ? FromPad(pad->GetX1() + x * (pad->GetX2() - pad->GetX1()), pad->GetLogx()) : ((pad->GetLogx() && x <= 0.) ? nan : x); };
-    auto valueY = [&](double_t y) { return (!isUser) ? FromPad(pad->GetY1() + y * (pad->GetY2() - pad->GetY1()), pad->GetLogy()) : ((pad->GetLogy() && y <= 0.) ? nan : y); };
+    // positions as axis values: given so, or fractions of the frame or the pad converted; a log axis cannot show values that are not positive
+    auto valueX = [&](double_t x) { return (!isUser) ? FromPad(pad->GetX1() + (span[0] + x * (span[2] - span[0])) * (pad->GetX2() - pad->GetX1()), pad->GetLogx()) : ((pad->GetLogx() && x <= 0.) ? nan : x); };
+    auto valueY = [&](double_t y) { return (!isUser) ? FromPad(pad->GetY1() + (span[1] + y * (span[3] - span[1])) * (pad->GetY2() - pad->GetY1()), pad->GetLogy()) : ((pad->GetLogy() && y <= 0.) ? nan : y); };
     auto skip = [&](const char* reason) { logger::warning("Shape {} ({}) of pad {} is not drawn: {}.", shapeIndex, Shape::KindName(kind), padID, reason); };
 
     TObject* object{};
@@ -4649,7 +4655,7 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
         if (!std::isfinite(y1)) y1 = yMin;
         if (x1 > x2) std::swap(x1, x2);
         if (y1 > y2) std::swap(y1, y2);
-        if (isUser) {  // cut at the frame (a region in fractions of the pad may lie outside of it on purpose)
+        if (cutAtFrame) {
           x1 = std::max(x1, xMin), x2 = std::min(x2, xMax), y1 = std::max(y1, yMin), y2 = std::min(y2, yMax);
         }
         if (!std::isfinite(x2) || !std::isfinite(y2) || x1 >= x2 || y1 >= y2) {
@@ -4671,8 +4677,8 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
           logger::warning("Shape {} (ellipse) of pad {} is drawn distorted: TEllipse does not convert its radii on a log axis.", shapeIndex, padID);
         }
         // the radii are in pad coordinates (TEllipse converts only the centre)
-        const double_t rx = (isUser) ? c[2] : c[2] * (pad->GetX2() - pad->GetX1());
-        const double_t ry = (isUser) ? c[3] : c[3] * (pad->GetY2() - pad->GetY1());
+        const double_t rx = (isUser) ? c[2] : c[2] * (span[2] - span[0]) * (pad->GetX2() - pad->GetX1());
+        const double_t ry = (isUser) ? c[3] : c[3] * (span[3] - span[1]) * (pad->GetY2() - pad->GetY1());
         const auto arc = shape->GetArc().value_or(std::pair<double_t, double_t>{0., 360.});
         object = new TEllipse(x, y, rx, ry, arc.first, arc.second, shape->GetRotation().value_or(0.));
         break;
@@ -4691,7 +4697,7 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
           skip("a point is not positive on a log axis");
           continue;
         }
-        if (isUser) {
+        if (cutAtFrame) {
           // inside: of the four frame edges (axis, limit, sign: lower or upper limit)
           for (auto [axis, limit, sign] : {std::tuple{0, pad->GetUxmin(), 1.}, std::tuple{0, pad->GetUxmax(), -1.}, std::tuple{1, pad->GetUymin(), 1.}, std::tuple{1, pad->GetUymax(), -1.}}) {
             auto coord = [axis = axis](const std::pair<double_t, double_t>& p) { return (axis == 0) ? p.first : p.second; };
@@ -4757,7 +4763,7 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
     // a region gets its outline only when a line is set for it (a box with option l, a polygon as second, open polyline)
     const bool regionOutline = kind != kind_t::polygon && isRegion && (shape->GetLineColor() || shape->GetLineStyle() || shape->GetLineWidth() || shape->GetLineAlpha());
     if (outline) line->Copy(*dynamic_cast<TAttLine*>(outline));
-    const uint32_t drawnID = Shape::EncodeDrawnID({kind, number, isUser});
+    const uint32_t drawnID = Shape::EncodeDrawnID({kind, number, coordinates});
     for (TObject* drawn : {object, outline}) {
       if (!drawn) continue;
       drawn->SetUniqueID(drawnID);  // for the position reported by a double-click in show mode
@@ -4797,8 +4803,9 @@ bool PlotPainter::DrawBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<P
     if (!box->GetTextAlpha()) {
       if (auto alpha = get_first(pad.GetDefaultTextAlpha(), padDefaults.GetDefaultTextAlpha())) box->SetTextAlpha(*alpha);
     }
-    TPave* generated = GenerateBox(box, pad_ptr);
-    if (generated) generated->SetUniqueID((box->IsUserCoordinates()) ? 1u : 0u);  // a double-click in show mode reports the position as given
+    const coordinates_t coordinates = get_first_or(pad_coordinates, box->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
+    TPave* generated = GenerateBox(box, coordinates, pad_ptr);
+    if (generated) generated->SetUniqueID(coordinates);  // a double-click in show mode reports the position as given
     return generated;
   };
   TPave* pave = std::visit(generate, boxVariant);
@@ -4815,7 +4822,7 @@ bool PlotPainter::DrawBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<P
  * Function to generate a legend or text box.
  */
 //**************************************************************************************************
-TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> boxVariant, TPad* pad)
+TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> boxVariant, coordinates_t coordinates, TPad* pad)
 {
   TPave* returnBox{nullptr};
 
@@ -4971,11 +4978,12 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       totalWidthNDC = borderWidthNDC + 2 * marginNDC + contentWidthNDC;
       totalHeightNDC = (1 + lineSpacing) * nLines * lineHeightNDC;
     }
+    const auto [unitX, unitY] = SizeUnit(coordinates, pad);
     if (box->GetWidth()) {
-      totalWidthNDC = *box->GetWidth();
+      totalWidthNDC = *box->GetWidth() * unitX;
     }
     if (box->GetHeight()) {
-      totalHeightNDC = *box->GetHeight();
+      totalHeightNDC = *box->GetHeight() * unitY;
     }
 
     double_t relMarginWidth = totalMarginWidthNDC / totalWidthNDC;
@@ -4995,7 +5003,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     const double_t borderX = mScale * box->GetBorderWidth().value_or(0.) / padWidthPixel;
     const double_t borderY = mScale * box->GetBorderWidth().value_or(0.) / padHeightPixel;
-    auto [upperLeftX, upperLeftY] = PlaceBox(*box, pad, totalWidthNDC, totalHeightNDC, borderX, borderY, (isLegend) ? "legend" : "text");
+    auto [upperLeftX, upperLeftY] = PlaceBox(*box, coordinates, pad, totalWidthNDC, totalHeightNDC, borderX, borderY, (isLegend) ? "legend" : "text");
     if constexpr (!isLegend) {
       // a single line placed at a position is aligned at it as ROOT aligns a TLatex at its point (the tens 1, 2, 3: left, centre, right;
       // the units 1, 2, 3: bottom, centre, top), otherwise the position is the upper left corner of the box
@@ -5191,7 +5199,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
  * The image itself is stored with the canvas (Plots.root then opens without the file); a size not given keeps its aspect ratio.
  */
 //**************************************************************************************************
-void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const string& name)
+void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, coordinates_t coordinates, TPad* pad, const string& name)
 {
   const auto path = expand_path(box.GetPath());
   if (!path) return;
@@ -5208,11 +5216,12 @@ void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const str
   }
   const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad);
   const double_t aspect = static_cast<double_t>(image->GetHeight()) / image->GetWidth() * padWidthPixel / padHeightPixel;  // height / width in NDC
-  double_t widthNDC = box.GetWidth().value_or(0.2);
-  double_t heightNDC = box.GetHeight().value_or(widthNDC * aspect);
+  const auto [unitX, unitY] = SizeUnit(coordinates, pad);
+  double_t widthNDC = (box.GetWidth()) ? *box.GetWidth() * unitX : 0.2;
+  double_t heightNDC = (box.GetHeight()) ? *box.GetHeight() * unitY : widthNDC * aspect;
   if (box.GetHeight() && !box.GetWidth()) widthNDC = heightNDC / aspect;
 
-  const auto [upperLeftX, upperLeftY] = PlaceBox(box, pad, widthNDC, heightNDC, 0., 0., "image");
+  const auto [upperLeftX, upperLeftY] = PlaceBox(box, coordinates, pad, widthNDC, heightNDC, 0., 0., "image");
   constexpr double_t tolerance = 1e-9;
   if (widthNDC <= 0. || heightNDC <= 0. || upperLeftX < -tolerance || upperLeftY - heightNDC < -tolerance || upperLeftX + widthNDC > 1. + tolerance || upperLeftY > 1. + tolerance) {
     logger::warning("Image {} is not drawn: it does not fit into its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}).", name.substr(name.find('_') + 1), upperLeftX, upperLeftY, widthNDC, heightNDC);
@@ -5227,7 +5236,7 @@ void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const str
   imagePad->SetMargin(0., 0., 0., 0.);
   imagePad->SetBit(kCanDelete);  // owned by the pad
   // a double-click in show mode reports the position as given
-  imagePad->SetUniqueID((box.IsUserCoordinates()) ? 1u : 0u);
+  imagePad->SetUniqueID(coordinates);
   imagePad->Draw();
   imagePad->cd();
   image->SetEditable(true);  // events go to the pad (otherwise ROOT zooms into the image on a click)
@@ -5243,12 +5252,37 @@ void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, TPad* pad, const str
 
 //**************************************************************************************************
 /**
- * Upper left corner (in NDC) of a box of the given size: at the position set for it (converted from user coordinates if requested)
+ * The frame of a pad as fractions of the pad (x1, y1, x2, y2); a 3d view has none: the pad within its margins.
+ */
+//**************************************************************************************************
+std::array<double_t, 4> PlotPainter::FrameInPad(const TVirtualPad* pad)
+{
+  if (pad->GetView()) return {pad->GetLeftMargin(), pad->GetBottomMargin(), 1. - pad->GetRightMargin(), 1. - pad->GetTopMargin()};
+  const double_t width = pad->GetX2() - pad->GetX1();
+  const double_t height = pad->GetY2() - pad->GetY1();
+  return {(pad->GetUxmin() - pad->GetX1()) / width, (pad->GetUymin() - pad->GetY1()) / height, (pad->GetUxmax() - pad->GetX1()) / width, (pad->GetUymax() - pad->GetY1()) / height};
+}
+
+//**************************************************************************************************
+/**
+ * The NDC of a width and a height of 1 set for a box (SetSize, SetWidth, SetHeight): the frame in frame coordinates, the pad otherwise.
+ */
+//**************************************************************************************************
+std::pair<double_t, double_t> PlotPainter::SizeUnit(coordinates_t coordinates, const TVirtualPad* pad)
+{
+  if (coordinates != frame_coordinates) return {1., 1.};
+  const auto [x1, y1, x2, y2] = FrameInPad(pad);
+  return {x2 - x1, y2 - y1};
+}
+
+//**************************************************************************************************
+/**
+ * Upper left corner (in NDC) of a box of the given size: at the position set for it (converted from frame or user coordinates)
  * or placed automatically within the frame of the pad (borderX, borderY: width of its border, half of which sticks out on each side).
  */
 //**************************************************************************************************
 template <typename BoxType>
-std::pair<double_t, double_t> PlotPainter::PlaceBox(const BoxType& box, TPad* pad, double_t widthNDC, double_t heightNDC, double_t borderX, double_t borderY, const string& boxType)
+std::pair<double_t, double_t> PlotPainter::PlaceBox(const BoxType& box, coordinates_t coordinates, TPad* pad, double_t widthNDC, double_t heightNDC, double_t borderX, double_t borderY, const string& boxType)
 {
   if (box.IsAutoPlacement()) {
     double_t lowerLeftX{};
@@ -5256,7 +5290,11 @@ std::pair<double_t, double_t> PlotPainter::PlaceBox(const BoxType& box, TPad* pa
     FindBoxPosition(pad, widthNDC + borderX, heightNDC + borderY, *box.GetPlacement(), boxType, lowerLeftX, lowerLeftY);
     return {lowerLeftX + 0.5 * borderX, lowerLeftY + 0.5 * borderY + heightNDC};
   }
-  if (box.IsUserCoordinates()) {
+  if (coordinates == frame_coordinates) {
+    const auto [x1, y1, x2, y2] = FrameInPad(pad);
+    return {x1 + box.GetXPosition() * (x2 - x1), y1 + box.GetYPosition() * (y2 - y1)};
+  }
+  if (coordinates == user_coordinates) {
     // pad coordinates are log10 of the axis values on a log axis (XtoPad/YtoPad, as ROOT places objects in user coordinates);
     // a value at or below zero has none: ROOT puts it at the frame edge
     if ((pad->GetLogx() && box.GetXPosition() <= 0.) || (pad->GetLogy() && box.GetYPosition() <= 0.)) {
@@ -5309,12 +5347,7 @@ void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, bo
   }
   const double_t tickLengthX = (axisHist) ? axisHist->GetXaxis()->GetTickLength() : gStyle->GetTickLength("X");  // ticks on the x axis (vertical)
   const double_t tickLengthY = (axisHist) ? axisHist->GetYaxis()->GetTickLength() : gStyle->GetTickLength("Y");  // ticks on the y axis (horizontal)
-  // the frame; a 3d view has none: the pad within its margins
-  const bool isView = pad->GetView() != nullptr;
-  const double_t frameX1 = (isView) ? pad->GetLeftMargin() : (pad->GetUxmin() - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
-  const double_t frameX2 = (isView) ? 1. - pad->GetRightMargin() : (pad->GetUxmax() - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
-  const double_t frameY1 = (isView) ? pad->GetBottomMargin() : (pad->GetUymin() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
-  const double_t frameY2 = (isView) ? 1. - pad->GetTopMargin() : (pad->GetUymax() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
+  const auto [frameX1, frameY1, frameX2, frameY2] = FrameInPad(pad);
   constexpr double_t kDistanceToPadEdge{0.015};  // without ticks: a small gap to the edge of the pad
   const double_t distanceX = (polarGrid) ? kDistanceToPadEdge : kDistanceToFrame * tickLengthY * (frameX2 - frameX1);
   const double_t distanceY = (polarGrid) ? kDistanceToPadEdge : kDistanceToFrame * tickLengthX * (frameY2 - frameY1);

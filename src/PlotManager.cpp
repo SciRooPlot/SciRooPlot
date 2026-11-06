@@ -2598,8 +2598,17 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
     const double_t padCoord = ((isX) ? pad->GetLogx() : pad->GetLogy()) ? std::log10(value) : value;
     return (padCoord - lo) / (hi - lo);
   };
-  // fractions of the pad with 3 digits, axis values with 4
-  auto number = [](double_t value, bool isUserCoord) { return (isUserCoord) ? fmt::format("{:.4g}", value) : fmt::format("{:.3g}", value); };
+  // a position in NDC in the coordinate system it was given in: fractions of the pad or the frame, or axis values
+  const auto frame = PlotPainter::FrameInPad(pad);
+  auto given = [&](double_t ndc, bool isX, coordinates_t coordinates) {
+    if (coordinates == user_coordinates) return axisValue(ndc, isX);
+    if (coordinates == frame_coordinates) return (isX) ? (ndc - frame[0]) / (frame[2] - frame[0]) : (ndc - frame[1]) / (frame[3] - frame[1]);
+    return ndc;
+  };
+  // the coordinate system a box was drawn with (TObject::SetUniqueID)
+  auto boxCoordinates = [](uint32_t uniqueID) { return (uniqueID <= static_cast<uint32_t>(user_coordinates)) ? static_cast<coordinates_t>(uniqueID) : pad_coordinates; };
+  // fractions with 3 digits, axis values with 4
+  auto number = [](double_t value, coordinates_t coordinates) { return (coordinates == user_coordinates) ? fmt::format("{:.4g}", value) : fmt::format("{:.3g}", value); };
   // a hint at the content: the start of the first line or row
   auto excerpt = [](string first, bool more) {
     if (first.size() > 20) {
@@ -2617,12 +2626,11 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
 
   if (imagePad) {
     // the upper left corner, as AddImage(x, y, ...) and SetPosition(x, y) take it, and the file name as hint
-    const bool isUserCoord = (imagePad->GetUniqueID() == 1u);
-    const double_t xNDC = imagePad->GetXlowNDC(), yNDC = imagePad->GetYlowNDC() + imagePad->GetHNDC();
-    const double_t x = (isUserCoord) ? axisValue(xNDC, true) : xNDC;
-    const double_t y = (isUserCoord) ? axisValue(yNDC, false) : yNDC;
+    const auto coordinates = boxCoordinates(imagePad->GetUniqueID());
+    const double_t x = given(imagePad->GetXlowNDC(), true, coordinates);
+    const double_t y = given(imagePad->GetYlowNDC() + imagePad->GetHNDC(), false, coordinates);
     const string what = "image " + string(imagePad->GetName()).substr(9) + excerpt(std::filesystem::path(imagePad->GetTitle()).filename().string(), false);
-    return line(what, number(x, isUserCoord) + ", " + number(y, isUserCoord));
+    return line(what, number(x, coordinates) + ", " + number(y, coordinates));
   }
 
   if (auto* box = dynamic_cast<TPave*>(selected)) {
@@ -2641,19 +2649,20 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
       return nullopt;  // e.g. the colour scale
     }
     // the upper left corner, as AddText(x, y, ...), AddLegend(x, y) and SetPosition(x, y) take it
-    const bool isUserCoord = (box->GetUniqueID() == 1u);
-    const double_t x = (isUserCoord) ? axisValue(box->GetX1NDC(), true) : box->GetX1NDC();
-    const double_t y = (isUserCoord) ? axisValue(box->GetY2NDC(), false) : box->GetY2NDC();
-    return line(what, number(x, isUserCoord) + ", " + number(y, isUserCoord));
+    const auto coordinates = boxCoordinates(box->GetUniqueID());
+    const double_t x = given(box->GetX1NDC(), true, coordinates);
+    const double_t y = given(box->GetY2NDC(), false, coordinates);
+    return line(what, number(x, coordinates) + ", " + number(y, coordinates));
   }
 
   using Shape = Plot::Pad::Shape;
   using kind_t = Shape::kind_t;
   const auto id = Shape::DecodeDrawnID(selected->GetUniqueID());
   if (!id) return nullopt;
-  // positions as given (axis values or fractions of the pad), points as the user's language writes a pair
-  auto nx = [&](double_t x) { return number((id->isUserCoord) ? x : fraction(x, true), id->isUserCoord); };
-  auto ny = [&](double_t y) { return number((id->isUserCoord) ? y : fraction(y, false), id->isUserCoord); };
+  // positions as given (axis values or fractions of the pad or the frame), points as the user's language writes a pair
+  const bool isUser = (id->coordinates == user_coordinates);
+  auto nx = [&](double_t x) { return number((isUser) ? x : given(fraction(x, true), true, id->coordinates), id->coordinates); };
+  auto ny = [&](double_t y) { return number((isUser) ? y : given(fraction(y, false), false, id->coordinates), id->coordinates); };
   auto point = [&](double_t x, double_t y) { return (isPython) ? "(" + nx(x) + ", " + ny(y) + ")" : "{" + nx(x) + ", " + ny(y) + "}"; };
   string position;
   if (auto* drawnLine = dynamic_cast<TLine*>(selected)) {  // also arrows
@@ -2673,10 +2682,11 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
       position = point(region->GetX1(), region->GetY1()) + ", " + point(region->GetX2(), region->GetY2());
     }
   } else if (auto* ellipse = dynamic_cast<TEllipse*>(selected)) {
-    // the radii are in pad coordinates: as fractions of the pad divided by its extent
-    const double_t rx = (id->isUserCoord) ? ellipse->GetR1() : ellipse->GetR1() / (pad->GetX2() - pad->GetX1());
-    const double_t ry = (id->isUserCoord) ? ellipse->GetR2() : ellipse->GetR2() / (pad->GetY2() - pad->GetY1());
-    position = point(ellipse->GetX1(), ellipse->GetY1()) + ", " + number(rx, id->isUserCoord) + ", " + number(ry, id->isUserCoord);
+    // the radii are in pad coordinates: as fractions of the pad (or the frame) divided by its extent
+    const bool inFrame = (id->coordinates == frame_coordinates);
+    const double_t rx = (isUser) ? ellipse->GetR1() : ellipse->GetR1() / (pad->GetX2() - pad->GetX1()) / ((inFrame) ? frame[2] - frame[0] : 1.);
+    const double_t ry = (isUser) ? ellipse->GetR2() : ellipse->GetR2() / (pad->GetY2() - pad->GetY1()) / ((inFrame) ? frame[3] - frame[1] : 1.);
+    position = point(ellipse->GetX1(), ellipse->GetY1()) + ", " + number(rx, id->coordinates) + ", " + number(ry, id->coordinates);
   } else if (auto* polygon = dynamic_cast<TPolyLine*>(selected)) {
     for (int32_t i = 0; i + 1 < polygon->GetN(); ++i) {  // the last point closes the polygon
       position += ((i) ? ", " : "") + point(polygon->GetX()[i], polygon->GetY()[i]);

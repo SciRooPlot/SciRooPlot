@@ -1277,6 +1277,28 @@ auto Plot::Pad::SetDefaultCandleWhiskerRange(float_t range) -> decltype(*this)
 
 //**************************************************************************************************
 /**
+ * Coordinate system of the legends, texts, statistics boxes and images that set none (default: pad_coordinates).
+ */
+//**************************************************************************************************
+auto Plot::Pad::SetDefaultBoxCoordinates(coordinates_t coordinates) -> decltype(*this)
+{
+  mBoxCoordinates = coordinates;
+  return *this;
+}
+
+//**************************************************************************************************
+/**
+ * Coordinate system of the shapes that set none (default: user_coordinates).
+ */
+//**************************************************************************************************
+auto Plot::Pad::SetDefaultShapeCoordinates(coordinates_t coordinates) -> decltype(*this)
+{
+  mShapeCoordinates = coordinates;
+  return *this;
+}
+
+//**************************************************************************************************
+/**
  * Make this pad transparent.
  */
 //**************************************************************************************************
@@ -1478,7 +1500,7 @@ Plot::Pad::Pad(const Pad& other)
   : FillSetters<Pad>(other), mPosition(other.mPosition), mMargins(other.mMargins), mView(other.mView),
     mFrameFill(other.mFrameFill), mFrameBorder(other.mFrameBorder), mText(other.mText),
     mMarkerDefaults(other.mMarkerDefaults), mLineDefaults(other.mLineDefaults), mFillDefaults(other.mFillDefaults),
-    mCandleOptionDefaults(other.mCandleOptionDefaults),
+    mCandleOptionDefaults(other.mCandleOptionDefaults), mBoxCoordinates(other.mBoxCoordinates), mShapeCoordinates(other.mShapeCoordinates),
     mPalette(other.mPalette), mRedrawAxes(other.mRedrawAxes), mIsEmptyCell(other.mIsEmptyCell), mColorScaleOf(other.mColorScaleOf),
     mLayoutValues(other.mLayoutValues), mHiddenNextTo(other.mHiddenNextTo), mAxes(other.mAxes)
 {
@@ -1557,6 +1579,14 @@ Plot::Pad::Pad(const ptree& padTree)
   mFillDefaults.ReadColors(padTree, "default_fill_colors");
   read_from_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_box_range");
   read_from_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whisker_range");
+  auto readCoordinates = [&padTree](const string& key, optional<coordinates_t>& coordinates) {
+    if (auto name = padTree.get_optional<string>(key)) {
+      coordinates = coordinates_from_name(*name);
+      if (!coordinates) logger::warning("Unknown coordinate system '{}' is ignored.", *name);
+    }
+  };
+  readCoordinates("default_box_coordinates", mBoxCoordinates);
+  readCoordinates("default_shape_coordinates", mShapeCoordinates);
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
   mIsEmptyCell = get_from_tree<bool>(padTree, "empty_cell").value_or(false);
   read_from_tree(padTree, mColorScaleOf, "color_scale_of");
@@ -1654,6 +1684,8 @@ ptree Plot::Pad::GetPropertyTree() const
   mFillDefaults.PutColors(padTree, "default_fill_colors");
   put_in_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_box_range");
   put_in_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whisker_range");
+  if (mBoxCoordinates) padTree.put("default_box_coordinates", coordinates_name(*mBoxCoordinates));
+  if (mShapeCoordinates) padTree.put("default_shape_coordinates", coordinates_name(*mShapeCoordinates));
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
   if (mIsEmptyCell) padTree.put("empty_cell", true);
   put_in_tree(padTree, mColorScaleOf, "color_scale_of");
@@ -1743,6 +1775,8 @@ void Plot::Pad::operator+=(const Pad& pad)
   mFillDefaults.Update(pad.mFillDefaults);
   if (pad.mCandleOptionDefaults.boxRange) mCandleOptionDefaults.boxRange = pad.mCandleOptionDefaults.boxRange;
   if (pad.mCandleOptionDefaults.whiskerRange) mCandleOptionDefaults.whiskerRange = pad.mCandleOptionDefaults.whiskerRange;
+  if (pad.mBoxCoordinates) mBoxCoordinates = pad.mBoxCoordinates;
+  if (pad.mShapeCoordinates) mShapeCoordinates = pad.mShapeCoordinates;
 
   if (pad.mPalette.colorGradient.rgbEndpoints) {
     mPalette.colorGradient = pad.mPalette.colorGradient;  // a gradient comes with its own alpha and number of colours
@@ -3850,7 +3884,10 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
   read_from_tree(boxTree, mPos.y, "y");
   read_from_tree(boxTree, mPos.w, "w");
   read_from_tree(boxTree, mPos.h, "h");
-  read_from_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
+  if (auto name = boxTree.get_optional<string>("coordinate_system")) {
+    mPos.coordinates = coordinates_from_name(*name);
+    if (!mPos.coordinates) logger::warning("Unknown coordinate system '{}' is ignored.", *name);
+  }
   if (auto name = boxTree.get_optional<string>("placement")) {
     mPos.placement = box_placement_from_name(*name);
     if (!mPos.placement) logger::warning("Unknown box placement '{}' is ignored.", *name);
@@ -3875,7 +3912,7 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
   put_in_tree(boxTree, mPos.y, "y");
   put_in_tree(boxTree, mPos.w, "w");
   put_in_tree(boxTree, mPos.h, "h");
-  put_in_tree(boxTree, mPos.isUserCoord, "is_user_coordinates");
+  if (mPos.coordinates) boxTree.put("coordinate_system", coordinates_name(*mPos.coordinates));
   if (mPos.placement) boxTree.put("placement", box_placement_name(*mPos.placement));
   this->PutBorder(boxTree);
   this->PutFill(boxTree);
@@ -3909,9 +3946,23 @@ BoxType& Plot::Pad::Box<BoxType>::SetSize(double_t width, double_t height)
 }
 
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetUserCoordinates(bool isUserCoord)
+BoxType& Plot::Pad::Box<BoxType>::SetPadCoordinates()
 {
-  mPos.isUserCoord = isUserCoord;
+  mPos.coordinates = pad_coordinates;
+  return *GetThis();
+}
+
+template <typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetFrameCoordinates()
+{
+  mPos.coordinates = frame_coordinates;
+  return *GetThis();
+}
+
+template <typename BoxType>
+BoxType& Plot::Pad::Box<BoxType>::SetUserCoordinates()
+{
+  mPos.coordinates = user_coordinates;
   return *GetThis();
 }
 
@@ -3993,7 +4044,10 @@ Plot::Pad::ImageBox::ImageBox(const ptree& imageBoxTree)
   read_from_tree(imageBoxTree, mY, "y");
   read_from_tree(imageBoxTree, mWidth, "w");
   read_from_tree(imageBoxTree, mHeight, "h");
-  read_from_tree(imageBoxTree, mIsUserCoord, "is_user_coordinates");
+  if (auto name = imageBoxTree.get_optional<string>("coordinate_system")) {
+    mCoordinates = coordinates_from_name(*name);
+    if (!mCoordinates) logger::warning("Unknown coordinate system '{}' is ignored.", *name);
+  }
   if (auto name = imageBoxTree.get_optional<string>("placement")) {
     mPlacement = box_placement_from_name(*name);
     if (!mPlacement) logger::warning("Unknown box placement '{}' is ignored.", *name);
@@ -4013,7 +4067,7 @@ ptree Plot::Pad::ImageBox::GetPropertyTree() const
   put_in_tree(boxTree, mY, "y");
   put_in_tree(boxTree, mWidth, "w");
   put_in_tree(boxTree, mHeight, "h");
-  put_in_tree(boxTree, mIsUserCoord, "is_user_coordinates");
+  if (mCoordinates) boxTree.put("coordinate_system", coordinates_name(*mCoordinates));
   if (mPlacement) boxTree.put("placement", box_placement_name(*mPlacement));
   return boxTree;
 }
@@ -4040,9 +4094,19 @@ auto Plot::Pad::ImageBox::SetHeight(double_t height) -> decltype(*this)
   mHeight = height;
   return *this;
 }
-auto Plot::Pad::ImageBox::SetUserCoordinates(bool isUserCoord) -> decltype(*this)
+auto Plot::Pad::ImageBox::SetPadCoordinates() -> decltype(*this)
 {
-  mIsUserCoord = isUserCoord;
+  mCoordinates = pad_coordinates;
+  return *this;
+}
+auto Plot::Pad::ImageBox::SetFrameCoordinates() -> decltype(*this)
+{
+  mCoordinates = frame_coordinates;
+  return *this;
+}
+auto Plot::Pad::ImageBox::SetUserCoordinates() -> decltype(*this)
+{
+  mCoordinates = user_coordinates;
   return *this;
 }
 auto Plot::Pad::ImageBox::SetAutoPlacement(box_placement_t placement) -> decltype(*this)
@@ -4802,14 +4866,14 @@ string Plot::Pad::Shape::KindLabel(kind_t kind)
 
 uint32_t Plot::Pad::Shape::EncodeDrawnID(const drawn_id_t& id)
 {
-  // bit 24 marks a shape (other objects keep 0); kind in bits 16-23, pad fractions in bit 15, number in bits 0-14
-  return (1u << 24) | (static_cast<uint32_t>(id.kind) << 16) | ((id.isUserCoord) ? 0u : (1u << 15)) | (id.number & 0x7FFFu);
+  // bit 24 marks a shape (other objects keep 0); kind in bits 16-23, coordinate system in bits 14-15, number in bits 0-13
+  return (1u << 24) | (static_cast<uint32_t>(id.kind) << 16) | (static_cast<uint32_t>(id.coordinates) << 14) | (id.number & 0x3FFFu);
 }
 
 optional<Plot::Pad::Shape::drawn_id_t> Plot::Pad::Shape::DecodeDrawnID(uint32_t uniqueID)
 {
-  if ((uniqueID >> 24) != 1u || ((uniqueID >> 16) & 0xFFu) > static_cast<uint32_t>(kind_t::polygon)) return nullopt;
-  return drawn_id_t{static_cast<kind_t>((uniqueID >> 16) & 0xFFu), static_cast<uint16_t>(uniqueID & 0x7FFFu), ((uniqueID >> 15) & 1u) == 0u};
+  if ((uniqueID >> 24) != 1u || ((uniqueID >> 16) & 0xFFu) > static_cast<uint32_t>(kind_t::polygon) || ((uniqueID >> 14) & 3u) > static_cast<uint32_t>(user_coordinates)) return nullopt;
+  return drawn_id_t{static_cast<kind_t>((uniqueID >> 16) & 0xFFu), static_cast<uint16_t>(uniqueID & 0x3FFFu), static_cast<coordinates_t>((uniqueID >> 14) & 3u)};
 }
 
 Plot::Pad::Shape::Shape(const ptree& shapeTree)
@@ -4818,7 +4882,10 @@ Plot::Pad::Shape::Shape(const ptree& shapeTree)
   optional<vector<double_t>> coordinates;
   read_from_tree(shapeTree, coordinates, "coordinates");
   if (coordinates) mCoordinates = *coordinates;
-  read_from_tree(shapeTree, mIsUserCoord, "is_user_coordinates");
+  if (auto name = shapeTree.get_optional<string>("coordinate_system")) {
+    mCoordinateSystem = coordinates_from_name(*name);
+    if (!mCoordinateSystem) logger::warning("Unknown coordinate system '{}' is ignored.", *name);
+  }
   if (auto layer = shapeTree.get_optional<string>("layer")) {
     if (*layer == "behind_data") {
       mLayer = layer_t::behind_data;
@@ -4845,7 +4912,7 @@ ptree Plot::Pad::Shape::GetPropertyTree() const
   ptree shapeTree;
   shapeTree.put("kind", KindName(mKind));
   put_in_tree(shapeTree, optional<vector<double_t>>(mCoordinates), "coordinates");
-  put_in_tree(shapeTree, mIsUserCoord, "is_user_coordinates");
+  if (mCoordinateSystem) shapeTree.put("coordinate_system", coordinates_name(*mCoordinateSystem));
   if (mLayer) shapeTree.put("layer", (*mLayer == layer_t::behind_data) ? "behind_data" : ((*mLayer == layer_t::on_top) ? "on_top" : "after_data"));
   put_in_tree(shapeTree, mArrowHead, "arrow_head");
   put_in_tree(shapeTree, mArrowSize, "arrow_size");
@@ -4859,9 +4926,19 @@ ptree Plot::Pad::Shape::GetPropertyTree() const
   return shapeTree;
 }
 
-auto Plot::Pad::Shape::SetUserCoordinates(bool isUserCoord) -> decltype(*this)
+auto Plot::Pad::Shape::SetPadCoordinates() -> decltype(*this)
 {
-  mIsUserCoord = isUserCoord;
+  mCoordinateSystem = pad_coordinates;
+  return *this;
+}
+auto Plot::Pad::Shape::SetFrameCoordinates() -> decltype(*this)
+{
+  mCoordinateSystem = frame_coordinates;
+  return *this;
+}
+auto Plot::Pad::Shape::SetUserCoordinates() -> decltype(*this)
+{
+  mCoordinateSystem = user_coordinates;
   return *this;
 }
 auto Plot::Pad::Shape::SetBehindData() -> decltype(*this)

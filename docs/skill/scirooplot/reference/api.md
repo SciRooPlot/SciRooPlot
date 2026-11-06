@@ -131,6 +131,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles)`
 - `Pad& SetDefaultCandleBoxRange(float_t range)`
 - `Pad& SetDefaultCandleWhiskerRange(float_t range)`
+- `Pad& SetDefaultBoxCoordinates(coordinates_t coordinates)` — of the legends, texts, statistics boxes and images that set none (default: pad_coordinates)
+- `Pad& SetDefaultShapeCoordinates(coordinates_t coordinates)` — of the shapes that set none (default: user_coordinates)
 - `Pad& SetTransparent()`
 - `Pad& SetFrameFill(int16_t style, color_t color, float_t alpha = 1.f)`
 - `Pad& SetFrameFillColor(color_t color)`
@@ -299,7 +301,9 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 
 - `BoxType& SetPosition(double_t x, double_t y)`
 - `BoxType& SetSize(double_t width, double_t height)`
-- `BoxType& SetUserCoordinates(bool isUserCoord = true)`
+- `BoxType& SetPadCoordinates()` — position and size as fractions of the pad (0 to 1; default, see Pad::SetDefaultBoxCoordinates)
+- `BoxType& SetFrameCoordinates()` — position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner)
+- `BoxType& SetUserCoordinates()` — position as axis values (size as fractions of the pad)
 - `BoxType& SetAutoPlacement(box_placement_t placement = best_corner)`
 - `BoxType& SetTransparent()`
 - `BoxType& SetNoBox()`
@@ -322,9 +326,11 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `ImageBox(double_t xPos, double_t yPos, const std::string& path)` — C++ only
 - `ImageBox(const std::string& path)` — C++ only
 - `ImageBox& SetPosition(double_t x, double_t y)`
-- `ImageBox& SetWidth(double_t width)` — fraction of the pad width (no SetSize: one side may follow from the aspect ratio)
-- `ImageBox& SetHeight(double_t height)` — fraction of the pad height
-- `ImageBox& SetUserCoordinates(bool isUserCoord = true)`
+- `ImageBox& SetWidth(double_t width)` — fraction of the pad width, of the frame width in frame coordinates (no SetSize: one side may follow from the aspect ratio)
+- `ImageBox& SetHeight(double_t height)` — fraction of the pad height, of the frame height in frame coordinates
+- `ImageBox& SetPadCoordinates()` — position and size as fractions of the pad (0 to 1; default, see Pad::SetDefaultBoxCoordinates)
+- `ImageBox& SetFrameCoordinates()` — position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner)
+- `ImageBox& SetUserCoordinates()` — position as axis values
 - `ImageBox& SetAutoPlacement(box_placement_t placement = best_corner)`
 
 ## Plot::Pad::StatsBox
@@ -362,7 +368,9 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 ## Plot::Pad::Shape
 *a line, arrow, region, ellipse or polygon that is not data (Pad::AddLine, AddArrow, AddVerticalLine, AddRegionX, ...); also has the line and fill setters*
 
-- `Shape& SetUserCoordinates(bool isUserCoord = true)` — false: positions as fractions of the pad (0 to 1) instead of axis values
+- `Shape& SetPadCoordinates()` — positions (and radii of an ellipse) as fractions of the pad (0 to 1)
+- `Shape& SetFrameCoordinates()` — positions (and radii of an ellipse) as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner)
+- `Shape& SetUserCoordinates()` — positions as axis values (default, see Pad::SetDefaultShapeCoordinates)
 - `Shape& SetBehindData()` — drawn after the frame and before the data (default: after the data)
 - `Shape& SetOnTop()` — drawn after the legends and texts (default: before them, so that they avoid it)
 - `Shape& SetArrowHead(const std::string& style)` — the option of TArrow: "|>" (default), ">", "<|>", "<>", "-|>-", ...

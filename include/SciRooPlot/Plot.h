@@ -183,6 +183,38 @@ inline std::optional<box_placement_t> box_placement_from_name(const std::string&
   return std::nullopt;
 }
 
+// coordinate system of the position of a box or a shape: fractions of the pad (0 to 1), fractions of the frame ((0, 0) lower left,
+// (1, 1) upper right corner) or axis values; for all boxes or shapes of a pad (Pad::SetDefaultBoxCoordinates, SetDefaultShapeCoordinates)
+#define COORDINATE_SYSTEMS       \
+  COORDINATES(pad_coordinates)   \
+  COORDINATES(frame_coordinates) \
+  COORDINATES(user_coordinates)
+enum coordinates_t : uint8_t {
+#define COORDINATES(name) name,
+  COORDINATE_SYSTEMS
+#undef COORDINATES
+};
+// the coordinate systems are stored by name
+inline std::string coordinates_name(coordinates_t coordinates)
+{
+  switch (coordinates) {
+#define COORDINATES(name) \
+  case name:              \
+    return #name;
+    COORDINATE_SYSTEMS
+#undef COORDINATES
+  }
+  return "";
+}
+inline std::optional<coordinates_t> coordinates_from_name(const std::string& name)
+{
+#define COORDINATES(coordinatesName) \
+  if (name == #coordinatesName) return coordinatesName;
+  COORDINATE_SYSTEMS
+#undef COORDINATES
+  return std::nullopt;
+}
+
 class PanelLayout;
 
 //**************************************************************************************************
@@ -577,6 +609,8 @@ class Plot::Pad : public FillSetters<Pad>
   Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles);
   Pad& SetDefaultCandleBoxRange(float_t range);
   Pad& SetDefaultCandleWhiskerRange(float_t range);
+  Pad& SetDefaultBoxCoordinates(coordinates_t coordinates);    // of the legends, texts, statistics boxes and images that set none (default: pad_coordinates)
+  Pad& SetDefaultShapeCoordinates(coordinates_t coordinates);  // of the shapes that set none (default: user_coordinates)
   Pad& SetTransparent();
   Pad& SetFrameFill(int16_t style, color_t color, float_t alpha = 1.f);
   Pad& SetFrameFillColor(color_t color);
@@ -648,6 +682,8 @@ class Plot::Pad : public FillSetters<Pad>
   const auto& GetDefaultFillStyles() const { return mFillDefaults.styles; }
   const auto& GetDefaultCandleBoxRange() const { return mCandleOptionDefaults.boxRange; }
   const auto& GetDefaultCandleWhiskerRange() const { return mCandleOptionDefaults.whiskerRange; }
+  const auto& GetDefaultBoxCoordinates() const { return mBoxCoordinates; }
+  const auto& GetDefaultShapeCoordinates() const { return mShapeCoordinates; }
   const auto& GetRedrawAxes() const { return mRedrawAxes; }
   bool GetIsEmptyCell() const { return mIsEmptyCell; }
   const auto& GetColorScaleOf() const { return mColorScaleOf; }
@@ -713,6 +749,8 @@ class Plot::Pad : public FillSetters<Pad>
   view_defaults_t mLineDefaults;
   view_defaults_t mFillDefaults;
   candle_defaults_t mCandleOptionDefaults;
+  std::optional<coordinates_t> mBoxCoordinates;
+  std::optional<coordinates_t> mShapeCoordinates;
   palette_defaults_t mPalette;
   std::optional<bool> mRedrawAxes;
   bool mIsEmptyCell{};                           // an Empty() cell of a PanelLayout: room for a legend or a text, nothing to warn about when left blank
@@ -1439,7 +1477,9 @@ class Plot::Pad::Box : public BorderSetters<BoxType>, public TextSetters<BoxType
 
   BoxType& SetPosition(double_t x, double_t y);
   BoxType& SetSize(double_t width, double_t height);
-  BoxType& SetUserCoordinates(bool isUserCoord = true);
+  BoxType& SetPadCoordinates();    // position and size as fractions of the pad (0 to 1; default, see Pad::SetDefaultBoxCoordinates)
+  BoxType& SetFrameCoordinates();  // position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner)
+  BoxType& SetUserCoordinates();   // position as axis values (size as fractions of the pad)
   BoxType& SetAutoPlacement(box_placement_t placement = best_corner);
   BoxType& SetTransparent();
   BoxType& SetNoBox();
@@ -1457,7 +1497,7 @@ class Plot::Pad::Box : public BorderSetters<BoxType>, public TextSetters<BoxType
   auto& GetMargin() const { return mMargin; }
   auto& GetLineSpacing() const { return mLineSpacing; }
 
-  bool IsUserCoordinates() const { return (mPos.isUserCoord) ? *mPos.isUserCoord : false; }
+  const auto& GetCoordinateSystem() const { return mPos.coordinates; }  // none: the default of the pad
   bool IsAutoPlacement() const { return mPos.placement.has_value(); }
 
  private:
@@ -1474,7 +1514,7 @@ class Plot::Pad::Box : public BorderSetters<BoxType>, public TextSetters<BoxType
     std::optional<double_t> y;
     std::optional<double_t> w;
     std::optional<double_t> h;
-    std::optional<bool> isUserCoord;
+    std::optional<coordinates_t> coordinates;
     std::optional<box_placement_t> placement;  // automatic placement (instead of the position given by x and y)
   };
 
@@ -1544,9 +1584,11 @@ class Plot::Pad::ImageBox
   void Print() const { Plot::Print(GetPropertyTree(), "ImageBox"); }
 
   ImageBox& SetPosition(double_t x, double_t y);
-  ImageBox& SetWidth(double_t width);    // fraction of the pad width (no SetSize: one side may follow from the aspect ratio)
-  ImageBox& SetHeight(double_t height);  // fraction of the pad height
-  ImageBox& SetUserCoordinates(bool isUserCoord = true);
+  ImageBox& SetWidth(double_t width);    // fraction of the pad width, of the frame width in frame coordinates (no SetSize: one side may follow from the aspect ratio)
+  ImageBox& SetHeight(double_t height);  // fraction of the pad height, of the frame height in frame coordinates
+  ImageBox& SetPadCoordinates();         // position and size as fractions of the pad (0 to 1; default, see Pad::SetDefaultBoxCoordinates)
+  ImageBox& SetFrameCoordinates();       // position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner)
+  ImageBox& SetUserCoordinates();        // position as axis values
   ImageBox& SetAutoPlacement(box_placement_t placement = best_corner);
 
  protected:
@@ -1560,7 +1602,7 @@ class Plot::Pad::ImageBox
   const auto& GetWidth() const { return mWidth; }
   const auto& GetHeight() const { return mHeight; }
   const auto& GetPlacement() const { return mPlacement; }
-  bool IsUserCoordinates() const { return mIsUserCoord.value_or(false); }
+  const auto& GetCoordinateSystem() const { return mCoordinates; }  // none: the default of the pad
   bool IsAutoPlacement() const { return mPlacement.has_value(); }
 
  private:
@@ -1569,7 +1611,7 @@ class Plot::Pad::ImageBox
   std::optional<double_t> mY;
   std::optional<double_t> mWidth;
   std::optional<double_t> mHeight;
-  std::optional<bool> mIsUserCoord;
+  std::optional<coordinates_t> mCoordinates;
   std::optional<box_placement_t> mPlacement;
 };
 
@@ -1604,13 +1646,15 @@ class Plot::Pad::Shape : public LineSetters<Shape>, public FillSetters<Shape>
   explicit Shape(const boost::property_tree::ptree& shapeTree);
   void Print() const { Plot::Print(GetPropertyTree(), "Shape"); }
 
-  Shape& SetUserCoordinates(bool isUserCoord = true);  // false: positions as fractions of the pad (0 to 1) instead of axis values
-  Shape& SetBehindData();                              // drawn after the frame and before the data (default: after the data)
-  Shape& SetOnTop();                                   // drawn after the legends and texts (default: before them, so that they avoid it)
-  Shape& SetArrowHead(const std::string& style);       // the option of TArrow: "|>" (default), ">", "<|>", "<>", "-|>-", ...
-  Shape& SetArrowSize(float_t size);                   // length of the arrow head as fraction of the pad height (default 0.03)
-  Shape& SetArc(double_t phiMin, double_t phiMax);     // part of an ellipse, in degrees (default: 0 to 360)
-  Shape& SetRotation(double_t theta);                  // rotation of an ellipse, in degrees
+  Shape& SetPadCoordinates();                       // positions (and radii of an ellipse) as fractions of the pad (0 to 1)
+  Shape& SetFrameCoordinates();                     // positions (and radii of an ellipse) as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner)
+  Shape& SetUserCoordinates();                      // positions as axis values (default, see Pad::SetDefaultShapeCoordinates)
+  Shape& SetBehindData();                           // drawn after the frame and before the data (default: after the data)
+  Shape& SetOnTop();                                // drawn after the legends and texts (default: before them, so that they avoid it)
+  Shape& SetArrowHead(const std::string& style);    // the option of TArrow: "|>" (default), ">", "<|>", "<>", "-|>-", ...
+  Shape& SetArrowSize(float_t size);                // length of the arrow head as fraction of the pad height (default 0.03)
+  Shape& SetArc(double_t phiMin, double_t phiMax);  // part of an ellipse, in degrees (default: 0 to 360)
+  Shape& SetRotation(double_t theta);               // rotation of an ellipse, in degrees
 
  protected:
   friend class PlotPainter;
@@ -1635,18 +1679,18 @@ class Plot::Pad::Shape : public LineSetters<Shape>, public FillSetters<Shape>
   static std::optional<kind_t> KindFromName(const std::string& name);
   static std::string KindLabel(kind_t kind);  // for messages: "vertical line", "region X"
   // the drawn object of a shape carries it as TObject::SetUniqueID, so that a double-click in show mode names it like the user added it:
-  // its kind, its number among the shapes of this kind in the pad (the nth AddArrow), and whether it is in fractions of the pad
+  // its kind, its number among the shapes of this kind in the pad (the nth AddArrow), and the coordinate system it was given in
   struct drawn_id_t {
     kind_t kind;
     uint16_t number;
-    bool isUserCoord;
+    coordinates_t coordinates;
   };
   static uint32_t EncodeDrawnID(const drawn_id_t& id);
   static std::optional<drawn_id_t> DecodeDrawnID(uint32_t uniqueID);
 
   auto GetKind() const { return mKind; }
   const auto& GetCoordinates() const { return mCoordinates; }
-  bool IsUserCoordinates() const { return mIsUserCoord.value_or(true); }
+  const auto& GetCoordinateSystem() const { return mCoordinateSystem; }  // none: the default of the pad
   layer_t GetLayer() const { return mLayer.value_or(layer_t::after_data); }
   const auto& GetArrowHead() const { return mArrowHead; }
   const auto& GetArrowSize() const { return mArrowSize; }
@@ -1656,7 +1700,7 @@ class Plot::Pad::Shape : public LineSetters<Shape>, public FillSetters<Shape>
  private:
   kind_t mKind{kind_t::line};
   std::vector<double_t> mCoordinates;  // line, arrow, region: x1, y1, x2, y2; vertical or horizontal line: x or y; region in x or y: x1, x2 or y1, y2; ellipse: x, y, rx, ry; polygon: x1, y1, x2, y2, ...
-  std::optional<bool> mIsUserCoord;
+  std::optional<coordinates_t> mCoordinateSystem;
   std::optional<layer_t> mLayer;
   std::optional<std::string> mArrowHead;
   std::optional<float_t> mArrowSize;
