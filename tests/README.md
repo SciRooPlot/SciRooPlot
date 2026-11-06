@@ -23,3 +23,5 @@ A bug found later adds a case to the list of the file that should have caught it
 drawn objects back, and the PASS/FAIL bookkeeping. A test exits 0 if all checks pass, 1 if one fails and 77 if it cannot run (skipped).
 
 The data is created when a test runs, in `tests/work/` of the build directory; nothing is installed.
+The `cli` tests run `srp`, `plot` and the shell functions of `env.sh` of the build directory, in bash and in zsh where it is installed;
+their C++ projects need cmake and a compiler.

@@ -16,6 +16,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import warnings
 
 import numpy as np
@@ -695,3 +696,101 @@ class Project:
         proc = subprocess.run([os.path.join(PREFIX, "bin", "plot"), group, name, mode], capture_output=True, text=True, timeout=timeout, check=False)
         self.nRuns += 1
         return Run(proc, self.path("out", "Plots.root"), self.path(f"run{self.nRuns}_Plots.root"))
+
+
+# ---------------------------------------------------------------------------------------------
+# the command line: the programs srp and plot, the shell functions of env.sh
+# ---------------------------------------------------------------------------------------------
+SRP = os.path.join(PREFIX, "bin", "srp")
+PLOT = os.path.join(PREFIX, "bin", "plot")
+ENV_SCRIPT = os.path.join(PREFIX, "share", "scirooplot", "env.sh")
+SHELLS = tuple(shell for shell in ("bash", "zsh") if shutil.which(shell))  # zsh is optional: its checks are left out without it
+
+
+class Output:
+    """the result of a command: exit status, stdout and stderr without colours and margins, text (both)"""
+
+    def __init__(self, proc, seconds=0.0):
+        self.rc = proc.returncode
+        # without colours and without the margin of printed lines ("       | ")
+        self.stdout = re.sub(r"(?m)^ {7}\| ", "", re.sub(r"\x1b\[[0-9;]*m", "", proc.stdout))
+        self.stderr = re.sub(r"(?m)^ {7}\| ", "", re.sub(r"\x1b\[[0-9;]*m", "", proc.stderr))
+        self.text = self.stdout + self.stderr
+        self.seconds = seconds
+
+    def lines(self, text=""):
+        return [line for line in self.text.splitlines() if text in line]
+
+    def errors(self):
+        """SciRooPlot's errors, those of env.sh (Error: ...) and ROOT's"""
+        return [line for line in self.text.splitlines() if line.startswith(("[ ERR", "Error", "Fatal")) or "Error in <" in line]
+
+    def warnings(self):
+        return [line for line in self.text.splitlines() if line.startswith(("[ WARN", "Warning"))]
+
+    def tail(self, n=400):
+        return " | ".join(self.text.strip().splitlines())[-n:]
+
+
+def run(program, *args, config=None, cwd=None, env=None, timeout=600):
+    """runs a program (srp, plot) with a configuration folder (default: the one of the test)"""
+    environ = dict(os.environ, **(env or {}))
+    if config:
+        environ["SCIROOPLOT_CONFIG_PATH"] = config
+    start = time.time()
+    proc = subprocess.run([program, *args], capture_output=True, text=True, cwd=cwd, env=environ, stdin=subprocess.DEVNULL, timeout=timeout, check=False)
+    return Output(proc, time.time() - start)
+
+
+def shell(code, shell="bash", config=None, cwd=None, env=None, interactive=False, typed=False, timeout=600):
+    """runs code in bash or zsh after sourcing env.sh, without the user's start-up files; interactive shells get the tab completion.
+    typed: the lines are read from standard input by an interactive shell, as if typed at its prompt (aliases, PROMPT_COMMAND)"""
+    home = os.path.join(WORK, f"home_{shell}")
+    os.makedirs(home, exist_ok=True)
+    environ = dict(os.environ, HOME=home, ZDOTDIR=home, **(env or {}))
+    if config:
+        environ["SCIROOPLOT_CONFIG_PATH"] = config
+    options = ["--norc", "--noprofile"] if shell == "bash" else ["-f"]
+    script = f'source "{ENV_SCRIPT}"\n{code}\n'
+    start = time.time()
+    if typed:
+        proc = subprocess.run([shell, *options, "-i"], input=script + "exit\n", capture_output=True, text=True, cwd=cwd, env=environ, timeout=timeout, check=False)
+    else:
+        proc = subprocess.run([shell, *options, *(["-i"] if interactive else []), "-c", script], capture_output=True, text=True, cwd=cwd, env=environ, stdin=subprocess.DEVNULL, timeout=timeout, check=False)
+    out = Output(proc, time.time() - start)
+    # an interactive shell without a terminal complains about job control
+    noise = ("job control", "terminal process group", "no job control", "can't change group", "cannot set terminal")
+    out.stderr = "\n".join(line for line in out.stderr.splitlines() if not any(n in line for n in noise))
+    out.text = out.stdout + out.stderr
+    return out
+
+
+def python(code, config=None, cwd=None, env=None, timeout=600):
+    """runs Python code in a process of its own that imports SciRooPlot (definition-time messages, a configuration of its own)"""
+    module = os.path.dirname(S.__file__)
+    environ = {"PYTHONPATH": module + os.pathsep + os.environ.get("PYTHONPATH", ""), **(env or {})}
+    return run(sys.executable, "-u", "-W", "ignore", "-c", code, config=config, cwd=cwd, env=environ, timeout=timeout)
+
+
+def config_folder(name):
+    """a new, empty configuration folder"""
+    path = os.path.join(WORK, name)
+    os.makedirs(path)
+    return path
+
+
+def config_files(config):
+    """the contents of every file of a configuration folder by relative path (without the lock file): to see that nothing changed"""
+    files = {}
+    for root, _, names in os.walk(config):
+        for name in names:
+            if name != ".lock":
+                path = os.path.join(root, name)
+                with open(path, "rb") as f:
+                    files[os.path.relpath(path, config)] = f.read()
+    return files
+
+
+def listed(output):
+    """the plots plot ... list prints, as (group, name)"""
+    return {(group, name) for name, group in re.findall(r"^ - (.*) in group (.*)$", output.stdout, re.M)}

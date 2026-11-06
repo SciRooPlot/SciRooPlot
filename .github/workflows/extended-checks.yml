@@ -124,6 +124,10 @@ jobs:
       - name: Install dependencies
         run: ./.github/scripts/install-linux.sh
 
+      # the tests of the shell functions run in bash and in zsh
+      - name: Install zsh
+        run: sudo apt-get install -y --no-install-recommends zsh
+
       - name: Install ROOT
         uses: mamba-org/setup-micromamba@v3
         with:
