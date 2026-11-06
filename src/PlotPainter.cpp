@@ -253,7 +253,8 @@ TGraph* PlotPainter::ToGraph(const TH1* hist)
 /**
  * Graph of a 1d histogram for the clipped aliases (only the bins in the range of its x axis):
  * the steps (two points per bin, at its edges) for hist_clipped and hist_open_clipped, for hist_clipped also the vertical lines at the outer edges,
- * which go down out of the frame (see ClippedBase); the bin centres for curve_clipped. ROOT cuts the lines of the graph at the frame.
+ * which go down out of the frame (see ClippedBase) until the frame is final (then to ROOT's base line, see GeneratePlot); the bin centres for
+ * curve_clipped. ROOT cuts the lines of the graph at the frame.
  */
 //**************************************************************************************************
 TGraph* PlotPainter::ToClippedGraph(const TH1* hist, draw_option_t alias, bool logY)
@@ -668,6 +669,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     vector<std::pair<unique_ptr<TPaveStats>, std::shared_ptr<const Plot::Pad::StatsBox>>> statsBoxes;  // filled by ROOT while drawing the data, placed after all data are drawn
     string drawOption;
     uint16_t dataIndex{};
+    // steps drawn with hist_clipped (false) or hist_open_clipped (true): ROOT's steps cut at the frame once it is final
+    vector<std::pair<TGraph*, bool>> clippedSteps;
     bool mapDrawn{};  // a 2d or 3d histogram of the pad is drawn (the first one gives the frame its colour levels)
     // minimum, maximum stored with the 2d data defining the frame: kept like a range set by the user
     std::pair<bool, bool> storedRangeZ{};
@@ -2047,7 +2050,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           bool hasFilledSteps{false};  // a histogram drawn with hist_clipped or hist_open_clipped and a fill: the steps are the outline of the filled areas
           if constexpr (is_graph_1d<data_type>()) {
             if ((alias == hist_clipped || alias == hist_open_clipped) && data_ptr->GetFillStyle() != 0 && data_ptr->GetFillColor() != 0 && data_ptr->GetN() > 0) {
-              // the polygon of the steps closed far below the frame: ROOT cuts it at the frame, so each part above the lower edge becomes an area of its own
+              // the polygon of the steps closed far below the frame (at ROOT's base line once the frame is final): ROOT cuts it at the frame
               vector<double_t> x(data_ptr->GetX(), data_ptr->GetX() + data_ptr->GetN());
               vector<double_t> y(data_ptr->GetY(), data_ptr->GetY() + data_ptr->GetN());
               if (alias == hist_open_clipped) {  // the steps of hist_clipped already go down there at the outer edges
@@ -2943,6 +2946,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           TGraph* graph = ToClippedGraph(histogram, clippedAlias, pad_ptr->GetLogy());
           mSourceHists[graph].reset(histogram);
           drawItem(graph, clippedAlias);
+          if (clippedAlias != curve_clipped) clippedSteps.emplace_back(graph, clippedAlias == hist_open_clipped);
         };
         if (optionAlias && (*optionAlias == hist_clipped || *optionAlias == hist_open_clipped || *optionAlias == curve_clipped)) {
           if constexpr (is_hist_1d<data_type>()) {
@@ -3104,6 +3108,56 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     // the placement of the boxes below relies on the painted data (painting creates e.g. the palette of a colour plot):
     // the pad is updated once for all data, since every update repaints everything drawn so far
     pad_ptr->Update();
+    // the clipped steps are ROOT's steps cut at the frame, which is known now: HIST goes down to the base line of the steps at the outer edges
+    // and fills down to it (0, or the lower frame edge if that is above 0 or on a log axis); HIST ][ (hist_open) also leaves out the bins at
+    // the ends that lie on the base line, with the step down to them: bins with the content of the base and, if the base is the lower frame
+    // edge, all bins below it (TGraphPainter::PaintGrapHist). The steps (two points per bin, for hist_clipped between the two points of the
+    // outer edges) and the outline of their fill follow
+    if (!clippedSteps.empty()) {
+      const bool logX = pad_ptr->GetLogx();
+      const bool logY = pad_ptr->GetLogy();
+      const double_t bottom = (logY) ? std::pow(10., pad_ptr->GetUymin()) : pad_ptr->GetUymin();
+      const double_t top = (logY) ? std::pow(10., pad_ptr->GetUymax()) : pad_ptr->GetUymax();
+      const double_t base = (logY) ? bottom : std::clamp(0., bottom, top);
+      // left of the frame: steps without any bin in the range of the frame are drawn there (ROOT refuses a graph without points)
+      const double_t outside = (logX) ? std::pow(10., 2. * pad_ptr->GetUxmin() - pad_ptr->GetUxmax()) : 2. * pad_ptr->GetUxmin() - pad_ptr->GetUxmax();
+      auto onBase = [&](double_t y) { return y == base || (y < base && base == bottom); };
+      for (auto [steps, open] : clippedSteps) {
+        vector<double_t> x(steps->GetX(), steps->GetX() + steps->GetN());
+        vector<double_t> y(steps->GetY(), steps->GetY() + steps->GetN());
+        if (open) {
+          size_t first = 0;
+          size_t last = x.size();  // points [first, last) are kept, whole bins
+          while (first < last && onBase(y[first]))
+            first += 2;
+          while (last > first && onBase(y[last - 1]))
+            last -= 2;
+          if (first < last) {  // as ROOT: steps all on the base line are drawn whole, along it
+            x = vector<double_t>(x.begin() + first, x.begin() + last);
+            y = vector<double_t>(y.begin() + first, y.begin() + last);
+          }
+        } else if (!y.empty()) {
+          y.front() = y.back() = base;
+        }
+        auto setPoints = [&](TGraph* graph, bool closed) {
+          graph->Set(0);
+          if (x.empty()) {
+            for (int32_t i = 0; i < 3; ++i)
+              graph->SetPoint(i, outside, base);
+            return;
+          }
+          if (closed) graph->SetPoint(0, x.front(), base);
+          for (size_t i = 0; i < x.size(); ++i)
+            graph->SetPoint(graph->GetN(), x[i], y[i]);
+          if (closed) graph->SetPoint(graph->GetN(), x.back(), base);
+        };
+        setPoints(steps, false);
+        // the fill: the outline of the steps closed at the base line (those of hist_clipped are already)
+        if (auto* fill = dynamic_cast<TGraph*>(pad_ptr->GetListOfPrimitives()->FindObject((string("fill_") + steps->GetName()).data()))) {
+          setPoints(fill, open);
+        }
+      }
+    }
     // z titles with offset 0 next to their labels: the z axis of a 3D view and the colour scales (the range of the frame is final now)
     if (axisHist_ptr && axisHist_ptr->GetDimension() == 3) {
       // the binned z axis has a title of its own; the colour scale shows the contents (the C axis). ROOT makes the scale of a 3d histogram
