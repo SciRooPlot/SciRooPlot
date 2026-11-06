@@ -489,6 +489,39 @@ def alias_table():
 
 
 # ---------------------------------------------------------------------------------------------
+# colours
+# ---------------------------------------------------------------------------------------------
+# the colours data takes when neither it nor its pad nor pad 0 sets one, in this order and repeating (documented in SKILL.md)
+DEFAULT_COLORS = (ROOT.kBlack, ROOT.kP10Blue, ROOT.kP10Red, ROOT.kP10Violet, ROOT.kP8Orange, ROOT.kP10Ash, ROOT.kP10Brown, ROOT.kTeal + 3)
+
+
+def rgba(color, alpha=None):
+    """a colour in any form SciRooPlot takes (ROOT index, "#rrggbb", (r, g, b) from 0 to 1) as (r, g, b, alpha), components from 0 to 255
+    and alpha to two decimals (None for an index ROOT does not know); alpha replaces the colour's own"""
+    if isinstance(color, str):
+        rgb = tuple(int(color[i : i + 2], 16) for i in (1, 3, 5))
+        own = 1.0
+    elif isinstance(color, (tuple, list)):
+        rgb = tuple(int(c * 255 + 0.5) for c in color)  # as SciRooPlot and ROOT round
+        own = 1.0
+    else:
+        found = ROOT.gROOT.GetColor(int(color))
+        if not found:
+            return None
+        rgb = tuple(int(getattr(found, f"Get{c}")() * 255 + 0.5) for c in ("Red", "Green", "Blue"))
+        own = found.GetAlpha()
+    return (*rgb, round(own if alpha is None else alpha, 2))
+
+
+def colour_diff(expected, index, alpha=None, steps=1):
+    """ "" if the ROOT colour index has the colour expected (any form, with alpha if given), else what it has. ROOT gives an rgb colour the
+    index of an existing colour within one step of 255 in each component (TColor::GetColor): steps is the tolerance of the components"""
+    want, got = rgba(expected, alpha), rgba(index)
+    same = want is not None and got is not None and all(abs(a - b) <= steps for a, b in zip(want[:3], got[:3])) and want[3] == got[3]
+    return "" if same else f"{got} (index {index}), expected {want}"
+
+
+# ---------------------------------------------------------------------------------------------
 # references: differences between a drawn object and the one plain ROOT gives ("" if equal)
 # ---------------------------------------------------------------------------------------------
 def _close_all(name, ref, obs, rel):
@@ -1468,7 +1501,12 @@ class Run:
         if groupDir:
             for key in groupDir.GetListOfKeys():
                 if key.GetName().split(":")[0] == name:
-                    return key.ReadObj()
+                    canvas = key.ReadObj()
+                    # the colours of the plot (rgb colours, gradients) are defined when it is painted: define them as the plot did
+                    define = canvas.GetListOfPrimitives().FindObject("define_colors")
+                    if define:
+                        define.Exec()
+                    return canvas
         return None
 
     def pad(self, name, group, pad=1):
@@ -1504,6 +1542,17 @@ class Run:
         while link:
             yield link.GetObject(), str(link.GetOption())
             link = link.Next()
+
+    def palette(self, name, group, pad=1):
+        """the palette a pad is painted with, as (r, g, b, alpha) per colour (see rgba): the pad's setup run as when it is painted; None if
+        the pad has no setup (also a ColorScale() cell has one)"""
+        padObj = self.pad(name, group, pad)
+        setup = padObj.GetPrimitive(f"setup_pad_{pad}") if padObj else None
+        if not setup:
+            return None
+        ROOT.gStyle.SetPalette(ROOT.kSunset)  # another palette before
+        setup.Exec()
+        return [rgba(ROOT.TColor.GetColorPalette(k)) for k in range(ROOT.TColor.GetNumberOfColors())]
 
     def frame(self, name, group, pad=1):
         """the frame of a pad in axis values: {"X": (min, max), "Y": (min, max)}, or None if the plot was not made"""
