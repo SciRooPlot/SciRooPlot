@@ -599,6 +599,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     auto drawData = pad.GetData();
     const bool hasData = !drawData.empty();
     unique_ptr<TH1> emptyFrame;  // frame made from the axis ranges of a pad without data and frame input
+    // the data whose copy gives the frame
+    const Plot::Pad::Data* frameSource{nullptr};
 
     if (pad.GetFrame()) {
       // the frame input of the pad is drawn only as frame (in front of the data, with the ranges stored with it, like data that defines the frame)
@@ -616,6 +618,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       } else {
         drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Data>(*drawData[frameDataID]));
       }
+      frameSource = drawData[frameDataID + 1].get();
     } else {
       // without data and frame input the frame is an empty histogram with one bin spanning the x range (and y range for 2d, if z has a range);
       // the ranges of the pad are applied to it as to any frame (an Empty() cell of a layout, room for a legend or a text, takes no ranges from pad 0)
@@ -674,6 +677,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     bool mapDrawn{};  // a 2d or 3d histogram of the pad is drawn (the first one gives the frame its colour levels)
     // minimum, maximum stored with the 2d data defining the frame: kept like a range set by the user
     std::pair<bool, bool> storedRangeZ{};
+    // the range a function giving the frame is sampled over for it (x and y): it is drawn with the same samples
+    optional<array<double_t, 4>> frameFuncRange;
     struct {
       uint16_t color, markerStyle, lineStyle, fillStyle;  // one colour entry per data item for marker, line and fill alike
     } usedDefaults{};                                     // entries of the pad's default lists taken so far
@@ -944,24 +949,36 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             auto [rangeMinX, rangeMaxX] = funcRange('x', data_ptr->GetXmin(), data_ptr->GetXmax(), data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
             // the frame is the function sampled over its range: a pad range inside it is sampled alone, so the frame ends exactly there
             // (not at the edges of the sampled bins) and the automatic y range (1d) or colour scale (2d) is that of the visible part;
-            // a pad range beyond the function widens the frame later, as for any data
-            auto padRange = [&](char padLabel, double_t& min, double_t& max) {
+            // a pad range beyond the function widens the frame later, as for any data. On a log axis a function crossing zero is sampled
+            // from the first of its sample edges above zero, where the frame starts (see below): the drawn function is sampled there as well
+            auto padRange = [&](char padLabel, double_t& min, double_t& max, int32_t nSamples) {
               const optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
               optional<double_t> userMax;
+              bool log{};
               for (const auto* axis : AxisSettings(pad, padDefaults, padLabel)) {
                 if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
+                if (axis->GetLog()) log = *axis->GetLog();
               }
               const double_t newMin = (userMin && *userMin > min && *userMin < max) ? *userMin : min;
               const double_t newMax = (userMax && *userMax < max && *userMax > min) ? *userMax : max;
               if (newMin < newMax) std::tie(min, max) = std::make_pair(newMin, newMax);
+              if (log && min <= 0. && max > 0. && nSamples > 0) {
+                const double_t width = (max - min) / nSamples;  // the bin edges of TAxis
+                int32_t edge = 1;
+                while (min + edge * width <= 0.)
+                  ++edge;
+                min += edge * width;
+              }
             };
-            padRange('X', rangeMinX, rangeMaxX);
+            padRange('X', rangeMinX, rangeMaxX, data_ptr->GetNpx());
             if constexpr (is_func_2d<data_type>()) {
               auto [rangeMinY, rangeMaxY] = funcRange('y', data_ptr->GetYmin(), data_ptr->GetYmax(), data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
-              padRange('Y', rangeMinY, rangeMaxY);
+              padRange('Y', rangeMinY, rangeMaxY, data_ptr->GetNpy());
               data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
+              frameFuncRange = {rangeMinX, rangeMaxX, rangeMinY, rangeMaxY};
             } else {
               data_ptr->SetRange(rangeMinX, rangeMaxX);
+              frameFuncRange = {rangeMinX, rangeMaxX, 0., 0.};
             }
           }
           // points with a positive value (x, y, value; for 1d graphs the ends of the x error bars and the value), needed for a log scale:
@@ -1897,9 +1914,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           if constexpr (is_func_2d<data_type>()) {
             auto [rangeMinX, rangeMaxX] = funcRange('x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
             auto [rangeMinY, rangeMaxY] = funcRange('y', ymin, ymax, data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
+            if (frameFuncRange && data.get() == frameSource) std::tie(rangeMinX, rangeMaxX, rangeMinY, rangeMaxY) = std::tuple_cat(*frameFuncRange);
             data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
           } else if constexpr (is_func_1d<data_type>()) {
             auto [rangeMin, rangeMax] = funcRange('x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
+            if (frameFuncRange && data.get() == frameSource) std::tie(rangeMin, rangeMax) = std::make_pair((*frameFuncRange)[0], (*frameFuncRange)[1]);
             data_ptr->SetRange(rangeMin, rangeMax);
           } else if constexpr (is_graph_1d<data_type>()) {
             // (histograms converted for a clipped alias got the x range of the data as bins before, the y range does not apply to them)

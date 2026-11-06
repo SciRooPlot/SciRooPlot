@@ -19,6 +19,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| A function (TF1, TF2) that gives the frame was drawn with other samples than the frame was made of where it crosses zero on a log x or y axis, or has a range of its own (`SetRangeX`) and a pad range inside it: its y range or colour scale did not match the drawn function (cells just below the scale minimum stayed white) | It is drawn with the samples of the frame, on a log axis from the first sample edge above zero | behaviour | Nothing. |
 | A TH2Poly that gives the frame lost its log z scale ("the data has no positive values") when a pad range widened its frame and few of its bins were filled | Log z is kept when any of its bins has a positive content | behaviour | Nothing. |
 | The z range of a TGraph2D that gives the frame was read from the deleted graph: a pad range widening its frame gave a random z range (5.5 to 5.73 for values 1 to 57) | The z range of its points, or the range stored with it | behaviour | Nothing. |
 | A pad range on `'X'` inside the points of a graph that gives the frame kept the y range of all its points (ROOT's `TGraph::GetHistogram`): points far below the range outside of it left empty decades on log y | The y range comes from the points drawn into the range (their x error bars reaching into it), as for histograms and functions | behaviour | Nothing. |
