@@ -1756,6 +1756,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               data_ptr->SetFillColor(fillColor->ToIndex());
             }
             if (tookColor) usedDefaults.color++;
+            if constexpr (is_func_3d<data_type>()) {
+              // ROOT paints the surface f = 0 of a 3d function with flat faces in the fill colour (whatever the fill style) and its mesh in the
+              // line colour: without a fill colour of its own, white faces with the mesh in the data's colour (as ROOT's default), not a silhouette
+              // (before the alpha, which applies to them too)
+              if (!data->GetFillColor() && !keep) data_ptr->SetFillColor(kWhite);
+            }
             if (auto fillAlpha = get_first(data->GetFillAlpha(),
                                            fromPad(pad.GetDefaultFillAlpha()),
                                            fromPad(padDefaults.GetDefaultFillAlpha()))) {
@@ -1770,11 +1776,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             if (keptWithoutFill) data_ptr->SetFillStyle(0);
             if constexpr (is_hist_1d<data_type>() || is_func_1d<data_type>()) {
               if (alias == line || alias == curve) data_ptr->SetFillStyle(0);  // HIST L and HIST C would also fill the histogram, L and C the area below a function
-            }
-            if constexpr (is_func_3d<data_type>()) {
-              // ROOT paints the surface f = 0 of a 3d function with flat faces in the fill colour (whatever the fill style) and its mesh in the
-              // line colour: without a fill colour of its own, white faces with the mesh in the data's colour (as ROOT's default), not a silhouette
-              if (!data->GetFillColor() && !keep) data_ptr->SetFillColor(kWhite);
             }
           }
 

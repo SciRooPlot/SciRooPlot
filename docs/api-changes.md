@@ -39,6 +39,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Automatic placement of legends, texts and images ignored 2d graphs and 2d functions drawn into the frame (colours, contours), and placed boxes in the 3d view of a TF3 outside the frame margins | Placed beside them as beside the filled bins of 2d histograms (on top only where nothing else is free); inside the pad margins in every 3d view | behaviour | none |
 | A legend, text or image without free room in the frame was put at its top left corner, also over other boxes | It goes on top of the data beside the other boxes (with the same warning), at the top left corner only if there is no such room either | behaviour | none |
 | A directory of an input file with a newer key of the same name holding data (a histogram `x` written after a directory `x`) was found by the search without a path, but a path into it (`AddData("x/h")`, `src:x`, `file.root:x`) and a wildcard for folders (`file.root:x*`) did not reach it: the data was reported missing | Reached by paths and wildcards as by the search (trees in such a directory cannot be chained by ROOT and stay an error) | behaviour | none |
+| A TF3 without a fill colour of its own drew its faces opaque white whatever its alpha (`SetAlpha`, `SetFillAlpha`, the alpha defaults of the pad) | The white faces take the alpha | behaviour | none |
 
 ### Files
 
