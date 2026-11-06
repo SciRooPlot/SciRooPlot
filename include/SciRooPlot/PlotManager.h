@@ -178,6 +178,9 @@ class PlotManager
   std::string mGifName;
   const Plot* mGifLastFrame{};                       // the frame that closes an animated gif (its file name sets how often the animation repeats)
   std::map<std::string, std::string> mWrittenFiles;  // output file (lower case) -> group:name of the plot written to it, in the current GeneratePlots call
+  // canvas size of the first frame of a gif (the size of the gif), and whether a frame of another size was reported (once per gif)
+  std::optional<std::pair<uint32_t, uint32_t>> mGifSize;
+  bool mGifSizeReported{};
   bool mExitInteractiveBrowsing{false};
   std::optional<std::pair<std::shared_ptr<TCanvas>, std::pair<int32_t, int32_t>>> mDetached;  // in mode "show": plot detached, shown once the browsing window shows another one (with the browsing window's top)
   // mode "show": the selected plots, made when browsing reaches them

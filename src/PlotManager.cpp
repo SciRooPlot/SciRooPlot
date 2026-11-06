@@ -1389,6 +1389,8 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     // how the animation repeats). The gif is named after the deepest group all frames are in and lies next to the folder of that group
     // (frames of animations/legoRotation: animations/legoRotation.gif); frames without a common group make animation.gif in the output directory
     mGifLastFrame = nullptr;
+    mGifSize.reset();
+    mGifSizeReported = false;
     if (str_starts_with(mode, "gif")) {
       optional<vector<string>> commonGroup;
       // frames that cannot be made are left out here already (missing data, a missing base plot): the last one written must close the gif
@@ -2395,6 +2397,14 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     fullName = mGifName;
     folderName = std::filesystem::path(mGifName).parent_path().string();
     fullName += (&plot == mGifLastFrame) ? lastFrameSuffix : frameSuffix;
+    // ROOT appends every frame at its own size, but the gif has the size of the first: viewers cut larger frames
+    const std::pair<uint32_t, uint32_t> size{canvas->GetWw(), canvas->GetWh()};
+    if (!mGifSize) {
+      mGifSize = size;
+    } else if (size != *mGifSize && !mGifSizeReported) {
+      logger::warning("The frames of {} differ in size: plot {} of group {} is {}x{}, the first frame {}x{}. Viewers show every frame in the size of the first.", mGifName, plot.GetName(), plot.GetGroup(), size.first, size.second, mGifSize->first, mGifSize->second);
+      mGifSizeReported = true;
+    }
   }
   std::error_code ec;
   std::filesystem::create_directories(folderName, ec);

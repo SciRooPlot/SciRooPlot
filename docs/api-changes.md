@@ -65,6 +65,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| Mode `gif` with frames of different canvas sizes (base plots `1d` and `2d`, own dimensions) was written silently: the gif has the size of its first frame, viewers cut larger frames | A warning per gif names the first frame of another size | behaviour | Give the plots of an animation one canvas size. |
 | Mode `html` with ROOT before 6.42 wrote a PostScript file named `<plot>.html` (ROOT knows html files only from 6.42 on) | It is refused with an error, nothing is written | CLI | Use ROOT 6.42 or newer, or mode `json`. |
 | The macro (mode `macro`) of a plot with a TGraph2D did not compile: the frame held the triangulation of the graph, for which ROOT writes a line that is no C++ | The frame has no triangulation, the macro compiles | file format | Write the macros again. |
 | A macro lost the setup of each pad (its palette or gradient, the axis ranges kept for histograms drawn in it, the text format): the frame, drawn first in the macro, cleared the pad | The setup runs before the pad is painted, as in the other modes | file format | Write the macros again. |
