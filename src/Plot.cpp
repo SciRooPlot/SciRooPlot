@@ -41,6 +41,7 @@
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -126,7 +127,14 @@ string color_t::ToString() const
 //**************************************************************************************************
 int16_t color_t::ToIndex() const
 {
-  if (mIndex) return *mIndex;
+  if (mIndex) {
+    // ROOT draws an index it does not know (also one made by the definition program, which does not exist here) in black, without a word
+    static std::unordered_set<int16_t> reported;
+    if (!logger::muted() && !gROOT->GetColor(*mIndex) && reported.insert(*mIndex).second) {
+      logger::warning("Colour index {} is not defined in ROOT: drawn black. Give the colour as \"#rrggbb\" or (r, g, b).", *mIndex);
+    }
+    return *mIndex;
+  }
   return static_cast<int16_t>(TColor::GetColor(static_cast<Int_t>(mRGB[0]), static_cast<Int_t>(mRGB[1]), static_cast<Int_t>(mRGB[2])));
 }
 
