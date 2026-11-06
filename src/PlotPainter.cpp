@@ -6168,7 +6168,24 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, 
       logger::error("Cannot divide {} by {}: a TH2Poly can only be divided by a TH2Poly with the same polygons in the same order.", numerator->GetName(), denominator->GetName());
       return false;
     }
-    return numerator->Divide(numerator, denominator, 1., 1., (binomialErrors) ? "B" : "");
+    // the polygons divided as TH1::Divide does: it ends with ResetStats, which reads past the arrays of a TH2Poly (ROOT bug)
+    const double_t entries = (binomialErrors) ? denominator->GetEntries() : numerator->GetEntries();
+    for (int32_t bin = 1; bin <= numeratorPoly->GetNumberOfBins(); ++bin) {
+      const double_t b1 = numerator->GetBinContent(bin);
+      const double_t b2 = denominator->GetBinContent(bin);
+      const double_t e1sq = std::pow(numerator->GetBinError(bin), 2);
+      const double_t e2sq = std::pow(denominator->GetBinError(bin), 2);
+      double_t errorSq{};
+      if (b2 && binomialErrors) {
+        errorSq = (b1 == b2) ? 0. : std::abs(((1. - 2. * b1 / b2) * e1sq + b1 * b1 * e2sq / (b2 * b2)) / (b2 * b2));
+      } else if (b2) {
+        errorSq = (e1sq * b2 * b2 + e2sq * b1 * b1) / std::pow(b2, 4);
+      }
+      numerator->SetBinContent(bin, (b2) ? b1 / b2 : 0.);
+      numerator->SetBinError(bin, std::sqrt(errorSq));
+    }
+    numerator->SetEntries(entries);
+    return true;
   }
   bool sameBinning = sameAxisBinning(numerator->GetXaxis(), denominator->GetXaxis());
   if (numerator->GetDimension() >= 2) sameBinning = sameBinning && sameAxisBinning(numerator->GetYaxis(), denominator->GetYaxis());
@@ -6239,8 +6256,8 @@ bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors, 
       const int32_t last = std::min(lastInside[i], axes[i]->GetLast());
       if (first != axes[i]->GetFirst() || last != axes[i]->GetLast()) axes[i]->SetRange(first, last);
     }
+    numerator->ResetStats();  // not for a TH2Poly: it reads past its arrays (ROOT bug)
   }
-  numerator->ResetStats();
   numerator->SetEntries(entries);
   if (nOutside && verbose) {
     logger::warning("{} bins of {} lie outside the range of function {} and are left out of the ratio.", nOutside, numerator->GetName(), denominator->GetName());
