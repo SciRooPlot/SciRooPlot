@@ -40,6 +40,12 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A legend, text or image without free room in the frame was put at its top left corner, also over other boxes | It goes on top of the data beside the other boxes (with the same warning), at the top left corner only if there is no such room either | behaviour | none |
 | A directory of an input file with a newer key of the same name holding data (a histogram `x` written after a directory `x`) was found by the search without a path, but a path into it (`AddData("x/h")`, `src:x`, `file.root:x`) and a wildcard for folders (`file.root:x*`) did not reach it: the data was reported missing | Reached by paths and wildcards as by the search (trees in such a directory cannot be chained by ROOT and stay an error) | behaviour | none |
 
+### Files
+
+| Old | New | Kind | Action |
+|---|---|---|---|
+| The macro (mode `macro`) of a plot with a TGraph2D did not compile: the frame held the triangulation of the graph, for which ROOT writes a line that is no C++ | The frame has no triangulation, the macro compiles | file format | Write the macros again. |
+
 ## 3.3.3 → 4.0.0
 
 ### Build, includes and logging

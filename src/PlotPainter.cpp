@@ -1065,6 +1065,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               axisHist_ptr = static_cast<TH1*>(data_ptr->GetHistogram()->Clone());
               axisHist_ptr->SetDirectory(nullptr);
               axisHist_ptr->SetBit(kCanDelete);
+              if constexpr (is_graph_2d<data_type>()) {
+                // the histogram of a 2d graph holds its Delaunay triangulation, which the frame does not use (see below) and which a
+                // macro cannot save (the line ROOT writes for it does not compile)
+                TList* functions = axisHist_ptr->GetListOfFunctions();
+                vector<TObject*> triangulations;
+                for (TObject* function : *functions) {
+                  if (function->InheritsFrom("TGraphDelaunay2D") || function->InheritsFrom("TGraphDelaunay")) triangulations.push_back(function);
+                }
+                for (TObject* triangulation : triangulations) {
+                  functions->Remove(triangulation);
+                  delete triangulation;
+                }
+              }
             }
           }
           string drawOptAxis = "AXIS";
