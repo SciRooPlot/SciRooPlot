@@ -5125,10 +5125,12 @@ void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, bo
   }
   const double_t tickLengthX = (axisHist) ? axisHist->GetXaxis()->GetTickLength() : gStyle->GetTickLength("X");  // ticks on the x axis (vertical)
   const double_t tickLengthY = (axisHist) ? axisHist->GetYaxis()->GetTickLength() : gStyle->GetTickLength("Y");  // ticks on the y axis (horizontal)
-  const double_t frameX1 = (pad->GetUxmin() - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
-  const double_t frameX2 = (pad->GetUxmax() - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
-  const double_t frameY1 = (pad->GetUymin() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
-  const double_t frameY2 = (pad->GetUymax() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
+  // the frame; a 3d view has none: the pad within its margins
+  const bool isView = pad->GetView() != nullptr;
+  const double_t frameX1 = (isView) ? pad->GetLeftMargin() : (pad->GetUxmin() - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
+  const double_t frameX2 = (isView) ? 1. - pad->GetRightMargin() : (pad->GetUxmax() - pad->GetX1()) / (pad->GetX2() - pad->GetX1());
+  const double_t frameY1 = (isView) ? pad->GetBottomMargin() : (pad->GetUymin() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
+  const double_t frameY2 = (isView) ? 1. - pad->GetTopMargin() : (pad->GetUymax() - pad->GetY1()) / (pad->GetY2() - pad->GetY1());
   constexpr double_t kDistanceToPadEdge{0.015};  // without ticks: a small gap to the edge of the pad
   const double_t distanceX = (polarGrid) ? kDistanceToPadEdge : kDistanceToFrame * tickLengthY * (frameX2 - frameX1);
   const double_t distanceY = (polarGrid) ? kDistanceToPadEdge : kDistanceToFrame * tickLengthX * (frameY2 - frameY1);
@@ -5451,6 +5453,13 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     }
   };
   auto markFunc = [&](TF1* func) {
+    if (func->GetNdim() == 2 && !pad->GetView()) {
+      // a 2d function drawn into the frame (colours, contours): a map over its range
+      double_t xMin{}, yMin{}, xMax{}, yMax{};
+      func->GetRange(xMin, yMin, xMax, yMax);
+      setRect(cellX(padX(xMin)), cellY(padY(yMin)), cellX(padX(xMax)), cellY(padY(yMax)), kMap);
+      return;
+    }
     if (func->GetNdim() != 1) return;
     double_t xMin{}, xMax{};
     func->GetRange(xMin, xMax);
@@ -5597,6 +5606,9 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       markGraph(&painted, polar);
     } else if (auto* graph = dynamic_cast<TGraph*>(obj)) {
       markGraph(graph);
+    } else if (auto* graph2d = dynamic_cast<TGraph2D*>(obj); graph2d && !pad->GetView() && graph2d->GetN() > 0) {
+      // a 2d graph drawn into the frame (colours, contours): a map over the range of its points
+      setRect(cellX(padX(graph2d->GetXmin())), cellY(padY(graph2d->GetYmin())), cellX(padX(graph2d->GetXmax())), cellY(padY(graph2d->GetYmax())), kMap);
     } else if (auto* multiGraph = dynamic_cast<TMultiGraph*>(obj)) {
       for (auto* subGraph : *multiGraph->GetListOfGraphs()) {
         markGraph(static_cast<TGraph*>(subGraph));
