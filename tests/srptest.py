@@ -427,6 +427,151 @@ def write_objects(path, objects):
     f.Close()
 
 
+# ---------------------------------------------------------------------------------------------
+# tables: the same columns as tree, RNTuple or CSV file
+# ---------------------------------------------------------------------------------------------
+class Texts(list):
+    """a column of strings (std::string; in a CSV file the text)"""
+
+
+class CStrings(list):
+    """a column of C strings (a leaf of type C, as Branch("s", buffer, "s/C") or uproot write them; trees only)"""
+
+
+class Vectors(list):
+    """a column of collections (std::vector<float>, one sequence per row; trees and RNTuples only)"""
+
+
+# the leaf type of a numpy type, and the C++ type of an RNTuple field
+LEAF_TYPES = {"float64": "D", "float32": "F", "int8": "B", "uint8": "b", "int16": "S", "uint16": "s", "int32": "I", "uint32": "i", "int64": "L", "uint64": "l", "bool": "O"}
+
+
+def _declare_tables():
+    if hasattr(ROOT, "srptest_columns"):
+        return
+    ROOT.gInterpreter.Declare(r"""
+    #include <ROOT/RNTupleModel.hxx>
+    #include <ROOT/RNTupleWriter.hxx>
+    struct srptest_columns {
+      struct column_t { std::string name; char type; std::vector<double> values; std::vector<std::string> texts; std::vector<std::size_t> offsets; };
+      struct buffer_t { double D; float F; Char_t B; UChar_t b; Short_t S; UShort_t s; Int_t I; UInt_t i; Long64_t L; ULong64_t l; bool O; std::string str; char cstr[64]; std::vector<float> vec; };
+      std::vector<column_t> columns;
+      void Numbers(const char* name, char type, const double* v, std::size_t n) { columns.push_back({name, type, std::vector<double>(v, v + n), {}, {}}); }
+      void Texts(const char* name, char type, const std::vector<std::string>& t) { columns.push_back({name, type, {}, t, {}}); }
+      void Vectors(const char* name, const double* flat, const std::vector<std::size_t>& offsets) { columns.push_back({name, 'V', std::vector<double>(flat, flat + offsets.back()), {}, offsets}); }
+      void Set(const column_t& c, buffer_t& b, std::size_t k) {
+        double v = (c.values.empty() || c.type == 'V') ? 0. : c.values[k];
+        switch (c.type) {
+          case 'D': b.D = v; break; case 'F': b.F = v; break; case 'B': b.B = v; break; case 'b': b.b = v; break;
+          case 'S': b.S = v; break; case 's': b.s = v; break; case 'I': b.I = v; break; case 'i': b.i = v; break;
+          case 'L': b.L = v; break; case 'l': b.l = v; break; case 'O': b.O = v; break;
+          case 'T': b.str = c.texts[k]; break;
+          case 'C': std::strncpy(b.cstr, c.texts[k].c_str(), 63); b.cstr[63] = 0; break;
+          case 'V': b.vec.assign(c.values.begin() + c.offsets[k], c.values.begin() + c.offsets[k + 1]); break;
+        }
+      }
+      TDirectory* Folder(TFile& f, const char* folder) {
+        if (!folder[0]) return &f;
+        return f.GetDirectory(folder) ? f.GetDirectory(folder) : f.mkdir(folder, "", true);
+      }
+      void WriteTree(const char* path, const char* folder, const char* name, std::size_t begin, std::size_t end) {
+        TFile f(path, "UPDATE");
+        Folder(f, folder)->cd();
+        TTree t(name, name);
+        std::deque<buffer_t> buffers(columns.size());
+        for (std::size_t i = 0; i < columns.size(); ++i) {
+          auto& c = columns[i]; auto& b = buffers[i]; const std::string leaf = c.name + "/" + c.type;
+          switch (c.type) {
+            case 'D': t.Branch(c.name.c_str(), &b.D, leaf.c_str()); break; case 'F': t.Branch(c.name.c_str(), &b.F, leaf.c_str()); break;
+            case 'B': t.Branch(c.name.c_str(), &b.B, leaf.c_str()); break; case 'b': t.Branch(c.name.c_str(), &b.b, leaf.c_str()); break;
+            case 'S': t.Branch(c.name.c_str(), &b.S, leaf.c_str()); break; case 's': t.Branch(c.name.c_str(), &b.s, leaf.c_str()); break;
+            case 'I': t.Branch(c.name.c_str(), &b.I, leaf.c_str()); break; case 'i': t.Branch(c.name.c_str(), &b.i, leaf.c_str()); break;
+            case 'L': t.Branch(c.name.c_str(), &b.L, leaf.c_str()); break; case 'l': t.Branch(c.name.c_str(), &b.l, leaf.c_str()); break;
+            case 'O': t.Branch(c.name.c_str(), &b.O, leaf.c_str()); break; case 'C': t.Branch(c.name.c_str(), b.cstr, leaf.c_str()); break;
+            case 'T': t.Branch(c.name.c_str(), &b.str); break; case 'V': t.Branch(c.name.c_str(), &b.vec); break;
+          }
+        }
+        for (std::size_t k = begin; k < end; ++k) {
+          for (std::size_t i = 0; i < columns.size(); ++i) Set(columns[i], buffers[i], k);
+          t.Fill();
+        }
+        t.Write();
+      }
+      template <typename T> std::function<void(std::size_t)> Field(ROOT::RNTupleModel& model, const column_t& c, T (buffer_t::*member)) {
+        auto field = model.MakeField<T>(c.name);
+        auto b = std::make_shared<buffer_t>();
+        return [this, &c, field, b, member](std::size_t k) { Set(c, *b, k); *field = (*b).*member; };
+      }
+      void WriteNTuple(const char* path, const char* folder, const char* name, std::size_t begin, std::size_t end) {
+        auto model = ROOT::RNTupleModel::Create();
+        std::vector<std::function<void(std::size_t)>> setters;
+        for (const auto& c : columns) {
+          switch (c.type) {
+            case 'D': setters.push_back(Field<double>(*model, c, &buffer_t::D)); break; case 'F': setters.push_back(Field<float>(*model, c, &buffer_t::F)); break;
+            case 'B': setters.push_back(Field<std::int8_t>(*model, c, reinterpret_cast<std::int8_t buffer_t::*>(&buffer_t::B))); break;
+            case 'b': setters.push_back(Field<std::uint8_t>(*model, c, &buffer_t::b)); break;
+            case 'S': setters.push_back(Field<std::int16_t>(*model, c, &buffer_t::S)); break; case 's': setters.push_back(Field<std::uint16_t>(*model, c, &buffer_t::s)); break;
+            case 'I': setters.push_back(Field<std::int32_t>(*model, c, &buffer_t::I)); break; case 'i': setters.push_back(Field<std::uint32_t>(*model, c, &buffer_t::i)); break;
+            case 'L': setters.push_back(Field<std::int64_t>(*model, c, reinterpret_cast<std::int64_t buffer_t::*>(&buffer_t::L))); break;
+            case 'l': setters.push_back(Field<std::uint64_t>(*model, c, reinterpret_cast<std::uint64_t buffer_t::*>(&buffer_t::l))); break;
+            case 'O': setters.push_back(Field<bool>(*model, c, &buffer_t::O)); break; case 'T': setters.push_back(Field<std::string>(*model, c, &buffer_t::str)); break;
+            case 'V': setters.push_back(Field<std::vector<float>>(*model, c, &buffer_t::vec)); break;
+            default: throw std::invalid_argument("RNTuples have no C strings");
+          }
+        }
+        TFile f(path, "UPDATE");
+        auto writer = ROOT::RNTupleWriter::Append(std::move(model), name, *Folder(f, folder));
+        for (std::size_t k = begin; k < end; ++k) {
+          for (auto& set : setters) set(k);
+          writer->Fill();
+        }
+      }
+    };
+    """)
+
+
+def _columns(columns):
+    _declare_tables()
+    table = ROOT.srptest_columns()
+    for name, values in columns.items():
+        if isinstance(values, (Texts, CStrings)):
+            table.Texts(name, "T" if isinstance(values, Texts) else "C", ROOT.std.vector["std::string"]([str(v) for v in values]))
+        elif isinstance(values, Vectors):
+            offsets = np.cumsum([0] + [len(v) for v in values]).astype(np.uint64)
+            flat = np.concatenate([np.asarray(v, dtype=np.float64) for v in values] + [np.zeros(1)])
+            table.Vectors(name, flat, ROOT.std.vector["std::size_t"](offsets.tolist()))
+        else:
+            array = np.asarray(values)
+            buffer = np.ascontiguousarray(array if len(array) else np.zeros(1), dtype=np.float64)  # an empty one is no buffer for cppyy
+            table.Numbers(name, LEAF_TYPES[array.dtype.name], buffer, len(array))
+    return table
+
+
+def write_tree(path, columns, name="t", folder="", rows=None, ntuple=False):
+    """writes columns (a dict name: numpy array, Texts, CStrings or Vectors) as a tree (an RNTuple with ntuple) into a ROOT file, created if
+    needed, into a folder of it; rows: the slice of rows to write (all by default). The type of a column is its numpy type."""
+    table = _columns(columns)
+    n = len(next(iter(columns.values())))
+    begin, end, _ = (rows or slice(None)).indices(n)
+    (table.WriteNTuple if ntuple else table.WriteTree)(path, folder, name, begin, end)
+
+
+def write_csv(path, columns, rows=None, delimiter=","):
+    """writes columns (a dict name: numpy array or Texts) as a table file with a header: numbers as Python writes them (they read back
+    exactly), bools as true and false"""
+    n = len(next(iter(columns.values())))
+
+    def text(v):
+        if isinstance(v, (bool, np.bool_)):
+            return "true" if v else "false"
+        return repr(float(v)) if isinstance(v, (float, np.floating)) else str(v)
+
+    with open(path, "w") as f:
+        f.write(delimiter.join(columns) + "\n")
+        for k in range(n)[rows or slice(None)]:
+            f.write(delimiter.join(text(values[k]) for values in columns.values()) + "\n")
+
+
 def add_data(pad, kind, source="inputs", variant="normal"):
     """adds data of a kind (see data_objects) to a pad and returns it; source names the data source holding the variant"""
     if kind == "function":
@@ -1819,7 +1964,7 @@ def run_in_terminal(command, timeout, env=None):
 def missing(run):
     """the data reported missing by a run, as "<data source>:<name>" (the lines below "Plot ... could not be created"; a data source
     restricted to a folder as "<data source>:<folder>/<name>")"""
-    return set(re.findall(r"^\s*- missing (.+?)(?: \[[^]]*\])? \(", run.log, re.M))  # without the description of a request [...]
+    return set(re.findall(r"^\s*- missing (.+?)(?: \[[^]]*\])?(?: \([^()]*\))?\s*$", run.log, re.M))  # without the description of a request [...] and the reason (...)
 
 
 class Chunks:
