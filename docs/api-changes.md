@@ -30,6 +30,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A TGraphMultiErrors drawn with `band`, `band_smooth`, `boxes`, `boxes_nomarkers`, `bars` (and the x/end-line choices of the points aliases) got the ROOT option of other graphs, which a multi-error graph applies to the graph only: its errors were drawn as bars | The alias is written per set of y errors (`global;set1;set2…`), so every set is drawn as band, boxes or without errors as for other graphs; with `boxes` ROOT draws no markers over the boxes of a multi-error graph. Its legend row follows ROOT's reading of the option, also for raw options | behaviour | none |
 | A TH2Poly divided by a function or by a TH2Poly could crash `plot` at random (ROOT's statistics of a TH2Poly read past its bins) | The polygons are divided without that read | behaviour | none |
 | `Normalize(isDensity, min, max)` and `NormalizeToMaximum(min, max)` of a TH2Poly took all polygons: the range was ignored | The polygons reaching into the range in x, as the bins of other histograms | behaviour | none |
+| A NaN or infinite value in an input of a ratio was divided by: a denominator interpolated at other positions was NaN everywhere (a histogram ratio drawn as zero, a graph ratio not drawn), and the warning named the numerator | Numerator and denominator lose their NaN or infinite values before their modifiers and the division (bins drawn as zero, points left out), with a warning naming that input | behaviour | none |
 
 ## 3.3.3 → 4.0.0
 

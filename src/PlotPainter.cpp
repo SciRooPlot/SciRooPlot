@@ -2672,14 +2672,71 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         }
       };
 
+      // NaN or infinite values (from the input or a division by zero) spoil the axis ranges and ROOT then draws nothing; removed before
+      // the modifiers, which would spread them (Normalize divides by a NaN integral, Cumulative carries one into every later bin), and
+      // before a division (a spline through one gives NaN everywhere)
+      auto removeInvalid = [&](auto* ptr, const string& name, bool report) {
+        using ptr_type = decltype(ptr);
+        if constexpr (is_hist<ptr_type>()) {
+          // a profile keeps sums per bin: they are cleared, so the bin is empty (a TProfile3D is held as a TH3)
+          auto clearProfileBin = [](auto* profile, int32_t bin) {
+            profile->SetBinEntries(bin, 0.);
+            profile->TArrayD::SetAt(0., bin);
+            if (profile->GetSumw2N()) profile->GetSumw2()->SetAt(0., bin);
+            if (profile->GetBinSumw2()->fN) profile->GetBinSumw2()->SetAt(0., bin);
+          };
+          TProfile3D* profile3d{};
+          if constexpr (is_hist_3d<ptr_type>()) profile3d = dynamic_cast<TProfile3D*>(ptr);
+          int32_t nInvalid{};
+          for (int32_t bin = 0; bin < ptr->GetNcells(); ++bin) {
+            if (!std::isfinite(ptr->GetBinContent(bin)) || !std::isfinite(ptr->GetBinError(bin))) {
+              if constexpr (is_one_of_v<ptr_type, TProfile*, TProfile2D*>()) {
+                clearProfileBin(ptr, bin);
+              } else {
+                if (profile3d) {
+                  clearProfileBin(profile3d, bin);
+                } else {
+                  ptr->SetBinContent(bin, 0.);
+                  ptr->SetBinError(bin, 0.);
+                }
+              }
+              ++nInvalid;
+            }
+          }
+          if (nInvalid && report) warn("{} has {} with NaN or infinite values, which are drawn as zero.", name, plural(nInvalid, "bin"));
+        } else if constexpr (is_graph_1d<ptr_type>() || is_graph_2d<ptr_type>()) {
+          int32_t nInvalid{};
+          for (int32_t i = ptr->GetN() - 1; i >= 0; --i) {
+            bool invalid{};
+            if constexpr (is_graph_2d<ptr_type>()) {
+              invalid = !std::isfinite(ptr->GetX()[i]) || !std::isfinite(ptr->GetY()[i]) || !std::isfinite(ptr->GetZ()[i]) ||
+                        !std::isfinite(ptr->GetErrorX(i)) || !std::isfinite(ptr->GetErrorY(i)) || !std::isfinite(ptr->GetErrorZ(i));
+            } else {
+              invalid = !std::isfinite(ptr->GetPointX(i)) || !std::isfinite(ptr->GetPointY(i)) || !std::isfinite(ptr->GetErrorXlow(i)) ||
+                        !std::isfinite(ptr->GetErrorXhigh(i)) || !std::isfinite(ptr->GetErrorYlow(i)) || !std::isfinite(ptr->GetErrorYhigh(i));
+            }
+            if (invalid) {
+              RemoveGraphPoint(ptr, i);
+              ++nInvalid;
+            }
+          }
+          if (nInvalid && report) warn("{} has {} with NaN or infinite values, which are not drawn.", name, plural(nInvalid, "point"));
+        }
+      };
+
       // an input of a ratio gets its modifiers (Numer() / Denom()) before the division, then a profile is divided as the histogram of
       // its means (its errors as set by its error option): TProfile::Divide accepts only profiles and estimates the errors poorly;
       // returns whether it was a profile
       bool numeratorMeans{}, denominatorMeans{};
-      auto prepareOperand = [&](data_ptr_t& operand, const Plot::Pad::Data::modify_t& operandModify) {
+      auto prepareOperand = [&](data_ptr_t& operand, const Plot::Pad::Data::modify_t& operandModify, const string& name, bool report = true) {
         Plot::Pad::Data mods = *data;
         mods.Modify() = operandModify;
-        std::visit([&](auto& ptr) { applyModifiers(ptr, mods); }, operand);
+        std::visit(
+          [&](auto& ptr) {
+            removeInvalid(ptr, name, report);
+            applyModifiers(ptr, mods);
+          },
+          operand);
         return ProfileMeans(operand);
       };
 
@@ -2770,7 +2827,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
 
           if (rawDenomData) {
-            denominatorMeans = prepareOperand(*rawDenomData, data_as_ratio->GetDenomModify());
+            denominatorMeans = prepareOperand(*rawDenomData, data_as_ratio->GetDenomModify(), data_as_ratio->GetDenomName());
             if (binomialErrors && (numeratorMeans || denominatorMeans)) {
               warn("Ratio {}: binomial errors (SetCorrelated) are not defined for the mean values of a profile, ignoring.", data->GetName());
               binomialErrors = false;
@@ -2796,53 +2853,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }  // end ratio code
 
-        // NaN or infinite values (from the input or a division by zero) spoil the axis ranges and ROOT then draws nothing; removed before
-        // the modifiers, which would spread them (Normalize divides by a NaN integral, Cumulative carries one into every later bin)
-        if constexpr (is_hist<data_type>()) {
-          // a profile keeps sums per bin: they are cleared, so the bin is empty (a TProfile3D is held as a TH3)
-          auto clearProfileBin = [](auto* profile, int32_t bin) {
-            profile->SetBinEntries(bin, 0.);
-            profile->TArrayD::SetAt(0., bin);
-            if (profile->GetSumw2N()) profile->GetSumw2()->SetAt(0., bin);
-            if (profile->GetBinSumw2()->fN) profile->GetBinSumw2()->SetAt(0., bin);
-          };
-          TProfile3D* profile3d{};
-          if constexpr (is_hist_3d<data_type>()) profile3d = dynamic_cast<TProfile3D*>(data_ptr);
-          int32_t nInvalid{};
-          for (int32_t bin = 0; bin < data_ptr->GetNcells(); ++bin) {
-            if (!std::isfinite(data_ptr->GetBinContent(bin)) || !std::isfinite(data_ptr->GetBinError(bin))) {
-              if constexpr (is_one_of_v<data_type, TProfile*, TProfile2D*>()) {
-                clearProfileBin(data_ptr, bin);
-              } else {
-                if (profile3d) {
-                  clearProfileBin(profile3d, bin);
-                } else {
-                  data_ptr->SetBinContent(bin, 0.);
-                  data_ptr->SetBinError(bin, 0.);
-                }
-              }
-              ++nInvalid;
-            }
-          }
-          if (nInvalid) warn("{} has {} with NaN or infinite values, which are drawn as zero.", data->GetName(), plural(nInvalid, "bin"));
-        } else if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
-          int32_t nInvalid{};
-          for (int32_t i = data_ptr->GetN() - 1; i >= 0; --i) {
-            bool invalid{};
-            if constexpr (is_graph_2d<data_type>()) {
-              invalid = !std::isfinite(data_ptr->GetX()[i]) || !std::isfinite(data_ptr->GetY()[i]) || !std::isfinite(data_ptr->GetZ()[i]) ||
-                        !std::isfinite(data_ptr->GetErrorX(i)) || !std::isfinite(data_ptr->GetErrorY(i)) || !std::isfinite(data_ptr->GetErrorZ(i));
-            } else {
-              invalid = !std::isfinite(data_ptr->GetPointX(i)) || !std::isfinite(data_ptr->GetPointY(i)) || !std::isfinite(data_ptr->GetErrorXlow(i)) ||
-                        !std::isfinite(data_ptr->GetErrorXhigh(i)) || !std::isfinite(data_ptr->GetErrorYlow(i)) || !std::isfinite(data_ptr->GetErrorYhigh(i));
-            }
-            if (invalid) {
-              RemoveGraphPoint(data_ptr, i);
-              ++nInvalid;
-            }
-          }
-          if (nInvalid) warn("{} has {} with NaN or infinite values, which are not drawn.", data->GetName(), plural(nInvalid, "point"));
-        }
+        removeInvalid(data_ptr, data->GetName(), true);
 
         applyModifiers(data_ptr, *data);
         // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
@@ -2955,7 +2966,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         if (data->GetType() == "ratio") {
           std::visit([&](auto* ptr) { dropStoredFunctions(ptr, "division"); }, *rawData);
           auto ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          numeratorMeans = prepareOperand(*rawData, ratio->GetNumModify());
+          numeratorMeans = prepareOperand(*rawData, ratio->GetNumModify(), data->GetName());
           // a function as numerator (e.g. model / data) is sampled where the denominator has its values (the points of a graph, the bin
           // centres of a histogram, after the modifiers of the denominator): the division is then that of a graph without errors, which
           // takes the errors of the denominator; a function of the inputs only within its range, a formula of the plot definition everywhere
@@ -2967,7 +2978,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               denom = nullopt;
             }
             if (denom) {
-              prepareOperand(*denom, ratio->GetDenomModify());
+              prepareOperand(*denom, ratio->GetDenomModify(), ratio->GetDenomName(), false);  // reported when it is divided by
               const bool fullRange = (data->GetDataSource() == kUserFunctions);
               auto* sampled = new TGraph();
               sampled->SetBit(kCanDelete);  // owned by the pad, as the clone it replaces
