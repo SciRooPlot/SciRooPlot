@@ -964,8 +964,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
               data_ptr->SetRange(rangeMinX, rangeMaxX);
             }
           }
-          // points with a positive value (x, y, value), needed for a log scale: graphs keep them, since their axis frame is an empty
-          // histogram (and drawing it below deletes the graph); the smallest value inside the frame's ranges is taken once those are set
+          // points with a positive value (x, y, value; for 1d graphs the ends of the x error bars and the value), needed for a log scale:
+          // graphs keep them, since their axis frame is an empty histogram (and drawing it below deletes the graph); the smallest value
+          // shown in the frame's ranges is taken once those are set
           optional<vector<array<double_t, 3>>> graphPositivePoints;
           // the same for the x axis of 1d graphs, from the lower ends of the error bars (from the points where those are not positive)
           optional<double_t> graphPositiveMinimumX;
@@ -978,10 +979,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             graphPositivePoints.emplace();
             if constexpr (is_graph_1d<data_type>()) graphPositiveMinimumX = std::numeric_limits<double_t>::infinity();
             for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
-              double_t value{};
-              double_t y{};
               if constexpr (is_graph_1d<data_type>()) {
-                value = data_ptr->GetPointY(i);
+                const double_t value = data_ptr->GetPointY(i);
                 const double_t x = data_ptr->GetPointX(i);
                 const double_t xLow = x - std::max(data_ptr->GetErrorXlow(i), 0.);  // -1 for graphs without errors
                 if (xLow > 0.) {
@@ -989,11 +988,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                 } else if (x > 0.) {
                   graphPositiveMinimumX = std::min(*graphPositiveMinimumX, x);
                 }
+                if (value > 0.) graphPositivePoints->push_back({xLow, x + std::max(data_ptr->GetErrorXhigh(i), 0.), value});
               } else {
-                value = data_ptr->GetZ()[i];
-                y = data_ptr->GetY()[i];
+                if (const double_t value = data_ptr->GetZ()[i]; value > 0.) graphPositivePoints->push_back({data_ptr->GetX()[i], data_ptr->GetY()[i], value});
               }
-              if (value > 0.) graphPositivePoints->push_back({data_ptr->GetX()[i], y, value});
             }
           }
           if constexpr (is_2d<data_type>()) polarFrame = isFlatPolar(drawOption);
@@ -1049,6 +1047,56 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
               axisHist_ptr = static_cast<TH1*>(data_ptr->GetHistogram()->Clone());
               axisHist_ptr->SetDirectory(nullptr);
               axisHist_ptr->SetBit(kCanDelete);
+              if constexpr (is_graph_1d<data_type>()) {
+                // ROOT's y range of a graph (TGraph::GetHistogram) comes from all its points: with an x range of the pad it is taken from the
+                // points drawn into it (their x errors reaching into the range), as for histograms and functions, by ROOT for those points alone
+                // (on a log axis only points reaching above zero)
+                static thread_local std::pair<double_t, double_t> shownX;
+                const optional<double_t> userMin = MinRange(pad, padDefaults, 'X');
+                optional<double_t> userMax;
+                bool logX{};
+                for (const auto* axis : AxisSettings(pad, padDefaults, 'X')) {
+                  if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
+                  if (axis->GetLog()) logX = *axis->GetLog();
+                }
+                shownX = {userMin.value_or(-std::numeric_limits<double_t>::infinity()), userMax.value_or(std::numeric_limits<double_t>::infinity())};
+                if (logX) shownX.first = std::max(shownX.first, std::numeric_limits<double_t>::min());
+                static const auto isShown = [](const TGraph* graph, int32_t i) {
+                  const double_t x = graph->GetPointX(i);
+                  return x + std::max(graph->GetErrorXhigh(i), 0.) >= shownX.first && x - std::max(graph->GetErrorXlow(i), 0.) <= shownX.second;
+                };
+                int32_t nShown = 0;
+                for (int32_t i = 0; i < data_ptr->GetN() && (userMin || userMax); ++i) {
+                  if (isShown(data_ptr, i)) ++nShown;
+                }
+                if (nShown > 0 && nShown < data_ptr->GetN()) {
+                  std::unique_ptr<TGraph> shown;
+                  if (auto* multi = dynamic_cast<TGraphMultiErrors*>(data_ptr)) {
+                    // a TGraphMultiErrors cannot be cut that way (ROOT's Sort leaves its y errors in place, Set crashes on a clone): made anew
+                    auto* subset = new TGraphMultiErrors(nShown, multi->GetNYErrors());
+                    shown.reset(subset);
+                    for (int32_t i = 0, n = 0; i < multi->GetN(); ++i) {
+                      if (!isShown(multi, i)) continue;
+                      subset->SetPoint(n, multi->GetPointX(i), multi->GetPointY(i));
+                      subset->SetPointEX(n, multi->GetErrorXlow(i), multi->GetErrorXhigh(i));
+                      for (int32_t e = 0; e < multi->GetNYErrors(); ++e)
+                        subset->SetPointEY(n, e, multi->GetEYlow(e)[i], multi->GetEYhigh(e)[i]);
+                      ++n;
+                    }
+                    subset->SetSumErrorsMode(multi->GetSumErrorsMode());
+                    if (multi->GetMinimum() != -1111) subset->SetMinimum(multi->GetMinimum());  // a range stored with the graph
+                    if (multi->GetMaximum() != -1111) subset->SetMaximum(multi->GetMaximum());
+                  } else {
+                    // the points shown first (ROOT sorts with SwapPoints of each graph class, which keeps their errors), the others cut off
+                    shown.reset(static_cast<TGraph*>(data_ptr->Clone()));
+                    shown->Sort([](const TGraph* graph, int32_t i, int32_t j) -> Bool_t { return isShown(graph, i) < isShown(graph, j); });
+                    shown->Set(nShown);
+                    shown->SetBit(TGraph::kResetHisto);  // the histogram cloned with the points would be kept
+                  }
+                  axisHist_ptr->SetMinimum(shown->GetHistogram()->GetMinimum());
+                  axisHist_ptr->SetMaximum(shown->GetHistogram()->GetMaximum());
+                }
+              }
               if constexpr (is_graph_2d<data_type>()) {
                 // the histogram of a 2d graph holds its Delaunay triangulation, which the frame does not use (see below) and which a
                 // macro cannot save (the line ROOT writes for it does not compile)
@@ -1406,13 +1454,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                 const TAxis* yAxis = axisHist_ptr->GetYaxis();
                 const auto binRange = [](const TAxis* axis) { return std::make_pair(std::max(axis->GetFirst(), 1), std::min(axis->GetLast(), axis->GetNbins())); };
                 if (graphPositivePoints) {
-                  // the frame of a 1d graph has its x axis set to the range, that of a 2d graph its bins selected
-                  const auto inRange = [&](const TAxis* axis, double_t value) {
+                  // the frame of a 1d graph has its x axis set to the range (a point counts where its x error bar reaches into it), that of a
+                  // 2d graph its bins selected
+                  const auto inRange = [&](const TAxis* axis, double_t low, double_t high) {
                     const auto [first, last] = binRange(axis);
-                    return value >= axis->GetBinLowEdge(first) && value <= axis->GetBinUpEdge(last);
+                    return high >= axis->GetBinLowEdge(first) && low <= axis->GetBinUpEdge(last);
                   };
-                  for (const auto& [x, y, value] : *graphPositivePoints) {
-                    if (inRange(xAxis, x) && (frameDim == 1 || inRange(yAxis, y))) positiveMinimum = std::min(positiveMinimum, value);
+                  for (const auto& [a, b, value] : *graphPositivePoints) {
+                    const bool shown = (frameDim == 1) ? inRange(xAxis, a, b) : inRange(xAxis, a, a) && inRange(yAxis, b, b);
+                    if (shown) positiveMinimum = std::min(positiveMinimum, value);
                   }
                 } else if (axisHist_ptr->InheritsFrom(TH2Poly::Class())) {
                   for (int32_t bin = 1; bin <= static_cast<TH2Poly*>(axisHist_ptr)->GetNumberOfBins(); ++bin) {
