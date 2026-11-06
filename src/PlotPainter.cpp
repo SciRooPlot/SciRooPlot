@@ -2211,8 +2211,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
         drawOption = "SAME ";  // next data should be drawn to same pad
       };
 
+      bool repeated{};  // an input prepared a second time (the denominator of a function numerator): reported only once
       auto warn = [&](auto&&... args) {
-        if (dataIndex != 0) logger::warning(std::forward<decltype(args)>(args)...);
+        if (dataIndex != 0 && !repeated) logger::warning(std::forward<decltype(args)>(args)...);
       };
 
       // functions stored with an input histogram or graph (fit results) do not follow modifiers or divisions: not drawn then
@@ -2675,7 +2676,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       // NaN or infinite values (from the input or a division by zero) spoil the axis ranges and ROOT then draws nothing; removed before
       // the modifiers, which would spread them (Normalize divides by a NaN integral, Cumulative carries one into every later bin), and
       // before a division (a spline through one gives NaN everywhere)
-      auto removeInvalid = [&](auto* ptr, const string& name, bool report) {
+      auto removeInvalid = [&](auto* ptr, const string& name) {
         using ptr_type = decltype(ptr);
         if constexpr (is_hist<ptr_type>()) {
           // a profile keeps sums per bin: they are cleared, so the bin is empty (a TProfile3D is held as a TH3)
@@ -2703,7 +2704,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               ++nInvalid;
             }
           }
-          if (nInvalid && report) warn("{} has {} with NaN or infinite values, which are drawn as zero.", name, plural(nInvalid, "bin"));
+          if (nInvalid) warn("{} has {} with NaN or infinite values, which are drawn as zero.", name, plural(nInvalid, "bin"));
         } else if constexpr (is_graph_1d<ptr_type>() || is_graph_2d<ptr_type>()) {
           int32_t nInvalid{};
           for (int32_t i = ptr->GetN() - 1; i >= 0; --i) {
@@ -2720,7 +2721,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               ++nInvalid;
             }
           }
-          if (nInvalid && report) warn("{} has {} with NaN or infinite values, which are not drawn.", name, plural(nInvalid, "point"));
+          if (nInvalid) warn("{} has {} with NaN or infinite values, which are not drawn.", name, plural(nInvalid, "point"));
         }
       };
 
@@ -2728,12 +2729,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       // its means (its errors as set by its error option): TProfile::Divide accepts only profiles and estimates the errors poorly;
       // returns whether it was a profile
       bool numeratorMeans{}, denominatorMeans{};
-      auto prepareOperand = [&](data_ptr_t& operand, const Plot::Pad::Data::modify_t& operandModify, const string& name, bool report = true) {
+      auto prepareOperand = [&](data_ptr_t& operand, const Plot::Pad::Data::modify_t& operandModify, const string& name) {
         Plot::Pad::Data mods = *data;
         mods.Modify() = operandModify;
         std::visit(
           [&](auto& ptr) {
-            removeInvalid(ptr, name, report);
+            removeInvalid(ptr, name);
             applyModifiers(ptr, mods);
           },
           operand);
@@ -2853,7 +2854,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           }
         }  // end ratio code
 
-        removeInvalid(data_ptr, data->GetName(), true);
+        removeInvalid(data_ptr, data->GetName());
 
         applyModifiers(data_ptr, *data);
         // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
@@ -2979,7 +2980,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
               denom = nullopt;
             }
             if (denom) {
-              prepareOperand(*denom, ratio->GetDenomModify(), ratio->GetDenomName(), false);  // reported when it is divided by
+              repeated = true;  // reported when it is divided by
+              prepareOperand(*denom, ratio->GetDenomModify(), ratio->GetDenomName());
+              repeated = false;
               const bool fullRange = (data->GetDataSource() == kUserFunctions);
               auto* sampled = new TGraph();
               sampled->SetBit(kCanDelete);  // owned by the pad, as the clone it replaces
