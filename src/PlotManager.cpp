@@ -2229,6 +2229,24 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     };
     cloneRedrawnHistograms(canvas.get());
   }
+  // the setup of a pad (palette, text format, kept axis ranges ...) is a TExec before its frame; a macro draws them in that order, and the
+  // frame drawn without SAME clears the pad, setup included: a copy drawn right before the pad in the pad holding it runs before it is painted
+  if (isMacroMode) {
+    std::function<void(TPad*)> copySetups;
+    copySetups = [&](TPad* pad) {
+      for (auto link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+        auto subPad = dynamic_cast<TPad*>(link->GetObject());
+        if (!subPad) continue;
+        copySetups(subPad);
+        auto setup = dynamic_cast<TExec*>(subPad->GetListOfPrimitives()->First());
+        if (!setup || !str_starts_with(setup->GetName(), "setup_pad_")) continue;
+        auto copy = new TExec(setup->GetName(), setup->GetTitle());
+        copy->SetBit(kCanDelete);
+        pad->GetListOfPrimitives()->AddBefore(link, copy);
+      }
+    };
+    copySetups(canvas.get());
+  }
 
   if (mode == "file") {
     mCanvasRegistry[plot.GetUniqueName()] = canvas;
