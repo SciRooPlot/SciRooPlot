@@ -398,7 +398,7 @@ const vector<color_t>& PlotPainter::DefaultColors()
  * Function to generate the plot.
  */
 //**************************************************************************************************
-unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<string, unordered_map<string, unique_ptr<TObject>>>& dataBuffer)
+unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& dataBuffer)
 {
   bool fail = false;
   auto sourceHistsGuard = make_scope_guard([this]() {  // needed until the boxes of the plot are made
@@ -468,6 +468,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
   mFrameRanges.clear();
   mFrameHists.clear();
   mScaleHists.clear();
+  mContentScales.clear();
   // the panels of a z group whose colour scale a ColorScale() cell shows draw none of their own (a panel in no z group: its own scale is shown)
   mScalesInCells.clear();
   for (const auto& [padID, pad] : plot.GetPads()) {
@@ -607,29 +608,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Data>(*pad.GetFrame()));
       drawData[0]->SetDefinesFrame();
     } else if (hasData) {
-      // find data that should define the axis frame (selects the most recently added data that wants to define frame)
-      auto framePos = std::find_if(drawData.rbegin(), drawData.rend(), [](const auto& curData) { return curData->GetDefinesFrame(); });
-      size_t frameDataID = (framePos != drawData.rend()) ? static_cast<size_t>((framePos.base() - 1) - drawData.begin()) : 0u;
-      // an empty graph is not drawn and has no ranges: the frame comes from the next data (if there is any that is not empty)
-      auto isEmptyGraph = [&](size_t dataID) {
-        const auto& curData = drawData[dataID];
-        if (curData->GetType() == "ratio") return false;
-        auto source = dataBuffer.find(curData->GetDataSource());
-        if (source == dataBuffer.end()) return false;
-        auto item = source->second.find(curData->GetName() + curData->GetDataInfo().GetNameSuffix());
-        if (item == source->second.end()) return false;
-        if (auto* graph2d = dynamic_cast<TGraph2D*>(item->second.get())) return graph2d->GetN() == 0;
-        auto* graph = dynamic_cast<TGraph*>(item->second.get());
-        return graph && graph->GetN() == 0 && !dynamic_cast<TGraphPolar*>(graph);
-      };
-      if (isEmptyGraph(frameDataID)) {
-        for (size_t dataID = 0; dataID < drawData.size(); ++dataID) {
-          if (!isEmptyGraph(dataID)) {
-            frameDataID = dataID;
-            break;
-          }
-        }
-      }
+      const size_t frameDataID = FrameDataIndex(drawData, dataBuffer);
       // make a copy of data that will serve as axis frame and put it in front of data vector
       if (drawData[frameDataID]->GetType() == "ratio") {
         drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Ratio>(*std::dynamic_pointer_cast<Plot::Pad::Ratio>(drawData[frameDataID])));
@@ -684,6 +663,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     unique_ptr<TH1> polarAxisHist;
     // the frame is a 2d histogram drawn as a map projection (AITOFF, MERCATOR, SINUSOIDAL, PARABOLIC, MOLLWEIDE)
     bool projectedPad{};
+    // the frame is a 3d histogram: its colour scale shows the contents (the C axis), not the binned z axis
+    bool contentFrame{};
     vector<std::pair<unique_ptr<TPaveStats>, std::shared_ptr<const Plot::Pad::StatsBox>>> statsBoxes;  // filled by ROOT while drawing the data, placed after all data are drawn
     string drawOption;
     uint16_t dataIndex{};
@@ -1123,6 +1104,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             axisHist_ptr->Draw((drawOption + "SAME AXIG").data());
           }
           const int32_t frameDim = axisHist_ptr->GetDimension();
+          if constexpr (is_hist_3d<data_type>()) contentFrame = true;
           const bool hbarFrame = IsHBarFrame(pad_ptr, axisHist_ptr);  // with HBAR the X and Y of the pad are the y and x axis of the histogram
 
           // a user range beyond the axes of the frame histogram needs a wider frame, since ROOT shows at most the axis of a histogram:
@@ -3114,7 +3096,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
     if (flatFrame) AddAxisRoom(pad_ptr, axisHist_ptr, padDefaults, pad, padID, (hasRefFunc) ? drawData[1].get() : nullptr, padSetup);
     if (mScalesInCells.count(padID)) {
       // the colour scale of the pad is shown by a ColorScale() cell: the drawing options lose their Z (ROOT then removes the scale it made)
-      static const std::regex withScale("(COL|CONT[0-9]?|LEGO[0-9]?|SURF[0-9]?|TRI[0-9]?)Z", std::regex::icase);
+      static const std::regex withScale("(COL|BOX[0-9]?|CONT[0-9]?|LEGO[0-9]?|SURF[0-9]?|TRI[0-9]?)Z", std::regex::icase);
       for (TObjLink* link = pad_ptr->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
         link->SetOption(std::regex_replace(string(link->GetOption()), withScale, "$1").data());
       }
@@ -3185,10 +3167,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       mFrameRanges[{padID, 'Y'}] = {FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()), FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy())};
       mFrameHists[padID] = axisHist_ptr;
     }
-    // the z range of a 2d frame is its minimum and maximum, also in a 3D view (x and y of a view are projected, not shared)
-    if (axisHist_ptr && axisHist_ptr->GetDimension() == 2 && !polarFrame && !polargram) {
+    // the colour axis of a 2d frame is z, its range the minimum and maximum, also in a 3D view (x and y of a view are projected, not shared);
+    // the colour axis of a 3d histogram is its contents (C), kept under Z for the z groups (a 3d function has no colour scale)
+    if (axisHist_ptr && (axisHist_ptr->GetDimension() == 2 || contentFrame) && !polarFrame && !polargram) {
       mFrameRanges[{padID, 'Z'}] = {axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum()};
       mScaleHists[padID] = axisHist_ptr;
+      if (contentFrame) mContentScales.insert(padID);
     }
 
     // the colour scale ROOT made while painting starts 0.005 of the pad width right of the frame and is 0.045 wide: other values
@@ -7059,6 +7043,61 @@ bool PlotPainter::PlaceZTitle(TPad* pad, TAxis* zAxis, const vector<label_range_
 
 //**************************************************************************************************
 /**
+ * The data of a pad that defines its axis frame (without a frame input): the most recently added data marked SetDefinesFrame, else the
+ * first; an empty graph is not drawn and has no ranges, so the frame then comes from the first data that is not empty (if there is any).
+ */
+//**************************************************************************************************
+size_t PlotPainter::FrameDataIndex(const vector<shared_ptr<Plot::Pad::Data>>& data, const data_buffer_t& dataBuffer)
+{
+  auto framePos = std::find_if(data.rbegin(), data.rend(), [](const auto& curData) { return curData->GetDefinesFrame(); });
+  size_t frameDataID = (framePos != data.rend()) ? static_cast<size_t>((framePos.base() - 1) - data.begin()) : 0u;
+  auto isEmptyGraph = [&](size_t dataID) {
+    const auto& curData = data[dataID];
+    if (curData->GetType() == "ratio") return false;
+    TObject* input = Input(*curData, dataBuffer);
+    if (auto* graph2d = dynamic_cast<TGraph2D*>(input)) return graph2d->GetN() == 0;
+    auto* graph = dynamic_cast<TGraph*>(input);
+    return graph && graph->GetN() == 0 && !dynamic_cast<TGraphPolar*>(graph);
+  };
+  if (isEmptyGraph(frameDataID)) {
+    for (size_t dataID = 0; dataID < data.size(); ++dataID) {
+      if (!isEmptyGraph(dataID)) return dataID;
+    }
+  }
+  return frameDataID;
+}
+
+//**************************************************************************************************
+/**
+ * The input of data from the buffer of the inputs (nullptr if it is not there).
+ */
+//**************************************************************************************************
+TObject* PlotPainter::Input(const Plot::Pad::Data& data, const data_buffer_t& dataBuffer)
+{
+  auto source = dataBuffer.find(data.GetDataSource());
+  if (source == dataBuffer.end()) return nullptr;
+  auto item = source->second.find(data.GetName() + data.GetDataInfo().GetNameSuffix());
+  return (item == source->second.end()) ? nullptr : item->second.get();
+}
+
+//**************************************************************************************************
+/**
+ * Whether the colour axis of a pad is the contents of a 3d histogram (C), not its z axis: its frame is a 3d histogram (or profile),
+ * not projected. Known before the pad is painted, for the z groups (see PlotManager::GeneratePlot); GetContentScales gives the pads
+ * as painted.
+ */
+//**************************************************************************************************
+bool PlotPainter::IsContentScale(const Plot::Pad& pad, const data_buffer_t& dataBuffer)
+{
+  const auto& data = pad.GetData();
+  const Plot::Pad::Data* frame = (pad.GetFrame()) ? pad.GetFrame().get() : ((data.empty()) ? nullptr : data[FrameDataIndex(data, dataBuffer)].get());
+  if (!frame || frame->GetProjInfo()) return false;
+  const TObject* input = Input(*frame, dataBuffer);
+  return input && input->InheritsFrom(TH3::Class());
+}
+
+//**************************************************************************************************
+/**
  * Draws a ColorScale() cell of a layout: the colour scale of the z group of the panel it shows, a copy of the scale of the first panel
  * of the group (its range, contours, palette and log setting, which the group shares), along the frames the cell spans.
  */
@@ -7086,7 +7125,7 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
     if (memberPad) break;
   }
   if (!memberPad) {
-    logger::warning("The colour scale cell (pad {}) stays empty: no panel of the z group of pad {} draws a 2d histogram, graph or function.", padID, shown);
+    logger::warning("The colour scale cell (pad {}) stays empty: no panel of the z group of pad {} draws a 2d histogram, graph or function, or a 3d histogram.", padID, shown);
     return;
   }
   const Plot::Pad& defaults = plot[0];
@@ -7103,7 +7142,8 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
   const double_t cellWidthPixel = PadSizePixel(cellPad).first;
   cellPad->SetLeftMargin(0.);
   cellPad->SetRightMargin(1. - 1. / std::max(cellWidthPixel, 2.));
-  cellPad->SetLogz(memberPad->GetLogz());
+  const bool contentScale = mContentScales.count(static_cast<uint8_t>(memberPad->GetNumber())) > 0;
+  cellPad->SetLogz(!contentScale && memberPad->GetLogz());  // ROOT colours the boxes of a 3d histogram linearly (the log z of its pad is the binned z)
   cellPad->Draw();
   cellPad->cd();
   // the setup of the panel (its palette): put in front of the scale once it is drawn, since drawing it without SAME clears the pad
@@ -7113,8 +7153,36 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
     cellSetup->SetBit(kCanDelete);
     cellSetup->Exec();
   }
-  // the histogram of the scale has no cells to paint: its x axis lies beyond the frame (only its z axis is shown)
-  auto* scale = static_cast<TH1*>(source->Clone(fmt::format("color_scale_pad_{}", padID).data()));
+  // the histogram of the scale has no cells to paint: its x axis lies beyond the frame (only its z axis is shown); the scale of a 3d histogram
+  // (its contents) is that of a 2d histogram with its range, colour levels and the look of its scale (the title after ';' of its z title)
+  TH1* scale{};
+  const string scaleName = fmt::format("color_scale_pad_{}", padID);
+  if (contentScale) {
+    scale = new TH2D(scaleName.data(), "", 1, 0., 1., 1, 0., 1.);
+    scale->SetDirectory(nullptr);
+    scale->SetStats(false);
+    scale->SetMinimum(source->GetMinimum());
+    scale->SetMaximum(source->GetMaximum());
+    if (source->TestBit(TH1::kUserContour)) {
+      vector<double_t> levels(static_cast<size_t>(source->GetContour()));
+      source->GetContour(levels.data());
+      scale->SetContour(static_cast<int32_t>(levels.size()), levels.data());
+    } else {
+      scale->SetContour(source->GetContour());
+    }
+    source->GetZaxis()->TAttAxis::Copy(*scale->GetZaxis());
+    for (const auto* content : AxisSettings(plot[static_cast<uint8_t>(memberPad->GetNumber())], defaults, 'C')) {
+      if (content->GetTitleFont()) scale->GetZaxis()->SetTitleFont(*content->GetTitleFont());
+      if (content->GetTitleColor()) scale->GetZaxis()->SetTitleColor(content->GetTitleColor()->ToIndex());
+      if (content->GetLabelFont()) scale->GetZaxis()->SetLabelFont(*content->GetLabelFont());
+      if (content->GetLabelColor()) scale->GetZaxis()->SetLabelColor(content->GetLabelColor()->ToIndex());
+    }
+    TString title = source->GetZaxis()->GetTitle();
+    title.Remove(0, (title.Index(";") >= 0) ? title.Index(";") + 1 : title.Length());
+    scale->GetZaxis()->SetTitle(title);
+  } else {
+    scale = static_cast<TH1*>(source->Clone(scaleName.data()));
+  }
   scale->SetDirectory(nullptr);
   scale->SetBit(kCanDelete);
   delete scale->GetListOfFunctions()->Remove(scale->GetListOfFunctions()->FindObject("palette"));

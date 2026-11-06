@@ -1961,17 +1961,28 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   if (sharedAxes.empty() && !hidesLabels) {
     canvas.reset(paint(fullPlot).release());
   } else {
+    // the colour axis shared by a z group is z, for a 3d histogram its contents (C): its range is shared, a log scale and time format are not
+    // (ROOT colours the boxes linearly)
+    set<uint8_t> contentPads;
+    if (sharedAxes.count('Z')) {
+      for (const auto& [padID, pad] : fullPlot.GetPads()) {
+        if (padID != 0 && PlotPainter::IsContentScale(pad, mDataBuffer)) contentPads.insert(padID);
+      }
+    }
+    auto axisOf = [&](char axisLabel, uint8_t padID) { return (axisLabel == 'Z' && contentPads.count(padID)) ? 'C' : axisLabel; };
     // pads sharing an axis: a log scale, time format or range set in one of them (else in pad 0) holds for all of them
     map<char, vector<vector<uint8_t>>> groups;
     for (const auto& [axisLabel, axisGroups] : sharedAxes) {
       for (const auto& group : axisGroups) {
         groups[axisLabel].push_back(group.pads);
-        auto common = [&, axisLabel = axisLabel](const char* what, auto get, auto set) {
+        // contents: the setting of a z group holds for the contents of its 3d histograms too (their range, not a log scale or time format)
+        auto common = [&, axisLabel = axisLabel](const char* what, auto get, auto set, bool contents) {
           optional<std::decay_t<decltype(*get(std::declval<const Plot::Pad::Axis&>()))>> value;
           uint8_t valuePad{};  // the first pad of the group setting it, whose value is used
           for (uint8_t padID : group.pads) {
+            if (!contents && axisOf(axisLabel, padID) == 'C') continue;
             const auto& axes = fullPlot[padID].GetAxes();
-            auto axis = axes.find(axisLabel);
+            auto axis = axes.find(axisOf(axisLabel, padID));
             if (axis == axes.end() || !get(axis->second)) continue;
             if (!value) {
               value = get(axis->second);
@@ -1982,14 +1993,22 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
           }
           if (!value) return;
           for (uint8_t padID : group.pads) {
-            set(fullPlot[padID][axisLabel], *value);
+            if (contents || axisOf(axisLabel, padID) != 'C') set(fullPlot[padID][axisOf(axisLabel, padID)], *value);
           }
         };
-        common("log scales", [](const Plot::Pad::Axis& axis) { return axis.GetLog(); }, [](Plot::Pad::Axis& axis, bool isLog) { axis.SetLog(isLog); });
-        common("time formats", [](const Plot::Pad::Axis& axis) { return axis.GetTimeFormat(); }, [](Plot::Pad::Axis& axis, const string& format) { axis.SetTimeFormat(format); });
-        common("minima", [](const Plot::Pad::Axis& axis) { return axis.GetMinRange(); }, [](Plot::Pad::Axis& axis, double_t min) { axis.SetMinRange(min); });
-        common("maxima", [](const Plot::Pad::Axis& axis) { return axis.GetMaxRange(); }, [](Plot::Pad::Axis& axis, double_t max) { axis.SetMaxRange(max); });
+        common("log scales", [](const Plot::Pad::Axis& axis) { return axis.GetLog(); }, [](Plot::Pad::Axis& axis, bool isLog) { axis.SetLog(isLog); }, false);
+        common("time formats", [](const Plot::Pad::Axis& axis) { return axis.GetTimeFormat(); }, [](Plot::Pad::Axis& axis, const string& format) { axis.SetTimeFormat(format); }, false);
+        common("minima", [](const Plot::Pad::Axis& axis) { return axis.GetMinRange(); }, [](Plot::Pad::Axis& axis, double_t min) { axis.SetMinRange(min); }, true);
+        common("maxima", [](const Plot::Pad::Axis& axis) { return axis.GetMaxRange(); }, [](Plot::Pad::Axis& axis, double_t max) { axis.SetMaxRange(max); }, true);
         if (axisLabel == 'Z') {
+          auto isLog = [&](uint8_t padID) {
+            const auto& axes = fullPlot[padID].GetAxes();
+            return !contentPads.count(padID) && axes.count('Z') && axes.at('Z').GetLog().value_or(false);
+          };
+          auto content = std::find_if(group.pads.begin(), group.pads.end(), [&](uint8_t padID) { return contentPads.count(padID) > 0; });
+          if (content != group.pads.end() && std::any_of(group.pads.begin(), group.pads.end(), isLog)) {
+            logger::warning("Plot {}: pad {} draws a 3d histogram, whose boxes ROOT colours linearly: they do not follow the log scale of its z group.", fullPlot.GetName(), *content);
+          }
           // one colour scale for the group, but each pad is painted with its own palette: the scale fits only some of them
           const auto& pads = fullPlot.GetPads();
           auto ownPalette = [](const Plot::Pad& p) { return p.GetPalette() || p.GetPaletteGradient().rgbEndpoints; };
@@ -2040,7 +2059,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
               auto& pad = fullPlot.GetPads().at(padID);
               const bool drawsNothing = pad.GetData().empty() && !pad.GetFrame() && !pad.GetRefFunc();
               logger::warning("Plot {}: pad {} is left out of the pads sharing the {} axis: {}.", fullPlot.GetName(), padID, axisLabel,
-                              (drawsNothing) ? "it draws nothing" : ((axisLabel == 'Z') ? "it draws no 2d histogram, graph or function (or a polar one)" : "it has no flat axis frame (a 3d view or a polar drawing)"));
+                              (drawsNothing) ? "it draws nothing" : ((axisLabel == 'Z') ? "it draws no 2d histogram, graph or function and no 3d histogram (or a polar drawing)" : "it has no flat axis frame (a 3d view or a polar drawing)"));
             }
             continue;
           }
@@ -2052,13 +2071,14 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
         for (uint8_t padID : members) {
           const auto& [padMin, padMax] = ranges.at({padID, axisLabel});
           if (!TMath::AreEqualRel(padMin, min, 1e-9) || !TMath::AreEqualRel(padMax, max, 1e-9)) paintAgain = true;
-          Plot::Pad::Axis& axis = fullPlot[padID][axisLabel];
+          const char padAxis = (axisLabel == 'Z' && painter.GetContentScales().count(padID)) ? 'C' : axisLabel;
+          Plot::Pad::Axis& axis = fullPlot[padID][padAxis];
           const auto& defaults = fullPlot[0].GetAxes();
-          const bool defaultMin = defaults.count(axisLabel) && defaults.at(axisLabel).GetMinRange();
-          const bool defaultMax = defaults.count(axisLabel) && defaults.at(axisLabel).GetMaxRange();
+          const bool defaultMin = defaults.count(padAxis) && defaults.at(padAxis).GetMinRange();
+          const bool defaultMax = defaults.count(padAxis) && defaults.at(padAxis).GetMaxRange();
           if (!axis.GetMinRange() && !defaultMin) axis.SetMinRange(min);
           if (!axis.GetMaxRange() && !defaultMax) axis.SetMaxRange(max);
-          commonRanges.insert({padID, axisLabel});
+          commonRanges.insert({padID, padAxis});
         }
       }
     }

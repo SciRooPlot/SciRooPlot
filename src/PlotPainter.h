@@ -265,7 +265,10 @@ class PlotPainter
   //        i.e. the plot looks the same at any scale, only with more or less pixels (used on screen and for bitmap files)
   // onScreen: the canvas is shown in a window, whose X11 backend has fixed dash patterns for line styles 2-4
   explicit PlotPainter(double_t scale = 1., bool onScreen = false) : mScale(scale), mOnScreen(onScreen) {}
-  std::unique_ptr<TCanvas> GeneratePlot(Plot& plot, const std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>>& dataBuffer);
+  // the inputs by source and name (with the suffix of their data info)
+  using data_buffer_t = std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>>;
+  std::unique_ptr<TCanvas> GeneratePlot(Plot& plot, const data_buffer_t& dataBuffer);
+  static bool IsContentScale(const Plot::Pad& pad, const data_buffer_t& dataBuffer);  // the colour axis of the pad is the contents of a 3d histogram (C)
   // the colours the n-th data item of a pad takes when neither the data nor its pad nor pad 0 sets one
   static const std::vector<color_t>& DefaultColors();
   // the red, green and blue of nColors spread evenly over a gradient
@@ -289,10 +292,14 @@ class PlotPainter
     }
     return pads;
   }
-  // the ranges of the frames as drawn (x and y of flat frames, z of 2d frames), keyed by pad and axis
+  // the pads whose colour axis is the contents of a 3d histogram (C, a range under Z in GetFrameRanges), not z
+  const std::set<uint8_t>& GetContentScales() const { return mContentScales; }
+  // the ranges of the frames as drawn (x and y of flat frames, the colour axis of 2d frames and 3d histograms under Z), keyed by pad and axis
   const std::map<std::pair<uint8_t, char>, std::pair<double_t, double_t>>& GetFrameRanges() const { return mFrameRanges; }
 
  private:
+  static size_t FrameDataIndex(const std::vector<std::shared_ptr<Plot::Pad::Data>>& data, const data_buffer_t& dataBuffer);
+  static TObject* Input(const Plot::Pad::Data& data, const data_buffer_t& dataBuffer);
   void AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefaults, const Plot::Pad& padSettings, uint8_t padID, const Plot::Pad::Data* refFunc, std::string& padSetup);
   void ApplyScale(TObject* obj, std::set<TObject*>& done, const std::string& drawOption = "");
   Width_t ScaleLineWidth(Width_t width) const;
@@ -407,6 +414,7 @@ class PlotPainter
   std::optional<std::set<uint8_t>> mFlatPads;
   std::map<uint8_t, TH1*> mFrameHists;  // the frame histograms of the flat frames (owned by their pads)
   std::map<uint8_t, TH1*> mScaleHists;  // the frame histograms with a z axis, also in 3D views (owned by their pads)
+  std::set<uint8_t> mContentScales;     // the pads whose colour scale shows the contents of a 3d histogram (the C axis)
   std::set<uint8_t> mScalesInCells;     // pads whose colour scale a ColorScale() cell shows instead of the pad
   // on screen: the free user-defined line styles that stand in for styles 2-4 (their dash strings from gStyle), 0 if there is none
   std::array<Style_t, 3> mScreenDashStyles{};

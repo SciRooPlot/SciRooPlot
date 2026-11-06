@@ -369,7 +369,8 @@ class Plot : public FillSetters<Plot>
   // of the group or in pad 0 holds for the whole group; without a range, the group gets the union of the automatic ranges of its pads.
   // Touching panels of a layout share their axes already (x per column, y per row). A pad listed again leaves its earlier group,
   // a single pad leaves its group, an empty list undoes all groups of the axis (also those of the layout).
-  // 3D views (lego, surfaces) share only z, polar drawings nothing: they are left out of the other groups.
+  // 3D views (lego, surfaces) share only z, polar drawings nothing: they are left out of the other groups. The z axis of a 3d histogram
+  // is binned: its colour axis, the contents ('C'), is the one it shares in a z group (its range only: ROOT colours the boxes linearly).
   Plot& ShareAxis(char axis, const std::vector<uint8_t>& pads);
 
  protected:
@@ -598,6 +599,7 @@ class Plot::Pad : public FillSetters<Pad>
   boost::property_tree::ptree GetPropertyTree() const;
 
   auto& GetData() { return mData; }
+  const auto& GetData() const { return mData; }
   auto& GetLegendBoxes() { return mLegendBoxes; }
   auto& GetTextBoxes() { return mTextBoxes; }
   auto& GetShapes() { return mShapes; }
