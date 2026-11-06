@@ -1988,9 +1988,11 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
           // one colour scale for the group, but each pad is painted with its own palette: the scale fits only some of them
           const auto& pads = fullPlot.GetPads();
           auto ownPalette = [](const Plot::Pad& p) { return p.GetPalette() || p.GetPaletteGradient().rgbEndpoints; };
+          // the palette the painter makes of the settings: a gradient (255 colours unless given) or a ROOT palette (kBird unless given), alpha 1 unless given
           auto palette = [](const Plot::Pad& p) {
             const auto& gradient = p.GetPaletteGradient();
-            return std::tie(p.GetPalette(), gradient.rgbEndpoints, gradient.alpha, gradient.nColors);
+            const bool isGradient = gradient.rgbEndpoints.has_value();
+            return std::make_tuple((isGradient) ? 0 : p.GetPalette().value_or(kBird), gradient.rgbEndpoints, gradient.alpha.value_or(1.f), (isGradient) ? gradient.nColors.value_or(255) : 0);
           };
           const Plot::Pad* first{nullptr};
           uint8_t firstPad{};
