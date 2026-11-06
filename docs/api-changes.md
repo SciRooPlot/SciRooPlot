@@ -44,6 +44,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Pads sharing one colour scale warned about different palettes when one set ROOT's default palette (kBird) or an alpha of 1 and the other nothing | They warn only when painted with different palettes | behaviour | none |
 | A colour gradient of fewer than two stops or with a number of colours below 1 was accepted silently when set (an error when plotted, the default colours used) | A warning when set, naming the setter | behaviour | none |
 | A value of a saved definition (`plots.info`) that could not be read was taken as the default, read in part or reported without its key for flags (`defines_frame`, `keep_input_style`, `empty_cell`, `is_correlated`, the `layout` of a shared axis), axis names, the pads of shared axes and common titles, the rows a legend entry shows (`symbol_of`), its `position`, joins and the lengths of base plots; a pad key without number named only the number | The plot is not loaded, with an error naming the value and its key, as for every other value | input validation | Re-run the plotting program to write the file again. |
+| A group set on a base plot was replaced silently (base plots have none) | It is replaced with a warning | behaviour | none |
 
 ### Files
 

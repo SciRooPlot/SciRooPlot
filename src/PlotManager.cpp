@@ -976,6 +976,8 @@ void PlotManager::AddBasePlot(Plot basePlot)
     logger::error("Cannot add base plot without a name.");
     return;
   }
+  // base plots are found by their name alone
+  if (!basePlot.GetGroup().empty() && basePlot.GetGroup() != "BASE_PLOTS") logger::warning("Base plot {}: its group {} is ignored (base plots have no group).", basePlot.GetName(), basePlot.GetGroup());
   basePlot.SetGroup("BASE_PLOTS");
   // base plots define the layout: their data would never be read (only the data of the plots is), and would define the frame,
   // take the first default styles and the first data numbers of every plot built on them
