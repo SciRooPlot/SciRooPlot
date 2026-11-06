@@ -8,9 +8,11 @@ Environment (set by CTest): SRP_PREFIX, a build or install directory with bin/pl
 SRP_TESTS_FULL=1 for the full case lists (weekly), otherwise a subset holding every value of every dimension at least once.
 """
 
+import functools
 import glob
 import itertools
 import math
+import operator
 import os
 import re
 import shutil
@@ -569,6 +571,828 @@ def func_diff(ref, obs, rel=1e-9):
     points = func_points(obs)
     evaluate = ref if callable(ref) and not hasattr(ref, "Eval") else (lambda *c: ref.Eval(*c))
     return _close_all("value", [evaluate(*c) for c in points], [obs.Eval(*c) for c in points], rel)
+
+
+# ---------------------------------------------------------------------------------------------
+# references of the data area: modifiers and divisions done with plain ROOT on data as drawn without them
+# ---------------------------------------------------------------------------------------------
+RANGE = (3.0, 7.0)  # range in x of Normalize and NormalizeToMaximum: bin edges of the inputs
+FACTOR = 3.7  # Scale
+AXIS_FACTOR = 2.0  # ScaleX/Y/Z
+GROUP = 3  # Rebin: 18 and 9 bins are multiples, the 10 of hist_var are not
+REBIN = {"rebin_x": "X", "rebin_y": "Y", "rebin_z": "Z", "rebin_xy": "XY", "rebin_xyz": "XYZ"}  # the axes of each
+MODIFIERS = {  # name: setter of the data
+    "normalize": lambda d: d.Normalize(),
+    "normalize_density": lambda d: d.Normalize(True),
+    "normalize_range": lambda d: d.Normalize(False, *RANGE),
+    "density": lambda d: d.Density(),
+    "divide_width": lambda d: d.DivideBinWidth(),
+    "norm_max": lambda d: d.NormalizeToMaximum(),
+    "norm_max_range": lambda d: d.NormalizeToMaximum(*RANGE),
+    "scale": lambda d: d.Scale(FACTOR),
+    "scale_x": lambda d: d.ScaleX(AXIS_FACTOR),
+    "scale_y": lambda d: d.ScaleY(AXIS_FACTOR),
+    "scale_z": lambda d: d.ScaleZ(AXIS_FACTOR),
+    "rebin_x": lambda d: d.RebinX(GROUP),
+    "rebin_y": lambda d: d.RebinY(GROUP),
+    "rebin_z": lambda d: d.RebinZ(GROUP),
+    "rebin_xy": lambda d: d.RebinXY(GROUP, GROUP),
+    "rebin_xyz": lambda d: d.RebinXYZ(GROUP, GROUP, GROUP),
+    "smooth": lambda d: d.Smooth(1),
+    "smooth_3": lambda d: d.Smooth(3),
+    "cumulative": lambda d: d.Cumulative(),
+    "cumulative_backward": lambda d: d.Cumulative(False),
+}
+COMBINATIONS = (  # set in this order, applied in the fixed one
+    ("cumulative", "normalize"),  # a cumulative distribution ending at 1
+    ("norm_max", "cumulative"),
+    ("normalize", "rebin_x"),
+    ("normalize_density", "divide_width"),
+    ("scale", "scale_x", "norm_max"),
+)
+
+
+def family(obj):
+    """how SciRooPlot treats the drawn data: hist, profile (1d to 3d), poly, graph, graph2d, func"""
+    if obj.InheritsFrom("TF1"):
+        return "func"
+    if obj.InheritsFrom("TGraph2D"):
+        return "graph2d"
+    if obj.InheritsFrom("TGraph"):
+        return "graph"
+    if obj.InheritsFrom("TH2Poly"):
+        return "poly"
+    if any(obj.InheritsFrom(c) for c in ("TProfile", "TProfile2D", "TProfile3D")):
+        return "profile"
+    return "hist"
+
+
+def sum_in_order(values):
+    """the sum in order, as the C++ code adds (Python's sum compensates rounding: values summing up to almost zero would differ)"""
+    return functools.reduce(operator.add, values, 0.0)
+
+
+class ModifierExpected:
+    """the reference of one case: the result and the warnings (fragments) it must give"""
+
+    def __init__(self, name):
+        self.name = name  # the data's name in messages
+        self.warnings = []
+
+    def unsupported(self, what, cls):
+        self.warnings.append(f"{what} is not supported for {self.name} ({cls})")
+
+    def warn(self, text):
+        self.warnings.append(text)
+
+
+def bins_in_range_x(h):
+    """the cells of a histogram (without under- and overflow) reaching into RANGE in x"""
+    if h.InheritsFrom("TH2Poly"):
+        return [b.GetBinNumber() for b in h.GetBins() if b.GetXMin() < RANGE[1] and b.GetXMax() > RANGE[0]]
+    axis = h.GetXaxis()
+    xs = [i for i in range(1, axis.GetNbins() + 1) if axis.GetBinLowEdge(i) < RANGE[1] and axis.GetBinUpEdge(i) > RANGE[0]]
+    return [c for c in inner_cells(h) if cell_x(h, c) in xs]
+
+
+def inner_cells(h):
+    if h.InheritsFrom("TH2Poly"):
+        return list(range(1, h.GetNumberOfBins() + 1))
+    return [c for c in range(h.GetNcells()) if not h.IsBinUnderflow(c) and not h.IsBinOverflow(c)]
+
+
+def cell_x(h, c):
+    bx, by, bz = ROOT.std.vector("int")(1), ROOT.std.vector("int")(1), ROOT.std.vector("int")(1)
+    h.GetBinXYZ(c, bx.data(), by.data(), bz.data())
+    return bx[0]
+
+
+def cell_width(h, c):
+    """the width (area, volume) of a cell"""
+    if h.InheritsFrom("TH2Poly"):
+        return next(b.GetArea() for b in h.GetBins() if b.GetBinNumber() == c)
+    bx, by, bz = ROOT.std.vector("int")(1), ROOT.std.vector("int")(1), ROOT.std.vector("int")(1)
+    h.GetBinXYZ(c, bx.data(), by.data(), bz.data())
+    width = h.GetXaxis().GetBinWidth(bx[0])
+    if h.GetDimension() > 1:
+        width *= h.GetYaxis().GetBinWidth(by[0])
+    if h.GetDimension() > 2:
+        width *= h.GetZaxis().GetBinWidth(bz[0])
+    return width
+
+
+def set_cell(h, c, content, error):
+    if h.InheritsFrom("TProfile") or h.InheritsFrom("TProfile2D") or h.InheritsFrom("TProfile3D"):
+        raise ValueError("profiles are compared through their means")
+    h.SetBinContent(c, content)
+    h.SetBinError(c, error)
+
+
+def profile_means(p):
+    """a profile as the histogram of its means (contents and errors per cell), for the comparison"""
+    dim = p.GetDimension()
+    h = {1: lambda: ROOT.TH1D("m", "", 1, 0, 1), 2: lambda: ROOT.TH2D("m", "", 1, 0, 1, 1, 0, 1), 3: lambda: ROOT.TH3D("m", "", 1, 0, 1, 1, 0, 1, 1, 0, 1)}[dim]()
+    for axis in "XYZ"[:dim]:
+        a = getattr(p, f"Get{axis}axis")()
+        edges = ROOT.std.vector("double")([a.GetBinLowEdge(i) for i in range(1, a.GetNbins() + 2)])
+        getattr(h, f"Get{axis}axis")().Set(a.GetNbins(), edges.data())
+    h.SetBinsLength()
+    for c in range(p.GetNcells()):
+        h.SetBinContent(c, p.GetBinContent(c))
+        h.SetBinError(c, p.GetBinError(c))
+    return h
+
+
+def scale_hist_axis(h, axis, factor):
+    a = getattr(h, f"Get{axis}axis")()
+    edges = ROOT.std.vector("double")([a.GetBinLowEdge(i) * factor for i in range(1, a.GetNbins() + 2)])
+    a.Set(a.GetNbins(), edges.data())
+
+
+def reference_hist(base, mods, exp):
+    """histograms and profiles (profiles as the histogram of their means): the operations of plain ROOT"""
+    h = base.Clone("reference")
+    h.SetDirectory(0)
+    cls, dim, fam = base.ClassName(), base.GetDimension(), family(base)
+    profile, poly = fam == "profile", fam == "poly"
+    content = 1.0
+    for axis, mod in (("X", "scale_x"), ("Y", "scale_y"), ("Z", "scale_z")):
+        if mod not in mods:
+            continue
+        if "XYZ".index(axis) == dim:
+            content *= AXIS_FACTOR  # the value axis
+        elif "XYZ".index(axis) > dim:
+            exp.warn(f"Cannot scale z axis of 1d histogram {exp.name}")
+        elif poly:
+            exp.unsupported(f"Scale{axis}", cls)
+        else:
+            scale_hist_axis(h, axis, AXIS_FACTOR)
+    groups = [axis for mod, axes in REBIN.items() if mod in mods for axis in axes]
+    for axis in groups:
+        if "XYZ".index(axis) >= dim or (poly and axis != "Z"):
+            exp.unsupported(f"Rebin{axis}", cls)
+    if groups and profile and dim == 3:
+        exp.unsupported("Rebinning", cls)
+    elif groups and not poly:
+        level = ROOT.gErrorIgnoreLevel
+        ROOT.gErrorIgnoreLevel = ROOT.kError
+        for axis in [a for a in "XYZ"[:dim] if a in groups]:
+            a = getattr(h, f"Get{axis}axis")()
+            if a.GetNbins() % GROUP:
+                exp.warn(f"Rebin{axis}({GROUP}): the {a.GetNbins()} bins of {exp.name} are no multiple of it")
+            getattr(h, f"Rebin{axis}" if dim > 1 else "Rebin")(GROUP)
+        ROOT.gErrorIgnoreLevel = level
+    density = "normalize_density" in mods
+    if "divide_width" in mods or "density" in mods:
+        if profile:
+            exp.unsupported("DivideBinWidth", cls)
+        elif poly:
+            for c in inner_cells(h):
+                width = cell_width(h, c)
+                set_cell(h, c, h.GetBinContent(c) / width, h.GetBinError(c) / width)
+            density = True
+        else:
+            h.Scale(1.0, "width")
+            density = True
+    smooth = 3 if "smooth_3" in mods else (1 if "smooth" in mods else 0)
+    if profile and smooth and dim < 3:
+        h = profile_means(h)  # the means are smoothed
+    if smooth:
+        if dim == 3 or poly:
+            exp.unsupported("Smooth", cls)
+        elif profile:
+            filled = [c for c in inner_cells(base) if base.GetBinEntries(c) > 0]
+            if dim == 1:
+                if len(filled) < 3:
+                    exp.warn(f"Smooth needs at least three filled bins in profile histogram {exp.name}")
+                else:
+                    values = ROOT.std.vector("double")([h.GetBinContent(c) for c in filled])
+                    ROOT.TH1.SmoothArray(len(filled), values.data(), smooth)
+                    for c, v in zip(filled, values):
+                        h.SetBinContent(c, v)
+            else:  # the kernel of TH2::Smooth over the filled cells only
+                total, weight = h.Clone("total"), h.Clone("weight")
+                total.Sumw2(False)
+                weight.Sumw2(False)
+                for c in range(h.GetNcells()):
+                    weight.SetBinContent(c, 1.0 if base.GetBinEntries(c) > 0 else 0.0)
+                total.Smooth(smooth)
+                weight.Smooth(smooth)
+                for c in filled:
+                    h.SetBinContent(c, total.GetBinContent(c) / weight.GetBinContent(c))
+        elif dim == 1 and h.GetNbinsX() < 3:
+            exp.warn(f"Smooth needs at least three bins in histogram {exp.name}")
+        else:
+            h.Smooth(smooth)
+    if any(m.startswith("normalize") for m in mods) or "density" in mods:
+        cells = bins_in_range_x(h) if "normalize_range" in mods else inner_cells(h)
+        integral = sum_in_order(h.GetBinContent(c) * (cell_width(h, c) if density else 1.0) for c in cells)
+        if not cells:
+            exp.warn(f"The range of Normalize for {exp.name} contains no bins")
+        elif integral == 0:
+            exp.warn(f"Cannot normalize {exp.name} because its integral is zero")
+        else:
+            h.Scale(1.0 / integral)
+    if "cumulative" in mods or "cumulative_backward" in mods:
+        if profile and dim == 1:
+            exp.warn(f"Cumulative is not supported for profile histogram {exp.name}")
+        elif dim > 1:
+            exp.unsupported("Cumulative", cls)
+        else:
+            if density:
+                for b in range(1, h.GetNbinsX() + 1):
+                    h.SetBinContent(b, h.GetBinContent(b) * h.GetBinWidth(b))
+                    h.SetBinError(b, h.GetBinError(b) * h.GetBinWidth(b))
+            h = h.GetCumulative("cumulative" in mods, "reference_cumulative")
+    factor = None
+    if "norm_max" in mods or "norm_max_range" in mods:
+        cells = bins_in_range_x(h) if "norm_max_range" in mods else inner_cells(h)
+        maximum = max(h.GetBinContent(c) for c in cells) if cells else None
+        if maximum == 0:
+            exp.warn(f"Cannot normalize {exp.name} to maximum because it is zero")
+        elif maximum is not None:
+            factor = 1.0 / maximum
+    if "scale" in mods:
+        factor = (factor or 1.0) * FACTOR
+    if content != 1.0:
+        factor = (factor or 1.0) * content
+    if factor:
+        h.Scale(factor)
+    if not poly:
+        h.ClearUnderflowAndOverflow()  # not drawn (the drawn histogram has them cleared)
+    return profile_means(h) if family(h) == "profile" else h
+
+
+def reference_graph(base, mods, exp):
+    """1d graphs: the values as plain numbers"""
+    cls = base.ClassName()
+    v = graph_values(base)
+    n = len(v["x"])
+    for axis in [axis for mod, axes in REBIN.items() if mod in mods for axis in axes]:
+        exp.unsupported(f"Rebin{axis}", cls)
+    if "divide_width" in mods or "density" in mods:
+        exp.unsupported("DivideBinWidth", cls)
+    if "cumulative" in mods or "cumulative_backward" in mods:
+        exp.unsupported("Cumulative", cls)
+    if "scale_z" in mods:
+        exp.warn(f"Cannot scale z axis of graph {exp.name}")
+
+    def scale(keys, factor):
+        for key in [k for k in keys if k in v]:
+            v[key] = [value * factor for value in v[key]]
+
+    if "scale_x" in mods:
+        scale(["x", "ErrorXlow", "ErrorXhigh"], AXIS_FACTOR)
+    smooth = 3 if "smooth_3" in mods else (1 if "smooth" in mods else 0)
+    if smooth:
+        if n < 4:
+            exp.warn(f"Smooth needs at least 4 points, {exp.name} has {n}")
+        else:
+            order = sorted(range(n), key=lambda i: v["x"][i])
+            v = {k: [values[i] for i in order] for k, values in v.items()}
+            graph = ROOT.TGraph(n)
+            for i in range(n):
+                graph.SetPoint(i, v["x"][i], v["y"][i])
+            smoother = ROOT.TGraphSmooth()
+            for _ in range(smooth):
+                smoothed = smoother.SmoothSuper(graph)
+                for i in range(n):
+                    graph.SetPointY(i, smoothed.GetPointY(i))
+            v["y"] = [graph.GetPointY(i) for i in range(n)]
+    factor = None
+    if any(m.startswith("normalize") for m in mods) or "density" in mods:
+        inside = [y for x, y in zip(v["x"], v["y"]) if "normalize_range" not in mods or RANGE[0] <= x <= RANGE[1]]
+        if not inside and n:
+            exp.warn(f"The range of Normalize for {exp.name} contains no points")
+        elif sum_in_order(inside) == 0:
+            exp.warn(f"Cannot normalize graph {exp.name} because the sum of its values is zero")
+        else:
+            factor = 1.0 / sum_in_order(inside)
+        if "normalize_density" in mods:
+            exp.warn(f"Cannot normalize graph {exp.name} by width")
+    if "norm_max" in mods or "norm_max_range" in mods:
+        inside = [y for x, y in zip(v["x"], v["y"]) if "norm_max_range" not in mods or RANGE[0] <= x <= RANGE[1]]
+        if not n:
+            exp.warn(f"Cannot normalize graph {exp.name} to maximum because it has no points")
+        elif not inside:
+            exp.warn(f"The range of NormalizeToMaximum for {exp.name} contains no points")
+        elif max(inside) == 0:
+            exp.warn(f"Cannot normalize graph {exp.name} to maximum because it is zero")
+        else:
+            factor = 1.0 / max(inside)
+    for mod, f in (("scale", FACTOR), ("scale_y", AXIS_FACTOR)):
+        if mod in mods:
+            factor = (factor or 1.0) * f
+    if factor:
+        flip(v, "y", factor)
+    return v
+
+
+def flip(v, axis, factor):
+    """values times a factor: errors stay positive, a negative factor swaps low and high errors (also of every error set)"""
+    v[axis] = [value * factor for value in v[axis]]
+    for key in [k for k in v if k != axis and (k.startswith((f"Error{axis.upper()}", f"e{axis}")))]:
+        v[key] = [abs(factor) * value for value in v[key]]
+    if factor < 0:
+        pairs = [(f"Error{axis.upper()}low", f"Error{axis.upper()}high")] + [(k, k[:-3] + "high") for k in v if k.startswith(f"e{axis}") and k.endswith("low")]
+        for low, high in [p for p in pairs if p[0] in v]:
+            v[low], v[high] = v[high], v[low]
+
+
+def reference_graph2d(base, mods, exp):
+    cls = base.ClassName()
+    v = graph_values(base)
+    for axis in [axis for mod, axes in REBIN.items() if mod in mods for axis in axes]:
+        exp.unsupported(f"Rebin{axis}", cls)
+    for mod, what in (("divide_width", "DivideBinWidth"), ("density", "DivideBinWidth"), ("smooth", "Smooth"), ("smooth_3", "Smooth"), ("cumulative", "Cumulative"), ("cumulative_backward", "Cumulative")):
+        if mod in mods:
+            exp.unsupported(what, cls)
+    if any(m.startswith("normalize") for m in mods) or "density" in mods:
+        exp.unsupported("Normalize", cls)
+    for axis in "xy":
+        if f"scale_{axis}" in mods:
+            for key in (axis, f"e{axis}"):
+                if key in v:
+                    v[key] = [value * AXIS_FACTOR for value in v[key]]
+    factor = None
+    if "norm_max" in mods or "norm_max_range" in mods:
+        inside = [z for x, z in zip(v["x"], v["z"]) if "norm_max_range" not in mods or RANGE[0] <= x <= RANGE[1]]
+        if not v["z"]:
+            exp.warn(f"Cannot normalize graph {exp.name} to maximum because it has no points")
+        elif not inside:
+            exp.warn(f"The range of NormalizeToMaximum for {exp.name} contains no points")
+        elif max(inside) == 0:
+            exp.warn(f"Cannot normalize graph {exp.name} to maximum because it is zero")
+        else:
+            factor = 1.0 / max(inside)
+    for mod, f in (("scale", FACTOR), ("scale_z", AXIS_FACTOR)):
+        if mod in mods:
+            factor = (factor or 1.0) * f
+    if factor:
+        flip(v, "z", factor)
+    return v
+
+
+def reference_func(base, mods, exp):
+    """functions: a callable giving the expected value at a point"""
+    cls, dim = base.ClassName(), base.GetNdim()
+    for axis in [axis for mod, axes in REBIN.items() if mod in mods for axis in axes]:
+        exp.unsupported(f"Rebin{axis}", cls)
+    for mod, what in (("divide_width", "DivideBinWidth"), ("density", "DivideBinWidth"), ("smooth", "Smooth"), ("smooth_3", "Smooth"), ("cumulative", "Cumulative"), ("cumulative_backward", "Cumulative")):
+        if mod in mods:
+            exp.unsupported(what, cls)
+    if "norm_max" in mods or "norm_max_range" in mods:
+        exp.unsupported("NormalizeToMaximum", cls)
+    if any(m.startswith("normalize") for m in mods) or "density" in mods:
+        exp.unsupported("Normalize", cls)
+    domain = [AXIS_FACTOR if f"scale_{a}" in mods else 1.0 for a in "xyz"[:dim]]
+    content = FACTOR if "scale" in mods else 1.0
+    if f"scale_{'xyz'[dim]}" in mods if dim < 3 else False:
+        content *= AXIS_FACTOR
+    if dim == 1 and "scale_z" in mods:
+        exp.unsupported("ScaleZ", cls)
+    return lambda *c: content * base.Eval(*[x / f for x, f in zip(c, domain)])
+
+
+GRAPHS = ("TGraph", "TGraphErrors", "TGraphAsymmErrors", "TGraphMultiErrors", "TGraphPolar", "TGraph2D", "TGraph2DErrors")
+
+
+def modifier_reference(base, mods, exp):
+    """the data as drawn without modifiers with the modifiers mods done by plain ROOT: a histogram (a profile as its means), the values of a
+    graph (graph_values) or a function as a callable; what is not supported for the data goes into exp (a ModifierExpected)"""
+    fam = family(base)
+    reference = {"graph": reference_graph, "graph2d": reference_graph2d, "func": reference_func}.get(fam, reference_hist)
+    return reference(base, set(mods), exp)
+
+
+def division_family(obj):
+    if obj.InheritsFrom("TF1"):
+        return f"func{obj.GetNdim()}"
+    if obj.InheritsFrom("TGraph2D"):
+        return "graph2d"
+    if obj.InheritsFrom("TGraph"):
+        return "graph"
+    return f"hist{obj.GetDimension()}"
+
+
+def as_divided(h):
+    """a profile as the histogram of its means; other histograms as they are"""
+    if not any(h.InheritsFrom(c) for c in ("TProfile", "TProfile2D", "TProfile3D")):
+        return h.Clone(f"{h.GetName()}_c")
+    if h.InheritsFrom("TProfile"):
+        m = h.ProjectionX(f"{h.GetName()}_m")
+    elif h.InheritsFrom("TProfile2D"):
+        m = h.ProjectionXY(f"{h.GetName()}_m")
+    else:
+        m = h.ProjectionXYZ(f"{h.GetName()}_m")
+    m.SetDirectory(0)
+    return m
+
+
+class Points:
+    """data as divided point by point: x, y and the y errors (kind none, sym or asym), per error dimension for a TGraphMultiErrors"""
+
+    def __init__(self, obj):
+        if obj.InheritsFrom("TH1"):
+            n = obj.GetNbinsX()
+            self.x = [obj.GetBinCenter(b) for b in range(1, n + 1)]
+            self.y = [obj.GetBinContent(b) for b in range(1, n + 1)]
+            self.kind, self.e = "sym", [obj.GetBinError(b) for b in range(1, n + 1)]
+            self.multi = None
+            return
+        v = graph_values(obj)
+        self.x, self.y = v["x"], v["y"]
+        if "ErrorYlow" not in v:
+            self.kind = "none"
+        elif obj.GetEY():
+            self.kind, self.e = "sym", v["ErrorYlow"]
+        else:
+            self.kind, self.lo, self.hi = "asym", v["ErrorYlow"], v["ErrorYhigh"]
+        self.multi = [(v[f"ey{d}low"], v[f"ey{d}high"]) for d in range(obj.GetNYErrors())] if obj.InheritsFrom("TGraphMultiErrors") else None
+
+
+def interpolate(num, den, exp):
+    """the denominator at the numerator's positions: (values, errors as sym list or (low, high) lists or None), or None if impossible"""
+    n = len(den.x)
+    if n < 2:
+        exp.error(f"Cannot interpolate {exp.den} for the division")
+        return None
+    order = sorted(range(n), key=lambda i: den.x[i])
+    xs = [den.x[i] for i in order]
+    if any(a == b for a, b in itertools.pairwise(xs)):
+        exp.error(f"Cannot divide {exp.num} by graph {exp.den}: it has two points at x")
+        return None
+
+    def spline(values):
+        knotsX, knotsY = ROOT.std.vector("double")(xs), ROOT.std.vector("double")(values)  # alive while the spline is made
+        sp = ROOT.TSpline3("s", knotsX.data(), knotsY.data(), n)
+        return [sp.Eval(x) for x in num.x]
+
+    ys = [den.y[i] for i in order]
+    values = spline(ys)
+    errors = None
+    if den.kind != "none":
+        low = spline([ys[k] - (den.e[i] if den.kind == "sym" else den.lo[i]) for k, i in enumerate(order)])
+        high = spline([ys[k] + (den.e[i] if den.kind == "sym" else den.hi[i]) for k, i in enumerate(order)])
+        if num.kind == "sym":
+            errors = [math.sqrt(0.5 * ((v - lo) ** 2 + (hi - v) ** 2)) for v, lo, hi in zip(values, low, high)]
+        elif num.kind == "asym":
+            errors = ([abs(v - lo) for v, lo in zip(values, low)], [abs(hi - v) for v, hi in zip(values, high)])
+    lo, hi = exp.denRange if exp.denRange else (xs[0], xs[-1])
+    if any(x < lo or x > hi for x in num.x):
+        exp.warn(f"points of {exp.num} are outside the range")
+    oneSign = all(y > 0 for y in ys) or all(y < 0 for y in ys)
+    if oneSign and any((v <= 0) if ys[0] > 0 else (v >= 0) for v in values):
+        exp.warn(f"The interpolation of {exp.den} for")
+    return values, errors
+
+
+def divide_points(num, den, binomial, exp):
+    """the ratio of two Points objects as a dict like graph_values (with "bins": the index of each kept point), or None on an error"""
+    same = len(num.x) <= len(den.x) and not ((num.kind == "sym" and den.kind == "asym") or (num.kind == "asym" and den.kind == "sym")) and all(a == b for a, b in zip(num.x, den.x))
+    if same:
+        values = den.y[: len(num.x)]
+        if den.kind == "none" or num.kind == "none":
+            errors = None
+        elif num.kind == "sym":
+            errors = den.e
+        else:
+            errors = (den.lo, den.hi)
+    else:
+        found = interpolate(num, den, exp)
+        if found is None:
+            return None
+        values, errors = found
+    out = {"x": [], "y": [], "lo": [], "hi": [], "index": [], "multi": [] if num.multi else None}
+    for i, (x, y, d) in enumerate(zip(num.x, num.y, values)):
+        if not d:
+            continue
+        same_sign = (y > 0) == (d > 0)
+
+        def propagate(e, de, y=y, d=d):
+            if binomial:
+                return 0.0 if y == d else math.sqrt(abs(((1 - 2 * y / d) * e**2 + y**2 * de**2 / d**2) / d**2))
+            return math.sqrt((e / d) ** 2 + (de * y / d**2) ** 2)
+
+        if num.kind == "sym":
+            lo = hi = propagate(num.e[i], errors[i] if errors else 0.0)
+        elif num.kind == "asym":
+            dLow, dHigh = (errors[0][i], errors[1][i]) if errors else (0.0, 0.0)
+            lo = propagate(num.lo[i], dHigh if same_sign else dLow)
+            hi = propagate(num.hi[i], dLow if same_sign else dHigh)
+            if d < 0:
+                lo, hi = hi, lo
+        else:
+            lo = hi = None
+        out["x"].append(x)
+        out["y"].append(y / d)
+        out["lo"].append(lo)
+        out["hi"].append(hi)
+        out["index"].append(i)
+        if num.multi:
+            oldLow, oldHigh = num.lo[i], num.hi[i]
+            if d < 0:
+                oldLow, oldHigh = oldHigh, oldLow
+            dims = [(dl[i], dh[i]) if d > 0 else (dh[i], dl[i]) for dl, dh in num.multi]
+            out["multi"].append([(a * lo / oldLow if oldLow else (lo if k == 0 else 0.0), b * hi / oldHigh if oldHigh else (hi if k == 0 else 0.0)) for k, (a, b) in enumerate(dims)])
+    if num.x and not out["x"]:
+        exp.warn(f"{exp.den} is zero at every point of {exp.num}")
+    return out
+
+
+class DivisionExpected:
+    def __init__(self, num, den, denRange):
+        self.num, self.den = num, den  # the names in messages
+        self.denRange = denRange  # where the denominator has values: beyond, it is extrapolated
+        self.warnings, self.errors = [], []
+
+    def warn(self, text):
+        self.warnings.append(text)
+
+    def error(self, text):
+        self.errors.append(text)
+
+
+def subset(points, keep):
+    """the points with the given indices"""
+    for key in ("x", "y", "e", "lo", "hi", "exlow", "exhigh"):
+        if getattr(points, key, None) is not None:
+            setattr(points, key, [getattr(points, key)[i] for i in keep])
+    if points.multi:
+        points.multi = [([lo[i] for i in keep], [hi[i] for i in keep]) for lo, hi in points.multi]
+    return points
+
+
+def with_errors_of(num, den):
+    """a numerator graph without errors takes the kind of errors of the denominator (zero errors of its own)"""
+    if num.kind == "none" and den.kind != "none":
+        num.kind = den.kind
+        if den.kind == "sym":
+            num.e = [0.0] * len(num.x)
+        else:
+            num.lo, num.hi = [0.0] * len(num.x), [0.0] * len(num.x)
+    return num
+
+
+def x_errors(obj, points):
+    """the x errors a Points object keeps (for the result and the extrapolation check)"""
+    if obj.InheritsFrom("TH1"):
+        points.exlow = points.exhigh = [obj.GetBinWidth(b) / 2 for b in range(1, obj.GetNbinsX() + 1)]
+    elif obj.InheritsFrom("TGraph") and (obj.GetEX() or obj.GetEXlow()):
+        points.exlow = [obj.GetErrorXlow(i) for i in range(obj.GetN())]
+        points.exhigh = [obj.GetErrorXhigh(i) for i in range(obj.GetN())]
+    else:
+        points.exlow = points.exhigh = None
+    return points
+
+
+def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
+    """the expected ratio: a histogram, a dict like graph_values, or None (an error is expected)"""
+    nf, df = division_family(numObj), division_family(denObj)
+    if nf == "graph2d" or nf in ("func2", "func3"):
+        exp.error(f"Unsupported division of {as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}")
+        return None
+    if nf == "func1":
+        if df == "graph" or df == "hist1":
+            den = x_errors(denObj, Points(as_divided(denObj) if df == "hist1" else denObj))
+            keep = [i for i, x in enumerate(den.x) if numFunc.inside(x)]  # a function of the inputs within its range
+            if not keep:  # nothing to sample at: the function itself cannot be divided
+                exp.error("Unsupported division of TF1")
+                return None
+            den = subset(den, keep)
+            num = Points(denObj if df == "graph" else as_divided(denObj))
+            num.x = list(den.x)
+            num.y = [numFunc(x) for x in den.x]
+            num.kind, num.multi = "none", None
+            num.exlow = num.exhigh = None
+            num = with_errors_of(num, den)
+            return result_graph(divide_points(num, den, binomial, exp), num, None)
+        if df == "func1":  # sampled at the numerator's points where both are defined
+            if numFunc.formula and denFunc.formula:
+                exp.error("two formulas of the plot definition have no range to be divided in")
+                return None
+            ranges = [(f.obj.GetXmin(), f.obj.GetXmax()) for f in (numFunc, denFunc) if not f.formula]
+            lo, hi = max(r[0] for r in ranges), min(r[1] for r in ranges)
+            npx = max(numObj.GetNpx(), 2)
+            xs = [lo + (hi - lo) * i / (npx - 1) for i in range(npx)]
+            graph = ROOT.TGraph(npx)
+            for i, x in enumerate(xs):
+                graph.SetPoint(i, x, numFunc(x))
+            return divide_by_function_graph(graph, denFunc, binomial, exp)
+        exp.error("Unsupported division of TF1")
+        return None
+    if nf.startswith("hist"):
+        dim = int(nf[4:])
+        num = as_divided(numObj)
+        if df.startswith("func"):
+            if int(df[4:]) > dim:
+                exp.error(f"Cannot divide {exp.num} by the higher dimensional function")
+                return None
+            return divide_by_function_hist(num, denFunc, int(df[4:]), binomial, exp)
+        if df == "graph":
+            if dim != 1:
+                exp.error(f"Unsupported division of {as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}")
+                return None
+            return graph_to_hist(num, divide_points(x_errors(num, Points(num)), x_errors(denObj, Points(denObj)), binomial, exp))
+        if df == "graph2d":
+            exp.error(f"Unsupported division of {as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}")
+            return None
+        den = as_divided(denObj)
+        if all(den.GetBinContent(c) == 0 for c in range(den.GetNcells())):
+            exp.warn(f"{exp.den} is empty: the ratio {exp.num} has no values")
+        if den.GetDimension() != dim:
+            exp.error(f"Cannot divide {exp.num} ({dim}d) by {exp.den}")
+            return None
+        if numObj.InheritsFrom("TH2Poly") or denObj.InheritsFrom("TH2Poly"):
+            if not (numObj.InheritsFrom("TH2Poly") and denObj.InheritsFrom("TH2Poly")):
+                exp.error(f"Cannot divide {exp.num} by {exp.den}: a TH2Poly")
+                return None
+        elif not same_binning(num, den):
+            if dim > 1:
+                exp.error(f"Cannot divide {exp.num} by {exp.den}: their binnings differ")
+                return None
+            return graph_to_hist(num, divide_points(x_errors(num, Points(num)), x_errors(den, Points(den)), binomial, exp))
+        num.Divide(num, den, 1.0, 1.0, "B" if binomial else "")
+        if not num.InheritsFrom("TH2Poly"):
+            num.ClearUnderflowAndOverflow()
+        return num
+    # a graph numerator
+    if df == "graph" or df == "hist1":
+        den = x_errors(denObj, Points(as_divided(denObj) if df == "hist1" else denObj))
+        num = with_errors_of(x_errors(numObj, Points(numObj)), den)
+        return result_graph(divide_points(num, den, binomial, exp), num, numObj)
+    if df == "func1":
+        return divide_by_function_graph(numObj, denFunc, binomial, exp)
+    exp.error(f"Unsupported division of {as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}")
+    return None
+
+
+def same_binning(a, b):
+    for axis in "XYZ"[: a.GetDimension()]:
+        x, y = getattr(a, f"Get{axis}axis")(), getattr(b, f"Get{axis}axis")()
+        if x.GetNbins() != y.GetNbins() or any(not close(x.GetBinLowEdge(i), y.GetBinLowEdge(i), 1e-10) for i in range(1, x.GetNbins() + 2)):
+            return False
+    return True
+
+
+def graph_to_hist(num, ratio):
+    """the ratio of a 1d histogram: the bins of the kept points, the others empty"""
+    if ratio is None:
+        return None
+    h = num.Clone("reference")
+    h.Reset()
+    for i, y, e in zip(ratio["index"], ratio["y"], ratio["lo"]):
+        h.SetBinContent(i + 1, y)
+        h.SetBinError(i + 1, e)
+    return h
+
+
+def result_graph(ratio, num, numObj):
+    """the ratio of a graph as a dict like graph_values"""
+    if ratio is None:
+        return None
+    v = {"x": ratio["x"], "y": ratio["y"]}
+    if num.kind != "none":
+        v["ErrorYlow"], v["ErrorYhigh"] = ratio["lo"], ratio["hi"]
+        v["ErrorXlow"] = [num.exlow[i] if num.exlow else 0.0 for i in ratio["index"]]
+        v["ErrorXhigh"] = [num.exhigh[i] if num.exhigh else 0.0 for i in ratio["index"]]
+    if ratio["multi"] is not None:
+        for d in range(len(num.multi)):
+            v[f"ey{d}low"] = [m[d][0] for m in ratio["multi"]]
+            v[f"ey{d}high"] = [m[d][1] for m in ratio["multi"]]
+    return v
+
+
+def divide_by_function_hist(num, func, funcDim, binomial, exp):
+    """a histogram by a function: the value at the bin centre (a TH2Poly: the centre of the bounding box), bins outside its range empty"""
+    outside = 0
+    if num.InheritsFrom("TH2Poly"):
+        for b in num.GetBins():
+            c = b.GetBinNumber()
+            x, y = 0.5 * (b.GetXMin() + b.GetXMax()), 0.5 * (b.GetYMin() + b.GetYMax())
+            d = func.value(*[x, y][:funcDim])
+            outside += d is None and num.GetBinContent(c) != 0
+            num.SetBinError(c, num.GetBinError(c) / abs(d) if d else 0.0)
+            num.SetBinContent(c, num.GetBinContent(c) / d if d else 0.0)
+    else:
+        if not num.GetSumw2N():
+            num.Sumw2()
+        bx, by, bz = (ROOT.std.vector("int")(1) for _ in range(3))
+        for c in range(num.GetNcells()):
+            if num.IsBinUnderflow(c) or num.IsBinOverflow(c):
+                num.SetBinContent(c, 0.0)
+                num.SetBinError(c, 0.0)
+                continue
+            num.GetBinXYZ(c, bx.data(), by.data(), bz.data())
+            xyz = [num.GetXaxis().GetBinCenter(bx[0]), num.GetYaxis().GetBinCenter(by[0]), num.GetZaxis().GetBinCenter(bz[0])]
+            d = func.value(*xyz[:funcDim])
+            outside += d is None and num.GetBinContent(c) != 0
+            num.SetBinError(c, num.GetBinError(c) / abs(d) if d else 0.0)
+            num.SetBinContent(c, num.GetBinContent(c) / d if d else 0.0)
+    if outside:
+        exp.warn(f"{outside} bins of {exp.num} lie outside the range of function {exp.den}")
+    if binomial:
+        exp.warn(f"Binomial errors are not supported for the division of {exp.num} by function {exp.den}")
+    return num
+
+
+def divide_by_function_graph(numObj, func, binomial, exp):
+    """a graph by a function: points outside its range and where it is zero left out"""
+    v = graph_values(numObj)
+    keep = [i for i, x in enumerate(v["x"]) if func.inside(x)]
+    if len(keep) < len(v["x"]):
+        exp.warn(f"{len(v['x']) - len(keep)} points of {exp.num} lie outside the range of function {exp.den}")
+    keep = [i for i in keep if func.value(v["x"][i])]
+    out = {k: [values[i] for i in keep] for k, values in v.items()}
+    for n, i in enumerate(keep):
+        d = func.value(v["x"][i])
+        out["y"][n] = v["y"][i] / d
+        swap = d < 0 and "ErrorYlow" in v and not numObj.GetEY()
+        for k in [k for k in v if k.startswith(("ErrorY", "ey"))]:
+            out[k][n] = v[k][i] / abs(d)
+        if swap:
+            for low, high in [("ErrorYlow", "ErrorYhigh")] + [(f"ey{d}low", f"ey{d}high") for d in range(numObj.GetNYErrors() if numObj.InheritsFrom("TGraphMultiErrors") else 0)]:
+                out[low][n], out[high][n] = out[high][n], out[low][n]
+    if binomial:
+        exp.warn(f"Binomial errors are not supported for the division of {exp.num} by function {exp.den}")
+    return out
+
+
+def input_range(obj):
+    """the x range an input covers as denominator: a histogram its axis, a graph its finite points with their x errors (as read, before
+    drawing removes x errors)"""
+    if obj.InheritsFrom("TEfficiency"):
+        obj = obj.CreateGraph() if obj.GetDimension() == 1 else obj.GetTotalHistogram()
+    if not obj:
+        return None
+    if obj.InheritsFrom("THnBase"):
+        return (obj.GetAxis(0).GetXmin(), obj.GetAxis(0).GetXmax())
+    if obj.InheritsFrom("TH1"):
+        return (obj.GetXaxis().GetXmin(), obj.GetXaxis().GetXmax())
+    if not obj.InheritsFrom("TGraph") or obj.InheritsFrom("TGraph2D"):
+        return None
+    points = sorted((obj.GetPointX(i), max(0.0, obj.GetErrorXlow(i)), max(0.0, obj.GetErrorXhigh(i))) for i in range(obj.GetN()) if all(math.isfinite(v) for v in (obj.GetPointX(i), obj.GetPointY(i), obj.GetErrorYlow(i), obj.GetErrorYhigh(i))))
+    return (points[0][0] - points[0][1], points[-1][0] + points[-1][2]) if points else None
+
+
+class Func:
+    """a function as divisor or numerator: its value and whether a point is inside its range (a formula of the plot definition has none)"""
+
+    def __init__(self, kind, variant, obj, evaluate=None):
+        self.formula = "formula" in DATA_KINDS[kind][2]
+        self.obj = obj if not self.formula else {1: ROOT.TF1, 2: ROOT.TF2}[DATA_KINDS[kind][0]](f"f_{kind}_{variant}", formula(kind, variant))
+        self.evaluate = evaluate or (lambda *x: self.obj.Eval(*x))  # exact values of a function drawn as samples (modified)
+
+    def inside(self, *x):
+        if self.formula:
+            return True
+        lows = [getattr(self.obj, f"Get{a}min")() for a in "XYZ"[: len(x)]]
+        highs = [getattr(self.obj, f"Get{a}max")() for a in "XYZ"[: len(x)]]
+        return all(lo <= c <= hi for c, lo, hi in zip(x, lows, highs))
+
+    def value(self, *x):
+        return self.evaluate(*x) if self.inside(*x) else None
+
+    def __call__(self, x):
+        return self.evaluate(x)
+
+
+def ratio_input(kind, source, variant):
+    """an input of a ratio (Data) of a kind in a variant: formulas of the plot definition, projected kinds projected"""
+    if "formula" in DATA_KINDS[kind][2]:
+        return S.Data(formula(kind, variant), S.kUserFunctions)
+    d = S.Data(kind, source)
+    if "projected" in DATA_KINDS[kind][2]:
+        d.Project([0] if DATA_KINDS[kind][0] == 1 else [0, 1])
+    return d
+
+
+def division_name(kind, variant, source):
+    """the name of data in messages about the division"""
+    if "formula" in DATA_KINDS[kind][2]:
+        return formula(kind, variant)
+    return f"{kind}:{source}" + ("_Proj{0}" if DATA_KINDS[kind][0] == 1 else "_Proj{01}") * ("projected" in DATA_KINDS[kind][2])
+
+
+def match_messages(lines, expected, keyed):
+    """the expected messages not given, the messages not expected"""
+
+    def fits(e, line):
+        return (re.search(re.escape(e[0]) + "(?![0-9])", line) and e[1] in line) if keyed else e in line
+
+    unmatched, unexpected = list(expected), []
+    for line in lines:
+        hit = next((e for e in unmatched if fits(e, line)), None)
+        if hit is None:
+            unexpected.append(line)
+        else:
+            unmatched.remove(hit)
+    return unmatched, unexpected
+
+
+def first_five(items):
+    """the first five items for a message, and how many more"""
+    return " | ".join(str(x) for x in items[:5]) + (f" (+{len(items) - 5})" if len(items) > 5 else "")
 
 
 # ---------------------------------------------------------------------------------------------
