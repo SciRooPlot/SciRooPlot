@@ -28,6 +28,8 @@
 #include <TGraph2D.h>
 #include <TH1.h>
 #include <THnBase.h>
+#include <TProfile.h>
+#include <TProfile2D.h>
 
 #include <fmt/format.h>
 
@@ -481,6 +483,16 @@ bool DataFrameRequest<DataInfo>::Book()
   }
 
   const bool hasWeights = mHasWeights;
+  // ROOT merges the profiles filled by its threads wrongly when one of them was filled with weights of 1 only (it has no sums of squared
+  // weights then, TProfile::Merge leaves them out): weighted profiles have them from the start
+  auto fillWeighted = [&](auto profile, const std::vector<std::string>& columns) {
+    profile.Sumw2();
+    if constexpr (std::is_same_v<decltype(profile), TProfile>) {
+      return (typed) ? node.Fill<D, D, D>(std::move(profile), columns) : node.Fill(std::move(profile), columns);
+    } else {
+      return (typed) ? node.Fill<D, D, D, D>(std::move(profile), columns) : node.Fill(std::move(profile), columns);
+    }
+  };
   // fixed bins as bin edges, for the models that take only one kind of binning for all axes
   auto toVariableBins = [](auto& dataDim) {
     if (!dataDim.nBins) return;
@@ -517,7 +529,7 @@ bool DataFrameRequest<DataInfo>::Book()
         profileModel = ROOT::RDF::TProfile1DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1]);
       }
       if (hasWeights) {
-        SetResult((typed) ? node.Profile1D<D, D, D>(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W") : node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W"));
+        SetResult(fillWeighted(*profileModel.GetProfile(), {"SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W"}));
       } else {
         SetResult((typed) ? node.Profile1D<D, D>(profileModel, "SRP_AXIS_1", "SRP_AXIS_2") : node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2"));
       }
@@ -555,7 +567,7 @@ bool DataFrameRequest<DataInfo>::Book()
         profileModel = ROOT::RDF::TProfile2DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
       }
       if (hasWeights) {
-        SetResult((typed) ? node.Profile2D<D, D, D, D>(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W") : node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W"));
+        SetResult(fillWeighted(*profileModel.GetProfile(), {"SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W"}));
       } else {
         SetResult((typed) ? node.Profile2D<D, D, D>(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3") : node.Profile2D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3"));
       }
