@@ -396,7 +396,8 @@ def data_objects(variant="normal"):
                 func.SetNpz(n)
         objects.update(functions)
     objects = {kind: obj for kind, obj in objects.items() if has_variant(kind, variant)}
-    for obj in objects.values():
+    for kind, obj in objects.items():
+        obj.SetName(kind)  # the name it is found by when handed over in memory (in a file it is the key's)
         ROOT.SetOwnership(obj, False)
     return objects
 
@@ -515,6 +516,25 @@ def hist_diff(ref, obs, rel=1e-9):
                 return edges
         bins = range(ref.GetNcells())
     return _close_all("content", [ref.GetBinContent(i) for i in bins], [obs.GetBinContent(i) for i in bins], rel) or _close_all("error", [ref.GetBinError(i) for i in bins], [obs.GetBinError(i) for i in bins], rel)
+
+
+def drawn_diff(ref, obs, rel=1e-9):
+    """differences between two drawn objects of any kind, or two lists of them (as by Run.objects): class, then histograms by
+    hist_diff, graphs by graph_diff, functions by func_diff"""
+    if isinstance(ref, (list, tuple)) or isinstance(obs, (list, tuple)):
+        ref, obs = list(ref or []), list(obs or [])
+        if len(ref) != len(obs):
+            return f"{len(obs)} objects drawn, expected {len(ref)}"
+        return next((f"{i}: {d}" for i, d in enumerate(drawn_diff(a, b, rel) for a, b in zip(ref, obs)) if d), "")
+    if not obs:
+        return "not drawn"
+    if ref.ClassName() != obs.ClassName():
+        return f"{obs.ClassName()}, expected {ref.ClassName()}"
+    if ref.InheritsFrom("TH1"):
+        return hist_diff(ref, obs, rel)
+    if ref.InheritsFrom("TF1"):
+        return func_diff(ref, obs, rel)
+    return graph_diff(ref, obs, rel)
 
 
 def graph_values(graph):
@@ -1438,10 +1458,10 @@ class Run:
         """the lines of a kind: ERR, WARN, INFO"""
         return [line for line in self.log.splitlines() if f"[ {kind}" in line or f"[{kind}" in line]
 
-    def errors(self):
-        """the errors of the run: SciRooPlot's and ROOT's (Error in <...>, Fatal in <...>), and crashes"""
+    def errors(self, text=""):
+        """the errors of the run containing text: SciRooPlot's and ROOT's (Error in <...>, Fatal in <...>), and crashes"""
         marks = ("[ ERR", "[ERR", "Error in <", "Fatal in <", "*** Break ***")
-        return [line for line in self.log.splitlines() if any(mark in line for mark in marks)]
+        return [line for line in self.log.splitlines() if any(mark in line for mark in marks) and text in line]
 
     def canvas(self, name, group):
         groupDir = self.file.Get(group) if self.file else None
@@ -1603,6 +1623,12 @@ def run_in_terminal(command, timeout):
     os.close(master)
     proc.wait()
     return subprocess.CompletedProcess(command, proc.returncode, b"".join(chunks).decode(errors="replace"), "")
+
+
+def missing(run):
+    """the data reported missing by a run, as "<data source>:<name>" (the lines below "Plot ... could not be created"; a data source
+    restricted to a folder as "<data source>:<folder>/<name>")"""
+    return set(re.findall(r"^\s*- missing (.+?)(?: \[[^]]*\])? \(", run.log, re.M))  # without the description of a request [...]
 
 
 class Project:
