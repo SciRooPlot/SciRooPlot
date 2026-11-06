@@ -27,6 +27,7 @@
 #include <TGraph.h>
 #include <TGraph2D.h>
 #include <TH1.h>
+#include <THnBase.h>
 
 #include <fmt/format.h>
 
@@ -93,6 +94,7 @@ class DataFrameRequest
   std::optional<ROOT::RDF::RNode> mNode;
   std::vector<data_dim_t> mDims;
   std::string mHistTitle;
+  std::vector<std::string> mAxisTitles;
   bool mIsProfile{};
   bool mIsScatter{};
   bool mHasWeights{};
@@ -292,6 +294,15 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     node = node.Define(colName, (code.find("return") == std::string::npos) ? fmt::format("static_cast<double>({})", code) : fmt::format("return static_cast<double>([&]() {{ {} }}());", code));
     return true;
   };
+  // the axis titles are separated by ';', inside a title (an expression that is a function body) ROOT reads it as #;
+  auto asTitle = [](const std::string& var) {
+    std::string title;
+    for (char c : var) {
+      if (c == ';') title += '#';
+      title += c;
+    }
+    return title;
+  };
   for (auto& dataDim : mDims) {
     std::string colName = "SRP_AXIS_" + std::to_string(axisID);
     std::string columnType;
@@ -357,10 +368,11 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
       }
     }
     if (mIsProfile && axisID == mDims.size()) {
-      mHistTitle += ";#LT " + dataDim.var + " #GT";
+      mHistTitle += ";#LT " + asTitle(dataDim.var) + " #GT";
     } else {
-      mHistTitle += ";" + dataDim.var;
+      mHistTitle += ";" + asTitle(dataDim.var);
     }
+    mAxisTitles.push_back(dataDim.var);
     ++axisID;
   }
   // a THn (more than 3 dimensions) has no axis for the counts: ROOT reports a title for it as an error
@@ -394,12 +406,17 @@ template <typename T>
 void DataFrameRequest<DataInfo>::SetResult(ROOT::RDF::RResultPtr<T> result)
 {
   mHandles.emplace_back(result);
-  mGetResult = [result, name = mObjName, title = mHistTitle]() mutable -> TObject* {
+  mGetResult = [result, name = mObjName, title = mHistTitle, axisTitles = mAxisTitles]() mutable -> TObject* {
     auto obj = static_cast<T*>(result->Clone(name.data()));
     if constexpr (std::is_base_of_v<TH1, T>) {
       obj->SetDirectory(nullptr);
     } else if constexpr (std::is_base_of_v<TGraph, T>) {
       obj->SetTitle(title.data());
+    } else if constexpr (std::is_base_of_v<THnBase, T>) {
+      // THnBase::SetTitle leaves #; in the axis titles as #semicolon: they are set one by one
+      for (int32_t i = 0; i < obj->GetNdimensions(); ++i) {
+        obj->GetAxis(i)->SetTitle(axisTitles[i].data());
+      }
     }
     return obj;
   };
