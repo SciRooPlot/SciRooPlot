@@ -2510,7 +2510,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     ptr->SetBinError(i, ptr->GetBinError(i) * width);
                   }
                 }
-                TH1* cumulativeHist = ptr->GetCumulative(*mods.GetCumulative());
+                TH1* cumulativeHist = ptr->GetCumulative(*mods.GetCumulative(), "");  // under the name of the data (ROOT appends _cumulative)
                 cumulativeHist->SetDirectory(nullptr);
                 cumulativeHist->SetBit(kCanDelete);
                 MoveProjectionTitles(ptr, cumulativeHist);

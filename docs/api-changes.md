@@ -33,6 +33,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A NaN or infinite value in an input of a ratio was divided by: a denominator interpolated at other positions was NaN everywhere (a histogram ratio drawn as zero, a graph ratio not drawn), and the warning named the numerator | Numerator and denominator lose their NaN or infinite values before their modifiers and the division (bins drawn as zero, points left out), with a warning naming that input | behaviour | none |
 | A TGraphMultiErrors whose points are not in the order of x kept its y errors where they were when SciRooPlot sorted it (`Smooth`, `area`, steps and other histogram aliases, as interpolated ratio denominator): the errors belonged to other points | Each point keeps its errors (`TGraphMultiErrors::Sort` of ROOT does not move them) | behaviour | none |
 | `Normalize` or `NormalizeToMaximum` of a graph whose values sum up (or reach their maximum) below zero multiplied its errors by the negative factor: negative error bars, drawn as a line by the default rule | Errors stay positive, low and high errors swap as the values turn upside down (as for histograms) | behaviour | none |
+| `Cumulative()` drew a histogram as `<name>_cumulative` (in `Plots.root`, macros and messages) | Under its own name | behaviour | none |
 
 ## 3.3.3 → 4.0.0
 
