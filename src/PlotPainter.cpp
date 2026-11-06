@@ -5104,7 +5104,8 @@ void PlotPainter::ApplyBoxStyle(const BoxType& box, TPave* pave)
 //**************************************************************************************************
 /**
  * Position of a box of the given size (in NDC, including its border) that is placed automatically within the frame of the pad.
- * Without enough free space, the box is placed in the top left corner of the frame (with a warning).
+ * Without enough free space, the box is placed beside the other boxes on top of the data, or if there is no such room in the top left
+ * corner of the frame (with a warning).
  * Returns the lower left corner of the box in NDC.
  */
 //**************************************************************************************************
@@ -5140,9 +5141,12 @@ void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, bo
   const double_t freeWidthNDC = freeArea[2] - freeArea[0];
   const double_t freeHeightNDC = freeArea[3] - freeArea[1];
   const bool fitsIntoFrame = (width <= freeWidthNDC && height <= freeHeightNDC);
-  if (fitsIntoFrame && FindFreeSpace(pad, freeArea, width, height, placement, lowerLeftX, lowerLeftY)) return;
+  bool coversData{};
+  const bool found = fitsIntoFrame && FindFreeSpace(pad, freeArea, width, height, placement, lowerLeftX, lowerLeftY, coversData);
+  if (found && !coversData) return;
   if (fitsIntoFrame) {
     logger::warning("Could not find enough space to place the {} properly.", boxType);
+    if (found) return;
   } else {
     logger::warning("The {} ({:.2f} x {:.2f}) is larger than the space inside the frame ({:.2f} x {:.2f}, in units of the pad size): use fewer lines, more columns or a smaller text size.",
                     boxType, width, height, freeWidthNDC, freeHeightNDC);
@@ -5160,10 +5164,12 @@ void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, bo
  * and samples graphs only coarsely.
  * The box is placed at the free position closest to the given corner of the frame
  * or (for best_corner) closest to the corner where it fits best.
+ * Without such a position, the box goes on top of maps (filled bins of 2d data) and then on top of anything but the other boxes
+ * (coversData set).
  * Returns the lower left corner of the box in NDC.
  */
 //**************************************************************************************************
-bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY)
+bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY, bool& coversData)
 {
   const double_t cellSize = 10. * mScale;  // grid cell size in pixels (as in TPad::PlaceBox), scaled so that boxes are placed the same way at any scale
   // size of the pad in pixels (GetWw and GetWh alone are the size of the whole canvas)
@@ -5172,8 +5178,10 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   const int32_t nx = static_cast<int32_t>(padWidthPixel / cellSize);
   const int32_t ny = static_cast<int32_t>(padHeightPixel / cellSize);
   if (nx <= 0 || ny <= 0) return false;
-  // cells occupied by drawn objects: bit 1 for objects, bit 2 for filled bins of maps (a box goes on top of a map only if there is no other room)
-  constexpr uint8_t kObject{1u}, kMap{2u};
+  // cells occupied by drawn objects: bit 1 for objects, bit 2 for filled bins of maps (a box goes on top of a map only if there is no other room),
+  // bit 3 for boxes placed before (avoided also by a box that has to go on top of the data)
+  constexpr uint8_t kObject{1u}, kMap{2u}, kBox{4u};
+  coversData = false;
   vector<uint8_t> blocked(static_cast<size_t>(nx) * ny, 0u);
 
   // conversion from pad coordinates to (fractional) grid cells
@@ -5185,7 +5193,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   auto padX = [&](double_t x) { return (!pad->GetLogx()) ? x : ((x > 0.) ? std::log10(x) : pad->GetX1()); };
   auto padY = [&](double_t y) { return (!pad->GetLogy()) ? y : ((y > 0.) ? std::log10(y) : pad->GetY1()); };
 
-  auto setRect = [&](double_t x1, double_t y1, double_t x2, double_t y2, uint8_t value) {  // in cells, inclusive (value: kObject or kMap)
+  auto setRect = [&](double_t x1, double_t y1, double_t x2, double_t y2, uint8_t value) {  // in cells, inclusive (value: kObject, kMap or kBox)
     if (!std::isfinite(x1) || !std::isfinite(y1) || !std::isfinite(x2) || !std::isfinite(y2)) return;
     if (x1 > x2) std::swap(x1, x2);
     if (y1 > y2) std::swap(y1, y2);
@@ -5490,7 +5498,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       continue;
     } else if (auto* pave = dynamic_cast<TPave*>(obj)) {
       // legends and texts placed before (coordinates in NDC)
-      setRect(pave->GetX1NDC() * nx, pave->GetY1NDC() * ny, pave->GetX2NDC() * nx, pave->GetY2NDC() * ny, kObject);
+      setRect(pave->GetX1NDC() * nx, pave->GetY1NDC() * ny, pave->GetX2NDC() * nx, pave->GetY2NDC() * ny, kBox);
     } else if (auto* box = dynamic_cast<TBox*>(obj)) {  // regions (shapes), in axis values like lines and ellipses
       setRect(cellX(padX(box->GetX1())), cellY(padY(box->GetY1())), cellX(padX(box->GetX2())), cellY(padY(box->GetY2())), kObject);
     } else if (auto* line = dynamic_cast<TLine*>(obj)) {
@@ -5519,7 +5527,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       if (ellipse->GetFillStyle() != 0) markPolygon(points);
     } else if (auto* subPad = dynamic_cast<TPad*>(obj); subPad && TString(subPad->GetName()).BeginsWith("ImageBox_")) {
       // images placed before (position in NDC of this pad)
-      setRect(subPad->GetXlowNDC() * nx, subPad->GetYlowNDC() * ny, (subPad->GetXlowNDC() + subPad->GetWNDC()) * nx, (subPad->GetYlowNDC() + subPad->GetHNDC()) * ny, kObject);
+      setRect(subPad->GetXlowNDC() * nx, subPad->GetYlowNDC() * ny, (subPad->GetXlowNDC() + subPad->GetWNDC()) * nx, (subPad->GetYlowNDC() + subPad->GetHNDC()) * ny, kBox);
     } else if (auto* hist = dynamic_cast<TH1*>(obj)) {
       if (!TString(hist->GetName()).BeginsWith("axis_hist") && !TString(hist->GetName()).Contains("hframe")) markHist(hist);
     } else if (auto* grid = dynamic_cast<TGraphPolargram*>(obj)) {
@@ -5683,12 +5691,18 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     }
   };
   const bool hasMaps = std::any_of(blocked.begin(), blocked.end(), [](uint8_t cell) { return cell & kMap; });
-  fillSum(kObject | kMap);
+  fillSum(kObject | kMap | kBox);
   search();
   if (!found && hasMaps) {
     // a map filling the frame: on top of it, avoiding only the other objects
-    fillSum(kObject);
+    fillSum(kObject | kBox);
     search();
+  }
+  if (!found) {
+    // no room beside the data: on top of it, avoiding only the other boxes
+    fillSum(kBox);
+    search();
+    coversData = found;
   }
   return found;
 }
