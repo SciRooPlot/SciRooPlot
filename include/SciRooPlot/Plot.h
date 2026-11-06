@@ -352,14 +352,14 @@ class Plot : public FillSetters<Plot>
   Pad& GetPad(uint8_t padID) { return mPads[padID]; }
   void operator+=(const Plot& plot);
   friend Plot operator+(const Plot& basePlot, const Plot& plot);
-  Plot(const Plot& otherPlot, const std::string& name, const std::optional<std::string>& group = {});
+  Plot(const Plot& other, const std::string& name, const std::optional<std::string>& group = {});
   void Print() const { Plot::Print(GetPropertyTree(), "Plot"); }
 
   // accessors for user
   Plot& SetName(const std::string& name);
   Plot& SetGroup(const std::string& group);
   Plot& AppendGroup(const std::string& subgroup);
-  Plot& SetBasePlot(const std::string& name);
+  Plot& SetBasePlot(const std::string& basePlot);
   Plot& SetDimensions(int32_t width, int32_t height, bool fixAspectRatio = false);
   Plot& SetWidth(int32_t width);
   Plot& SetHeight(int32_t height);

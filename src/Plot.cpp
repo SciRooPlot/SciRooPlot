@@ -534,8 +534,8 @@ Plot::Plot(const string& name, const PanelLayout& layout) : Plot(name)
  * Constructor from existing plot.
  */
 //**************************************************************************************************
-Plot::Plot(const Plot& otherPlot, const string& name, const optional<string>& group)
-  : Plot(otherPlot)
+Plot::Plot(const Plot& other, const string& name, const optional<string>& group)
+  : Plot(other)
 {
   if (auto error = NameError(name)) logger::throw_invalid_argument("{}", *error);
   if (group) {
@@ -825,9 +825,9 @@ auto Plot::AppendGroup(const string& subgroup) -> decltype(*this)
   return *this;
 }
 
-auto Plot::SetBasePlot(const string& name) -> decltype(*this)
+auto Plot::SetBasePlot(const string& basePlot) -> decltype(*this)
 {
-  mBasePlot = name;
+  mBasePlot = basePlot;
   return *this;
 }
 
