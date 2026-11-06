@@ -1533,9 +1533,9 @@
           plot[1].AddData("g1", "input", "Graph").SetLegend(2);
 
           // legend 1 ("Data", "Fit") at rel. (x, y) pos. in pad
-          plot[1].AddLegend(0.7, 0.8);
+          plot[1].AddLegend(0.68, 0.8);
           // legend 2 ("Graph")
-          plot[1].AddLegend(0.2, 0.2);
+          plot[1].AddLegend(0.06, 0.06);
 
           plot[1].GetLegend(2)
                  .AddEntry("Best fit")
@@ -1545,7 +1545,7 @@
           plot[1].AddLegend();
           plot[1].AddLegend(top_right);
 
-          plot[1].AddText(0.18, 0.88, "Work in progress");
+          plot[1].AddText(0.04, 0.9, "Work in progress");
           plot[1].AddText({"first line", "second line"});
           ```
         ],
@@ -1556,9 +1556,9 @@
           plot[1].AddData("g1", "input", "Graph").SetLegend(2)
 
           # legend 1 ("Data", "Fit") at rel. (x, y) pos. in pad
-          plot[1].AddLegend(0.7, 0.8)
+          plot[1].AddLegend(0.68, 0.8)
           # legend 2 ("Graph")
-          plot[1].AddLegend(0.2, 0.2)
+          plot[1].AddLegend(0.06, 0.06)
 
           plot[1].GetLegend(2).AddEntry("Best fit").SetSymbolElements("L").SetLine(kSolid, 2.0, kRed)
 
@@ -1566,7 +1566,7 @@
           plot[1].AddLegend()
           plot[1].AddLegend(top_right)
 
-          plot[1].AddText(0.18, 0.88, "Work in progress")
+          plot[1].AddText(0.04, 0.9, "Work in progress")
           plot[1].AddText(["first line", "second line"])
           ```
         ],
@@ -2007,7 +2007,7 @@
       ))
       #v(0.6em)
       #api-section("Text, legends & reference lines", (
-        [#names("AddText(xPos, yPos, text)", "AddText(placement, text)", "AddText(text)")], [Add a text box at a fixed position (upper left corner, pad coordinates), close to a given corner, or auto-placed.],
+        [#names("AddText(xPos, yPos, text)", "AddText(placement, text)", "AddText(text)")], [Add a text box at a fixed position (upper left corner, fractions of the frame), close to a given corner, or auto-placed.],
         [#names("AddLegend(xPos, yPos, title = {})", "AddLegend(placement, title = {})", "AddLegend(title = {})")], [Add a legend, the same ways.],
         [`SetRefFunc(function)`], [Draw a reference function (e.g. `"1"`) behind the data; returns it for styling.],
         [`SetFrame(name, dataset)`], [Take the frame from an input that is not drawn.],
@@ -2219,7 +2219,7 @@
       #api-section("Box (shared by TextBox, LegendBox and StatsBox)", (
         [`SetPosition(x, y)` / `SetSize(w, h)`], [Position of the upper left corner, or dimensions of the box.],
         [`SetAutoPlacement(placement = best_corner)`], [Let SciRooPlot place the box: as close as possible to the corner of the frame where it fits best, or to a given one (`top_left`, `top_right`, `bottom_right`, `bottom_left`).],
-        [#names("SetPadCoordinates()", "SetFrameCoordinates()", "SetUserCoordinates()")], [Position as fractions of the pad (default) or of the frame, or as axis values.],
+        [#names("SetPadCoordinates()", "SetFrameCoordinates()", "SetUserCoordinates()")], [Position as fractions of the frame (default) or of the pad, or as axis values.],
         [#names("SetBorder(style, width, color, alpha = 1)", "SetBorderColor(color)", "SetBorderStyle(style)", "SetBorderWidth(width)", "SetBorderAlpha(alpha)")], [Border, all at once or individually.],
         [#names("SetText(font, size, color, alpha = 1)", "SetTextColor(color)", "SetTextFont(font)", "SetTextSize(size)", "SetTextAlpha(alpha)")], [Text styling, all at once or individually.],
         [#names("SetFill(style, color, alpha = 1)", "SetFillColor(color)", "SetFillStyle(style)", "SetFillAlpha(alpha)")], [Background fill, all at once or individually.],

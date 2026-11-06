@@ -100,7 +100,7 @@ def DefineGallery(pm: PlotManager):
                 plot.SetGroup("gallery/" + kind)
                 for pad, shown in [(1, alias.removesuffix("_clipped")), (2, alias)]:
                     plot[pad].AddData(name, kind).SetDrawOption(globals()[shown]).SetColor(kAzure + 2)
-                    plot[pad].AddText(0.3, 0.5, shown)  # below the dip, clear of the outer edge of the first bin
+                    plot[pad].AddText(0.19, 0.45, shown)  # below the dip, clear of the outer edge of the first bin
                     plot[pad]['Y'].SetLog().SetRange(7.5, 35.0).SetTitle("")
                 plot[0]['X'].SetRange(*frameX).SetTitle("")
                 pm.AddPlot(plot)

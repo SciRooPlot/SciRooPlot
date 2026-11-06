@@ -1327,7 +1327,7 @@ pm.AddBasePlot(PlotManager.MakeBasePlot("1d_ratio"))
 plot = Plot("ptSpectrum", "spectra", "1d_ratio")
 plot[1].AddData("hPt", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
 plot[1].AddData("hPt", "mc", "simulation").SetLine(kSolid, 3.0, kRed + 1).SetDrawOption(hist_open)
-plot[1].AddLegend(0.6, 0.9)
+plot[1].AddLegend(0.56, 0.93)
 plot[2].AddRatio(["hPt", "data"], ["hPt", "mc"])
 plot[0]['X'].SetRange(0.0, 10.0).SetTitle("#it{p}_{T} (GeV/#it{c})")
 plot[1]['Y'].SetLog()
@@ -1342,7 +1342,7 @@ int main() {
   Plot plot("ptSpectrum", "spectra", "1d_ratio");
   plot[1].AddData("hPt", "data", "data").SetMarker(kFullCircle, 1.0, kBlack);
   plot[1].AddData("hPt", "mc", "simulation").SetLine(kSolid, 3.0, kRed + 1).SetDrawOption(hist_open);
-  plot[1].AddLegend(0.6, 0.9);
+  plot[1].AddLegend(0.56, 0.93);
   plot[2].AddRatio({"hPt", "data"}, {"hPt", "mc"});
   plot[0]['X'].SetRange(0.0, 10.0).SetTitle("#it{p}_{T} (GeV/#it{c})");
   plot[1]['Y'].SetLog();
@@ -1471,7 +1471,7 @@ plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(k
 pm.AddPlot(plot);` },
   { title: "Legend and text", img: "img/tour/legend.png", alt: "The spectrum with a legend top right and experiment text bottom left",
     text: `<p>The third argument of <code>AddData</code> is the label. <code>AddLegend()</code> collects the labels into a box and finds a corner where it covers no data; <code>AddText</code> does the same for free text.</p>
-<p class="expert-only">Explicit positions: <code>AddLegend(0.6, 0.9)</code> is the upper left corner in pad coordinates, <code>AddLegend(top_right)</code> a preferred corner. In <code>show</code> mode, double-click a box or shape to print its current coordinates.</p>`,
+<p class="expert-only">Explicit positions: <code>AddLegend(0.56, 0.93)</code> is the upper left corner as fractions of the frame, <code>AddLegend(top_right)</code> a preferred corner. In <code>show</code> mode, double-click a box or shape to print its current coordinates.</p>`,
     py: `plot = Plot("legend", "tour", "1d")
 plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
 plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2)
@@ -1952,7 +1952,7 @@ plot.ShareAxis('Z', {4, 5});</pre></div>` },
   { id: "text", g: "layout", t: "Text sizes and insets", body: `<p>Three levels: for a class of plots, the <code>PanelLayout</code> of the base plot (the only way that keeps all panels equal); for one plot, the pad or the axis; for one box, the box itself. With the default font 42 a size is a fraction of the pad, so the same number is smaller in a smaller pad; font 43 takes pixels.</p>
 <div class="code"><pre data-snip="text"></pre></div>
 <p>An inset is an extra pad placed inside the frame; pads are drawn in the order of their numbers, so it covers what is below it.</p>` },
-  { id: "legends", g: "layout", t: "Legends and texts", body: `<div class="code"><pre data-snip="legends"></pre></div><p>Positions are the upper left corner in pad coordinates (0 to 1); <code>.SetFrameCoordinates()</code> switches to fractions of the frame (the same place in every panel of a multi-panel layout), <code>.SetUserCoordinates()</code> to axis units; for all boxes of a plot: <code>plot[0].SetDefaultBoxCoordinates(frame_coordinates)</code> (shapes: <code>SetDefaultShapeCoordinates</code>). Legend symbols follow what is drawn; override them with <code>SetSymbolElements</code> (L line, P marker, F fill, E error bar). In <code>show</code> mode, double-click a box or shape to print its coordinates.</p><p>One legend for several panels: <code>legend.AddDataEntry(padID, dataID)</code> adds a row for data drawn in another pad, with its symbol, style and legend label (e.g. in an <code>Empty()</code> strip above the panels).</p>` },
+  { id: "legends", g: "layout", t: "Legends and texts", body: `<div class="code"><pre data-snip="legends"></pre></div><p>Positions are the upper left corner as fractions of the frame ((0, 0) its lower left, (1, 1) its upper right corner; beyond them outside of it, in an empty layout cell fractions of the cell), so they are the same in every panel of a multi-panel layout; <code>.SetPadCoordinates()</code> switches to fractions of the pad, <code>.SetUserCoordinates()</code> to axis units; for all boxes of a plot: <code>plot[0].SetDefaultBoxCoordinates(pad_coordinates)</code> (shapes: <code>SetDefaultShapeCoordinates</code>). Legend symbols follow what is drawn; override them with <code>SetSymbolElements</code> (L line, P marker, F fill, E error bar). In <code>show</code> mode, double-click a box or shape to print its coordinates.</p><p>One legend for several panels: <code>legend.AddDataEntry(padID, dataID)</code> adds a row for data drawn in another pad, with its symbol, style and legend label (e.g. in an <code>Empty()</code> strip above the panels).</p>` },
   { id: "templates", g: "layout", t: "Templates: one look per kind of data", body: `<p>A thesis or paper shows the same few kinds of data again and again: measured points, a simulation, a model, systematic uncertainties. Each should look the same in every figure. A <b>template</b> says once how one kind of data looks; every plot then only names the data.</p>
 <div class="twocode"><div><h3>Without templates</h3><div class="code"><pre data-snip="tmpl_before"></pre></div><p class="small muted">The style is repeated in every plot. To make the simulation blue, you edit every line that has it, and the one you miss gives a figure that does not match.</p></div>
 <div><h3>With templates</h3><div class="code"><pre data-snip="tmpl_after"></pre></div><p class="small muted">The style lives in one line per kind of data, at the top of your file. Change it there and every figure follows.</p></div></div>
@@ -2197,7 +2197,7 @@ plot[1].GetLegend(1).AddEntry("same marker as data 2").SetRefData(2)
 plot[1].AddData("band", "src", "unc.").SetLegendEntry(LegendEntry().SetSymbolElements("F"))
 plot[1](1).SetLegendEntry(LegendEntry().AfterData(2))   # a model drawn first (under the data) listed after data 2
 plot[1].AddText(top_left, "My Experiment")
-plot[1].AddText(0.2, 0.9, ["line one", "line two"]).SetTextSize(0.04)`, cpp: `plot[1].AddLegend();                         // best free corner
+plot[1].AddText(0.06, 0.93, ["line one", "line two"]).SetTextSize(0.04)`, cpp: `plot[1].AddLegend();                         // best free corner
 plot[1].AddLegend(top_right);                 // or a preferred corner, or AddLegend(0.5, 0.8)
 plot[1].AddData("f", "src", "in the second legend").SetLegend(2);
 plot[1].GetLegend(1).SetNumColumns(2).SetNoBox();
@@ -2207,7 +2207,7 @@ plot[1].GetLegend(1).AddEntry("same marker as data 2").SetRefData(2);
 plot[1].AddData("band", "src", "unc.").SetLegendEntry(LegendEntry().SetSymbolElements("F"));
 plot[1](1).SetLegendEntry(LegendEntry().AfterData(2));  // a model drawn first (under the data) listed after data 2
 plot[1].AddText(top_left, "My Experiment");
-plot[1].AddText(0.2, 0.9, {"line one", "line two"}).SetTextSize(0.04);` },
+plot[1].AddText(0.06, 0.93, {"line one", "line two"}).SetTextSize(0.04);` },
   tmpl_before: { py: `spectrum = Plot("ptSpectrum", "spectra", "1d_ratio")
 spectrum[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
 spectrum[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1)
@@ -2475,7 +2475,7 @@ plot = Plot("vertexZ", "detector/events", "1d_ratio")
 plot[1].AddData("hVtxZ", "EventQA", "data").Normalize()
 plot[1].AddData("hVtxZ", "EventQA_MC", "simulation").Normalize() \\
        .SetDrawOption(hist).SetLine(kSolid, 3.0, kRed + 1)
-plot[1].AddLegend(0.189, 0.898)
+plot[1].AddLegend(0.05, 0.94)
 plot[1]['Y'].SetTitle("normalised counts").SetMaxRange(0.036)
 plot[2].AddRatio(["hVtxZ", "EventQA"], ["hVtxZ", "EventQA_MC"]).Both().Normalize()
 plot[2]['Y'].SetTitle("data / sim.").SetRange(-1.0, 5.0)
@@ -2490,7 +2490,7 @@ Plot plot("vertexZ", "detector/events", "1d_ratio");
 plot[1].AddData("hVtxZ", "EventQA", "data").Normalize();
 plot[1].AddData("hVtxZ", "EventQA_MC", "simulation").Normalize()
        .SetDrawOption(hist).SetLine(kSolid, 3.0, kRed + 1);
-plot[1].AddLegend(0.189, 0.898);
+plot[1].AddLegend(0.05, 0.94);
 plot[1]['Y'].SetTitle("normalised counts").SetMaxRange(0.036);
 plot[2].AddRatio({"hVtxZ", "EventQA"}, {"hVtxZ", "EventQA_MC"}).Both().Normalize();
 plot[2]['Y'].SetTitle("data / sim.").SetRange(-1.0, 5.0);
@@ -2546,8 +2546,8 @@ for i, (low, high) in enumerate([(1.0, 1.5), (1.5, 2.0), (2.0, 3.0), (3.0, 4.0),
        .ProjectX(low, high, True).ScaleX(1000.0).Normalize(False, 190.0, 240.0) \\
        .SetMarker(kFullCircle, 1.0, kBlack).SetDefinesFrame()
     pad.AddPoints([190.0, 240.0], [0.05, 0.05], "norm. region").SetDrawOption(line).SetLine(kSolid, 5.0, kRed + 1)
-    pad.AddText(0.6, 0.9, f"{low:g} < #it{{p}}_{{T}} < {high:g} GeV/#it{{c}}")
-plot[1].AddLegend(0.6, 0.8)
+    pad.AddText(0.56, 0.93, f"{low:g} < #it{{p}}_{{T}} < {high:g} GeV/#it{{c}}")
+plot[1].AddLegend(0.56, 0.8)
 plot[0]['X'].SetRange(60.0, 240.0).SetNumDivisions(505).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})")
 plot[0]['Y'].SetTitle("pairs (norm. region = 1)").SetMinRange(0.0)
 pm.AddPlot(plot)
@@ -2568,9 +2568,9 @@ for (size_t i = 0; i < ptBins.size(); ++i) {
      .ProjectX(low, high, true).ScaleX(1000.0).Normalize(false, 190.0, 240.0)
      .SetMarker(kFullCircle, 1.0, kBlack).SetDefinesFrame();
   pad.AddPoints({190.0, 240.0}, {0.05, 0.05}, "norm. region").SetDrawOption(line).SetLine(kSolid, 5.0, kRed + 1);
-  pad.AddText(0.6, 0.9, Form("%g < #it{p}_{T} < %g GeV/#it{c}", low, high));
+  pad.AddText(0.56, 0.93, Form("%g < #it{p}_{T} < %g GeV/#it{c}", low, high));
 }
-plot[1].AddLegend(0.6, 0.8);
+plot[1].AddLegend(0.56, 0.8);
 plot[0]['X'].SetRange(60.0, 240.0).SetNumDivisions(505).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})");
 plot[0]['Y'].SetTitle("pairs (norm. region = 1)").SetMinRange(0.0);
 pm.AddPlot(plot);
@@ -2639,9 +2639,9 @@ pm.AddBasePlot(PlotManager.MakeBasePlot("2d_2x1"))
 
 plot = Plot("etaPhiDataVsSim", "detector/tracking", "2d_2x1")
 plot[1].AddData("hEtaPhi", "TrackQA")
-plot[1].AddText(0.15, 0.9, "data")
+plot[1].AddText(0.05, 0.93, "data")
 plot[2].AddData("hEtaPhi", "TrackQA_MC")
-plot[2].AddText(0.15, 0.9, "simulation")
+plot[2].AddText(0.05, 0.93, "simulation")
 plot[0].SetPalette(kViridis)
 plot[0]['X'].SetNumDivisions(505)
 pm.AddPlot(plot)
@@ -2653,9 +2653,9 @@ pm.AddBasePlot(PlotManager::MakeBasePlot("2d_2x1"));
 
 Plot plot("etaPhiDataVsSim", "detector/tracking", "2d_2x1");
 plot[1].AddData("hEtaPhi", "TrackQA");
-plot[1].AddText(0.15, 0.9, "data");
+plot[1].AddText(0.05, 0.93, "data");
 plot[2].AddData("hEtaPhi", "TrackQA_MC");
-plot[2].AddText(0.15, 0.9, "simulation");
+plot[2].AddText(0.05, 0.93, "simulation");
 plot[0].SetPalette(kViridis);
 plot[0]['X'].SetNumDivisions(505);
 pm.AddPlot(plot);
@@ -2676,13 +2676,13 @@ for i, cent in enumerate(centralities):
     label = "Pb-Pb / pp" if i == 0 else None
     pad.AddRatio(["cent_" + cent + "/ptSpec", "heavyion"], ["ptSpec", "data"], label).Numer().Scale(1.0 / ncoll[cent])
     pad.SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 1)
-    pad.AddText(0.5, 0.9, cent + "%")
+    pad.AddText(0.48, 0.93, cent + "%")
 plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high") \\
        .SetDrawOption(boxes).SetFill(1001, kOrange - 9).SetLineColor(kOrange + 1).SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"))
 plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetMarker(kOpenCircle, 1.2, kOrange + 1).SetLegend(2)
-plot[1].AddLegend(0.2, 0.3)
-plot[1].AddLegend(0.2, 0.78)
-plot[3].AddLegend(0.1, 0.3).AddEntry("norm. unc. 5%").SetSymbolElements("F").SetFill(1001, kGray)
+plot[1].AddLegend(0.05, 0.19)
+plot[1].AddLegend(0.05, 0.78)
+plot[3].AddLegend(0.11, 0.19).AddEntry("norm. unc. 5%").SetSymbolElements("F").SetFill(1001, kGray)
 plot[0]['X'].SetLog().SetRange(0.15, 10.0)
 plot[0]['Y'].SetRange(0.0, 1.4).SetTitle("#it{R}_{AA}").SetTitleCenter()
 pm.AddPlot(plot)
@@ -2701,14 +2701,14 @@ for (size_t i = 0; i < centralities.size(); ++i) {
   const std::optional<std::string> label = (i == 0) ? std::optional<std::string>("Pb-Pb / pp") : std::nullopt;
   pad.AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}, label).Numer().Scale(1.0 / ncoll[cent]);
   pad.SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 1);
-  pad.AddText(0.5, 0.9, cent + "%");
+  pad.AddText(0.48, 0.93, cent + "%");
 }
 plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high")
        .SetDrawOption(boxes).SetFill(1001, kOrange - 9).SetLineColor(kOrange + 1).SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
 plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetMarker(kOpenCircle, 1.2, kOrange + 1).SetLegend(2);
-plot[1].AddLegend(0.2, 0.3);
-plot[1].AddLegend(0.2, 0.78);
-plot[3].AddLegend(0.1, 0.3).AddEntry("norm. unc. 5%").SetSymbolElements("F").SetFill(1001, kGray);
+plot[1].AddLegend(0.05, 0.19);
+plot[1].AddLegend(0.05, 0.78);
+plot[3].AddLegend(0.11, 0.19).AddEntry("norm. unc. 5%").SetSymbolElements("F").SetFill(1001, kGray);
 plot[0]['X'].SetLog().SetRange(0.15, 10.0);
 plot[0]['Y'].SetRange(0.0, 1.4).SetTitle("#it{R}_{AA}").SetTitleCenter();
 pm.AddPlot(plot);
@@ -2725,7 +2725,7 @@ jetStyle = Data().SetMarkerStyle(kFullSquare).SetMarkerSize(1.2)
 for tag, label in [("R02", "#it{R} = 0.2"), ("R04", "#it{R} = 0.4"), ("R06", "#it{R} = 0.6")]:
     plot[1].AddData("hJetPt_" + tag, "jets", label).ApplyLayout(jetStyle).RebinX(2)
 plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kDashed, 2.0, kGray + 2)
-plot[1].AddLegend(0.212, 0.454, "anti-#it{k}_{T} jets, |#eta| < 0.5")
+plot[1].AddLegend(0.08, 0.38, "anti-#it{k}_{T} jets, |#eta| < 0.5")
 plot[1]['X'].SetLog().SetTitle("#it{p}_{T}^{jet} (GeV/#it{c})")
 plot[1]['Y'].SetLog().SetTitle("d#it{N}/d#it{p}_{T} (GeV/#it{c})^{-1}")
 pm.AddPlot(plot)
@@ -2740,7 +2740,7 @@ for (const auto& [tag, label] : std::vector<std::pair<std::string, std::string>>
   plot[1].AddData("hJetPt_" + tag, "jets", label).ApplyLayout(jetStyle).RebinX(2);
 }
 plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kDashed, 2.0, kGray + 2);
-plot[1].AddLegend(0.212, 0.454, "anti-#it{k}_{T} jets, |#eta| < 0.5");
+plot[1].AddLegend(0.08, 0.38, "anti-#it{k}_{T} jets, |#eta| < 0.5");
 plot[1]['X'].SetLog().SetTitle("#it{p}_{T}^{jet} (GeV/#it{c})");
 plot[1]['Y'].SetLog().SetTitle("d#it{N}/d#it{p}_{T} (GeV/#it{c})^{-1}");
 pm.AddPlot(plot);

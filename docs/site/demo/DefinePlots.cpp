@@ -31,8 +31,8 @@ int main()
     pad.AddData("m4l_data", "leptons", "data")
       .SetColor(kBlack)
       .SetMarkerStyle(kFullCircle);
-    pad.AddText(0.2, 0.9, {experiment, "H #rightarrow 4l"});
-    pad.AddLegend(0.2, 0.76);
+    pad.AddText(0.06, 0.93, {experiment, "H #rightarrow 4l"});
+    pad.AddLegend(0.06, 0.75);
     pad['Y'].SetRange(0.0, 40.0);
     pm.AddPlot(plot);
   }
@@ -45,9 +45,9 @@ int main()
       .SetLine(kSolid, 3.0, kRed + 1);
     pad.AddData("mgg_bkgFit", "photons", "bkg. only")
       .SetLine(kDashed, 3.0, kBlue + 1);
-    pad.AddText(0.57, 0.9,
+    pad.AddText(0.52, 0.95,
                 {experiment, "H #rightarrow #gamma#gamma"});
-    pad.AddLegend(0.57, 0.7);
+    pad.AddLegend(0.52, 0.74);
     plot[2].AddRatio({"mgg_data", "photons"}, {"mgg_bkgFit"});
     plot[2]['Y'].SetTitle("data / bkg.").SetRange(0.9, 1.15);
     pm.AddPlot(plot);
@@ -77,7 +77,7 @@ int main()
       .SetMarkerStyle(kFullCircle)
       .SetMarkerSize(0.8);
     pad.SetRefFunc("1").SetLine(kSolid, 3.0, kRed + 1);
-    pad.AddLegend(0.2, 0.9);
+    pad.AddLegend(0.06, 0.93);
     pad['Y'].SetLog().SetRange(0.08, 20.0);
     pm.AddPlot(plot);
   }
