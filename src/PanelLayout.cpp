@@ -567,8 +567,8 @@ void PanelLayout::ApplyTo(Plot& plot) const
     target.SetMargins((frameTop[r0] - y0) / height, (y1 - frameBottom[r1]) / height, (frameLeft[c0] - x0) / width, (x1 - frameRight[c1]) / width);
     target.SetDefaultTextSize(mTextSize / minSide);
     // axes shared with a touching panel: labels and title are only shown once (a label next to a panel would run into its frame); the painter
-    // hides them where this panel and the touching ones have flat frames (a 3D view or a polar drawing shares no axis), so they are kept apart
-    // from the axis settings: the panels touching below (x) and on the left (y)
+    // hides them in flat frames (a 3D view or a polar drawing shares no axis and shows its own), so they are kept apart from the axis
+    // settings: the panels touching below (x) and on the left (y), named in the warning about a flat panel beside a 3D view
     auto touching = [&](size_t rFirst, size_t rLast, size_t cFirst, size_t cLast) {
       vector<uint8_t> pads;
       for (size_t r = rFirst; r <= rLast; ++r) {

@@ -5,14 +5,14 @@ panels show no scale of their own. The colour axis of a z group is z, for a 3d h
 scale of the group does not reach it, with a warning); a TF3 has no colour scale.
 A range, log scale or time format set in one pad of the group or in pad 0 holds for all of them (differing ranges: the first pad's,
 with a warning). 3D views and polar drawings share no x and y axes: they and the flat pads beside them keep their own ranges (an explicit
-group warns that it leaves them out). ShareAxis regroups: an empty list undoes the groups of the axis (the layout's too, with a warning
+group warns that it leaves them out; a flat panel right of one warns that its hidden y axis is not shared). ShareAxis regroups: an empty list undoes the groups of the axis (the layout's too, with a warning
 that the layout shows the axis once), a single pad leaves its group, a pad listed twice or a pad the plot does not have is warned about,
 an unknown axis and pad 0 are refused when defined. Panels spanning other columns share no x with the narrow ones, panels apart by a
 panel spacing still share. The title of a row (x) or column (y) of touching panels showing the same title is drawn once, under or beside
 all of them (centred if the axis says so); panels with titles of their own keep them, and SetCommonTitles(false) keeps all titles.
 Covers: d29a380 (shared axes, common titles, colour-scale cells), 05312cc (undoing the axes of touching panels warns), 7476c1b (a
-colour-scale cell naming its panel), the commits of this file's first version and of its fix "3d histograms share their contents in
-z groups".
+colour-scale cell naming its panel), the commits of this file's first version, b59d3ff (3d histograms in z groups), the fix "flat panels
+beside 3d views keep their labels hidden".
 """
 
 from srptest import Chunks, DATA_1D, DATA_2D, DATA_3D, DATA_POLAR, Project, S, add_data, cases, check, close, data_objects, describe, finish, has_variant, hist_diff, python, source_of
@@ -217,6 +217,7 @@ for i, c in enumerate(zpairs):
     warned = [line for line in linear if f"Plot z{i}_True:" in line]
     check(f"a log scale not reaching the 3d histogram is warned about{'' if expected else ' only there'}: {describe(c)}", len(warned) == (1 if expected else 0) and (not expected or "pad 2" in warned[0]), str(warned))
 leftOut = run.warnings("is left out of the pads sharing")
+besides = run.warnings("are hidden beside pad")
 for i, c in enumerate(views):
     what = describe(c)
     alone = [run.frame(f"v{i}_False", pad) for pad in (1, 2)]
@@ -230,6 +231,15 @@ for i, c in enumerate(views):
         check(f"an explicit group warns that it leaves out the pad without flat frame: {what}", len(warned) == 1 and "pad 1" in warned[0], str(warned))
     else:
         check(f"the layout leaves it out silently: {what}", not warned, str(warned))
+    # the flat pad right of the drawing keeps its y labels hidden (no room for them), with a warning; below it (x) the drawing shows its own
+    for shared in (True, False):
+        warned = [line for line in besides if f"Plot v{i}_{shared}:" in line]
+        expected = c["group"] == "layout" and c["axis"] == "Y"
+        check(
+            f"a flat pad beside the drawing warns that its hidden {c['axis'].lower()} axis is not shared{'' if expected else ' only where it touches'}: {what} shared={shared}",
+            len(warned) == (1 if expected else 0) and (not expected or "the y labels and title of pad 2 are hidden beside pad 1" in warned[0]),
+            str(warned),
+        )
 
 names = {what: f"s{i}" for i, what in enumerate(SETTINGS)}
 
@@ -293,7 +303,7 @@ grid = {a: [axis_range(names["ratios of a grid"], pad, a) for pad in (1, 2, 3, 4
 check("a grid with ratios: y per row, x per column", same(grid["Y"][0], grid["Y"][1]) and same(grid["Y"][2], grid["Y"][3]) and same(grid["X"][0], grid["X"][2]) and same(grid["X"][1], grid["X"][3]), str(grid))
 grid = {a: [axis_range(names["grid"], pad, a) for pad in (1, 2, 3, 4)] for a in "XY"}
 check("a 2x2 grid: y per row, x per column", same(grid["Y"][0], grid["Y"][1]) and same(grid["Y"][2], grid["Y"][3]) and same(grid["X"][0], grid["X"][2]) and same(grid["X"][1], grid["X"][3]), str(grid))
-known = ("set different maxima", "the layout shows", "listed in two groups", "no pad 7", "is left out of the pads sharing", "whose boxes ROOT colours linearly")
+known = ("set different maxima", "the layout shows", "listed in two groups", "no pad 7", "is left out of the pads sharing", "whose boxes ROOT colours linearly", "are hidden beside pad")
 extra = [line for line in run.lines("WARN") if not any(k in line for k in known)]
 check("no other warnings", not extra, " | ".join(extra[:5]))
 

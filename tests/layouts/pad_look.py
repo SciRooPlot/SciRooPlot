@@ -3,12 +3,12 @@ titles have the pixel sizes of the layout (31.52 and 39.4 by default, or those g
 them (fractions of the smaller pad side, pixel fonts in pixels), in font 42; drawn 1d data has the line width and marker size of the layout;
 a colour scale is the colour-scale offset away from its frame and the colour-scale width wide (in its panel and in a ColorScale() cell);
 ratio and pull panels of base plots draw their reference line (at 1 and 0) with few divisions and a centred title.
-The labels and title of an axis are hidden only where a touching panel shares that axis (towards the panel below for x, the panel on
-the left for y); a 3D view or a polar drawing shares no x and y axes, so it keeps its labels and its neighbours keep theirs towards it.
+The labels and title of an axis are hidden towards a touching panel (below for x, on the left for y) in flat frames; a 3D view or a polar
+drawing shares no x and y axes and keeps its own; a flat panel beside one keeps them hidden (no room for them) with a warning, once per axis.
 Every data kind is drawn in every panel of a base plot of its dimension (1d: a grid with ratio and pull panels, 2d: a grid with one
 colour scale and a gap grid with own scales, 3d: a touching grid), in the map-with-projections layout and in layouts with spanning panels.
 Covers: 1bcc1d8 (sizes given to MakeBasePlot), a71579b (colour scales in pixels), 7476c1b (pull panels), the commits of this file's first
-version and of its fix "labels between touching panels hidden only between flat frames".
+version, f717ec7 (labels hidden only where the axis is shared) and its fix "flat panels beside 3d views keep their labels hidden".
 """
 
 from srptest import DATA_3D, DATA_KINDS, DATA_POLAR, ROOT, Project, S, add_data, cases, check, describe, finish
@@ -92,6 +92,7 @@ OWN_SIZES = {  # name: (what pad 1 draws, where the sizes are set, label size, t
     "own title size": ("hist", "pad", None, 0.07, (0.0, True)),
     "sizes of pad 0": ("hist", "pad 0", 0.06, 0.07, (0.0, False)),
     "own sizes 0 beside a 3D view": ("lego", "pad", 0.0, 0.0, (0.0, False)),
+    "beside a 3D view": ("lego", "pad", None, None, (0.0, False)),
 }
 for name, (kind, place, label, title, _) in OWN_SIZES.items():
     plot = S.Plot(name.replace(" ", "_"), "look", "1d_2x1_ratio_pull_default" if kind == "hist" else "2d_2x1_default")
@@ -121,6 +122,7 @@ def pixels(size, font, side):
     return size if font % 10 == 3 else size * side
 
 
+unsharedWanted = set()  # the warnings about a flat panel beside a drawing without flat frame
 for i, case in enumerate(todo):
     what = describe(case)
     text, title, offset, width, line, marker = SIZES[case["sizes"]]
@@ -142,12 +144,17 @@ for i, case in enumerate(todo):
         if frame and padID in frames:
             left, right, top, bottom = frames[padID]
             ownView = view(case["kind"]) and kinds[padID] == case["kind"]
-            # the touching panel below (sharing x) and on the left (sharing y), unless one of the two is drawn without flat frame
+            # the touching panels below (x) and on the left (y): their axis is hidden in a flat frame, also beside a drawing without flat frame
+            # (with a warning: the axis is not shared)
             below = [o for o, (l2, r2, t2, b2) in frames.items() if o != padID and abs(t2 - bottom) < 0.01 and min(right, r2) - max(left, l2) > 1]
             onLeft = [o for o, (l2, r2, t2, b2) in frames.items() if o != padID and abs(r2 - left) < 0.01 and min(bottom, b2) - max(top, t2) > 1]
             flat = lambda o: not (view(case["kind"]) and kinds[o] == case["kind"])  # noqa: E731
-            hideX = not ownView and any(flat(o) for o in below)
-            hideY = not ownView and any(flat(o) for o in onLeft)
+            hideX = not ownView and bool(below)
+            hideY = not ownView and bool(onLeft)
+            for axisName, touching in (("x", below), ("y", onLeft)):
+                unshared = sorted(o for o in touching if not flat(o))
+                if not ownView and unshared:
+                    unsharedWanted.add(f"Plot c{i}: the {axisName} labels and title of pad {padID} are hidden beside pad {unshared[0]},")
             hbars = case["layout"] == "projections" and padID == 3 and DATA_KINDS[case["kind"]][0] > 1  # the histogram's x axis is vertical
             horizontal, vertical = (frame.GetYaxis(), frame.GetXaxis()) if hbars else (frame.GetXaxis(), frame.GetYaxis())
             for axisName, axis, hidden in (("x", horizontal, hideX), ("y", vertical, hideY)):
@@ -180,6 +187,9 @@ for i, case in enumerate(todo):
             if frame:
                 axis = frame.GetYaxis()
                 check(f"few y divisions and a centred title in pad {padID}: {what}", axis.GetNdivisions() % 1000000 == 305 and axis.TestBit(ROOT.TAxis.kCenterTitle), f"divisions {axis.GetNdivisions()}, centred {axis.TestBit(ROOT.TAxis.kCenterTitle)}")
+unsharedWanted.add("Plot beside_a_3D_view: the y labels and title of pad 2 are hidden beside pad 1,")  # own sizes: no warning
+unsharedGot = {line[line.index("Plot ") : line.index(", which") + 1] for line in run.warnings("are hidden beside pad")}
+check("a flat panel beside a 3D view or polar drawing warns that its hidden axis is not shared (each such axis once)", unsharedGot == unsharedWanted, f"missing {sorted(unsharedWanted - unsharedGot)[:3]}, not expected {sorted(unsharedGot - unsharedWanted)[:3]}")
 for name, (kind, place, label, title, want) in OWN_SIZES.items():
     frame = run.frame_hist(name.replace(" ", "_"), "look", 2)
     got = (round(frame.GetYaxis().GetLabelSize(), 6), frame.GetYaxis().GetTitleSize() > 0) if frame else None  # (a y title gets a pixel size)

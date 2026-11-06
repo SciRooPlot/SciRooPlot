@@ -2082,11 +2082,28 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
         }
       }
     }
+    // a 3D view or polar drawing shows the labels and title the layout hides (painted again); a flat panel beside one keeps them hidden,
+    // though the axis is not shared: it has no room for them
     const auto flatPads = painter.GetFlatPads();
     auto isFlat = [&](uint8_t padID) { return flatPads.count(padID) > 0; };
     for (const auto& [padID, pad] : allPads) {
       for (const auto& [axisLabel, touching] : pad.GetHiddenNextTo()) {
-        if (!isFlat(padID) || !std::all_of(touching.begin(), touching.end(), isFlat)) paintAgain = true;
+        if (!isFlat(padID)) {
+          paintAgain = true;
+          continue;
+        }
+        // (a touching panel that draws nothing has no frame either)
+        auto drawsView = [&](uint8_t other) {
+          auto found = allPads.find(other);
+          return !isFlat(other) && found != allPads.end() && (!found->second.GetData().empty() || found->second.GetFrame());
+        };
+        auto unshared = std::find_if(touching.begin(), touching.end(), drawsView);
+        const auto axis = pad.GetAxes().find(axisLabel);
+        const bool ownLabels = axis != pad.GetAxes().end() && axis->second.GetLabelSize();
+        if (unshared != touching.end() && !ownLabels) {
+          logger::warning("Plot {}: the {} labels and title of pad {} are hidden beside pad {}, which shares no axis with it (a 3D view or a polar drawing); separate them with a Gap() to show them.",
+                          fullPlot.GetName(), static_cast<char>(std::tolower(axisLabel)), padID, *unshared);
+        }
       }
     }
     if (paintAgain) painter.SetFlatPads(flatPads);

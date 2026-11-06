@@ -282,7 +282,7 @@ class PlotPainter
     mCommonRanges = std::move(commonRanges);
   }
   // the pads with flat frames, from an earlier paint of the plot (see GetFlatPads): the labels and titles a layout hides towards touching panels
-  // stay where one of them has none (unknown: hidden everywhere)
+  // stay in the others, 3D views and polar drawings (unknown: hidden everywhere)
   void SetFlatPads(std::set<uint8_t> flatPads) { mFlatPads = std::move(flatPads); }
   std::set<uint8_t> GetFlatPads() const
   {

@@ -1372,15 +1372,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
               }
             }
 
-            // labels and title a layout hides towards touching panels (see PanelLayout::ApplyTo): only where the axis is shared, i.e. this panel and
-            // the touching ones have flat frames (known from an earlier paint, see SetFlatPads), and unless the pad sets their size itself
-            if (auto hidden = pad.GetHiddenNextTo().find(axisLabel); hidden != pad.GetHiddenNextTo().end()) {
-              auto isFlat = [&](uint8_t other) { return mFlatPads->count(other) > 0; };
-              const bool shared = !mFlatPads || (isFlat(padID) && std::all_of(hidden->second.begin(), hidden->second.end(), isFlat));
+            // labels and title a layout hides towards touching panels (see PanelLayout::ApplyTo): in a flat frame (known from an earlier paint, see
+            // SetFlatPads; a 3D view or a polar drawing keeps its own, it shares no axis), unless the pad sets their size itself
+            if (pad.GetHiddenNextTo().count(axisLabel)) {
+              const bool hide = !mFlatPads || mFlatPads->count(padID);
               const auto own = pad.GetAxes().find(axisLabel);
               const bool ownTitleSize = own != pad.GetAxes().end() && own->second.GetTitleSize();
               const bool ownLabelSize = own != pad.GetAxes().end() && own->second.GetLabelSize();
-              if (shared) {
+              if (hide) {
                 if (!ownTitleSize) textSizeTitle = 0.f;
                 if (!ownLabelSize) textSizeLabel = 0.f;
               } else if (auto titleSize = LayoutValue(pad, padDefaults, "title_size"); titleSize && !ownTitleSize) {

@@ -721,7 +721,7 @@ class Plot::Pad : public FillSetters<Pad>
                                                  // has its own) and the defaults of the colour scale (also of a 3d histogram, whose scale is the C axis)
 
   // a panel of a PanelLayout: the axes whose labels and title are hidden, with the panels touching there (x: below, y: on the left);
-  // hidden only where all of them have flat frames
+  // hidden in a flat frame (a 3D view or a polar drawing keeps its own)
   std::map<char, std::vector<uint8_t>> mHiddenNextTo;
 
   std::map<char, Axis> mAxes;
