@@ -6477,11 +6477,17 @@ void PlotPainter::ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFact
   double_t* errorsLow = (axis == 0) ? graph->GetEXlow() : graph->GetEYlow();     // asymmetric and bent errors
   double_t* errorsHigh = (axis == 0) ? graph->GetEXhigh() : graph->GetEYhigh();  // (nullptr for symmetric errors)
   auto multiErrors = (axis == 1) ? MultiErrorSums(graph) : nullopt;
+  // a negative factor (Normalize of values summing up below zero) turns the values upside down: errors stay positive, low and high swap
+  const double_t errorFactor = std::abs(scaleFactor);
   for (int32_t i{}; i < graph->GetN(); ++i) {
     values[i] *= scaleFactor;
-    if (errors) errors[i] *= scaleFactor;
-    if (errorsLow) errorsLow[i] *= scaleFactor;
-    if (errorsHigh) errorsHigh[i] *= scaleFactor;
+    if (errors) errors[i] *= errorFactor;
+    if (errorsLow) errorsLow[i] *= errorFactor;
+    if (errorsHigh) errorsHigh[i] *= errorFactor;
+    if (scaleFactor < 0. && errorsLow && errorsHigh) {
+      std::swap(errorsLow[i], errorsHigh[i]);
+      SwapMultiErrors(graph, multiErrors, i);
+    }
   }
   ScaleMultiErrors(graph, multiErrors);
 }
@@ -6552,11 +6558,13 @@ void PlotPainter::ScaleGraphAxis(TGraph2D* graph, int16_t axis, double_t scaleFa
     default:
       return;
   }
+  const double_t errorFactor = std::abs(scaleFactor);  // as for 1d graphs
   for (int32_t i{}; i < graph->GetN(); ++i) {
     values[i] *= scaleFactor;
-    if (errors) errors[i] *= scaleFactor;
-    if (errorsLow) errorsLow[i] *= scaleFactor;
-    if (errorsHigh) errorsHigh[i] *= scaleFactor;
+    if (errors) errors[i] *= errorFactor;
+    if (errorsLow) errorsLow[i] *= errorFactor;
+    if (errorsHigh) errorsHigh[i] *= errorFactor;
+    if (scaleFactor < 0. && errorsLow && errorsHigh) std::swap(errorsLow[i], errorsHigh[i]);
   }
 }
 
