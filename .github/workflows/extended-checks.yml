@@ -124,9 +124,9 @@ jobs:
       - name: Install dependencies
         run: ./.github/scripts/install-linux.sh
 
-      # the tests of the shell functions run in bash and in zsh
-      - name: Install zsh
-        run: sudo apt-get install -y --no-install-recommends zsh
+      # the tests of the shell functions run in bash and in zsh; the output tests take screenshots with ImageMagick
+      - name: Install zsh and ImageMagick
+        run: sudo apt-get install -y --no-install-recommends zsh imagemagick
 
       - name: Install ROOT
         uses: mamba-org/setup-micromamba@v3

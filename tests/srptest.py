@@ -16,6 +16,7 @@ import operator
 import os
 import pickle
 import pty
+import random
 import re
 import select
 import shutil
@@ -542,7 +543,7 @@ def colour_diff(expected, index, alpha=None, steps=1):
 # ---------------------------------------------------------------------------------------------
 def _close_all(name, ref, obs, rel):
     for i, (a, b) in enumerate(zip(ref, obs)):
-        if not close(a, b, rel) and not (math.isnan(a) and math.isnan(b)):
+        if a != b and not close(a, b, rel) and not (math.isnan(a) and math.isnan(b)):
             return f"{name}[{i}] {b:g}, expected {a:g}"
     return ""
 
@@ -1490,6 +1491,130 @@ def first_five(items):
 
 
 # ---------------------------------------------------------------------------------------------
+# files written by the output modes
+# ---------------------------------------------------------------------------------------------
+FILE_MODES = ("pdf", "eps", "ps", "svg", "png", "jpg", "html", "json", "xml", "root")  # one file per plot, named <plot>.<mode>
+BITMAP_MODES = ("png", "jpg")  # and gif: sized by bitmapscale
+
+
+def display(own=False):
+    """a graphical display for the programs the test starts: the caller's (DISPLAY), else a virtual one (Xvfb) for the rest of the test;
+    own: a virtual one in any case, of 3200 x 2400 pixels (a screenshot needs a known screen); False if there is none (the checks that need
+    one are left out)"""
+    if os.environ.get("DISPLAY") and not own:
+        return True
+    if not shutil.which("Xvfb"):
+        return False
+    import atexit
+
+    # a display number of its own, picked at random: with -displayfd two servers starting at the same moment can take the same number,
+    # and the one that has to move on writes its number a second time and ends
+    for _ in range(10):
+        number = random.randrange(100, 30000)
+        if os.path.exists(f"/tmp/.X{number}-lock") or os.path.exists(f"/tmp/.X11-unix/X{number}"):
+            continue
+        with open(os.path.join(WORK, "xvfb.log"), "a") as log:
+            server = subprocess.Popen(["Xvfb", f":{number}", "-screen", "0", "3200x2400x24", "-nolisten", "tcp"], stdout=log, stderr=log)
+        deadline = time.time() + 10
+        while server.poll() is None and not os.path.exists(f"/tmp/.X11-unix/X{number}") and time.time() < deadline:
+            time.sleep(0.1)
+        if server.poll() is None and os.path.exists(f"/tmp/.X11-unix/X{number}"):
+            os.environ["DISPLAY"] = f":{number}"
+            atexit.register(server.terminate)
+            return True
+        server.terminate()
+    return False
+
+
+def bitmap(path):
+    """the pixels of a png or jpg file (the first image of a gif) as an array of 0xAARRGGBB values, rows from the top; None if unreadable"""
+    image = ROOT.TImage.Open(path)
+    if not image or not image.IsValid():
+        return None
+    width, height = image.GetWidth(), image.GetHeight()
+    argb = image.GetArgbArray()
+    argb.reshape((width * height,))
+    pixels = np.frombuffer(argb, dtype=np.uint32, count=width * height).reshape(height, width).copy()
+    del image
+    return pixels
+
+
+def rgb(colour):
+    """a ROOT colour index as 0xRRGGBB"""
+    c = ROOT.gROOT.GetColor(colour)
+    return (round(255 * c.GetRed()) << 16) | (round(255 * c.GetGreen()) << 8) | round(255 * c.GetBlue())
+
+
+def gif_info(path):
+    """the structure of a gif file: {"size": (width, height) of the screen, "frames": [(width, height) of each image], "delays": [centiseconds
+    of each frame], "loops": None (played once), 0 (endless) or the number of repeats}; None if it is no gif"""
+    with open(path, "rb") as f:
+        data = f.read()
+    if data[:6] not in (b"GIF87a", b"GIF89a"):
+        return None
+    info = {"size": (int.from_bytes(data[6:8], "little"), int.from_bytes(data[8:10], "little")), "frames": [], "delays": [], "loops": None}
+    pos = 13 + (3 << ((data[10] & 7) + 1) if data[10] & 0x80 else 0)  # after the global colour table
+
+    def skip_blocks(pos):
+        while data[pos]:
+            pos += data[pos] + 1
+        return pos + 1
+
+    while pos < len(data) and data[pos] != 0x3B:
+        if data[pos] == 0x21:  # extension: graphic control (the delay) or application (the loop count of NETSCAPE2.0)
+            label, block = data[pos + 1], data[pos + 2 : pos + 3 + data[pos + 2]]
+            if label == 0xF9:
+                info["delays"].append(int.from_bytes(block[2:4], "little"))
+            elif label == 0xFF and block[1:12] == b"NETSCAPE2.0":
+                info["loops"] = int.from_bytes(data[pos + 16 : pos + 18], "little")
+            pos = skip_blocks(pos + 2)
+        elif data[pos] == 0x2C:  # an image: its descriptor, local colour table, LZW data
+            info["frames"].append((int.from_bytes(data[pos + 5 : pos + 7], "little"), int.from_bytes(data[pos + 7 : pos + 9], "little")))
+            flags = data[pos + 9]
+            pos += 10 + (3 << ((flags & 7) + 1) if flags & 0x80 else 0)
+            pos = skip_blocks(pos + 1)
+        else:
+            return None
+    return info
+
+
+def canvas_tree(pad, depth=0, reservation=True):
+    """the primitives of a canvas or pad and of its sub-pads in drawing order: (depth, class, name, drawing option); reservation False
+    leaves out a TExec define_colors that only reserves colour indices (added where ROOT reads the canvas back: modes file, root, xml)"""
+    found = []
+    link = pad.GetListOfPrimitives().FirstLink()
+    while link:
+        obj = link.GetObject()
+        onlyReservation = obj.ClassName() == "TExec" and obj.GetName() == "define_colors" and re.fullmatch(r"if \(!gROOT->GetColor\(\d+\)\) new TColor\(\d+, 1, 1, 1\);", obj.GetTitle())
+        if reservation or not onlyReservation:
+            found.append((depth, obj.ClassName(), obj.GetName(), str(link.GetOption())))
+        if obj.InheritsFrom("TPad"):
+            found += canvas_tree(obj, depth + 1, reservation)
+        link = link.Next()
+    return found
+
+
+def read_canvas(path):
+    """the canvas stored in a root, xml or json file (a key name may hold '/', which TFile::Get cannot read)"""
+    if path.endswith(".json"):
+        with open(path) as f:
+            # ROOT writes an infinite value as 2e308 (JSROOT reads it as infinity), which its own reader refuses: read as the largest double
+            text = re.sub(r"(?<![\w.])2e308\b", "1.7976931348623157e308", f.read())
+        try:
+            obj = ROOT.TBufferJSON.ConvertFromJSON(text)
+        except Exception:  # ROOT throws for json it cannot read
+            return None
+        return ROOT.BindObject(obj, "TCanvas") if obj else None
+    f = ROOT.TFile.Open(path)
+    keys = [key for key in f.GetListOfKeys() if key.GetClassName() == "TCanvas"] if f else []
+    _open_files.append(f)  # open while the canvas is used
+    return keys[0].ReadObj() if len(keys) == 1 else None
+
+
+_open_files = []
+
+
+# ---------------------------------------------------------------------------------------------
 # a project and its runs
 # ---------------------------------------------------------------------------------------------
 class Run:
@@ -1666,11 +1791,12 @@ def in_chunks(todo, compare, size=500):
         os.waitpid(pid, 0)
 
 
-def run_in_terminal(command, timeout):
+def run_in_terminal(command, timeout, env=None):
     """Runs a command with its output and errors going to one terminal (a pseudo-terminal): a program writes line by line into a terminal,
-    so the messages come in the order they were written (into a pipe, standard output is written in blocks, after the errors)."""
+    so the messages come in the order they were written (into a pipe, standard output is written in blocks, after the errors); env: its
+    environment (None: this process's)."""
     master, slave = pty.openpty()
-    proc = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=slave, stderr=slave, close_fds=True)
+    proc = subprocess.Popen(command, stdin=subprocess.DEVNULL, stdout=slave, stderr=slave, close_fds=True, env=env)
     os.close(slave)
     chunks, deadline = [], time.time() + timeout
     while True:
@@ -1772,7 +1898,8 @@ class Project:
         for variant in variants:
             self.source(source_of(variant), data_objects(variant))
 
-    def plot(self, group=".+", name=".+", mode="file", timeout=1800):
+    def plot(self, group=".+", name=".+", mode="file", timeout=1800, env=None):
+        """runs plot; env: variables changed for it (None as value: removed)"""
         if not self.saved:
             self.pm.SaveProject()
             self.srp("add", self.name, self.path("DefinePlots.py"), self.path("out"))
@@ -1781,7 +1908,8 @@ class Project:
                 sys.exit(f"cannot select project {self.name}: {selected.stdout}{selected.stderr}")
             self.saved = True
         shutil.rmtree(self.path("out"), ignore_errors=True)
-        proc = run_in_terminal([os.path.join(PREFIX, "bin", "plot"), group, name, mode], timeout)
+        environ = {k: v for k, v in dict(os.environ, **(env or {})).items() if v is not None}
+        proc = run_in_terminal([os.path.join(PREFIX, "bin", "plot"), group, name, mode], timeout, environ)
         self.nRuns += 1
         return Run(proc, self.path("out", "Plots.root"), self.path(f"run{self.nRuns}_Plots.root"))
 

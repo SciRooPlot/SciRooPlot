@@ -25,3 +25,5 @@ drawn objects back, and the PASS/FAIL bookkeeping. A test exits 0 if all checks 
 The data is created when a test runs, in `tests/work/` of the build directory; nothing is installed.
 The `cli` tests run `srp`, `plot` and the shell functions of `env.sh` of the build directory, in bash and in zsh where it is installed;
 their C++ projects need cmake and a compiler.
+The `output` tests that need a display (mode `macro`, screenshots of mode `show`) use the caller's `DISPLAY` or start Xvfb themselves;
+the macros are run with the `root` executable, the screenshots taken with ImageMagick's `import` (that part is left out without it).
