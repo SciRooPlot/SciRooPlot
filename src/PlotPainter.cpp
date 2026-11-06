@@ -970,10 +970,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           optional<vector<array<double_t, 3>>> graphPositivePoints;
           // the same for the x axis of 1d graphs, from the lower ends of the error bars (from the points where those are not positive)
           optional<double_t> graphPositiveMinimumX;
-          // the range of the points of a 2d graph in z, including their errors
+          // the range of the points of a 2d graph in z, including their errors, and the minimum and maximum stored with it (read here: drawing
+          // the frame below deletes the graph)
           std::pair<double_t, double_t> graphRangeZ{};
+          std::pair<double_t, double_t> graphStoredZ{-1111., -1111.};
           if constexpr (is_graph_2d<data_type>()) {
             if (data_ptr->GetN() > 0) graphRangeZ = {data_ptr->GetZminE(), data_ptr->GetZmaxE()};  // ROOT reads the first point of an empty graph
+            graphStoredZ = {data_ptr->GetMinimum(), data_ptr->GetMaximum()};
           }
           if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
             graphPositivePoints.emplace();
@@ -1645,9 +1648,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                 if (axis->GetMaxRange()) userMaxZ = axis->GetMaxRange();
               }
               // a minimum or maximum stored with the graph defining the frame is kept like a range set by the user
-              storedRangeZ = {data_ptr->GetMinimum() != -1111, data_ptr->GetMaximum() != -1111};
-              if (!userMinZ) min = (storedRangeZ.first) ? data_ptr->GetMinimum() : std::min(min, graphRangeZ.first);
-              if (!userMaxZ) max = (storedRangeZ.second) ? data_ptr->GetMaximum() : std::max(max, graphRangeZ.second);
+              storedRangeZ = {graphStoredZ.first != -1111, graphStoredZ.second != -1111};
+              if (!userMinZ) min = (storedRangeZ.first) ? graphStoredZ.first : std::min(min, graphRangeZ.first);
+              if (!userMaxZ) max = (storedRangeZ.second) ? graphStoredZ.second : std::max(max, graphRangeZ.second);
             }
             bool contentRange{};
             if (frameDim == 3) {
