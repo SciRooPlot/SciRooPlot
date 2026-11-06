@@ -2451,6 +2451,21 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
           // (the axis range is set for the computation only; nullopt if the range contains no bins)
           auto inRangeX = [&](const optional<double_t>& min, const optional<double_t>& max, const char* modifier, auto compute) -> optional<double_t> {
             if (!min && !max) return compute();
+            if constexpr (is_hist_2d<ptr_type>()) {
+              if (poly) {
+                // a TH2Poly ignores the ranges of its axes: the sum or largest content of the polygons reaching into the range
+                const bool maximum = (std::string_view(modifier) == "NormalizeToMaximum");
+                optional<double_t> result;
+                for (TObject* obj : *poly->GetBins()) {
+                  auto* polyBin = static_cast<TH2PolyBin*>(obj);
+                  if ((min && polyBin->GetXMax() <= *min) || (max && polyBin->GetXMin() >= *max)) continue;
+                  const double_t content = poly->GetBinContent(polyBin->GetBinNumber()) * ((!maximum && isDensity) ? polyBin->GetArea() : 1.);
+                  result = (maximum) ? std::max(result.value_or(content), content) : result.value_or(0.) + content;
+                }
+                if (!result) warn("The range of {} for {} contains no bins, ignoring.", modifier, ptr->GetName());
+                return result;
+              }
+            }
             TAxis* axis = ptr->GetXaxis();
             auto [first, last] = BinRange(axis, min, max);
             first = std::max(first, 1);
