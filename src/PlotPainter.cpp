@@ -2963,6 +2963,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
       }
 
       if (rawData) {
+        bool numeratorFailed{};  // a function numerator that could not be sampled (reported)
         if (data->GetType() == "ratio") {
           std::visit([&](auto* ptr) { dropStoredFunctions(ptr, "division"); }, *rawData);
           auto ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
@@ -3015,8 +3016,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
                     }
                     if (!std::isfinite(lo) || !std::isfinite(hi)) {
                       logger::error("Ratio {}: two formulas of the plot definition have no range to be divided in: set one with SetRangeX.", data->GetName());
+                      numeratorFailed = true;
                     } else if (lo >= hi) {
                       logger::error("Ratio {}: the ranges of the functions do not overlap.", data->GetName());
+                      numeratorFailed = true;
                     } else {
                       const int32_t npx = std::max((*func)->GetNpx(), 2);
                       for (int32_t i = 0; i < npx; ++i) {
@@ -3039,7 +3042,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const unordered_map<st
             }
           }
         }
-        std::visit(processData, *rawData);
+        if (numeratorFailed) {
+          fail = true;  // reported above: not again as an unsupported division
+        } else {
+          std::visit(processData, *rawData);
+        }
       } else {
         fail = true;
       }
