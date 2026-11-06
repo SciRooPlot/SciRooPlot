@@ -63,6 +63,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A request whose expression is a function body containing `;` (`Project1D("if (y > 0) return x; return -x;")`) got the part after the first `;` as the title of the next axis (the counts or the next variable lost), and one of 4 or more dimensions gave a ROOT error | The whole expression is the title of its axis | behaviour | Nothing. |
 | Weighted profiles of trees and tables (`Profile1D`, `Profile2D`, `Profile` with a weight) read in parallel had wrong errors when one thread had read only rows of weight 1 (ROOT merges the profiles of its threads wrongly then) | The errors of the profile filled with all rows | behaviour | Nothing. |
 | A graph with a point whose x is not finite (NaN, inf; not drawn, with a warning) also gave ROOT's error `Axis limits need to be finite numbers` | Only the warning | behaviour | Nothing. |
+| A table whose columns are aligned by several spaces in the header too (`x     y`) was refused without the hint to use one delimiter | With the hint | behaviour | Nothing. |
 
 ### Files
 

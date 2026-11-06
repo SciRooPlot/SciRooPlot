@@ -3227,15 +3227,17 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
       }
     }
     if (maxCount) {
+      auto nWords = [](const string& text) {
+        std::istringstream words(text);
+        return std::distance(std::istream_iterator<string>(words), std::istream_iterator<string>());
+      };
       for (const auto& [number, content] : lines) {
         const size_t n = split(content, guess).size();
         if (n == maxCount + 1) continue;
         string hint;
-        if (guess == ' ' || guess == '\t') {
-          std::istringstream words(content);
-          if (std::distance(std::istream_iterator<string>(words), std::istream_iterator<string>()) == static_cast<std::ptrdiff_t>(maxCount + 1)) {
-            hint = " (columns seem to be aligned with several spaces or tabs; use exactly one delimiter between the values)";
-          }
+        // as many words as the header, but other gaps between them (the header may be aligned too)
+        if ((guess == ' ' || guess == '\t') && nWords(content) == nWords(lines[0].second)) {
+          hint = " (columns seem to be aligned with several spaces or tabs; use exactly one delimiter between the values)";
         }
         logger::error("Cannot read table {}: {}{}.", inputFileName, describeMismatch(guess, maxCount + 1, number, n), hint);
         return;
