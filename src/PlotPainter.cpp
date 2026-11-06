@@ -5255,6 +5255,20 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       }
     }
   };
+  // the part of a band (pad coordinates) from (xa, lowA to highA) to (xb, lowB to highB), column by column: in each column from the lowest to
+  // the highest edge within it (at its two sides)
+  auto markBand = [&](double_t xa, double_t lowA, double_t highA, double_t xb, double_t lowB, double_t highB) {
+    const double_t ca = cellX(xa), cb = cellX(xb);
+    if (!std::isfinite(ca) || !std::isfinite(cb)) return;
+    const double_t c1 = std::max(std::min(ca, cb), 0.), c2 = std::min(std::max(ca, cb), static_cast<double_t>(nx));
+    auto at = [&](double_t c) { return std::clamp((cb == ca) ? 0. : (c - ca) / (cb - ca), 0., 1.); };
+    for (double_t c = std::floor(c1); c <= c2; c += 1.) {
+      const double_t ta = at(c), tb = at(c + 1.);
+      const double_t bottom = std::min(lowA + ta * (lowB - lowA), lowA + tb * (lowB - lowA));
+      const double_t top = std::max(highA + ta * (highB - highA), highA + tb * (highB - highA));
+      setRect(c, cellY(bottom), c, cellY(top), kObject);
+    }
+  };
   // a filled histogram or curve starts at 0, or at the frame edge if 0 is outside of the frame; on a log axis at the lower frame edge
   // (TGraphPainter::PaintGrapHist and Smooth)
   auto fillBaseY = [&]() { return (pad->GetLogy()) ? pad->GetUymin() : std::clamp(0., pad->GetUymin(), pad->GetUymax()); };
@@ -5302,8 +5316,18 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       }
       return;
     }
-    const bool hasErrors = option.Contains("E") || (!option.Contains("HIST") && HasErrors(hist));
-    const bool hasErrorArea = hasErrors && (option.Contains("E2") || option.Contains("E3") || option.Contains("E4") || option.Contains("E5") || option.Contains("E6"));
+    // an error option without any error to draw (all zero, as ROOT computes them: the square root of the content without Sumw2): ROOT
+    // draws the steps instead (or the markers)
+    auto anyError = [hist, axis]() {
+      for (int32_t bin = 1; bin <= axis->GetNbins(); ++bin) {
+        if (hist->GetBinError(bin) != 0.) return true;
+      }
+      return false;
+    };
+    const bool hasErrors = (option.Contains("E") || (!option.Contains("HIST") && HasErrors(hist))) && anyError();
+    const bool hasErrorBand = hasErrors && (option.Contains("E3") || option.Contains("E4") || option.Contains("E5") || option.Contains("E6"));  // through the bin centres
+    const bool hasErrorArea = hasErrorBand || (hasErrors && option.Contains("E2"));
+    const bool hasLine = !hasErrors && (option.Contains("L") || option.Contains("C"));  // a line or curve through the bin centres instead of steps
     const bool showEmpty = option.Contains("E0");
     const float_t markerSize = (option.Contains("P") || option.Contains("*") || (hasErrors && !hasErrorArea)) ? hist->GetMarkerSize() : 0.f;
     // the fill of a histogram drawn as steps, line or curve (THistPainter::PaintHist: a fill colour and style are needed):
@@ -5329,6 +5353,8 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
         }
       }
     }
+    // the last bin drawn, for lines and bands through the bin centres
+    int32_t previous = 0;
     for (int32_t bin = axis->GetFirst(); bin <= axis->GetLast(); ++bin) {  // only the visible range
       const double_t content = hist->GetBinContent(bin);
       if (hasErrors && !showEmpty && content == 0.) continue;  // not drawn by ROOT
@@ -5336,13 +5362,25 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       const double_t xUp = padX(axis->GetBinUpEdge(bin));
       const double_t xCenter = padX(axis->GetBinCenter(bin));
       const double_t y = padY(content);
-      markLine(xLow, y, xUp, y);
+      const double_t low = padY(content - hist->GetBinErrorLow(bin)), high = padY(content + hist->GetBinErrorUp(bin));
+      if (hasLine) {
+        if (previous) markLine(padX(axis->GetBinCenter(previous)), padY(hist->GetBinContent(previous)), xCenter, y);
+      } else {
+        markLine(xLow, y, xUp, y);
+      }
       markPoint(xCenter, y, markerSize);
-      if (hasErrorArea) {
-        setRect(cellX(xLow), cellY(padY(content - hist->GetBinErrorLow(bin))), cellX(xUp), cellY(padY(content + hist->GetBinErrorUp(bin))), kObject);
+      if (hasErrorBand && previous) {
+        const double_t before = hist->GetBinContent(previous);
+        markBand(padX(axis->GetBinCenter(previous)), padY(before - hist->GetBinErrorLow(previous)), padY(before + hist->GetBinErrorUp(previous)), xCenter, low, high);
+      }
+      previous = bin;
+      if (hasErrorBand) {
+        setRect(cellX(xCenter), cellY(low), cellX(xCenter), cellY(high), kObject);
+      } else if (hasErrorArea) {
+        setRect(cellX(xLow), cellY(low), cellX(xUp), cellY(high), kObject);
       } else if (hasErrors) {
-        markLine(xCenter, padY(content - hist->GetBinErrorLow(bin)), xCenter, padY(content + hist->GetBinErrorUp(bin)));
-      } else if (bin < axis->GetLast()) {
+        markLine(xCenter, low, xCenter, high);
+      } else if (!hasLine && bin < axis->GetLast()) {
         markLine(xUp, y, xUp, padY(hist->GetBinContent(bin + 1)));  // step to the next bin
       }
     }
@@ -5358,6 +5396,23 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     const bool hasLine = option.Contains("l") || option.Contains("c") || option.Strip(TString::kBoth).IsNull();
     const float_t markerSize = (option.Contains("p") || option.Contains("*")) ? graph->GetMarkerSize() : 0.f;
     const int32_t n = graph->GetN();
+    // the errors of point i (a graph without errors gives -1)
+    auto errorXlow = [graph](int32_t i) { return std::max(graph->GetErrorXlow(i), 0.); };
+    auto errorXhigh = [graph](int32_t i) { return std::max(graph->GetErrorXhigh(i), 0.); };
+    // of a graph with several sets of y errors the largest (each set is drawn)
+    auto* multi = dynamic_cast<TGraphMultiErrors*>(graph);
+    auto errorYlow = [graph, multi](int32_t i) {
+      double_t error = std::max(graph->GetErrorYlow(i), 0.);
+      for (int32_t set = 0; multi && set < multi->GetNYErrors(); ++set)
+        error = std::max(error, multi->GetErrorYlow(i, set));
+      return error;
+    };
+    auto errorYhigh = [graph, multi](int32_t i) {
+      double_t error = std::max(graph->GetErrorYhigh(i), 0.);
+      for (int32_t set = 0; multi && set < multi->GetNYErrors(); ++set)
+        error = std::max(error, multi->GetErrorYhigh(i, set));
+      return error;
+    };
     if (n > 0 && option.Contains("b")) {
       // bar chart (TGraphPainter::PaintGraph): boxes of a fraction of the mean point distance around each point, from the base of a fill
       const auto [xMin, xMax] = std::minmax_element(graph->GetX(), graph->GetX() + n);
@@ -5380,8 +5435,8 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       const double_t x = padX(xUser), y = padY(yUser);
       markPoint(x, y, markerSize);
       if (hasLine && i > 0) markLine(padX(graph->GetPointX(i - 1)), padY(graph->GetPointY(i - 1)), x, y);
-      const double_t exLow = graph->GetErrorXlow(i), exHigh = graph->GetErrorXhigh(i);
-      const double_t eyLow = graph->GetErrorYlow(i), eyHigh = graph->GetErrorYhigh(i);
+      const double_t exLow = errorXlow(i), exHigh = errorXhigh(i);
+      const double_t eyLow = errorYlow(i), eyHigh = errorYhigh(i);
       if (hasErrorBoxes) {
         setRect(cellX(padX(xUser - exLow)), cellY(padY(yUser - eyLow)), cellX(padX(xUser + exHigh)), cellY(padY(yUser + eyHigh)), kObject);
         continue;
@@ -5389,16 +5444,9 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       if (exLow > 0. || exHigh > 0.) markLine(padX(xUser - exLow), y, padX(xUser + exHigh), y);
       if (eyLow > 0. || eyHigh > 0.) markLine(x, padY(yUser - eyLow), x, padY(yUser + eyHigh));
       if (hasErrorBand && i > 0) {
-        // area between the lower and upper edges of the band from the previous point to this one (column by column)
-        const double_t xPrev = padX(graph->GetPointX(i - 1));
-        const double_t lowPrev = padY(graph->GetPointY(i - 1) - graph->GetErrorYlow(i - 1)), highPrev = padY(graph->GetPointY(i - 1) + graph->GetErrorYhigh(i - 1));
-        const double_t low = padY(yUser - eyLow), high = padY(yUser + eyHigh);
-        const double_t c1 = std::max(std::min(cellX(xPrev), cellX(x)), 0.), c2 = std::min(std::max(cellX(xPrev), cellX(x)), static_cast<double_t>(nx));
-        for (double_t c = std::floor(c1); c <= c2; c += 1.) {
-          const double_t t = (cellX(x) == cellX(xPrev)) ? 0. : (c - cellX(xPrev)) / (cellX(x) - cellX(xPrev));
-          if (t < 0. || t > 1.) continue;
-          setRect(c, cellY(lowPrev + t * (low - lowPrev)), c, cellY(highPrev + t * (high - highPrev)), kObject);
-        }
+        // the band from the previous point to this one
+        const double_t yPrev = graph->GetPointY(i - 1);
+        markBand(padX(graph->GetPointX(i - 1)), padY(yPrev - errorYlow(i - 1)), padY(yPrev + errorYhigh(i - 1)), x, padY(yUser - eyLow), padY(yUser + eyHigh));
       }
     }
   };
@@ -5407,14 +5455,23 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     double_t xMin{}, xMax{};
     func->GetRange(xMin, xMax);
     const int32_t nPoints = std::max(func->GetNpx(), 2);
+    // with a fill colour and style ROOT fills the curve down to the base of a fill (as a histogram drawn as curve)
+    const bool isFilled = func->GetFillColor() != 0 && func->GetFillStyle() != 0;
+    vector<std::pair<double_t, double_t>> polygon;
     double_t xPrev{}, yPrev{};
     for (int32_t i = 0; i < nPoints; ++i) {
       const double_t xUser = xMin + (xMax - xMin) * i / (nPoints - 1);
       const double_t x = padX(xUser);
       const double_t y = padY(func->Eval(xUser));
       if (i > 0) markLine(xPrev, yPrev, x, y);
+      if (isFilled) polygon.emplace_back(x, y);
       xPrev = x;
       yPrev = y;
+    }
+    if (isFilled) {
+      polygon.emplace_back(padX(xMax), fillBaseY());
+      polygon.emplace_back(padX(xMin), fillBaseY());
+      markPolygon(polygon);
     }
   };
 
