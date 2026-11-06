@@ -19,6 +19,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| A TH2Poly that gives the frame lost its log z scale ("the data has no positive values") when a pad range widened its frame and few of its bins were filled | Log z is kept when any of its bins has a positive content | behaviour | Nothing. |
 | The z range of a TGraph2D that gives the frame was read from the deleted graph: a pad range widening its frame gave a random z range (5.5 to 5.73 for values 1 to 57) | The z range of its points, or the range stored with it | behaviour | Nothing. |
 | A pad range on `'X'` inside the points of a graph that gives the frame kept the y range of all its points (ROOT's `TGraph::GetHistogram`): points far below the range outside of it left empty decades on log y | The y range comes from the points drawn into the range (their x error bars reaching into it), as for histograms and functions | behaviour | Nothing. |
 | A pad range inside a function, a 2d graph or a TH2Poly that gives the frame (the first data of a pad) ended at the edges of its internal bins: the sampling of the function, the interpolation grid of the graph, the search grid of the polygons (`['X'].SetRange(2.3, 7.7)` gave a frame from 2.296 to 7.705) | The frame ends at the range, as for graphs | behaviour | Nothing. |

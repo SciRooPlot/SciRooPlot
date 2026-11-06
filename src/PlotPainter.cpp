@@ -978,6 +978,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             if (data_ptr->GetN() > 0) graphRangeZ = {data_ptr->GetZminE(), data_ptr->GetZmaxE()};  // ROOT reads the first point of an empty graph
             graphStoredZ = {data_ptr->GetMinimum(), data_ptr->GetMaximum()};
           }
+          // the bins of a TH2Poly with a positive content (x and y ranges, content), needed for a log scale as well (read here: a pad range
+          // widening its frame makes that a histogram of its search grid)
+          optional<vector<array<double_t, 5>>> polyPositiveBins;
+          if constexpr (is_hist_2d<data_type>()) {
+            if (auto* poly = dynamic_cast<TH2Poly*>(data_ptr)) {
+              polyPositiveBins.emplace();
+              for (TObject* obj : *poly->GetBins()) {
+                auto* bin = static_cast<TH2PolyBin*>(obj);  // (its getters are not const)
+                if (bin->GetContent() > 0.) polyPositiveBins->push_back({bin->GetXMin(), bin->GetXMax(), bin->GetYMin(), bin->GetYMax(), bin->GetContent()});
+              }
+            }
+          }
           if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
             graphPositivePoints.emplace();
             if constexpr (is_graph_1d<data_type>()) graphPositiveMinimumX = std::numeric_limits<double_t>::infinity();
@@ -1467,10 +1479,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                     const bool shown = (frameDim == 1) ? inRange(xAxis, a, b) : inRange(xAxis, a, a) && inRange(yAxis, b, b);
                     if (shown) positiveMinimum = std::min(positiveMinimum, value);
                   }
-                } else if (axisHist_ptr->InheritsFrom(TH2Poly::Class())) {
-                  for (int32_t bin = 1; bin <= static_cast<TH2Poly*>(axisHist_ptr)->GetNumberOfBins(); ++bin) {
-                    const double_t content = axisHist_ptr->GetBinContent(bin);
-                    if (content > 0.) positiveMinimum = std::min(positiveMinimum, content);
+                } else if (polyPositiveBins) {
+                  // the polygons reaching into the x and y ranges of the frame
+                  const auto [firstX, lastX] = binRange(xAxis);
+                  const auto [firstY, lastY] = binRange(yAxis);
+                  for (const auto& [x0, x1, y0, y1, content] : *polyPositiveBins) {
+                    const bool shownX = x1 >= xAxis->GetBinLowEdge(firstX) && x0 <= xAxis->GetBinUpEdge(lastX);
+                    if (shownX && y1 >= yAxis->GetBinLowEdge(firstY) && y0 <= yAxis->GetBinUpEdge(lastY)) positiveMinimum = std::min(positiveMinimum, content);
                   }
                 } else {
                   const auto [firstX, lastX] = binRange(xAxis);
