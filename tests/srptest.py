@@ -113,7 +113,7 @@ def describe(case):
 # data of every kind
 # ---------------------------------------------------------------------------------------------
 # Every kind of data SciRooPlot draws, by kind: (dimension of the drawn data, class, properties). The data covers 1 to 10 on every axis
-# with positive values (usable on log axes): about 1 to 10 for 1d data, products of those for 2d and 3d data, about 0.1 to 0.8 for
+# (-4 to 5 in the variant crossing) with positive values (usable on log axes): about 1 to 10 for 1d data, products of those for 2d and 3d data, about 0.1 to 0.8 for
 # efficiencies. Properties: binned (a histogram: the frame shows whole bins), polar (drawn in a polar grid, no cartesian frame), formula
 # (a function of the plot definition, no input object), cpp (a function of compiled C++ code: stored as values sampled over its range),
 # projected (an n-dimensional histogram, drawn as its projection onto the first axis, or the first two), polygons (bins that are
@@ -165,16 +165,21 @@ FORMULAS = {"function": "1 + (x - 1) * (1 - 0.3 * ((x - 5.5) / 4.5)^2)"}
 # Variants of the data of every kind, for robustness: values crossing zero (negative), one NaN or infinite value (nan, inf), all values
 # zero (zeros), no entries or points at all (empty), a single filled bin or point (single), values near the largest float (huge),
 # graph points in shuffled order (unsorted), histograms with large underflow and overflow contents (overflow), functions sampled with
-# few or many points (coarse, fine). A TEfficiency counts events: it has no negative, NaN, infinite, huge or overflow variant.
-VARIANTS = ("normal", "negative", "nan", "inf", "zeros", "empty", "single", "huge", "unsorted", "overflow", "coarse", "fine")
-COUNTS_VARIANTS = ("normal", "zeros", "empty", "single")
-FUNCTION_VARIANTS = ("normal", "negative", "zeros", "coarse", "fine")
+# few or many points (coarse, fine), coordinates from -4 to 5 on every axis with the values of normal (crossing: bins and points at and
+# below zero, for log axes). A TEfficiency counts events: it has no negative, NaN, infinite, huge or overflow variant. Polar graphs have
+# no crossing variant (their coordinates are angles).
+VARIANTS = ("normal", "negative", "nan", "inf", "zeros", "empty", "single", "huge", "unsorted", "overflow", "coarse", "fine", "crossing")
+COUNTS_VARIANTS = ("normal", "zeros", "empty", "single", "crossing")
+FUNCTION_VARIANTS = ("normal", "negative", "zeros", "coarse", "fine", "crossing")
+CROSSING_SHIFT = -5.0  # the shift of every coordinate in the variant crossing
 NPX = {"normal": 100, "coarse": 5, "fine": 10000}  # points of a function per axis, at most NPX_MAX in 2d and 3d (memory of the stored samples)
 NPX_MAX = {1: 10000, 2: 200, 3: 20}
 
 
 def has_variant(kind, variant):
     _, cls, props = DATA_KINDS[kind]
+    if variant == "crossing" and "polar" in props:
+        return False
     if cls == "TEfficiency":
         return variant in COUNTS_VARIANTS
     if cls.startswith("TF"):
@@ -196,7 +201,15 @@ def formula(kind, variant="normal"):
     """the formula of a function kind in a variant"""
     dim = DATA_KINDS[kind][0]
     base = {1: FORMULAS["function"], 2: "x * y", 3: "x * y * z"}[dim]
+    if variant == "crossing":
+        return re.sub(r"\b([xyz])\b", rf"(\1 + {-CROSSING_SHIFT:g})", base)
     return {"negative": f"({base}) - {5**dim}", "zeros": f"0 * {' * '.join('xyz'[:dim])}"}.get(variant, base)
+
+
+def axis_range(variant="normal"):
+    """the range the data of a variant covers on every axis"""
+    shift = CROSSING_SHIFT if variant == "crossing" else 0.0
+    return (1.0 + shift, 10.0 + shift)
 
 
 def _declare():
@@ -204,19 +217,19 @@ def _declare():
     if hasattr(ROOT, "srptest_poly"):
         return
     code = """
-    TH2Poly* srptest_poly() {
-      auto* h = new TH2Poly("hist2poly", "", 1., 10., 1., 10.);
+    TH2Poly* srptest_poly(double shift) {
+      auto* h = new TH2Poly("hist2poly", "", 1. + shift, 10. + shift, 1. + shift, 10. + shift);
       for (int i = 0; i < 9; ++i)
-        for (int j = 0; j < 9; ++j) h->AddBin(1. + i, 1. + j, 2. + i, 2. + j);
+        for (int j = 0; j < 9; ++j) h->AddBin(1. + shift + i, 1. + shift + j, 2. + shift + i, 2. + shift + j);
       return h;
     }
     double srptest_value(double x) { return 1. + (x - 1.) * (1. - 0.3 * std::pow((x - 5.5) / 4.5, 2)); }
     """
-    for variant, shift, scale in (("normal", 0, 1), ("negative", 1, 1), ("zeros", 0, 0)):
+    for variant, shift, scale, d in (("normal", 0, 1, 0), ("negative", 1, 1, 0), ("zeros", 0, 0, 0), ("crossing", 0, 1, -CROSSING_SHIFT)):
         code += f"""
-    double srptest_f1_{variant}(double* x, double*) {{ return {scale} * (srptest_value(x[0]) - {shift} * 5.); }}
-    double srptest_f2_{variant}(double* x, double*) {{ return {scale} * (x[0] * x[1] - {shift} * 25.); }}
-    double srptest_f3_{variant}(double* x, double*) {{ return {scale} * (x[0] * x[1] * x[2] - {shift} * 125.); }}"""
+    double srptest_f1_{variant}(double* x, double*) {{ return {scale} * (srptest_value(x[0] + {d}) - {shift} * 5.); }}
+    double srptest_f2_{variant}(double* x, double*) {{ return {scale} * ((x[0] + {d}) * (x[1] + {d}) - {shift} * 25.); }}
+    double srptest_f3_{variant}(double* x, double*) {{ return {scale} * ((x[0] + {d}) * (x[1] + {d}) * (x[2] + {d}) - {shift} * 125.); }}"""
     ROOT.gInterpreter.Declare(code)
 
 
@@ -231,12 +244,14 @@ def data_objects(variant="normal"):
     """one object of every data kind that has the variant (see VARIANTS), by kind; the formula kinds need none"""
     _declare()
     special = 3  # the item of every object that gets the NaN or infinite value, or stays filled in the single variant
+    d = CROSSING_SHIFT if variant == "crossing" else 0.0  # the shift of every coordinate
+    lo, hi = axis_range(variant)
 
     def value(index, *coords):
         """the value of item index (in fill order) at coords"""
         v = 1e35 if variant == "huge" else 1.0  # ROOT finds minima and maxima of histograms only below the largest float (3.4e38)
         for c in coords:
-            v *= _value(c)
+            v *= _value(c - d)
         if variant == "negative":
             v -= 5.0 ** len(coords)
         elif variant == "zeros":
@@ -255,12 +270,12 @@ def data_objects(variant="normal"):
 
     outside = 1e6 if variant == "overflow" else 0.0  # content of the underflow and overflow bins
 
-    h = ROOT.TH1D("hist", "", 18, 1.0, 10.0)
-    hn = ROOT.TH1D("hist_noerrors", "", 18, 1.0, 10.0)
-    hc = ROOT.TH1D("hist_counts", "", 18, 1.0, 10.0)
-    edges = ROOT.std.vector("double")([1.0, 1.2, 1.5, 2.0, 2.7, 3.5, 4.5, 6.0, 7.5, 9.0, 10.0])
+    h = ROOT.TH1D("hist", "", 18, lo, hi)
+    hn = ROOT.TH1D("hist_noerrors", "", 18, lo, hi)
+    hc = ROOT.TH1D("hist_counts", "", 18, lo, hi)
+    edges = ROOT.std.vector("double")([e + d for e in (1.0, 1.2, 1.5, 2.0, 2.7, 3.5, 4.5, 6.0, 7.5, 9.0, 10.0)])
     hv = ROOT.TH1D("hist_var", "", edges.size() - 1, edges.data())
-    p = ROOT.TProfile("profile", "", 18, 1.0, 10.0)
+    p = ROOT.TProfile("profile", "", 18, lo, hi)
     for hist in (h, hv):
         for b in range(1, hist.GetNbinsX() + 1):
             if keep(b - 1):
@@ -285,24 +300,24 @@ def data_objects(variant="normal"):
         p.Fill(0.0, outside)
         p.Fill(11.0, outside)
     nBins = np.array([18, 3, 3], dtype=np.int32)
-    low, high = np.array([1.0, 0.0, 0.0]), np.array([10.0, 3.0, 3.0])
+    low, high = np.array([lo, 0.0, 0.0]), np.array([hi, 3.0, 3.0])
     thn = ROOT.THnD("thn", "", 2, nBins[:2], low[:2], high[:2])
     sparse = ROOT.THnSparseD("thn_sparse", "", 2, nBins[:2], low[:2], high[:2])
-    sparse2 = ROOT.THnSparseD("thn_sparse2d", "", 3, np.array([18, 18, 3], dtype=np.int32), np.array([1.0, 1.0, 0.0]), np.array([10.0, 10.0, 3.0]))
+    sparse2 = ROOT.THnSparseD("thn_sparse2d", "", 3, np.array([18, 18, 3], dtype=np.int32), np.array([lo, lo, 0.0]), np.array([hi, hi, 3.0]))
     for b in range(18):
-        x = 1.25 + 0.5 * b
+        x = lo + 0.25 + 0.5 * b
         for nd in (thn, sparse):
             if keep(b):
                 nd.Fill(np.array([x, 1.5]), value(b, x))
         for c in range(18):
-            y = 1.25 + 0.5 * c
+            y = lo + 0.25 + 0.5 * c
             if keep(18 * b + c):
                 sparse2.Fill(np.array([x, y, 1.5]), value(18 * b + c, x, y))
     if outside:
         for nd, coords in ((thn, ([0.0, 1.5], [11.0, 1.5])), (sparse, ([0.0, 1.5], [11.0, 1.5])), (sparse2, ([0.0, 5.0, 1.5], [11.0, 5.0, 1.5]))):
             for c in coords:
                 nd.Fill(np.array(c), outside)
-    xs = [1.0 + 0.5 * i for i in range(19)]
+    xs = [lo + 0.5 * i for i in range(19)]
     kept = order([(i, x) for i, x in enumerate(xs) if keep(i)])
     g, ge, ga, gp = (sized(cls, len(kept)) for cls in (ROOT.TGraph, ROOT.TGraphErrors, ROOT.TGraphAsymmErrors, ROOT.TGraphPolar))
     gm = ROOT.TGraphMultiErrors("graph_multi", "", len(kept), 2)
@@ -316,14 +331,14 @@ def data_objects(variant="normal"):
         gm.SetPointEY(n, 0, abs(0.05 * y), abs(0.05 * y))
         gm.SetPointEY(n, 1, abs(0.1 * y), abs(0.1 * y))
         gp.SetPoint(n, 2 * ROOT.TMath.Pi() * i / len(xs), y)
-    total = ROOT.TH1D("total", "", 18, 1.0, 10.0)
-    passed = ROOT.TH1D("passed", "", 18, 1.0, 10.0)
-    total2 = ROOT.TH2D("total2", "", 9, 1.0, 10.0, 9, 1.0, 10.0)
-    passed2 = ROOT.TH2D("passed2", "", 9, 1.0, 10.0, 9, 1.0, 10.0)
+    total = ROOT.TH1D("total", "", 18, lo, hi)
+    passed = ROOT.TH1D("passed", "", 18, lo, hi)
+    total2 = ROOT.TH2D("total2", "", 9, lo, hi, 9, lo, hi)
+    passed2 = ROOT.TH2D("passed2", "", 9, lo, hi, 9, lo, hi)
     for b in range(1, 19):
         if keep(b - 1):
             total.SetBinContent(b, 100)
-            passed.SetBinContent(b, 0 if variant == "zeros" else round(8 * _value(total.GetBinCenter(b))))
+            passed.SetBinContent(b, 0 if variant == "zeros" else round(8 * _value(total.GetBinCenter(b) - d)))
     for i in range(1, 10):
         for j in range(1, 10):
             if keep(9 * (i - 1) + j - 1):
@@ -331,8 +346,8 @@ def data_objects(variant="normal"):
                 passed2.SetBinContent(i, j, 0 if variant == "zeros" else round(4 * (_value(i + 0.5) + _value(j + 0.5))))
     eff = ROOT.TEfficiency(passed, total)
     eff2 = ROOT.TEfficiency(passed2, total2)
-    h2 = ROOT.TH2D("hist2d", "", 18, 1.0, 10.0, 18, 1.0, 10.0)
-    p2 = ROOT.TProfile2D("profile2d", "", 18, 1.0, 10.0, 18, 1.0, 10.0)
+    h2 = ROOT.TH2D("hist2d", "", 18, lo, hi, 18, lo, hi)
+    p2 = ROOT.TProfile2D("profile2d", "", 18, lo, hi, 18, lo, hi)
     for i in range(1, 19):
         for j in range(1, 19):
             index = 18 * (i - 1) + j - 1
@@ -342,20 +357,21 @@ def data_objects(variant="normal"):
                 p2.Fill(x, y, 0.9 * value(index, x, y))
                 p2.Fill(x, y, 1.1 * value(index, x, y))
     h2.SetEntries(sum(keep(n) for n in range(18 * 18)))
-    poly = ROOT.srptest_poly()
+    poly = ROOT.srptest_poly(d)
     for i in range(9):
         for j in range(9):
             if keep(9 * i + j):
-                poly.SetBinContent(1 + 9 * i + j, value(9 * i + j, 1.5 + i, 1.5 + j))
-    h3 = ROOT.TH3D("hist3d", "", 9, 1.0, 10.0, 9, 1.0, 10.0, 9, 1.0, 10.0)
-    p3 = ROOT.TProfile3D("profile3d", "", 9, 1.0, 10.0, 9, 1.0, 10.0, 9, 1.0, 10.0)
+                poly.SetBinContent(1 + 9 * i + j, value(9 * i + j, lo + 0.5 + i, lo + 0.5 + j))
+    h3 = ROOT.TH3D("hist3d", "", 9, lo, hi, 9, lo, hi, 9, lo, hi)
+    p3 = ROOT.TProfile3D("profile3d", "", 9, lo, hi, 9, lo, hi, 9, lo, hi)
     for i in range(1, 10):
         for j in range(1, 10):
             for k in range(1, 10):
                 index = 81 * (i - 1) + 9 * (j - 1) + k - 1
+                x, y, z = (lo - 0.5 + n for n in (i, j, k))
                 if keep(index):
-                    h3.SetBinContent(i, j, k, value(index, i + 0.5, j + 0.5, k + 0.5))
-                    p3.Fill(i + 0.5, j + 0.5, k + 0.5, value(index, i + 0.5, j + 0.5, k + 0.5))
+                    h3.SetBinContent(i, j, k, value(index, x, y, z))
+                    p3.Fill(x, y, z, value(index, x, y, z))
     h3.SetEntries(sum(keep(n) for n in range(9**3)))
     if outside:
         for hist in (h2, p2, poly):
@@ -364,7 +380,7 @@ def data_objects(variant="normal"):
         for hist in (h3, p3):
             hist.Fill(0.0, 5.0, 5.0, outside)
             hist.Fill(11.0, 5.0, 5.0, outside)
-    points = order([(n, 1.0 + (n % 10), 1.0 + (n // 10)) for n in range(100) if keep(n)])
+    points = order([(n, lo + (n % 10), lo + (n // 10)) for n in range(100) if keep(n)])
     g2, g2e = sized(ROOT.TGraph2D, len(points)), sized(ROOT.TGraph2DErrors, len(points))
     for m, (n, x, y) in enumerate(points):
         for graph in (g2, g2e):
@@ -377,14 +393,14 @@ def data_objects(variant="normal"):
     objects.update({"efficiency2d": eff2, "thn_sparse2d": sparse2, "graph2d": g2, "graph2d_errors": g2e, "hist3d": h3, "profile3d": p3})
     if variant in FUNCTION_VARIANTS:
         npx = NPX.get(variant, NPX["normal"])
-        cpp = variant if variant in ("negative", "zeros") else "normal"
+        cpp = variant if variant in ("negative", "zeros", "crossing") else "normal"
         functions = {
-            "tf1": ROOT.TF1("tf1", formula("tf1", variant), 1.0, 10.0),
-            "tf2": ROOT.TF2("tf2", formula("tf2", variant), 1.0, 10.0, 1.0, 10.0),
-            "tf3": ROOT.TF3("tf3", formula("tf3", variant), 1.0, 10.0, 1.0, 10.0, 1.0, 10.0),
-            "tf1_cpp": ROOT.TF1("tf1_cpp", getattr(ROOT, f"srptest_f1_{cpp}"), 1.0, 10.0, 0),
-            "tf2_cpp": ROOT.TF2("tf2_cpp", getattr(ROOT, f"srptest_f2_{cpp}"), 1.0, 10.0, 1.0, 10.0, 0),
-            "tf3_cpp": ROOT.TF3("tf3_cpp", getattr(ROOT, f"srptest_f3_{cpp}"), 1.0, 10.0, 1.0, 10.0, 1.0, 10.0, 0),
+            "tf1": ROOT.TF1("tf1", formula("tf1", variant), lo, hi),
+            "tf2": ROOT.TF2("tf2", formula("tf2", variant), lo, hi, lo, hi),
+            "tf3": ROOT.TF3("tf3", formula("tf3", variant), lo, hi, lo, hi, lo, hi),
+            "tf1_cpp": ROOT.TF1("tf1_cpp", getattr(ROOT, f"srptest_f1_{cpp}"), lo, hi, 0),
+            "tf2_cpp": ROOT.TF2("tf2_cpp", getattr(ROOT, f"srptest_f2_{cpp}"), lo, hi, lo, hi, 0),
+            "tf3_cpp": ROOT.TF3("tf3_cpp", getattr(ROOT, f"srptest_f3_{cpp}"), lo, hi, lo, hi, lo, hi, 0),
         }
         for name, func in functions.items():
             dim = DATA_KINDS[name][0]
@@ -413,9 +429,9 @@ def write_objects(path, objects):
 def add_data(pad, kind, source="inputs", variant="normal"):
     """adds data of a kind (see data_objects) to a pad and returns it; source names the data source holding the variant"""
     if kind == "function":
-        return pad.AddFunction(formula(kind, variant)).SetRangeX(1.0, 10.0)
+        return pad.AddFunction(formula(kind, variant)).SetRangeX(*axis_range(variant))
     if kind == "function2d":
-        return pad.AddFunction(formula(kind, variant)).SetRangeX(1.0, 10.0).SetRangeY(1.0, 10.0)
+        return pad.AddFunction(formula(kind, variant)).SetRangeX(*axis_range(variant)).SetRangeY(*axis_range(variant))
     data = pad.AddData(kind, source)
     if "projected" in DATA_KINDS[kind][2]:
         data.Project([0] if DATA_KINDS[kind][0] == 1 else [0, 1])
