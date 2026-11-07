@@ -146,7 +146,26 @@ for i, case in enumerate(todo):
     if case["log"]:
         pad["Y"].SetLog()
     p.pm.AddPlot(plot)
+# room left by the drawing as ROOT draws it: markers only (P, or E P without errors) draw no steps and no fill, although the histogram
+# has a fill colour and style; its contents alternate between the bottom and the top of the frame, so steps would block every column
+room = ROOT.TH1D("room", "", 20, 0.0, 20.0)
+room.Sumw2()
+for b in range(1, 21):
+    room.SetBinContent(b, 1.0 if b % 2 else 9.5)
+    room.SetBinError(b, 0.0)
+p.source("room", {"room": room})
+ROOM = {"markers": "P", "error_markers": "E P"}
+for name, option in ROOM.items():
+    plot = S.Plot(f"room_{name}", "boxes", "1d")
+    plot[1].AddData("room", "room").SetDrawOption(option).SetFill(1001, S.kOrange + 7).SetMarkerSize(0.6)
+    plot[1]["Y"].SetRange(0.0, 10.0)
+    plot[1].AddLegend()
+    plot[1].AddText(["text", "with two lines"])
+    p.pm.AddPlot(plot)
 run = p.plot("boxes")
+for name, option in ROOM.items():
+    warned = [line for line in run.messages(f"room_{name}", "boxes") if any(text in line for text in NO_SPACE)]
+    check(f"markers only ({option}) leave room between them: no warning of too little space [mark only what root draws]", run.pad(f"room_{name}", "boxes") is not None and not warned, " | ".join(warned))
 
 
 def rect(obj):

@@ -5564,11 +5564,14 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     const bool hasErrorBand = hasErrors && (option.Contains("E3") || option.Contains("E4") || option.Contains("E5") || option.Contains("E6"));  // through the bin centres
     const bool hasErrorArea = hasErrorBand || (hasErrors && option.Contains("E2"));
     const bool hasLine = !hasErrors && (option.Contains("L") || option.Contains("C"));  // a line or curve through the bin centres instead of steps
+    const bool hasMarkers = option.Contains("P") || option.Contains("*");
+    // steps without markers, line or curve: markers (P, also with HIST, or E P without errors) are drawn alone, as in the legend rows
+    const bool hasSteps = !hasErrors && !hasLine && !hasMarkers;
     const bool showEmpty = option.Contains("E0");
-    const float_t markerSize = (option.Contains("P") || option.Contains("*") || (hasErrors && !hasErrorArea)) ? hist->GetMarkerSize() : 0.f;
+    const float_t markerSize = (hasMarkers || (hasErrors && !hasErrorArea)) ? hist->GetMarkerSize() : 0.f;
     // the fill of a histogram drawn as steps, line or curve (THistPainter::PaintHist: a fill colour and style are needed):
     // steps are filled per bin, a line with option F2 down to the lower frame edge, a smoothed curve down to the base of the fill
-    if (!hasErrors && hist->GetFillColor() != 0 && hist->GetFillStyle() != 0) {
+    if ((hasSteps || hasLine) && hist->GetFillColor() != 0 && hist->GetFillStyle() != 0) {
       const bool isCurve = option.Contains("C");
       const bool isLineArea = option.Contains("F2");
       if (isCurve || isLineArea) {
@@ -5601,8 +5604,8 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       const double_t low = padY(content - hist->GetBinErrorLow(bin)), high = padY(content + hist->GetBinErrorUp(bin));
       if (hasLine) {
         if (previous) markLine(padX(axis->GetBinCenter(previous)), padY(hist->GetBinContent(previous)), xCenter, y);
-      } else {
-        markLine(xLow, y, xUp, y);
+      } else if (hasSteps || hasErrors) {
+        markLine(xLow, y, xUp, y);  // the step, or the error bar in x
       }
       markPoint(xCenter, y, markerSize);
       if (hasErrorBand && previous) {
@@ -5616,7 +5619,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
         setRect(cellX(xLow), cellY(low), cellX(xUp), cellY(high), kObject);
       } else if (hasErrors) {
         markLine(xCenter, low, xCenter, high);
-      } else if (!hasLine && bin < axis->GetLast()) {
+      } else if (hasSteps && bin < axis->GetLast()) {
         markLine(xUp, y, xUp, padY(hist->GetBinContent(bin + 1)));  // step to the next bin
       }
     }
