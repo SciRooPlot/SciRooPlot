@@ -82,6 +82,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 |---|---|---|---|
 | `srp clean` forgot a C++ project whose build folder was deleted (`rm -rf build`), although its sources were still there | It keeps a project while the folder above the program's folder holds a `CMakeLists.txt` (the layout of `srp init-cpp`) | CLI | Nothing. |
 | `srp add <project> <folder>` and `srp set <project> program <folder>` accepted a folder as program (`plot` then warned that the program does not exist) | Refused with an error, nothing stored (a program file that does not exist yet stays allowed) | CLI | Give the program file. |
+| `SCIROOPLOT_CONFIG_PATH` with a `~` the shell did not expand (`SCIROOPLOT_CONFIG_PATH='~/cfg'`) was refused ("must not be relative"), the tab completion did not find its projects | A leading `~` is the home folder, as in program and output paths | CLI | Nothing. |
 
 ## 3.3.3 → 4.0.0
 

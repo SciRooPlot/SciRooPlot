@@ -1,7 +1,8 @@
 """Every srp command on a project does what it says, or fails with exit status 1 and one error naming the reason, leaving the
 configuration folder exactly as it was: for an existing project, the selected one (@current), an unknown one, @current with none selected,
 names that are no project names (.., a b, a/b) and an empty name; and for every command while projects.info cannot be read (the reason
-is given once, the file is never written over); a folder is refused as program. Removing, renaming and resetting change only what SciRooPlot wrote: program files stay, folders holding other files are
+is given once, the file is never written over); a folder is refused as program, and a ~
+the shell did not expand in SCIROOPLOT_CONFIG_PATH is the home folder. Removing, renaming and resetting change only what SciRooPlot wrote: program files stay, folders holding other files are
 kept or refused; clean forgets the projects whose code is gone (the folder of the program, for a C++ project also the sources above its
 build folder). Registering is safe against srp commands and programs running at the same time, and in-memory data moves with a renamed
 project.
@@ -139,6 +140,11 @@ for args, reason in (
     check(f"srp {' '.join(args)}: one error naming {reason}, nothing stored [07fb006, e7af591]", out.rc == 1 and len(out.errors()) == 1 and reason in out.errors()[0] and config_files(config) == before, out.tail())
 out = run(SRP, "add", "C", program("C"), "${HOME}/out", config=config)
 check("srp add with a variable in the path stores it as written, expanded by get", out.rc == 0 and get(config, "C", "outdir") == os.path.join(os.environ["HOME"], "out") and "${HOME}/out" in open(os.path.join(config, "projects.info")).read(), out.tail())
+
+# a configuration path with a ~ the shell did not expand (SCIROOPLOT_CONFIG_PATH='~/cfg'): the home folder, as in program and output paths
+home = config_folder("home")
+out = run(SRP, "add", "T", program("T"), env={"HOME": home, "SCIROOPLOT_CONFIG_PATH": "~/tilde_config"})
+check("SCIROOPLOT_CONFIG_PATH='~/cfg' is a folder in the home folder", out.rc == 0 and os.path.isfile(os.path.join(home, "tilde_config", "projects.info")), out.tail())
 
 # removing, renaming, resetting: only SciRooPlot's files
 config = setup()

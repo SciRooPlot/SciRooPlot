@@ -4,7 +4,7 @@ reference: completion matches with the shell's POSIX ERE, plot with std::regex, 
 in every combination of matchmode and matchcase: a group word offers the main groups (all groups once it holds a slash) starting with a
 match (any match in contains mode), a name word the names of the plots plot selects for the complete group word, trailing slashes
 included. bash inserts a single match and keeps the typed word when the matches do not all start with it. srp: the commands, plot modes and
-setting values it offers are exactly those srp help documents, and srp accepts each of them; the projects offered are the registered ones.
+setting values it offers are exactly those srp help documents, and srp accepts each of them; the projects offered are the registered ones (also with a ~ in SCIROOPLOT_CONFIG_PATH that the shell did not expand).
 Completing 3000 plots takes well below two seconds.
 Covers: cd59237 (regex dialect), cc729f2 (trailing slash), e7af591 (projects with a brace in a property), suite_cli (speed)."""
 
@@ -166,6 +166,16 @@ check("srp select offers the projects", sorted(got) == ["@current", "comp", "sec
 got, out = bash_complete("srp", "get", "comp", "")
 check("srp get offers the properties program and outdir", sorted(got) == ["outdir", "program"], f"{got}")
 run(SRP, "select", "comp", config=config)
+
+# a configuration path with a ~ the shell did not expand (SCIROOPLOT_CONFIG_PATH='~/cfg'): the home folder, as srp reads it
+for sh in SHELLS:
+    home = os.path.join(os.path.dirname(config), f"home_{sh}")
+    os.makedirs(home, exist_ok=True)
+    link = os.path.join(home, "tilde_config")
+    if not os.path.islink(link):
+        os.symlink(config, link)
+    out = shell('_scirooplot_helper load_config; echo "current: ${current_project}"', sh, interactive=True, env={"SCIROOPLOT_CONFIG_PATH": "~/tilde_config"})
+    check(f"{sh}: a ~ in SCIROOPLOT_CONFIG_PATH is the home folder", "current: comp" in out.stdout, out.tail())
 
 # speed with 3000 plots in 150 groups
 bigConfig = config_folder("config_big")

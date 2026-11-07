@@ -139,7 +139,10 @@ const Config& Config::Get()
 void Config::LoadConfig()
 {
   const char* envPath = gSystem->Getenv("SCIROOPLOT_CONFIG_PATH");
-  std::string configPath = expand_path(envPath ? "${SCIROOPLOT_CONFIG_PATH}" : "~/.SciRooPlot").value_or("");
+  // a leading ~ is the home folder, also where the shell did not expand it (SCIROOPLOT_CONFIG_PATH='~/cfg'), as in the paths of projects
+  // (variables are not expanded: an unset one would be reported by the logger, which needs this configuration)
+  std::string configPath = (envPath) ? envPath : "~/.SciRooPlot";
+  if (configPath == "~" || configPath.compare(0, 2, "~/") == 0) configPath = expand_path("~").value_or("~") + configPath.substr(1);
   if (configPath.empty()) {
     std::cerr << "SCIROOPLOT_CONFIG_PATH must not be empty." << std::endl;
     return;
