@@ -1543,6 +1543,7 @@ bool PlotManager::FillBuffer()
   // data sources restricted to a folder (dataSource:some/folder) are read in the same pass as the data source they are part of,
   // so each input file is opened only once
   mNotFoundData.clear();
+  mHiddenDirectories.clear();
   map<string, vector<string>> sourceGroups;  // data source -> requested data sources that are part of it (itself or restricted to a folder)
   for (const auto& [dataSource, buffer] : mDataBuffer) {
     sourceGroups[dataSource.substr(0, dataSource.find(':'))].push_back(dataSource);
@@ -3074,7 +3075,11 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
         if (!traverse && !dataNames.count(name)) continue;
         TClass* keyClass = ReadableClass(key);
         if (traverse) {
-          if (!IsContainer(keyClass) || !visited.insert(name).second) continue;
+          if (!IsContainer(keyClass)) continue;
+          if (!visited.insert(name).second) {
+            if (keyClass->InheritsFrom(TDirectory::Class())) WarnHiddenDirectory(directory, name);
+            continue;
+          }
           if (keyClass->InheritsFrom(TDirectory::Class())) {
             if (auto* subDir = OpenDirectory(directory, key)) {
               ReadData(subDir, dataNames, prefix, suffix, dataSource, readCache);
@@ -3409,6 +3414,7 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, const vector<string>& su
       } else if (keyClass && keyClass->InheritsFrom(TDirectory::Class())) {
         subFolder = OpenDirectory(directory, key);
       } else if (IsContainer(keyClass)) {
+        WarnHiddenDirectory(directory, subDir);
         auto& container = readCache[key];
         if (!container) container.reset(key->ReadObj());
         subFolder = container.get();
@@ -3424,6 +3430,27 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, const vector<string>& su
     folder = subFolder;
   }
   return (folder && IsContainer(folder->IsA())) ? folder : nullptr;
+}
+
+//**************************************************************************************************
+/**
+ * A directory with a list or folder of its name written after it (ROOT allows only that order) is hidden: paths and the search find the
+ * latest key of the name, so nothing in the directory can be read. Reported once per reading of the inputs.
+ */
+//**************************************************************************************************
+void PlotManager::WarnHiddenDirectory(TDirectory* directory, const string& name)
+{
+  TKey* latest = FindContainerKey(directory, name);
+  if (!latest || KeyInherits(latest, TDirectory::Class())) return;
+  for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {
+    if (!key || name != key->GetName() || !KeyInherits(key, TDirectory::Class())) continue;
+    string path = directory->GetPath();  // file.root:/some/folder
+    path += (path.back() == '/' ? "" : "/") + name;
+    if (mHiddenDirectories.insert(path).second) {
+      logger::warning("Directory {} cannot be read: a {} of the same name written after it hides it (rename one of them).", path, latest->GetClassName());
+    }
+    return;
+  }
 }
 
 //**************************************************************************************************

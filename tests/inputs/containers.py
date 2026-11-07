@@ -6,7 +6,7 @@ the same object. A name that is not there is reported missing, and its plot is n
 the same object read from the top level of a file. The rule is the one documented in the skill (Data sources).
 Special containers: a map gives its values under the names of their keys, a clones array its objects, an object in two lists is found in
 both, of several cycles of a key only the latest counts, an item of the same name as a list is found as data with the bare name and the
-list's items through the path, keys of classes that are no TObject and data that is no named object are not drawn.
+list's items through the path, a list written after a directory of its name hides the directory (reported once), keys of classes that are no TObject and data that is no named object are not drawn.
 Covers: 1dd8464 (a stored THStack or TMultiGraph read like a list, also inside a TList and in memory), 52d49d5 (lists and directories
 handed over in memory become folders).
 """
@@ -313,6 +313,14 @@ mixed.cd()
 mixedFolder.Write()
 stored.cd()
 special["directory, folder, map, list"] = [("mixed/fold/map/map2/lst/hx", "S", 9090), ("hx", "S:mixed", 9090)]
+hidden = stored.mkdir("hidden")  # a directory, then a list of its name (ROOT allows only this order): the list hides the directory
+hidden.cd()
+ident_object("hist", "h", 9100).Write()
+ident_object("hist", "onlydir", 9102).Write()
+stored.cd()
+lst("hidden", ident_object("hist", "h", 9101)).Write("hidden", ROOT.TObject.kSingleKey)
+special["a list hiding a directory of its name"] = [("hidden/h", "S", 9101), ("h", "S:hidden", 9101)]
+special["a list hiding a directory of its name: the directory not read"] = [("hidden/onlydir", "S", None)]
 lst("empty").Write("empty", ROOT.TObject.kSingleKey)
 stored.mkdir("dempty")
 special["empty containers"] = [("empty/x", "S", None), ("dempty/x", "S", None)]
@@ -348,6 +356,8 @@ for name, (what, items) in expected.items():
         continue
     wrong = [f"{s}:{n} gives {ident_of(o)}, expected {i}" for o, (n, s, i) in zip(drawn, wanted) if ident_of(o) != i]
     check(f"found: {what}", not wrong, "; ".join(wrong[:4]))
+hiding = run.warnings("hidden cannot be read")
+check("a directory hidden by a list of its name is reported once", len(hiding) == 1 and "TList" in hiding[0], " | ".join(hiding))
 errors = run.errors()
 expectedErrors = ("cannot be created", "could not be created", "strings/s (data source S) is of unsupported type")
 check("no errors but the missing data", all(any(e in line for e in expectedErrors) for line in errors), " | ".join(errors[:5]))

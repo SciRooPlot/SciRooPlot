@@ -211,7 +211,9 @@ class PlotManager
     void operator()(TObject* container) const;  // deletes a list or folder read from a file with all objects in it
   };
   using read_cache_t = std::map<TKey*, std::unique_ptr<TObject, container_deleter_t>>;  // lists and folders read from the keys of the input file currently read
-  static TObject* FindSubDirectory(TObject* folder, const std::vector<std::string>& subDirs, read_cache_t& readCache);
+  TObject* FindSubDirectory(TObject* folder, const std::vector<std::string>& subDirs, read_cache_t& readCache);
+  void WarnHiddenDirectory(TDirectory* directory, const std::string& name);
+  std::set<std::string> mHiddenDirectories;  // directories hidden by a list or folder of their name, reported once per FillBuffer
   static bool IsContainer(const TClass* cl);
   static TClass* ReadableClass(TKey* key);
   static bool KeyInherits(TKey* key, const TClass* base);
