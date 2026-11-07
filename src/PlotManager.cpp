@@ -2323,8 +2323,15 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
         auto subPad = dynamic_cast<TPad*>(link->GetObject());
         if (!subPad) continue;
         copySetups(subPad);
-        auto setup = dynamic_cast<TExec*>(subPad->GetListOfPrimitives()->First());
-        if (!setup || !str_starts_with(setup->GetName(), "setup_pad_")) continue;
+        // not always the first primitive: a colour-scale cell gets it once its scale is drawn, and painting on a display puts the frame in front
+        TExec* setup{nullptr};
+        for (auto* primitive : *subPad->GetListOfPrimitives()) {
+          if (primitive->InheritsFrom(TExec::Class()) && str_starts_with(primitive->GetName(), "setup_pad_")) {
+            setup = static_cast<TExec*>(primitive);
+            break;
+          }
+        }
+        if (!setup) continue;
         auto copy = new TExec(setup->GetName(), setup->GetTitle());
         copy->SetBit(kCanDelete);
         pad->GetListOfPrimitives()->AddBefore(link, copy);
