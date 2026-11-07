@@ -77,6 +77,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A macro lost the setup of each pad (its palette or gradient, the axis ranges kept for histograms drawn in it, the text format): the frame, drawn first in the macro, cleared the pad | The setup runs before the pad is painted, as in the other modes | file format | Write the macros again. |
 | The coordinate system of boxes and shapes was saved as `is_user_coordinates` (`plots.info`) | It is saved as `coordinate_system` (`pad_coordinates`, `frame_coordinates` or `user_coordinates`) | file format | Re-run the plotting programs. |
 | A layout saved the hiding of the labels and titles between touching panels as label and title size 0 of their axes (`plots.info`) | It is saved as `hidden_next_to` of the pad: the touching panels, by axis | file format | Re-run the plotting programs: plots saved before keep their labels hidden everywhere. |
+| A key of a saved definition (`plots.info`) that is not read (misspelt, a part under a key without its number such as `FRAME_x`, an unknown name under `layout_values`) was ignored silently | Loading warns once per plot, naming every such key | behaviour | Re-run the plotting program, or correct the keys named. |
 
 ### Command line
 

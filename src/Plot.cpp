@@ -37,6 +37,7 @@
 #include <memory>
 #include <ostream>
 #include <regex>
+#include <set>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -1597,8 +1598,10 @@ Plot::Pad::Pad(const ptree& padTree)
     }
   }
   if (auto layoutTree = padTree.get_child_optional("layout_values")) {
+    // the values a PanelLayout sets (another key is not read: the loading names it)
+    static const std::set<string> layoutKeys{"title_size", "title_offset_x", "title_offset_y", "title_offset_z", "color_scale_offset", "color_scale_width"};
     for (const auto& [key, value] : *layoutTree) {
-      mLayoutValues[key] = *get_from_tree<float_t>(*layoutTree, key);
+      if (layoutKeys.count(key)) mLayoutValues[key] = *get_from_tree<float_t>(*layoutTree, key);
     }
   }
 

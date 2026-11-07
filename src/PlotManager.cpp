@@ -1170,6 +1170,27 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
     return false;
   }
 
+  // keys of the file that a plot does not read (misspelt, a part without its number, renamed in another version) are named: those the plot
+  // written again does not hold (a file written by SciRooPlot holds no others)
+  const string fileName = (file) ? *file : Config::Get().PlotsFile(mProjectName);
+  auto reportUnknownKeys = [&](const Plot& plot, const ptree& read) {
+    vector<string> unknown;
+    std::function<void(const ptree&, const ptree&, const string&)> compare = [&](const ptree& readNode, const ptree& writtenNode, const string& path) {
+      for (const auto& [key, child] : readNode) {
+        const auto written = writtenNode.find(key);
+        if (written == writtenNode.not_found()) {
+          unknown.push_back(path + key);
+        } else if (!child.empty()) {
+          compare(child, written->second, path + key + ".");
+        }
+      }
+    };
+    compare(read, plot.GetPropertyTree(), "");
+    if (unknown.empty()) return;
+    const string what = (plot.GetGroup() == "BASE_PLOTS") ? fmt::format("Base plot {}", plot.GetName()) : fmt::format("Plot {} from group {}", plot.GetName(), plot.GetGroup());
+    logger::warning("{} ignores what it does not know in {}: {}.", what, fileName, util::join_strings(unknown, ", "));
+  };
+
   uint32_t nPlotsInFile{};
   uint32_t nBasePlotsLoaded{};
   for (const auto& plotTree : fileTree) {
@@ -1184,6 +1205,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
     if (curGroup == "BASE_PLOTS") {
       try {
         Plot basePlot(plotTree.second);
+        reportUnknownKeys(basePlot, plotTree.second);
         AddBasePlot(std::move(basePlot));
         ++nBasePlotsLoaded;
       } catch (const std::exception& e) {
@@ -1197,6 +1219,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
     ++nMatched;
     try {
       Plot plot(plotTree.second);
+      reportUnknownKeys(plot, plotTree.second);
       AddPlot(std::move(plot));
       ++nLoaded;
     } catch (const std::exception& e) {
