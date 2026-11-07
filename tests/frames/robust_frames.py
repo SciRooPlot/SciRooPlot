@@ -1,7 +1,8 @@
 """Every data kind in every variant (values crossing zero, a NaN or infinite value, all zeros, no entries, a single bin or point, values
 near the largest float) gives a plot with a finite frame and no ROOT errors, on linear and log scales of its value axis: a log axis
 keeps a positive range (or is switched off with a warning when there is nothing positive). Data with a NaN or infinite value is
-reported with a warning naming it. A plot that ROOT throws an exception on while painting is reported and loses only itself.
+reported with a warning naming it, as data with contents beyond the largest float (ROOT finds axis ranges only below it). A plot that
+ROOT throws an exception on while painting is reported and loses only itself.
 Covers: the commits of this file's first version (crashes on NaN points of TGraphMultiErrors and on empty 2d graphs, misplaced errors of
 2d graphs after removing NaN points, the whole run lost to one plot ROOT could not paint).
 """
@@ -60,6 +61,7 @@ for i, case in enumerate(todo):
             check(f"log scale without positive values ignored with a warning: {what}", bool(ignored), "log scale off without warning")
 unpaintableErrors = [line for line in run.errors() if "a_unpaintable" in line]
 check("a plot ROOT cannot paint is made or reported", bool(run.pad("a_unpaintable", "robust")) or any("could not be painted" in line for line in unpaintableErrors), str(unpaintableErrors))
+check("contents beyond the largest float are reported by name", any(line.split("]", 1)[-1].split()[0] == "unpaintable" and "beyond the largest float" in line for line in run.warnings()), " | ".join(run.warnings()[:3]))
 errors = [line for line in run.errors() if "a_unpaintable" not in line]
 check("no ROOT errors", not errors, " | ".join(errors[:5]))
 kinds = {case["kind"] for case in todo if case["variant"] in ("nan", "inf")}

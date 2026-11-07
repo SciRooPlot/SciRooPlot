@@ -5,7 +5,7 @@ search: its folder first, then its sub-folders), a data source restricted to a f
 holding it; inputs without the tree and trees without rows add nothing; in-memory trees join the chain where they were added. Entries(n)
 and Entries(a, b) count the rows of the whole chain, across the boundaries of its inputs. RNTuples are chained when they have the same
 path in every input (also given as a path in the name). Inputs that cannot be chained are reported, the plot is lost: a column of another
-type or missing in one input (the error names what the tree is chained from), RNTuples under different paths, a TTree in some inputs and
+type or missing in one input (the error names what the tree is chained from and the reason ROOT's tree reader gives), RNTuples under different paths, a TTree in some inputs and
 an RNTuple in others. The reading summary names the inputs a chain is made of.
 Covers: the chained trees of the old chain suite (AO2D-like folders in the order of the file, wildcards in directories, ordering by
 Entries, the first match per whole file, schema problems), the RNTuple chains of backlog 56.
@@ -109,8 +109,8 @@ for source, (inputs, _, _, _) in sources.items():
         p.pm.AddDataSource(source, inputs)
 p.pm.AddDataSource("file_and_memory", memoryTree)
 failing = {  # data source: (inputs, data name, the error)
-    "column_type": ([S0, S1], "t", "the tree is chained from 2 files: do all inputs of the data source have the same columns?"),
-    "column_missing": ([S0, S2], "t", "the tree is chained from 2 files: do all inputs of the data source have the same columns?"),
+    "column_type": ([S0, S1], "t", ("contains data of type float", "the tree is chained from 2 files: do all inputs of the data source have the same columns?")),
+    "column_missing": ([S0, S2], "t", ("does not have a branch called v", "the tree is chained from 2 files: do all inputs of the data source have the same columns?")),
     "rntuple_paths": ([RA + ":sub", RC + ":other"], "nt", f"ROOT chains RNTuples only under the same path, but it is sub/nt in {RA} and other/nt in {RC}"),
     "tree_and_rntuple": ([RA, TNT], "nt", "it is a TTree in some inputs and an RNTuple in others"),
 }
@@ -160,7 +160,8 @@ check("the chains give no errors", not run.errors(), " | ".join(run.errors()[:5]
 failed = p.plot("failing")
 for source, (_, name, text) in failing.items():
     lost = not failed.canvas(source, "failing")
-    reported = [line for line in failed.errors() if text in line and f"{source}:{name}" in line]
+    reported = [line for line in failed.errors() if all(t in line for t in ((text,) if isinstance(text, str) else text)) and f"{source}:{name}" in line]
     check(f"{source}: inputs that cannot be chained are reported, the plot is lost", lost and reported, f"plot {'lost' if lost else 'made'}; errors {failed.errors()[:3]}")
     check(f"{source}: reported as missing", f"{source}:{name}" in missing(failed), str(sorted(missing(failed))))
+check("the reason of ROOT's tree reader is in the error, not a line of its own", not [line for line in failed.log.splitlines() if "Error in <TTreeReader" in line], failed.log[-400:])
 finish()

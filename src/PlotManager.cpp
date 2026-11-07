@@ -3637,12 +3637,14 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   using data_info_t = Plot::Pad::Data::data_info_t;
   auto start = std::chrono::steady_clock::now();
 
-  // extract the reason for a failed data query: the first compiler error printed by ROOT (if any) or the exception message
+  // extract the reason for a failed data query: the first compiler error or error of ROOT's tree reader (if any) or the exception message
   auto getErrorReason = [](const std::exception& exception, const string& rootOutput) {
     std::istringstream lines(rootOutput);
     for (string line; std::getline(lines, line);) {
-      if (auto pos = line.find("error: "); pos != string::npos) {
-        string reason = line.substr(pos + 7);
+      const auto compilerError = line.find("error: ");
+      const auto readerError = (line.rfind("Error in <TTreeReader", 0) == 0) ? line.find(">: ") : string::npos;
+      if (compilerError != string::npos || readerError != string::npos) {
+        string reason = line.substr((compilerError != string::npos) ? compilerError + 7 : readerError + 3);
         if (str_ends_with(reason, ".")) reason.pop_back();
         return reason;
       }
@@ -3743,6 +3745,34 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   std::function<void(const vector<const data_info_t*>&, bool)> processGroup;
   processGroup = [&](const vector<const data_info_t*>& infos, bool sequential) {
     OutputCapture rootOutput;
+    // errors of ROOT's tree reader (a column of another type in one of the chained inputs) go there too: they are the reason given below
+    static std::mutex readerMutex;
+    static OutputCapture* readerOutput = nullptr;
+    static ErrorHandlerFunc_t outerHandler = nullptr;
+    OutputCapture* const enclosingOutput = readerOutput;  // a group processed while another one is
+    {
+      std::lock_guard<std::mutex> lock(readerMutex);
+      readerOutput = &rootOutput;
+    }
+    if (!enclosingOutput) {
+      outerHandler = SetErrorHandler([](Int_t level, Bool_t abort, const char* location, const char* msg) {
+        if (level >= kError && location && std::string_view(location).rfind("TTreeReader", 0) == 0) {
+          std::lock_guard<std::mutex> lock(readerMutex);
+          if (readerOutput) {
+            std::ostream(readerOutput) << "Error in <" << location << ">: " << msg << '\n';
+            return;
+          }
+        }
+        (outerHandler) ? outerHandler(level, abort, location, msg) : DefaultErrorHandler(level, abort, location, msg);
+      });
+    }
+    auto readerGuard = make_scope_guard([enclosingOutput]() {
+      {
+        std::lock_guard<std::mutex> lock(readerMutex);
+        readerOutput = enclosingOutput;
+      }
+      if (!enclosingOutput) SetErrorHandler(outerHandler);
+    });
     vector<DataFrameRequest<data_info_t>> requests;  // successfully booked requests
     vector<const data_info_t*> rejected;             // requests already reported as invalid while preparing them
     try {

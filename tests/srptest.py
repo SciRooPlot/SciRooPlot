@@ -1427,14 +1427,14 @@ def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
     """the expected ratio: a histogram, a dict like graph_values, or None (an error is expected)"""
     nf, df = division_family(numObj), division_family(denObj)
     if nf == "graph2d" or nf in ("func2", "func3"):
-        exp.error(f"Unsupported division of {as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}")
+        exp.error(f"Cannot divide {exp.num} ({as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}) by {exp.den}")
         return None
     if nf == "func1":
         if df == "graph" or df == "hist1":
             den = x_errors(denObj, Points(as_divided(denObj) if df == "hist1" else denObj))
             keep = [i for i, x in enumerate(den.x) if numFunc.inside(x)]  # a function of the inputs within its range
             if not keep:  # nothing to sample at: the function itself cannot be divided
-                exp.error("Unsupported division of TF1")
+                exp.error(f"Cannot divide {exp.num} (TF1) by {exp.den}")
                 return None
             den = subset(den, keep)
             num = Points(denObj if df == "graph" else as_divided(denObj))
@@ -1456,7 +1456,7 @@ def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
             for i, x in enumerate(xs):
                 graph.SetPoint(i, x, numFunc(x))
             return divide_by_function_graph(graph, denFunc, binomial, exp)
-        exp.error("Unsupported division of TF1")
+        exp.error(f"Cannot divide {exp.num} (TF1) by {exp.den}")
         return None
     if nf.startswith("hist"):
         dim = int(nf[4:])
@@ -1468,11 +1468,11 @@ def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
             return divide_by_function_hist(num, denFunc, int(df[4:]), binomial, exp)
         if df == "graph":
             if dim != 1:
-                exp.error(f"Unsupported division of {as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}")
+                exp.error(f"Cannot divide {exp.num} ({as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}) by {exp.den}")
                 return None
             return graph_to_hist(num, divide_points(x_errors(num, Points(num)), x_errors(denObj, Points(denObj)), binomial, exp))
         if df == "graph2d":
-            exp.error(f"Unsupported division of {as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}")
+            exp.error(f"Cannot divide {exp.num} ({as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}) by {exp.den}")
             return None
         den = as_divided(denObj)
         if all(den.GetBinContent(c) == 0 for c in range(den.GetNcells())):
@@ -1504,7 +1504,7 @@ def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
         return result_graph(divide_points(num, den, binomial, exp), num, numObj)
     if df == "func1":
         return divide_by_function_graph(numObj, denFunc, binomial, exp)
-    exp.error(f"Unsupported division of {as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}")
+    exp.error(f"Cannot divide {exp.num} ({as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}) by {exp.den}")
     return None
 
 

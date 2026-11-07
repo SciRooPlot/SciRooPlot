@@ -2812,8 +2812,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           };
           TProfile3D* profile3d{};
           if constexpr (is_hist_3d<ptr_type>()) profile3d = dynamic_cast<TProfile3D*>(ptr);
-          int32_t nInvalid{};
+          int32_t nInvalid{}, nBeyondFloat{};
           for (int32_t bin = 0; bin < ptr->GetNcells(); ++bin) {
+            // ROOT finds minima and maxima (axis ranges, colour scales) only below the largest float
+            if (std::abs(ptr->GetBinContent(bin)) > std::numeric_limits<float>::max() && std::isfinite(ptr->GetBinContent(bin))) ++nBeyondFloat;
             if (!std::isfinite(ptr->GetBinContent(bin)) || !std::isfinite(ptr->GetBinError(bin))) {
               if constexpr (is_one_of_v<ptr_type, TProfile*, TProfile2D*>()) {
                 clearProfileBin(ptr, bin);
@@ -2829,6 +2831,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             }
           }
           if (nInvalid) warn("{} has {} with NaN or infinite values, which are drawn as zero.", name, plural(nInvalid, "bin"));
+          if (nBeyondFloat) {
+            warn("{} has {} with contents beyond the largest float (3.4e38): ROOT finds axis ranges only below it, so they are wrong (a log scale fails).", name,
+                 plural(nBeyondFloat, "bin"));
+          }
         } else if constexpr (is_graph_1d<ptr_type>() || is_graph_2d<ptr_type>()) {
           int32_t nInvalid{};
           for (int32_t i = ptr->GetN() - 1; i >= 0; --i) {
@@ -2892,7 +2898,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
               }
             }
             auto unsupported = [&]() {
-              logger::error("Unsupported division of {} and {}.", data_ptr->ClassName(), denom_data_ptr->ClassName());
+              logger::error("Cannot divide {} ({}) by {} ({}): not supported.", data_ptr->GetName(), data_ptr->ClassName(), denom_data_ptr->GetName(), denom_data_ptr->ClassName());
               fail = true;
             };
             if constexpr (is_hist<data_type>()) {
