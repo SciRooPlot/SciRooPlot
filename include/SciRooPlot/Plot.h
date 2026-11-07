@@ -1017,7 +1017,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   const auto& GetMinRangeY() const { return mRangeY.min; }
   const auto& GetMaxRangeY() const { return mRangeY.max; }
   const bool& GetDefinesFrame() const { return mDefinesFrame; }
-  const bool& GetKeepInputStyle() const { return mKeepInputStyle; }
+  bool GetKeepInputStyle() const { return mKeepInputStyle.value_or(false); }
   const auto& GetContours() const { return mContours; }
   const auto& GetNContours() const { return mNContours; }
   const auto& GetNpx() const { return mNpx; }
@@ -1117,7 +1117,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
 
  private:
   bool mDefinesFrame{};
-  bool mKeepInputStyle{};
+  std::optional<bool> mKeepInputStyle;
 
   std::string mType;  // for introspection: "data" or "ratio"
   std::string mName;

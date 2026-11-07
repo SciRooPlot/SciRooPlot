@@ -2528,7 +2528,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   dataTree.put("name", mName);
   dataTree.put("data_source", mDataSource);
   if (mDefinesFrame) dataTree.put("defines_frame", mDefinesFrame);
-  if (mKeepInputStyle) dataTree.put("keep_input_style", mKeepInputStyle);
+  if (mKeepInputStyle) dataTree.put("keep_input_style", *mKeepInputStyle);
   put_in_tree(dataTree, mLegend.label, "legend_label");
   put_in_tree(dataTree, mLegend.id, "legend_id");
   if (mLegend.entry) dataTree.put_child("legend_entry", mLegend.entry->GetPropertyTree());
@@ -2610,7 +2610,7 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
     mDrawOption = dataLayout.mDrawOption;
     mDrawOptionAlias = dataLayout.mDrawOptionAlias;
   }
-  if (dataLayout.mKeepInputStyle) mKeepInputStyle = true;
+  if (dataLayout.mKeepInputStyle) mKeepInputStyle = dataLayout.mKeepInputStyle;
   if (dataLayout.mTextFormat) mTextFormat = dataLayout.mTextFormat;
   if (dataLayout.mTextAngle) mTextAngle = dataLayout.mTextAngle;
   if (dataLayout.mLegend.entry) {  // merged like the styles: what the data's own entry sets and the layout does not is kept
