@@ -6,8 +6,8 @@ value and coordinates at and below zero (variant crossing), without a range and 
   0.001 x the maximum, it starts at 0.9 x the smallest positive point), and a graph with values at or below zero on log y starts at half
   its smallest positive value inside the frame (ROOT: 0.001 x the maximum)
 - the y range of a histogram comes from the bins shown in the frame, as ROOT does for the same bins drawn alone, that of a graph with
-  an x range from the points drawn into it (their x error bars reaching into it, on log x above zero), as ROOT does for those points
-  alone; that of a function contains every value shown, at most a decade beyond it (on log y only its maximum where it crosses zero);
+  an x range or on log x from the points drawn (their x error bars reaching into the range, on log x above zero), as ROOT does for
+  those points alone; that of a function contains every value shown, at most a decade beyond it (on log y only its maximum where it crosses zero);
   a log z axis colours every positive value shown, or starts at ROOT's floor min(1, 0.001 x maximum) where there are values at or below
   zero (2d functions as drawn, sampled as the frame), and is off with a warning where 2d data shows no positive value
 - a positive lower range below the data widens the frame to exactly that value, also below bins that end at or cross zero; a lower range
@@ -77,6 +77,7 @@ todo = cases(
         {"kind": "hist", "variant": "crossing", "log": "X", "range": "zero", "why": "f49b65a"},
         {"kind": "graph_multi", "variant": "normal", "log": "X", "range": "inside", "why": "y range of a graph from the points shown"},
         {"kind": "graph_asymm", "variant": "crossing", "log": "XY", "range": "inside", "why": "y range of a graph from the points shown"},
+        {"kind": "graph", "variant": "crossing", "log": "X", "range": "none", "why": "y range of a graph from the points shown"},
         {"kind": "graph2d_errors", "variant": "normal", "log": "Z", "range": "wide", "why": "z range of a 2d graph read before it is deleted"},
         {"kind": "hist2poly", "variant": "single", "log": "Z", "range": "wide", "why": "positive TH2Poly bins of a widened frame"},
         {"kind": "hist2poly", "variant": "single", "log": "Z", "range": "inside", "why": "positive TH2Poly bins of a widened frame"},
@@ -287,9 +288,10 @@ for i, case in enumerate(todo):
             ref = root_frame(obj, opt, logs, frame["X"])
             check(f"y range from the bins shown, as ROOT draws them: {what}", same(y, ref["Y"]), f"{fmt(y)}, ROOT {fmt(ref['Y'])}")
         elif obj.InheritsFrom("TGraph"):
-            # the y frame of the points drawn into the x range, as ROOT draws them alone (without a range all points, as ROOT draws the
-            # graph); where ROOT starts log y at 0.001 x the maximum (values at or below zero), half the smallest positive value shown
-            shown = shown_points(obj, rangeX, "X" in logs) if rangeX else []
+            # the y frame of the points drawn (into the x range, on log x above zero), as ROOT draws them alone (without a range on a
+            # linear x axis all points, as ROOT draws the graph); where ROOT starts log y at 0.001 x the maximum (values at or below zero),
+            # half the smallest positive value shown
+            shown = shown_points(obj, rangeX or (-math.inf, math.inf), "X" in logs) if rangeX or "X" in logs else []
             ref = root_frame(points_alone(obj, shown) if shown else obj, opt, logs)
             fallback = "Y" in logs and close(ref["Y"][0], 0.001 * ref["Y"][1], 1e-6)
             if case["range"] not in IGNORED_MIN and not fallback:

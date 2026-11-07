@@ -64,6 +64,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Weighted profiles of trees and tables (`Profile1D`, `Profile2D`, `Profile` with a weight) read in parallel had wrong errors when one thread had read only rows of weight 1 (ROOT merges the profiles of its threads wrongly then) | The errors of the profile filled with all rows | behaviour | Nothing. |
 | A graph with a point whose x is not finite (NaN, inf; not drawn, with a warning) also gave ROOT's error `Axis limits need to be finite numbers` | Only the warning | behaviour | Nothing. |
 | A table whose columns are aligned by several spaces in the header too (`x     y`) was refused without the hint to use one delimiter | With the hint | behaviour | Nothing. |
+| A graph giving the frame on a log x axis without an x range had ROOT's y range of all its points, also of the points at x ≤ 0 that a log axis does not draw (the frame reached far below the points shown) | Its y range comes from the points drawn, as with an x range | behaviour | Nothing. |
 
 ### Files
 

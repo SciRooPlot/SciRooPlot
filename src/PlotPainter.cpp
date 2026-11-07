@@ -1081,9 +1081,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
               axisHist_ptr->SetDirectory(nullptr);
               axisHist_ptr->SetBit(kCanDelete);
               if constexpr (is_graph_1d<data_type>()) {
-                // ROOT's y range of a graph (TGraph::GetHistogram) comes from all its points: with an x range of the pad it is taken from the
-                // points drawn into it (their x errors reaching into the range), as for histograms and functions, by ROOT for those points alone
-                // (on a log axis only points reaching above zero)
+                // ROOT's y range of a graph (TGraph::GetHistogram) comes from all its points: with an x range of the pad, or on log x, it is
+                // taken from the points drawn (their x errors reaching into the range, on log x above zero), as for histograms and functions,
+                // by ROOT for those points alone
                 static thread_local std::pair<double_t, double_t> shownX;
                 const optional<double_t> userMin = MinRange(pad, padDefaults, 'X');
                 optional<double_t> userMax;
@@ -1099,7 +1099,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                   return x + std::max(graph->GetErrorXhigh(i), 0.) >= shownX.first && x - std::max(graph->GetErrorXlow(i), 0.) <= shownX.second;
                 };
                 int32_t nShown = 0;
-                for (int32_t i = 0; i < data_ptr->GetN() && (userMin || userMax); ++i) {
+                for (int32_t i = 0; i < data_ptr->GetN() && (userMin || userMax || logX); ++i) {
                   if (isShown(data_ptr, i)) ++nShown;
                 }
                 if (nShown > 0 && nShown < data_ptr->GetN()) {
