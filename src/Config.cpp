@@ -736,6 +736,18 @@ bool Config::CheckPath(const string& path)
   return true;
 }
 
+// the program of a project: a path as CheckPath, which may not exist yet (srp init-* registers before creating it), but is no folder
+bool Config::CheckProgram(const string& program)
+{
+  if (!CheckPath(program)) return false;
+  std::error_code ec;
+  if (std::filesystem::is_directory(*expand_path(program), ec)) {
+    logger::error("The program {} is a folder: give the program file.", program);
+    return false;
+  }
+  return true;
+}
+
 bool Config::Add(const string& projectName, const string& program, const string& outputDir)
 {
   if (!ProjectsReadable()) return false;
@@ -753,7 +765,7 @@ bool Config::Add(const string& projectName, const string& program, const string&
     return false;
   }
   // checked before anything is stored, so that a failing add leaves no project behind
-  if (!CheckPath(program) || (!outputDir.empty() && !CheckPath(outputDir))) return false;
+  if (!CheckProgram(program) || (!outputDir.empty() && !CheckPath(outputDir))) return false;
   auto& properties = mProjects[projectName].mProperties;
   properties["program"] = program;
   if (!outputDir.empty()) properties["outdir"] = outputDir;
@@ -796,7 +808,8 @@ bool Config::SetProperty(const string& projectName, const string& property, cons
     logger::error("The program of project {} cannot be unset (srp set {} program <path> changes it, srp remove {} removes the project).", projectName, projectName, projectName);
     return false;
   }
-  if ((property == "program" || property == "outdir") && !value.empty() && !CheckPath(value)) return false;
+  if (property == "program" && !CheckProgram(value)) return false;
+  if (property == "outdir" && !value.empty() && !CheckPath(value)) return false;
   auto& properties = mProjects[projectName].mProperties;
   properties[property] = value;
   mTouchedProperties[projectName].insert(property);

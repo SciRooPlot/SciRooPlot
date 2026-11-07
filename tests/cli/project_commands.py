@@ -1,7 +1,7 @@
 """Every srp command on a project does what it says, or fails with exit status 1 and one error naming the reason, leaving the
 configuration folder exactly as it was: for an existing project, the selected one (@current), an unknown one, @current with none selected,
 names that are no project names (.., a b, a/b) and an empty name; and for every command while projects.info cannot be read (the reason
-is given once, the file is never written over). Removing, renaming and resetting change only what SciRooPlot wrote: program files stay, folders holding other files are
+is given once, the file is never written over); a folder is refused as program. Removing, renaming and resetting change only what SciRooPlot wrote: program files stay, folders holding other files are
 kept or refused; clean forgets the projects whose code is gone (the folder of the program, for a C++ project also the sources above its
 build folder). Registering is safe against srp commands and programs running at the same time, and in-memory data moves with a renamed
 project.
@@ -123,13 +123,15 @@ for args in (("projects",), ("projects", "A"), ("select", "A"), ("add", "C", pro
         f"rc {out.rc}: {out.tail()}",
     )
 
-# srp add: paths are checked before anything is stored, an unset variable gives one message (07fb006, e7af591)
+# srp add: paths are checked before anything is stored (a program is no folder), an unset variable gives one message (07fb006, e7af591)
 config = setup()
 before = config_files(config)
 for args, reason in (
     (("add", "C", program("C"), "${SRP_NO_SUCH_VAR}/out"), "SRP_NO_SUCH_VAR"),
     (("add", "C", "${SRP_NO_SUCH_VAR}/def.py"), "SRP_NO_SUCH_VAR"),
     (("add", "C", "relative/def.py"), "must not be relative"),
+    (("add", "C", PROGRAMS), "is a folder"),
+    (("set", "A", "program", PROGRAMS), "is a folder"),
     (("add", "@current", program("C")), "@current"),
     (("add", "C"), "Specify program"),
 ):

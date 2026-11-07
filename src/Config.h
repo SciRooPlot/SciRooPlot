@@ -109,6 +109,7 @@ class Config
   static bool WriteInfoFile(const std::string& file, const boost::property_tree::ptree& tree);
   static bool CheckProjectName(const std::string& projectName);
   static bool CheckPath(const std::string& path);
+  static bool CheckProgram(const std::string& program);
 
   struct Lock {
     explicit Lock(const std::filesystem::path& path);

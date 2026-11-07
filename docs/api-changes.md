@@ -81,6 +81,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Old | New | Kind | Action |
 |---|---|---|---|
 | `srp clean` forgot a C++ project whose build folder was deleted (`rm -rf build`), although its sources were still there | It keeps a project while the folder above the program's folder holds a `CMakeLists.txt` (the layout of `srp init-cpp`) | CLI | Nothing. |
+| `srp add <project> <folder>` and `srp set <project> program <folder>` accepted a folder as program (`plot` then warned that the program does not exist) | Refused with an error, nothing stored (a program file that does not exist yet stays allowed) | CLI | Give the program file. |
 
 ## 3.3.3 → 4.0.0
 
