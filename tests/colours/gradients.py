@@ -2,13 +2,14 @@
 pad its palette: n colours at equal steps from position 0 to 1, linear between the stops and the end colours before the first and after the
 last stop; n is the number of data items of the pad that take a colour from the defaults (not those setting all three colours or keeping
 the style of their input) unless given, for a palette 255. A gradient of pad 0 is sized for each pad by its own data; a gradient of the
-pad wins over pad 0's; the alpha given with it makes every colour transparent. A gradient no data takes from gives no message; an
-explicit number of colours of 0 is reported. Stops are checked when set: fewer than two stops, a number of colours below 1, positions
-outside 0 to 1, decreasing positions and components outside 0 to 1 warn, equal neighbours (a hard step) do not.
+pad wins over pad 0's; the alpha given with it makes every colour transparent. A gradient no data takes from gives no message. Stops
+are checked when set: fewer than two stops, a number of colours below 1, positions outside 0 to 1, decreasing positions and components
+outside 0 to 1 warn and the gradient is ignored (the colours stay as before, nothing is said again when plotted), equal neighbours (a hard
+step) do not.
 Covers: 2e30e68 (no gradient error without data taking colours), 9f1978c (stops checked, end colours beyond the first and last stop).
 """
 
-from srptest import ROOT, Project, S, add_data, cases, check, describe, finish, python, rgba
+from srptest import DEFAULT_COLORS, ROOT, Project, S, add_data, cases, check, describe, finish, python, rgba
 
 STOPS = {  # positions and colours of the stops, in the forms they are given in
     "two": [((1.0, 0.0, 0.0), 0.0), ((0.0, 0.0, 1.0), 1.0)],
@@ -131,7 +132,8 @@ for name in quiet:
     check(f"made without messages: {name}", run.pad(name, "quiet") is not None)
 check("a gradient no data takes from gives no messages", not run.errors() and not run.warnings(), " | ".join(run.errors()[:3] + run.warnings()[:3]))
 run = p.plot("zero")
-check("an explicit number of 0 gradient colours is reported", any("must be positive" in line for line in run.errors()), " | ".join(run.errors()[:3]))
+drawn = run.objects("zero", "zero")
+check("a gradient ignored when set (0 colours): the default colours, nothing said when plotted", drawn and rgba(drawn[0].GetMarkerColor()) == rgba(DEFAULT_COLORS[0]) and not run.errors() and not run.warnings(), " | ".join(run.errors()[:3] + run.warnings()[:3]))
 
 # stops are checked when set: warnings of the definition (a process of its own)
 STOP_CHECKS = {  # stops, number of colours and the warning they give (None: accepted silently)

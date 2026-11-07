@@ -34,6 +34,7 @@
 #include <array>
 #include <cstddef>
 #include <deque>
+#include <functional>
 #include <initializer_list>
 #include <iosfwd>
 #include <map>
@@ -457,7 +458,14 @@ class Plot : public FillSetters<Plot>
   static std::optional<std::string> NameError(const std::string& name, bool isGroup = false);
   static std::string NormalizeGroup(const std::string& group);
   static float_t RoundWidth(float_t width, const char* what);
-  static void CheckAlpha(float_t alpha);
+  // a value that cannot mean anything is reported where it is set and ignored, so that what was set before stays (false: ignored)
+  static bool CheckAlpha(float_t alpha);
+  static bool CheckFinite(double value, const std::string& what);
+  static bool CheckNotNegative(double value, const std::string& what);
+  static bool CheckFraction(double value, const std::string& what);  // 0 to 1
+  static bool CheckCount(int64_t count, const std::string& what);    // at least one
+  static bool CheckFont(int16_t font);
+  static void Quietly(bool quiet, const std::function<void()>& call);  // without messages if quiet
   static std::optional<float_t> RoundWidth(const std::optional<float_t>& width, const char* what);
   static void ReadWidthFromTree(const boost::property_tree::ptree& tree, std::optional<float_t>& target, const char* key);
   // keys <prefix>color, <prefix>alpha, <prefix><style> and <prefix><scale> (none without scale key, a width is rounded)
@@ -640,7 +648,7 @@ class Plot::Pad : public FillSetters<Pad>
   auto& GetShapes() { return mShapes; }
   auto& GetImageBoxes() { return mImageBoxes; }
   static std::vector<std::tuple<float_t, float_t, float_t, float_t>> GradientEndpoints(const std::vector<std::pair<color_t, float_t>>& gradient);
-  static void CheckGradient(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<int32_t> nColors, const std::string& setter);
+  static bool CheckGradient(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<int32_t> nColors, const std::string& setter);
   uint16_t GetDataCount() const { return mData.size(); }
 
   const auto& GetAxes() const { return mAxes; }
@@ -1051,6 +1059,8 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   static void ReadModify(const boost::property_tree::ptree& tree, modify_t& modify, const std::string& prefix = "");
   static void PutModify(boost::property_tree::ptree& tree, const modify_t& modify, const std::string& prefix = "");
 
+  // the ranges of a projection without those whose limits are not finite numbers (reported): the projection covers the whole axis there
+  static std::vector<std::tuple<uint8_t, double_t, double_t>> FiniteRanges(const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges);
   struct proj_info_t {
     std::vector<uint8_t> dims;                                    // dimensions to project on (can be one or two)
     std::vector<std::tuple<uint8_t, double_t, double_t>> ranges;  // range restrictions on other dimensions
@@ -1240,7 +1250,9 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   {                                                                             \
     auto applyTo = [&](modify_t& target) {                                      \
       std::swap(Modify(), target);                                              \
-      Data::METHOD(args...);                                                    \
+      /* with Both() the arguments were checked for the numerator already */    \
+      const bool quiet = (&target == &mDenomModify && mModMode == Mode::Both);  \
+      Quietly(quiet, [&]() { Data::METHOD(args...); });                         \
       std::swap(Modify(), target);                                              \
     };                                                                          \
     if (mModMode == Mode::Res) Data::METHOD(args...);                           \

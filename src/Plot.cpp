@@ -190,10 +190,49 @@ float_t Plot::RoundWidth(float_t width, const char* what)
   }
   return rounded;
 }
-// an alpha outside of 0 (transparent) to 1 (opaque) is passed on to ROOT as it is, with a warning
-void Plot::CheckAlpha(float_t alpha)
+bool Plot::CheckAlpha(float_t alpha)
 {
-  if (!(alpha >= 0.f && alpha <= 1.f)) logger::warning("Alpha {} is outside of 0 (transparent) to 1 (opaque).", alpha);
+  if (alpha >= 0.f && alpha <= 1.f) return true;
+  logger::warning("Alpha {} is outside of 0 (transparent) to 1 (opaque): ignored.", alpha);
+  return false;
+}
+bool Plot::CheckFinite(double value, const string& what)
+{
+  if (std::isfinite(value)) return true;
+  logger::warning("The {} ({}) is not a finite number: ignored.", what, value);
+  return false;
+}
+bool Plot::CheckNotNegative(double value, const string& what)
+{
+  if (!CheckFinite(value, what)) return false;
+  if (value >= 0.) return true;
+  logger::warning("The {} ({}) is negative: ignored.", what, value);
+  return false;
+}
+bool Plot::CheckFraction(double value, const string& what)
+{
+  if (value >= 0. && value <= 1.) return true;
+  logger::warning("The {} ({}) is outside of 0 to 1: ignored.", what, value);
+  return false;
+}
+bool Plot::CheckCount(int64_t count, const string& what)
+{
+  if (count >= 1) return true;
+  logger::warning("The {} ({}) is not a positive number: ignored.", what, count);
+  return false;
+}
+bool Plot::CheckFont(int16_t font)
+{
+  if (font / 10 >= 1 && font / 10 <= 15 && font % 10 <= 3) return true;
+  logger::warning("Text font {} is not a ROOT font (10 * font number from 1 to 15 + precision from 0 to 3): ignored.", font);
+  return false;
+}
+void Plot::Quietly(bool quiet, const std::function<void()>& call)
+{
+  if (!quiet) return call();
+  const bool wasMuted = std::exchange(logger::muted(), true);
+  auto restore = util::make_scope_guard([wasMuted]() { logger::muted() = wasMuted; });
+  call();
 }
 optional<float_t> Plot::RoundWidth(const optional<float_t>& width, const char* what)
 {
@@ -254,8 +293,9 @@ void layout_t::Update(const layout_t& other)
 template <class Derived>
 Derived& MarkerSetters<Derived>::SetMarker(int16_t style, float_t size, color_t color, float_t alpha)
 {
-  Plot::CheckAlpha(alpha);
-  mMarker = {color, alpha, style, size};
+  bool valid = Plot::CheckFinite(size, "marker size");
+  valid = Plot::CheckAlpha(alpha) && valid;
+  if (valid) mMarker = {color, alpha, style, size};
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -267,8 +307,7 @@ Derived& MarkerSetters<Derived>::SetMarkerColor(color_t color)
 template <class Derived>
 Derived& MarkerSetters<Derived>::SetMarkerAlpha(float_t alpha)
 {
-  Plot::CheckAlpha(alpha);
-  mMarker.alpha = alpha;
+  if (Plot::CheckAlpha(alpha)) mMarker.alpha = alpha;
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -280,7 +319,7 @@ Derived& MarkerSetters<Derived>::SetMarkerStyle(int16_t style)
 template <class Derived>
 Derived& MarkerSetters<Derived>::SetMarkerSize(float_t size)
 {
-  mMarker.scale = size;
+  if (Plot::CheckFinite(size, "marker size")) mMarker.scale = size;
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -297,8 +336,9 @@ void MarkerSetters<Derived>::PutMarker(ptree& tree) const
 template <class Derived>
 Derived& LineSetters<Derived>::SetLine(int16_t style, float_t width, color_t color, float_t alpha)
 {
-  Plot::CheckAlpha(alpha);
-  mLine = {color, alpha, style, Plot::RoundWidth(width, "line width")};
+  bool valid = Plot::CheckFinite(width, "line width");
+  valid = Plot::CheckAlpha(alpha) && valid;
+  if (valid) mLine = {color, alpha, style, Plot::RoundWidth(width, "line width")};
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -310,8 +350,7 @@ Derived& LineSetters<Derived>::SetLineColor(color_t color)
 template <class Derived>
 Derived& LineSetters<Derived>::SetLineAlpha(float_t alpha)
 {
-  Plot::CheckAlpha(alpha);
-  mLine.alpha = alpha;
+  if (Plot::CheckAlpha(alpha)) mLine.alpha = alpha;
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -323,7 +362,7 @@ Derived& LineSetters<Derived>::SetLineStyle(int16_t style)
 template <class Derived>
 Derived& LineSetters<Derived>::SetLineWidth(float_t width)
 {
-  mLine.scale = Plot::RoundWidth(width, "line width");
+  if (Plot::CheckFinite(width, "line width")) mLine.scale = Plot::RoundWidth(width, "line width");
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -340,8 +379,7 @@ void LineSetters<Derived>::PutLine(ptree& tree) const
 template <class Derived>
 Derived& FillSetters<Derived>::SetFill(int16_t style, color_t color, float_t alpha)
 {
-  Plot::CheckAlpha(alpha);
-  mFill = {color, alpha, style, {}};
+  if (Plot::CheckAlpha(alpha)) mFill = {color, alpha, style, {}};
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -359,8 +397,7 @@ Derived& FillSetters<Derived>::SetFillStyle(int16_t style)
 template <class Derived>
 Derived& FillSetters<Derived>::SetFillAlpha(float_t alpha)
 {
-  Plot::CheckAlpha(alpha);
-  mFill.alpha = alpha;
+  if (Plot::CheckAlpha(alpha)) mFill.alpha = alpha;
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -377,8 +414,10 @@ void FillSetters<Derived>::PutFill(ptree& tree) const
 template <class Derived>
 Derived& TextSetters<Derived>::SetText(int16_t font, float_t size, color_t color, float_t alpha)
 {
-  Plot::CheckAlpha(alpha);
-  mText = {color, alpha, font, size};
+  bool valid = Plot::CheckFont(font);
+  valid = Plot::CheckNotNegative(size, "text size") && valid;
+  valid = Plot::CheckAlpha(alpha) && valid;
+  if (valid) mText = {color, alpha, font, size};
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -390,20 +429,19 @@ Derived& TextSetters<Derived>::SetTextColor(color_t color)
 template <class Derived>
 Derived& TextSetters<Derived>::SetTextAlpha(float_t alpha)
 {
-  Plot::CheckAlpha(alpha);
-  mText.alpha = alpha;
+  if (Plot::CheckAlpha(alpha)) mText.alpha = alpha;
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
 Derived& TextSetters<Derived>::SetTextFont(int16_t font)
 {
-  mText.style = font;
+  if (Plot::CheckFont(font)) mText.style = font;
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
 Derived& TextSetters<Derived>::SetTextSize(float_t size)
 {
-  mText.scale = size;
+  if (Plot::CheckNotNegative(size, "text size")) mText.scale = size;
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -420,8 +458,9 @@ void TextSetters<Derived>::PutText(ptree& tree) const
 template <class Derived>
 Derived& BorderSetters<Derived>::SetBorder(int16_t style, float_t width, color_t color, float_t alpha)
 {
-  Plot::CheckAlpha(alpha);
-  mBorder = {color, alpha, style, Plot::RoundWidth(width, "border width")};
+  bool valid = Plot::CheckFinite(width, "border width");
+  valid = Plot::CheckAlpha(alpha) && valid;
+  if (valid) mBorder = {color, alpha, style, Plot::RoundWidth(width, "border width")};
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -433,8 +472,7 @@ Derived& BorderSetters<Derived>::SetBorderColor(color_t color)
 template <class Derived>
 Derived& BorderSetters<Derived>::SetBorderAlpha(float_t alpha)
 {
-  Plot::CheckAlpha(alpha);
-  mBorder.alpha = alpha;
+  if (Plot::CheckAlpha(alpha)) mBorder.alpha = alpha;
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -446,7 +484,7 @@ Derived& BorderSetters<Derived>::SetBorderStyle(int16_t style)
 template <class Derived>
 Derived& BorderSetters<Derived>::SetBorderWidth(float_t width)
 {
-  mBorder.scale = Plot::RoundWidth(width, "border width");
+  if (Plot::CheckFinite(width, "border width")) mBorder.scale = Plot::RoundWidth(width, "border width");
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -971,7 +1009,7 @@ auto Plot::Pad::SetRedrawAxes(bool redraw) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultTextSize(float_t size) -> decltype(*this)
 {
-  mText.scale = size;
+  if (CheckNotNegative(size, "text size")) mText.scale = size;
   return *this;
 }
 
@@ -987,7 +1025,7 @@ auto Plot::Pad::SetDefaultTextColor(color_t color) -> decltype(*this)
 }
 auto Plot::Pad::SetDefaultTextAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mText.alpha = alpha;
   return *this;
 }
@@ -999,7 +1037,7 @@ auto Plot::Pad::SetDefaultTextAlpha(float_t alpha) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultTextFont(int16_t font) -> decltype(*this)
 {
-  mText.style = font;
+  if (CheckFont(font)) mText.style = font;
   return *this;
 }
 
@@ -1010,7 +1048,7 @@ auto Plot::Pad::SetDefaultTextFont(int16_t font) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultMarkerSize(float_t size) -> decltype(*this)
 {
-  mMarkerDefaults.scale = size;
+  if (CheckFinite(size, "marker size")) mMarkerDefaults.scale = size;
   return *this;
 }
 
@@ -1021,7 +1059,7 @@ auto Plot::Pad::SetDefaultMarkerSize(float_t size) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultLineWidth(float_t width) -> decltype(*this)
 {
-  mLineDefaults.scale = RoundWidth(width, "default line width");
+  if (CheckFinite(width, "default line width")) mLineDefaults.scale = RoundWidth(width, "default line width");
   return *this;
 }
 
@@ -1032,25 +1070,25 @@ auto Plot::Pad::SetDefaultLineWidth(float_t width) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultFillAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mFillDefaults.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::SetDefaultMarkerAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mMarkerDefaults.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::SetDefaultLineAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mLineDefaults.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::SetDefaultAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mMarkerDefaults.alpha = alpha;
   mLineDefaults.alpha = alpha;
   mFillDefaults.alpha = alpha;
@@ -1075,27 +1113,32 @@ vector<tuple<float_t, float_t, float_t, float_t>> Plot::Pad::GradientEndpoints(c
 
 //**************************************************************************************************
 /**
- * Warn about gradient stops that cannot give the intended colours: fewer than two stops or colours, positions outside [0, 1] or decreasing
- * (equal neighbours are a hard step), colour components outside [0, 1]. Run once when the gradient is set; the painter clamps the
- * interpolation to the end colours.
+ * Report gradient stops that cannot give the intended colours: fewer than two stops or colours, positions outside [0, 1] or decreasing
+ * (equal neighbours are a hard step), colour components outside [0, 1]. Run once when the gradient is set, which is then ignored (false).
  */
 //**************************************************************************************************
-void Plot::Pad::CheckGradient(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<int32_t> nColors, const string& setter)
+bool Plot::Pad::CheckGradient(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<int32_t> nColors, const string& setter)
 {
-  if (rgbEndpoints.size() < 2) logger::warning("{}: a gradient needs at least two stops, got {}: the default colours are used.", setter, rgbEndpoints.size());
-  if (nColors && *nColors < 1) logger::warning("{}: the number of gradient colours must be positive, got {}: the default colours are used.", setter, *nColors);
+  bool valid = true;
+  auto invalid = [&](auto&&... args) {
+    logger::warning(args...);
+    valid = false;
+  };
+  if (rgbEndpoints.size() < 2) invalid("{}: a gradient needs at least two stops, got {}: ignored.", setter, rgbEndpoints.size());
+  if (nColors && *nColors < 1) invalid("{}: the number of gradient colours must be positive, got {}: ignored.", setter, *nColors);
   auto inUnitRange = [](float_t value) { return value >= 0.f && value <= 1.f; };
   for (size_t i = 0; i < rgbEndpoints.size(); ++i) {
     const auto& [red, green, blue, position] = rgbEndpoints[i];
     if (!inUnitRange(position)) {
-      logger::warning("{}: gradient stop {} is at position {}, outside of 0 to 1 (the colour scale only covers 0 to 1).", setter, i + 1, position);
+      invalid("{}: gradient stop {} is at position {}, outside of 0 to 1 (the colour scale only covers 0 to 1): ignored.", setter, i + 1, position);
     } else if (i > 0 && position < std::get<3>(rgbEndpoints[i - 1])) {
-      logger::warning("{}: gradient stop {} is at position {}, before the previous one ({}): positions must not decrease.", setter, i + 1, position, std::get<3>(rgbEndpoints[i - 1]));
+      invalid("{}: gradient stop {} is at position {}, before the previous one ({}): positions must not decrease, ignored.", setter, i + 1, position, std::get<3>(rgbEndpoints[i - 1]));
     }
     if (!inUnitRange(red) || !inUnitRange(green) || !inUnitRange(blue)) {
-      logger::warning("{}: gradient stop {} has the colour ({}, {}, {}), components must be between 0 and 1.", setter, i + 1, red, green, blue);
+      invalid("{}: gradient stop {} has the colour ({}, {}, {}), components must be between 0 and 1: ignored.", setter, i + 1, red, green, blue);
     }
   }
+  return valid;
 }
 
 //**************************************************************************************************
@@ -1161,8 +1204,8 @@ auto Plot::Pad::SetDefaultMarkerColors(const vector<color_t>& colors) -> decltyp
 }
 auto Plot::Pad::SetDefaultMarkerColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
-  if (alpha) Plot::CheckAlpha(*alpha);
-  CheckGradient(rgbEndpoints, nColors, "SetDefaultMarkerColors");
+  if (alpha && !Plot::CheckAlpha(*alpha)) return *this;
+  if (!CheckGradient(rgbEndpoints, nColors, "SetDefaultMarkerColors")) return *this;
   mMarkerDefaults.SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
 }
@@ -1177,8 +1220,8 @@ auto Plot::Pad::SetDefaultLineColors(const vector<color_t>& colors) -> decltype(
 }
 auto Plot::Pad::SetDefaultLineColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
-  if (alpha) Plot::CheckAlpha(*alpha);
-  CheckGradient(rgbEndpoints, nColors, "SetDefaultLineColors");
+  if (alpha && !Plot::CheckAlpha(*alpha)) return *this;
+  if (!CheckGradient(rgbEndpoints, nColors, "SetDefaultLineColors")) return *this;
   mLineDefaults.SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
 }
@@ -1193,8 +1236,8 @@ auto Plot::Pad::SetDefaultFillColors(const vector<color_t>& colors) -> decltype(
 }
 auto Plot::Pad::SetDefaultFillColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
-  if (alpha) Plot::CheckAlpha(*alpha);
-  CheckGradient(rgbEndpoints, nColors, "SetDefaultFillColors");
+  if (alpha && !Plot::CheckAlpha(*alpha)) return *this;
+  if (!CheckGradient(rgbEndpoints, nColors, "SetDefaultFillColors")) return *this;
   mFillDefaults.SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
 }
@@ -1210,8 +1253,8 @@ auto Plot::Pad::SetDefaultColors(const vector<color_t>& colors) -> decltype(*thi
 }
 auto Plot::Pad::SetDefaultColors(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
-  if (alpha) Plot::CheckAlpha(*alpha);
-  CheckGradient(rgbEndpoints, nColors, "SetDefaultColors");
+  if (alpha && !Plot::CheckAlpha(*alpha)) return *this;
+  if (!CheckGradient(rgbEndpoints, nColors, "SetDefaultColors")) return *this;
   for (auto* defaults : {&mMarkerDefaults, &mLineDefaults, &mFillDefaults})
     defaults->SetGradient({rgbEndpoints, alpha, nColors});
   return *this;
@@ -1261,7 +1304,7 @@ auto Plot::Pad::SetDefaultFillStyles(const vector<int16_t>& styles) -> decltype(
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultCandleBoxRange(float_t range) -> decltype(*this)
 {
-  mCandleOptionDefaults.boxRange = range;
+  if (CheckFraction(range, "candle box range")) mCandleOptionDefaults.boxRange = range;
   return *this;
 }
 
@@ -1272,7 +1315,7 @@ auto Plot::Pad::SetDefaultCandleBoxRange(float_t range) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultCandleWhiskerRange(float_t range) -> decltype(*this)
 {
-  mCandleOptionDefaults.whiskerRange = range;
+  if (CheckFraction(range, "candle whisker range")) mCandleOptionDefaults.whiskerRange = range;
   return *this;
 }
 
@@ -1316,7 +1359,7 @@ auto Plot::Pad::SetTransparent() -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetFrameFill(int16_t style, color_t color, float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mFrameFill.color = color;
   mFrameFill.style = style;
   mFrameFill.alpha = alpha;
@@ -1337,7 +1380,7 @@ auto Plot::Pad::SetFrameFillStyle(int16_t style) -> decltype(*this)
 
 auto Plot::Pad::SetFrameFillAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mFrameFill.alpha = alpha;
   return *this;
 }
@@ -1349,7 +1392,7 @@ auto Plot::Pad::SetFrameFillAlpha(float_t alpha) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetFrameBorder(int16_t style, float_t width, color_t color, float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!CheckFinite(width, "frame border width") || !Plot::CheckAlpha(alpha)) return *this;
   mFrameBorder.color = color;
   mFrameBorder.alpha = alpha;
   mFrameBorder.style = style;
@@ -1365,7 +1408,7 @@ auto Plot::Pad::SetFrameBorderColor(color_t color) -> decltype(*this)
 
 auto Plot::Pad::SetFrameBorderAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mFrameBorder.alpha = alpha;
   return *this;
 }
@@ -1378,7 +1421,7 @@ auto Plot::Pad::SetFrameBorderStyle(int16_t style) -> decltype(*this)
 
 auto Plot::Pad::SetFrameBorderWidth(float_t width) -> decltype(*this)
 {
-  mFrameBorder.scale = RoundWidth(width, "frame border width");
+  if (CheckFinite(width, "frame border width")) mFrameBorder.scale = RoundWidth(width, "frame border width");
   return *this;
 }
 
@@ -1413,15 +1456,19 @@ auto Plot::Pad::SetFrameTransparent() -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetPalette(int32_t palette, optional<float_t> alpha) -> decltype(*this)
 {
-  if (alpha) Plot::CheckAlpha(*alpha);
+  if (alpha && !Plot::CheckAlpha(*alpha)) return *this;
+  if (palette > kCividis) {  // up to 0: ROOT's default palette, 1 to 50: of so many colours
+    logger::warning("Palette {} is not a ROOT palette (the last one is kCividis, {}): ignored.", palette, static_cast<int>(kCividis));
+    return *this;
+  }
   mPalette.index = palette;
   mPalette.colorGradient = {{}, alpha, {}};  // a ROOT palette keeps only the alpha of the gradient settings
   return *this;
 }
 auto Plot::Pad::SetPalette(const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, optional<float_t> alpha, optional<int32_t> nColors) -> decltype(*this)
 {
-  if (alpha) Plot::CheckAlpha(*alpha);
-  CheckGradient(rgbEndpoints, nColors, "SetPalette");
+  if (alpha && !Plot::CheckAlpha(*alpha)) return *this;
+  if (!CheckGradient(rgbEndpoints, nColors, "SetPalette")) return *this;
   mPalette.index = {};
   mPalette.colorGradient = {rgbEndpoints, alpha, nColors};
   return *this;
@@ -1439,6 +1486,15 @@ auto Plot::Pad::SetPalette(const vector<pair<color_t, float_t>>& gradient, optio
 //**************************************************************************************************
 auto Plot::Pad::SetPosition(double_t xlow, double_t ylow, double_t xup, double_t yup) -> decltype(*this)
 {
+  bool valid = CheckFraction(xlow, "pad position xlow");
+  valid = CheckFraction(ylow, "pad position ylow") && valid;
+  valid = CheckFraction(xup, "pad position xup") && valid;
+  valid = CheckFraction(yup, "pad position yup") && valid;
+  if (valid && (xlow >= xup || ylow >= yup)) {
+    logger::warning("Pad position ({}, {}) to ({}, {}): the lower left corner must be below and left of the upper right one, ignored.", xlow, ylow, xup, yup);
+    valid = false;
+  }
+  if (!valid) return *this;
   mPosition.xlow = xlow;
   mPosition.ylow = ylow;
   mPosition.xup = xup;
@@ -1453,6 +1509,11 @@ auto Plot::Pad::SetPosition(double_t xlow, double_t ylow, double_t xup, double_t
 //**************************************************************************************************
 auto Plot::Pad::SetMargins(float_t top, float_t bottom, float_t left, float_t right) -> decltype(*this)
 {
+  bool valid = CheckFraction(top, "top margin");
+  valid = CheckFraction(bottom, "bottom margin") && valid;
+  valid = CheckFraction(left, "left margin") && valid;
+  valid = CheckFraction(right, "right margin") && valid;
+  if (!valid) return *this;
   mMargins.top = top;
   mMargins.bottom = bottom;
   mMargins.left = left;
@@ -1461,22 +1522,22 @@ auto Plot::Pad::SetMargins(float_t top, float_t bottom, float_t left, float_t ri
 }
 auto Plot::Pad::SetTopMargin(float_t top) -> decltype(*this)
 {
-  mMargins.top = top;
+  if (CheckFraction(top, "top margin")) mMargins.top = top;
   return *this;
 }
 auto Plot::Pad::SetBottomMargin(float_t bottom) -> decltype(*this)
 {
-  mMargins.bottom = bottom;
+  if (CheckFraction(bottom, "bottom margin")) mMargins.bottom = bottom;
   return *this;
 }
 auto Plot::Pad::SetLeftMargin(float_t left) -> decltype(*this)
 {
-  mMargins.left = left;
+  if (CheckFraction(left, "left margin")) mMargins.left = left;
   return *this;
 }
 auto Plot::Pad::SetRightMargin(float_t right) -> decltype(*this)
 {
-  mMargins.right = right;
+  if (CheckFraction(right, "right margin")) mMargins.right = right;
   return *this;
 }
 
@@ -1487,6 +1548,9 @@ auto Plot::Pad::SetRightMargin(float_t right) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetView(double_t theta, double_t phi) -> decltype(*this)
 {
+  bool valid = CheckFinite(theta, "view angle theta");
+  valid = CheckFinite(phi, "view angle phi") && valid;
+  if (!valid) return *this;
   mView.theta = theta;
   mView.phi = phi;
   return *this;
@@ -1965,6 +2029,7 @@ Plot::Pad::Data& Plot::Pad::AddData(const Data& data, const optional<string>& la
 //**************************************************************************************************
 Plot::Pad::Data& Plot::Pad::AddFunction(const string& function, const optional<string>& label)
 {
+  if (is_blank(function)) logger::throw_invalid_argument("Empty function expression.");
   mData.push_back(std::make_shared<Data>(function, kUserFunctions, label));
   return *mData.back();
 }
@@ -2640,17 +2705,27 @@ auto Plot::Pad::Data::SetDrawOption() -> decltype(*this)
 }
 auto Plot::Pad::Data::SetTextFormat(const string& textFormat) -> decltype(*this)
 {
+  // printed with a % in front (as ROOT's text option does): a conversion of a floating point number, text may follow
+  static const std::regex valid(R"(^[-+ #0]*\d*(\.\d*)?[eEfFgGaA]([^%]|%%)*$)");
+  if (!std::regex_match(textFormat, valid)) {
+    logger::warning("Text format '{}' of {} is not valid: a conversion of a number without % (e.g. 4.2f or .3g), ignored.", textFormat, mName);
+    return *this;
+  }
   mTextFormat = textFormat;
   return *this;
 }
 auto Plot::Pad::Data::SetTextAngle(float_t angle) -> decltype(*this)
 {
-  mTextAngle = angle;
+  if (CheckFinite(angle, "text angle of " + GetName())) mTextAngle = angle;
   return *this;
 }
 auto Plot::Pad::Data::SetShowStats(const string& format, const optional<string>& title) -> decltype(*this)
 {
   // the first line of the box ('n', which would be the name of the histogram) is shown exactly when there is a title
+  if (format.find_first_not_of("nemMrRuoiIsSkK") != string::npos) {
+    logger::warning("Statistics box format '{}' of {} is not valid: letters of TStyle::SetOptStat (nemMrRuoiIsSkK), ignored.", format, mName);
+    return *this;
+  }
   mStats.format = format;
   mStats.format->erase(std::remove(mStats.format->begin(), mStats.format->end(), 'n'), mStats.format->end());
   mStats.title = title;
@@ -2663,6 +2738,9 @@ auto Plot::Pad::Data::SetStatsBox(const StatsBox& statsBox) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetRangeX(double_t min, double_t max) -> decltype(*this)
 {
+  bool valid = CheckFinite(min, "range minimum of " + GetName());
+  valid = CheckFinite(max, "range maximum of " + GetName()) && valid;
+  if (!valid) return *this;
   if (min >= max) {
     logger::warning("Range ({}, {}) of {} in x has min >= max, ignoring it.", min, max, mName);
     return *this;
@@ -2673,12 +2751,12 @@ auto Plot::Pad::Data::SetRangeX(double_t min, double_t max) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetMinRangeX(double_t min) -> decltype(*this)
 {
-  mRangeX.min = min;
+  if (CheckFinite(min, "range minimum of " + GetName())) mRangeX.min = min;
   return *this;
 }
 auto Plot::Pad::Data::SetMaxRangeX(double_t max) -> decltype(*this)
 {
-  mRangeX.max = max;
+  if (CheckFinite(max, "range maximum of " + GetName())) mRangeX.max = max;
   return *this;
 }
 auto Plot::Pad::Data::SetRangeX() -> decltype(*this)
@@ -2689,6 +2767,9 @@ auto Plot::Pad::Data::SetRangeX() -> decltype(*this)
 }
 auto Plot::Pad::Data::SetRangeY(double_t min, double_t max) -> decltype(*this)
 {
+  bool valid = CheckFinite(min, "range minimum of " + GetName());
+  valid = CheckFinite(max, "range maximum of " + GetName()) && valid;
+  if (!valid) return *this;
   if (min >= max) {
     logger::warning("Range ({}, {}) of {} in y has min >= max, ignoring it.", min, max, mName);
     return *this;
@@ -2699,12 +2780,12 @@ auto Plot::Pad::Data::SetRangeY(double_t min, double_t max) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetMinRangeY(double_t min) -> decltype(*this)
 {
-  mRangeY.min = min;
+  if (CheckFinite(min, "range minimum of " + GetName())) mRangeY.min = min;
   return *this;
 }
 auto Plot::Pad::Data::SetMaxRangeY(double_t max) -> decltype(*this)
 {
-  mRangeY.max = max;
+  if (CheckFinite(max, "range maximum of " + GetName())) mRangeY.max = max;
   return *this;
 }
 auto Plot::Pad::Data::SetRangeY() -> decltype(*this)
@@ -2727,7 +2808,7 @@ auto Plot::Pad::Data::SetColor(color_t color) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mMarker.alpha = alpha;
   mLine.alpha = alpha;
   mFill.alpha = alpha;
@@ -2745,26 +2826,36 @@ auto Plot::Pad::Data::SetKeepInputStyle(bool keep) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetContours(const vector<double>& contours) -> decltype(*this)
 {
+  const bool finite = std::all_of(contours.begin(), contours.end(), [](double level) { return std::isfinite(level); });
+  if (!finite) {
+    logger::warning("The contour levels of {} are not all finite numbers: ignored.", mName);
+    return *this;
+  }
   if (std::adjacent_find(contours.begin(), contours.end(), std::greater_equal<double>()) != contours.end()) {
-    logger::warning("The contour levels of {} do not increase: ROOT expects them in increasing order.", mName);
+    logger::warning("The contour levels of {} do not increase: ROOT expects them in increasing order, ignored.", mName);
+    return *this;
   }
   mContours = contours;
   return *this;
 }
 auto Plot::Pad::Data::SetContours(int32_t nContours) -> decltype(*this)
 {
-  if (nContours < 1) logger::warning("SetContours({}) of {}: the number of contour levels must be positive.", nContours, mName);
-  mNContours = nContours;
+  if (CheckCount(nContours, "number of contour levels of " + GetName())) mNContours = nContours;
   return *this;
 }
 auto Plot::Pad::Data::SetNpx(int32_t nx, optional<int32_t> ny) -> decltype(*this)
 {
+  bool valid = CheckCount(nx, "number of x samples of " + GetName());
+  valid = (!ny || CheckCount(*ny, "number of y samples of " + GetName())) && valid;
+  if (!valid) return *this;
   mNpx = nx;
   mNpy = ny;
   return *this;
 }
 auto Plot::Pad::Data::Normalize(bool isDensity, optional<double_t> min, optional<double_t> max) -> decltype(*this)
 {
+  if (min && !CheckFinite(*min, "Normalize range minimum of " + GetName())) min.reset();
+  if (max && !CheckFinite(*max, "Normalize range maximum of " + GetName())) max.reset();
   if (min && max && !(*min < *max)) {
     logger::warning("Range [{}, {}] of Normalize for {} is empty, ignoring the range.", *min, *max, GetName());
     min.reset();
@@ -2777,6 +2868,8 @@ auto Plot::Pad::Data::Normalize(bool isDensity, optional<double_t> min, optional
 }
 auto Plot::Pad::Data::NormalizeToMaximum(optional<double_t> min, optional<double_t> max) -> decltype(*this)
 {
+  if (min && !CheckFinite(*min, "NormalizeToMaximum range minimum of " + GetName())) min.reset();
+  if (max && !CheckFinite(*max, "NormalizeToMaximum range maximum of " + GetName())) max.reset();
   if (min && max && !(*min < *max)) {
     logger::warning("Range [{}, {}] of NormalizeToMaximum for {} is empty, ignoring the range.", *min, *max, GetName());
     min.reset();
@@ -2789,12 +2882,15 @@ auto Plot::Pad::Data::NormalizeToMaximum(optional<double_t> min, optional<double
 }
 auto Plot::Pad::Data::Scale(double_t scaleFactor) -> decltype(*this)
 {
-  mModify.scaleFactor = scaleFactor;
+  if (CheckFinite(scaleFactor, "scale factor of " + GetName())) mModify.scaleFactor = scaleFactor;
   return *this;
 }
 auto Plot::Pad::Data::Smooth(uint16_t nIterSmooth) -> decltype(*this)
 {
-  if (nIterSmooth == 0) logger::warning("Smooth(0) of {} does not smooth: give the number of iterations.", mName);
+  if (nIterSmooth == 0) {
+    logger::warning("Smooth(0) of {} does not smooth: give the number of iterations, ignored.", mName);
+    return *this;
+  }
   mModify.nIterSmooth = nIterSmooth;
   return *this;
 }
@@ -2817,27 +2913,34 @@ auto Plot::Pad::Data::Density() -> decltype(*this)
 }
 auto Plot::Pad::Data::RebinX(uint16_t nGroup) -> decltype(*this)
 {
-  mModify.rebinGroupX = nGroup;
+  if (CheckCount(nGroup, "number of bins to merge for " + GetName())) mModify.rebinGroupX = nGroup;
   return *this;
 }
 auto Plot::Pad::Data::RebinY(uint16_t nGroup) -> decltype(*this)
 {
-  mModify.rebinGroupY = nGroup;
+  if (CheckCount(nGroup, "number of bins to merge for " + GetName())) mModify.rebinGroupY = nGroup;
   return *this;
 }
 auto Plot::Pad::Data::RebinZ(uint16_t nGroup) -> decltype(*this)
 {
-  mModify.rebinGroupZ = nGroup;
+  if (CheckCount(nGroup, "number of bins to merge for " + GetName())) mModify.rebinGroupZ = nGroup;
   return *this;
 }
 auto Plot::Pad::Data::RebinXY(uint16_t nGroupX, uint16_t nGroupY) -> decltype(*this)
 {
+  bool valid = CheckCount(nGroupX, "number of x bins to merge for " + GetName());
+  valid = CheckCount(nGroupY, "number of y bins to merge for " + GetName()) && valid;
+  if (!valid) return *this;
   mModify.rebinGroupX = nGroupX;
   mModify.rebinGroupY = nGroupY;
   return *this;
 }
 auto Plot::Pad::Data::RebinXYZ(uint16_t nGroupX, uint16_t nGroupY, uint16_t nGroupZ) -> decltype(*this)
 {
+  bool valid = CheckCount(nGroupX, "number of x bins to merge for " + GetName());
+  valid = CheckCount(nGroupY, "number of y bins to merge for " + GetName()) && valid;
+  valid = CheckCount(nGroupZ, "number of z bins to merge for " + GetName()) && valid;
+  if (!valid) return *this;
   mModify.rebinGroupX = nGroupX;
   mModify.rebinGroupY = nGroupY;
   mModify.rebinGroupZ = nGroupZ;
@@ -2845,49 +2948,61 @@ auto Plot::Pad::Data::RebinXYZ(uint16_t nGroupX, uint16_t nGroupY, uint16_t nGro
 }
 auto Plot::Pad::Data::ScaleX(double_t scaleFactor) -> decltype(*this)
 {
-  mModify.scaleAxisX = scaleFactor;
+  if (CheckFinite(scaleFactor, "x scale factor of " + GetName())) mModify.scaleAxisX = scaleFactor;
   return *this;
 }
 auto Plot::Pad::Data::ScaleY(double_t scaleFactor) -> decltype(*this)
 {
-  mModify.scaleAxisY = scaleFactor;
+  if (CheckFinite(scaleFactor, "y scale factor of " + GetName())) mModify.scaleAxisY = scaleFactor;
   return *this;
 }
 auto Plot::Pad::Data::ScaleZ(double_t scaleFactor) -> decltype(*this)
 {
-  mModify.scaleAxisZ = scaleFactor;
+  if (CheckFinite(scaleFactor, "z scale factor of " + GetName())) mModify.scaleAxisZ = scaleFactor;
   return *this;
 }
 auto Plot::Pad::Data::Project(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   if (dims.empty()) logger::throw_invalid_argument("Project needs at least one axis to project onto.");
-  mProjInfo = {dims, ranges, isUserCoord};
+  mProjInfo = {dims, FiniteRanges(ranges), isUserCoord};
   return *this;
 }
 auto Plot::Pad::Data::ProjectX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfo = {{0}, {{1, startY, endY}}, isUserCoord};
+  mProjInfo = {{0}, FiniteRanges({{1, startY, endY}}), isUserCoord};
   return *this;
 }
 auto Plot::Pad::Data::ProjectY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord};
+  mProjInfo = {{1}, FiniteRanges({{0, startX, endX}}), isUserCoord};
   return *this;
 }
 auto Plot::Pad::Data::Profile(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   if (dims.empty()) logger::throw_invalid_argument("Profile needs at least one axis to profile along.");
-  mProjInfo = {dims, ranges, isUserCoord, true};
+  mProjInfo = {dims, FiniteRanges(ranges), isUserCoord, true};
   return *this;
+}
+vector<tuple<uint8_t, double_t, double_t>> Plot::Pad::Data::FiniteRanges(const vector<tuple<uint8_t, double_t, double_t>>& ranges)
+{
+  vector<tuple<uint8_t, double_t, double_t>> finite;
+  for (const auto& [axis, min, max] : ranges) {
+    if (std::isfinite(min) && std::isfinite(max)) {
+      finite.emplace_back(axis, min, max);
+    } else {
+      logger::warning("The projection range [{}, {}] of axis {} has a limit that is not a finite number: ignored.", min, max, static_cast<int>(axis));
+    }
+  }
+  return finite;
 }
 auto Plot::Pad::Data::ProfileX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfo = {{0}, {{1, startY, endY}}, isUserCoord, true};
+  mProjInfo = {{0}, FiniteRanges({{1, startY, endY}}), isUserCoord, true};
   return *this;
 }
 auto Plot::Pad::Data::ProfileY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfo = {{1}, {{0, startX, endX}}, isUserCoord, true};
+  mProjInfo = {{1}, FiniteRanges({{0, startX, endX}}), isUserCoord, true};
   return *this;
 }
 auto Plot::Pad::Data::Project(std::initializer_list<uint8_t> dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
@@ -3423,7 +3538,7 @@ auto Plot::Pad::Ratio::SelectInput(const char* call, Select select) -> decltype(
     };
     swapDenom();
     auto swapBack = util::make_scope_guard(swapDenom);
-    select();
+    Quietly(mModMode == Mode::Both, select);  // with Both() the arguments were checked for the numerator already
   }
   return *this;
 }
@@ -3676,6 +3791,9 @@ auto Plot::Pad::Axis::SetTitle(const string& title) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetRange(double_t min, double_t max) -> decltype(*this)
 {
+  bool valid = CheckFinite(min, "range minimum");
+  valid = CheckFinite(max, "range maximum") && valid;
+  if (!valid) return *this;
   if (min >= max) {
     logger::warning("Range ({}, {}) of axis {} has min >= max, ignoring it.", min, max, mName);
     return *this;
@@ -3685,12 +3803,12 @@ auto Plot::Pad::Axis::SetRange(double_t min, double_t max) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetMaxRange(double_t max) -> decltype(*this)
 {
-  mRange.max = max;
+  if (CheckFinite(max, "range maximum")) mRange.max = max;
   return *this;
 }
 auto Plot::Pad::Axis::SetMinRange(double_t min) -> decltype(*this)
 {
-  mRange.min = min;
+  if (CheckFinite(min, "range minimum")) mRange.min = min;
   return *this;
 }
 auto Plot::Pad::Axis::SetRoomAboveMax(double_t frameFraction) -> decltype(*this)
@@ -3725,7 +3843,7 @@ auto Plot::Pad::Axis::SetAxisColor(color_t color) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetAxisAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mAxisFrame.alpha = alpha;
   return *this;
 }
@@ -3741,27 +3859,27 @@ auto Plot::Pad::Axis::SetMaxDigits(int32_t maxDigits) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetTickLength(float_t tickLength) -> decltype(*this)
 {
-  mAxisFrame.scale = tickLength;
+  if (CheckFinite(tickLength, "tick length")) mAxisFrame.scale = tickLength;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleFont(int16_t font) -> decltype(*this)
 {
-  mTitleLayout.style = font;
+  if (CheckFont(font)) mTitleLayout.style = font;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelFont(int16_t font) -> decltype(*this)
 {
-  mLabelLayout.style = font;
+  if (CheckFont(font)) mLabelLayout.style = font;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleSize(float_t size) -> decltype(*this)
 {
-  mTitleLayout.scale = size;
+  if (CheckNotNegative(size, "title size")) mTitleLayout.scale = size;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelSize(float_t size) -> decltype(*this)
 {
-  mLabelLayout.scale = size;
+  if (CheckNotNegative(size, "label size")) mLabelLayout.scale = size;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleColor(color_t color) -> decltype(*this)
@@ -3776,29 +3894,29 @@ auto Plot::Pad::Axis::SetLabelColor(color_t color) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetTitleAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mTitleLayout.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mLabelLayout.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleOffset(float_t offset) -> decltype(*this)
 {
-  mTitleLayout.offset = offset;
+  if (CheckFinite(offset, "title offset")) mTitleLayout.offset = offset;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelOffset(float_t offset) -> decltype(*this)
 {
-  mLabelLayout.offset = offset;
+  if (CheckFinite(offset, "label offset")) mLabelLayout.offset = offset;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelAngle(float_t angle) -> decltype(*this)
 {
-  mLabelLayout.angle = angle;
+  if (CheckFinite(angle, "label angle")) mLabelLayout.angle = angle;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleCenter(bool center) -> decltype(*this)
@@ -3838,12 +3956,12 @@ auto Plot::Pad::Axis::SetHideClippedLabels(bool hide) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetColorScaleOffset(float_t offset) -> decltype(*this)
 {
-  mAxisFrame.colorScaleOffset = offset;
+  if (CheckFinite(offset, "colour scale offset")) mAxisFrame.colorScaleOffset = offset;
   return *this;
 }
 auto Plot::Pad::Axis::SetColorScaleWidth(float_t width) -> decltype(*this)
 {
-  mAxisFrame.colorScaleWidth = width;
+  if (CheckNotNegative(width, "colour scale width")) mAxisFrame.colorScaleWidth = width;
   return *this;
 }
 auto Plot::Pad::Axis::SetTimeFormat(const string& timeFormat) -> decltype(*this)
@@ -3853,6 +3971,10 @@ auto Plot::Pad::Axis::SetTimeFormat(const string& timeFormat) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetTickOrientation(const string& tickOrientation) -> decltype(*this)
 {
+  if (tickOrientation != "+" && tickOrientation != "-" && tickOrientation != "+-" && tickOrientation != "-+") {
+    logger::warning("Tick orientation '{}' of axis {} is not valid: + (positive side), - (negative side) or +- (both), ignored.", tickOrientation, mName);
+    return *this;
+  }
   mAxisFrame.tickOrientation = tickOrientation;
   return *this;
 }
@@ -3871,6 +3993,12 @@ auto Plot::Pad::Axis::SetTickOrientation(const string& tickOrientation) -> declt
 template <typename BoxType>
 Plot::Pad::Box<BoxType>::Box(double_t xPos, double_t yPos) : Box()
 {
+  bool valid = CheckFinite(xPos, "box position x");
+  valid = CheckFinite(yPos, "box position y") && valid;
+  if (!valid) {
+    SetAutoPlacement();
+    return;
+  }
   mPos.x = xPos;
   mPos.y = yPos;
 }
@@ -3934,6 +4062,9 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
 template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetPosition(double_t x, double_t y)
 {
+  bool valid = CheckFinite(x, "box position x");
+  valid = CheckFinite(y, "box position y") && valid;
+  if (!valid) return *GetThis();
   mPos.x = x;
   mPos.y = y;
   mPos.placement = nullopt;
@@ -3943,6 +4074,9 @@ BoxType& Plot::Pad::Box<BoxType>::SetPosition(double_t x, double_t y)
 template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetSize(double_t width, double_t height)
 {
+  bool valid = CheckNotNegative(width, "box width");
+  valid = CheckNotNegative(height, "box height") && valid;
+  if (!valid) return *GetThis();
   mPos.w = width;
   mPos.h = height;
   return *GetThis();
@@ -3996,22 +4130,14 @@ BoxType& Plot::Pad::Box<BoxType>::SetNoBox()
 template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetMargin(float_t margin)
 {
-  if (margin >= 0.f) {
-    mMargin = margin;
-  } else {
-    logger::warning("Box cannot have a negative margin ({}).", margin);
-  }
+  if (CheckNotNegative(margin, "box margin")) mMargin = margin;
   return *GetThis();
 }
 
 template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetLineSpacing(float_t lineSpacing)
 {
-  if (lineSpacing >= 0.f) {
-    mLineSpacing = lineSpacing;
-  } else {
-    logger::warning("Box cannot have a negative line spacing ({}).", lineSpacing);
-  }
+  if (CheckNotNegative(lineSpacing, "line spacing")) mLineSpacing = lineSpacing;
   return *GetThis();
 }
 
@@ -4082,6 +4208,9 @@ ptree Plot::Pad::ImageBox::GetPropertyTree() const
 //**************************************************************************************************
 auto Plot::Pad::ImageBox::SetPosition(double_t x, double_t y) -> decltype(*this)
 {
+  bool valid = CheckFinite(x, "image position x");
+  valid = CheckFinite(y, "image position y") && valid;
+  if (!valid) return *this;
   mX = x;
   mY = y;
   mPlacement = nullopt;
@@ -4089,12 +4218,12 @@ auto Plot::Pad::ImageBox::SetPosition(double_t x, double_t y) -> decltype(*this)
 }
 auto Plot::Pad::ImageBox::SetWidth(double_t width) -> decltype(*this)
 {
-  mWidth = width;
+  if (CheckNotNegative(width, "image width")) mWidth = width;
   return *this;
 }
 auto Plot::Pad::ImageBox::SetHeight(double_t height) -> decltype(*this)
 {
-  mHeight = height;
+  if (CheckNotNegative(height, "image height")) mHeight = height;
   return *this;
 }
 auto Plot::Pad::ImageBox::SetPadCoordinates() -> decltype(*this)
@@ -4265,7 +4394,8 @@ void Plot::Pad::TextBox::ShiftDataIDsOfPads(const std::map<uint8_t, uint16_t>& o
 auto Plot::Pad::TextBox::SetTextAlign(int16_t align) -> decltype(*this)
 {
   if (align < 0 || align / 10 > 3 || align % 10 > 3) {
-    logger::warning("Text alignment {} is not valid: tens 1-3 (left, centre, right), units 1-3 (bottom, middle, top).", align);
+    logger::warning("Text alignment {} is not valid: tens 1-3 (left, centre, right), units 1-3 (bottom, middle, top), ignored.", align);
+    return *this;
   }
   int16_t hAlign = (align / 10) * 10;
   int16_t vAlign = align % 10;
@@ -4415,21 +4545,13 @@ auto Plot::Pad::LegendBox::SetTitle(const string& title) -> decltype(*this)
 
 auto Plot::Pad::LegendBox::SetNumColumns(uint8_t numColumns) -> decltype(*this)
 {
-  if (numColumns) {
-    mNumColumns = numColumns;
-  } else {
-    logger::warning("Legend box cannot have 0 columns.");
-  }
+  if (CheckCount(numColumns, "number of legend columns")) mNumColumns = numColumns;
   return *this;
 }
 
 auto Plot::Pad::LegendBox::SetColumnSpacing(float_t spacing) -> decltype(*this)
 {
-  if (spacing >= 0.f) {
-    mColumnSpacing = spacing;
-  } else {
-    logger::warning("Legend box cannot have a negative column spacing ({}).", spacing);
-  }
+  if (CheckNotNegative(spacing, "legend column spacing")) mColumnSpacing = spacing;
   return *this;
 }
 
@@ -4456,7 +4578,7 @@ auto Plot::Pad::LegendBox::SetDefaultColor(color_t color) -> decltype(*this)
 
 auto Plot::Pad::LegendBox::SetDefaultAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mLineDefault.alpha = alpha;
   mMarkerDefault.alpha = alpha;
   mFillDefault.alpha = alpha;
@@ -4471,7 +4593,7 @@ auto Plot::Pad::LegendBox::SetDefaultLineColor(color_t color) -> decltype(*this)
 
 auto Plot::Pad::LegendBox::SetDefaultLineAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mLineDefault.alpha = alpha;
   return *this;
 }
@@ -4484,7 +4606,7 @@ auto Plot::Pad::LegendBox::SetDefaultLineStyle(int16_t style) -> decltype(*this)
 
 auto Plot::Pad::LegendBox::SetDefaultLineWidth(float_t width) -> decltype(*this)
 {
-  mLineDefault.scale = RoundWidth(width, "legend default line width");
+  if (CheckFinite(width, "legend default line width")) mLineDefault.scale = RoundWidth(width, "legend default line width");
   return *this;
 }
 
@@ -4496,7 +4618,7 @@ auto Plot::Pad::LegendBox::SetDefaultMarkerColor(color_t color) -> decltype(*thi
 
 auto Plot::Pad::LegendBox::SetDefaultMarkerAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mMarkerDefault.alpha = alpha;
   return *this;
 }
@@ -4509,7 +4631,7 @@ auto Plot::Pad::LegendBox::SetDefaultMarkerStyle(int16_t style) -> decltype(*thi
 
 auto Plot::Pad::LegendBox::SetDefaultMarkerSize(float_t size) -> decltype(*this)
 {
-  mMarkerDefault.scale = size;
+  if (CheckFinite(size, "marker size")) mMarkerDefault.scale = size;
   return *this;
 }
 
@@ -4521,7 +4643,7 @@ auto Plot::Pad::LegendBox::SetDefaultFillColor(color_t color) -> decltype(*this)
 
 auto Plot::Pad::LegendBox::SetDefaultFillAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mFillDefault.alpha = alpha;
   return *this;
 }
@@ -4534,11 +4656,7 @@ auto Plot::Pad::LegendBox::SetDefaultFillStyle(int16_t style) -> decltype(*this)
 
 auto Plot::Pad::LegendBox::SetSymbolColScale(float_t scale) -> decltype(*this)
 {
-  if (scale >= 0.f) {
-    mSymbolColScale = scale;
-  } else {
-    logger::warning("Legend box cannot have a negative symbol column scale ({}).", scale);
-  }
+  if (CheckNotNegative(scale, "legend symbol column scale")) mSymbolColScale = scale;
   return *this;
 }
 
@@ -4744,6 +4862,10 @@ auto Plot::Pad::LegendEntry::SetLabel(const string& label) -> decltype(*this)
 
 auto Plot::Pad::LegendEntry::SetRefData(uint16_t refDataID) -> decltype(*this)
 {
+  if (refDataID == 0) {
+    logger::warning("SetRefData: data are numbered from 1, 0 is ignored.");
+    return *this;
+  }
   mRefDataID = refDataID;
   return *this;
 }
@@ -4786,6 +4908,10 @@ auto Plot::Pad::LegendEntry::AtTop() -> decltype(*this)
 
 auto Plot::Pad::LegendEntry::BeforeData(uint16_t dataID) -> decltype(*this)
 {
+  if (dataID == 0) {
+    logger::warning("BeforeData: data are numbered from 1, 0 is ignored.");
+    return *this;
+  }
   mPosition = position_t::before;
   mPositionDataID = dataID;
   return *this;
@@ -4793,6 +4919,10 @@ auto Plot::Pad::LegendEntry::BeforeData(uint16_t dataID) -> decltype(*this)
 
 auto Plot::Pad::LegendEntry::AfterData(uint16_t dataID) -> decltype(*this)
 {
+  if (dataID == 0) {
+    logger::warning("AfterData: data are numbered from 1, 0 is ignored.");
+    return *this;
+  }
   mPosition = position_t::after;
   mPositionDataID = dataID;
   return *this;
@@ -4808,7 +4938,7 @@ auto Plot::Pad::LegendEntry::SetColor(color_t color) -> decltype(*this)
 
 auto Plot::Pad::LegendEntry::SetAlpha(float_t alpha) -> decltype(*this)
 {
-  Plot::CheckAlpha(alpha);
+  if (!Plot::CheckAlpha(alpha)) return *this;
   mMarker.alpha = alpha;
   mLine.alpha = alpha;
   mFill.alpha = alpha;
@@ -4823,6 +4953,10 @@ auto Plot::Pad::LegendEntry::SetAlpha(float_t alpha) -> decltype(*this)
 
 Plot::Pad::Shape::Shape(kind_t kind, const vector<double_t>& coordinates) : mKind(kind), mCoordinates(coordinates)
 {
+  const bool finite = std::all_of(coordinates.begin(), coordinates.end(), [](double_t value) { return std::isfinite(value); });
+  if (!finite) {
+    logger::warning("A {} with a position that is not a finite number will not be drawn.", KindName(kind));
+  }
 }
 
 const char* Plot::Pad::Shape::KindName(kind_t kind)
@@ -4963,19 +5097,21 @@ auto Plot::Pad::Shape::SetArrowHead(const string& style) -> decltype(*this)
 auto Plot::Pad::Shape::SetArrowSize(float_t size) -> decltype(*this)
 {
   if (mKind != kind_t::arrow) logger::warning("SetArrowSize has an effect only on arrows (Pad::AddArrow), not on a {}.", KindName(mKind));
-  mArrowSize = size;
+  if (CheckNotNegative(size, "arrow size")) mArrowSize = size;
   return *this;
 }
 auto Plot::Pad::Shape::SetArc(double_t phiMin, double_t phiMax) -> decltype(*this)
 {
   if (mKind != kind_t::ellipse) logger::warning("SetArc has an effect only on ellipses (Pad::AddEllipse), not on a {}.", KindName(mKind));
-  mArc = {phiMin, phiMax};
+  bool valid = CheckFinite(phiMin, "start angle of the arc");
+  valid = CheckFinite(phiMax, "end angle of the arc") && valid;
+  if (valid) mArc = {phiMin, phiMax};
   return *this;
 }
 auto Plot::Pad::Shape::SetRotation(double_t theta) -> decltype(*this)
 {
   if (mKind != kind_t::ellipse) logger::warning("SetRotation has an effect only on ellipses (Pad::AddEllipse), not on a {}.", KindName(mKind));
-  mRotation = theta;
+  if (CheckFinite(theta, "rotation angle")) mRotation = theta;
   return *this;
 }
 

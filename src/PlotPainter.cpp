@@ -4601,7 +4601,10 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
     // fractions of the frame or the pad: the part of the pad they span
     const std::array<double_t, 4> span = (coordinates == frame_coordinates) ? FrameInPad(pad) : std::array<double_t, 4>{0., 0., 1., 1.};  // x1, y1, x2, y2
     const size_t nExpected = (kind == kind_t::vertical_line || kind == kind_t::horizontal_line) ? 1u : ((kind == kind_t::region_x || kind == kind_t::region_y) ? 2u : 4u);
-    if ((kind == kind_t::polygon) ? (c.size() < 6 || c.size() % 2) : (c.size() != nExpected)) continue;  // a polygon with too few points was reported when it was added
+    // a polygon with too few points and positions that are not finite numbers were reported when the shape was added
+    if ((kind == kind_t::polygon) ? (c.size() < 6 || c.size() % 2) : (c.size() != nExpected)) continue;
+    const bool finite = std::all_of(c.begin(), c.end(), [](double_t value) { return std::isfinite(value); });
+    if (!finite) continue;
     // positions as axis values: given so, or fractions of the frame or the pad converted; a log axis cannot show values that are not positive
     auto valueX = [&](double_t x) { return (!isUser) ? FromPad(pad->GetX1() + (span[0] + x * (span[2] - span[0])) * (pad->GetX2() - pad->GetX1()), pad->GetLogx()) : ((pad->GetLogx() && x <= 0.) ? nan : x); };
     auto valueY = [&](double_t y) { return (!isUser) ? FromPad(pad->GetY1() + (span[1] + y * (span[3] - span[1])) * (pad->GetY2() - pad->GetY1()), pad->GetLogy()) : ((pad->GetLogy() && y <= 0.) ? nan : y); };

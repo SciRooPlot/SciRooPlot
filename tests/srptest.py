@@ -2563,7 +2563,7 @@ SETTER_VALUES = {
     "style": {"plain": 2},
     "styles": {"plain": [2, 7]},
     "symbolElements": {"plain": "lp"},
-    "textFormat": {"plain": "%.3g", "text": '%.2f "a" $'},
+    "textFormat": {"plain": ".3g", "text": '.2f "a" \\c $d; {g} µ²'},
     "tickLength": {"plain": 0.04},
     "tickOrientation": {"plain": "+-"},
     "timeFormat": {"plain": "%d.%m.%y %H:%M"},
