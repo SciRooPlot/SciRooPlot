@@ -76,6 +76,12 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | The coordinate system of boxes and shapes was saved as `is_user_coordinates` (`plots.info`) | It is saved as `coordinate_system` (`pad_coordinates`, `frame_coordinates` or `user_coordinates`) | file format | Re-run the plotting programs. |
 | A layout saved the hiding of the labels and titles between touching panels as label and title size 0 of their axes (`plots.info`) | It is saved as `hidden_next_to` of the pad: the touching panels, by axis | file format | Re-run the plotting programs: plots saved before keep their labels hidden everywhere. |
 
+### Command line
+
+| Old | New | Kind | Action |
+|---|---|---|---|
+| `srp clean` forgot a C++ project whose build folder was deleted (`rm -rf build`), although its sources were still there | It keeps a project while the folder above the program's folder holds a `CMakeLists.txt` (the layout of `srp init-cpp`) | CLI | Nothing. |
+
 ## 3.3.3 → 4.0.0
 
 ### Build, includes and logging

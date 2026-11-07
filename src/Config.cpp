@@ -524,12 +524,14 @@ bool Config::Clean()
         logger::warning("Cannot expand program path '{}' of project {}; keeping it.", rawProgram, projectName);
       } else {
         // a folder that cannot be checked (no permission, a symlink loop, a stale mount) is kept, not taken as gone
+        // the sources of a C++ project outlive its build folder: kept while the folder above holds a CMakeLists.txt (layout of srp init-cpp)
         std::error_code ec;
-        const bool folderExists = std::filesystem::exists(std::filesystem::path(*program).parent_path(), ec);
+        const auto folder = std::filesystem::path(*program).parent_path();
+        const bool codeExists = std::filesystem::exists(folder, ec) || (!ec && std::filesystem::exists(folder.parent_path() / "CMakeLists.txt", ec));
         if (ec) {
           logger::warning("Cannot check the program folder of project {} ({}); keeping it.", projectName, ec.message());
         } else {
-          isStale = !folderExists;
+          isStale = !codeExists;
         }
       }
     }

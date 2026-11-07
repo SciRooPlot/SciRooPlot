@@ -2,7 +2,8 @@
 configuration folder exactly as it was: for an existing project, the selected one (@current), an unknown one, @current with none selected,
 names that are no project names (.., a b, a/b) and an empty name; and for every command while projects.info cannot be read (the reason
 is given once, the file is never written over). Removing, renaming and resetting change only what SciRooPlot wrote: program files stay, folders holding other files are
-kept or refused. Registering is safe against srp commands and programs running at the same time, and in-memory data moves with a renamed
+kept or refused; clean forgets the projects whose code is gone (the folder of the program, for a C++ project also the sources above its
+build folder). Registering is safe against srp commands and programs running at the same time, and in-memory data moves with a renamed
 project.
 Covers: suite_cli #15, #18, #43 (unknown projects), f6e960e (confdir of an unknown project, unset program), b334843 (confdir ..),
 07fb006 and e7af591 (add with an unset variable: one message, nothing left), 5b7c72f (program before srp add), f934095 (concurrent
@@ -153,6 +154,18 @@ shutil.rmtree(os.path.join(PROGRAMS, "B"))
 out = run(SRP, "clean", config=config)
 check("clean removes the projects whose program folder is gone, and only those", out.rc == 0 and project_names(config) == ["A"], out.tail())
 program("B")
+# a C++ project whose build folder was deleted: its sources (the CMakeLists.txt above the build folder) are still there
+config = setup()
+built = os.path.join(PROGRAMS, "cpp", "build", "definePlots")
+os.makedirs(os.path.dirname(built))
+open(os.path.join(PROGRAMS, "cpp", "CMakeLists.txt"), "w").close()
+run(SRP, "add", "cpp", built, config=config)
+shutil.rmtree(os.path.dirname(built))
+out = run(SRP, "clean", config=config)
+check("clean keeps a C++ project whose build folder is gone while its sources are there", out.rc == 0 and project_names(config) == ["A", "B", "cpp"], out.tail())
+os.remove(os.path.join(PROGRAMS, "cpp", "CMakeLists.txt"))
+out = run(SRP, "clean", config=config)
+check("clean removes it once its CMakeLists.txt is gone too", out.rc == 0 and project_names(config) == ["A", "B"], out.tail())
 
 # concurrent registration (f934095)
 config = config_folder("config_concurrent")
