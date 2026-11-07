@@ -1,12 +1,16 @@
 """Every file mode writes one file per plot, <output directory>/<group>/<plot>.<mode>, in its format and holding the plot: for every data
 kind of srptest in every variant (every value at least once in the fast run; the normal variant of every kind in every mode always).
-Checked by the structure of each format: pdf (one page), eps (bounding box of the canvas' aspect), ps (one page), svg (an svg document of
-the canvas' aspect), png and jpg (the canvas' pixels at bitmapscale 1), html (a page holding the canvas), and root, xml and json, whose
-canvas must be the one of mode file (Plots.root): the same primitives with the same drawing options, in every sub-pad. The json canvas has
-no colour reservation (a TExec only a canvas read back by ROOT needs) and keeps a histogram drawn twice as one object; ROOT writes infinite
-values into json as 2e308 (JSROOT reads them as infinity), which its own reader refuses: they are read back as the largest double.
+Checked by the structure of each format: pdf (one page, shown in the canvas' aspect: ROOT turns the page of a wide canvas), eps (bounding
+box of the canvas' aspect), ps (one page), svg (an svg document of the canvas' aspect), png and jpg (the canvas' pixels at bitmapscale 1),
+html (a page holding the canvas), and root, xml and json, whose canvas must be the one of mode file (Plots.root): the same primitives with
+the same drawing options, in every sub-pad. The json canvas has no colour reservation (a TExec only a canvas read back by ROOT needs) and
+keeps a histogram drawn twice as one object; ROOT writes infinite values into json as 2e308 (JSROOT reads them as infinity), which its own
+reader refuses: they are read back as the largest double.
 Images (Pad::AddImage) are in every format: svg embeds a png, eps and ps a cell array, the bitmaps show the image's pixels, root, xml and
 json hold it in its sub-pad; pdf only from ROOT 6.42 on, before which one warning per run says so (instead of ROOT's line per image).
+The same for multi-panel plots (srptest's LAYOUTS: a grid, ratio panels, a gap with an explicit group, a legend strip with the rows of
+other pads, a flat panel beside a 3D view): as pdf of every data kind, in every mode of a 1d and a 2d histogram (normal variant; the
+variants of the data are the single-pad plots' part).
 No mode gives errors, or warnings mode file does not give for the same data.
 Mode html needs ROOT 6.42 (before, ROOT writes PostScript under that name): with an older ROOT it is refused with an error and writes
 nothing."""
@@ -17,17 +21,28 @@ import re
 import shutil
 import xml.etree.ElementTree as ElementTree
 
-from srptest import DATA_KINDS, FILE_MODES, VARIANTS, Project, ROOT, S, add_data, base_of, bitmap, canvas_tree, cases, check, describe, finish, has_variant, read_canvas, rgb, source_of
+from srptest import DATA_KINDS, FILE_MODES, LAYOUT_BASES, LAYOUTS, VARIANTS, Project, ROOT, S, add_data, base_of, bitmap, canvas_tree, cases, check, describe, finish, has_layout, has_variant, layout_plot, read_canvas, rgb, source_of
 
 ROOT_642 = ROOT.gROOT.GetVersionInt() >= 64200
 MODES = tuple(mode for mode in FILE_MODES if ROOT_642 or mode != "html")
-p = Project("file_formats")
+p = Project("file_formats", bases=("1d", "2d", *LAYOUT_BASES))
 p.inputs(VARIANTS)
 todo = cases({"mode": MODES, "kind": tuple(DATA_KINDS), "variant": VARIANTS}, valid=lambda c: has_variant(c["kind"], c["variant"]), always=lambda c: c["variant"] == "normal")
+plots = {}  # plot name: its case
 for i, case in enumerate(todo):
+    plots[f"{case['mode']}_{i}"] = case
     plot = S.Plot(f"{case['mode']}_{i}", "formats/sub", base_of(case["kind"]))
     add_data(plot[1], case["kind"], source_of(case["variant"]), case["variant"])
     p.pm.AddPlot(plot)
+# multi-panel plots; named: the plots of the first test of the output of layouts (d29a380: maps, legend strip, 1d grid, 3D views)
+multi = cases(
+    {"mode": MODES, "kind": tuple(DATA_KINDS), "layout": LAYOUTS},
+    valid=lambda c: has_layout(c["kind"], c["layout"]) and (c["mode"] == "pdf" or c["kind"] in ("hist", "hist2d")),
+    named=[{"mode": "pdf", "kind": kind, "layout": layout, "why": "d29a380"} for kind, layout in (("hist2d", "grid"), ("hist", "strip"), ("hist", "grid"), ("hist2d", "view"))],
+)
+for i, case in enumerate(multi):
+    plots[f"{case['mode']}_L{i}"] = case
+    p.pm.AddPlot(layout_plot(f"{case['mode']}_L{i}", "formats/sub", case["kind"], case["layout"]))
 
 logo = p.path("logo.png")  # 300 x 100 pixels of one colour
 LOGO_COLOUR = ROOT.kAzure + 2
@@ -64,7 +79,14 @@ def format_problem(mode, path, canvas):
     width, height = canvas.GetWw(), canvas.GetWh()
     if mode == "pdf":
         pages = len(re.findall(rb"/Type\s*/Page\b(?!s)", data))
-        return "" if data.startswith(b"%PDF-") and data.rstrip().endswith(b"%%EOF") and pages == 1 else f"no pdf of one page ({pages} pages)"
+        if not data.startswith(b"%PDF-") or not data.rstrip().endswith(b"%%EOF") or pages != 1:
+            return f"no pdf of one page ({pages} pages)"
+        box, turn = re.search(rb"/CropBox\s*\[\s*(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s*\]", data), re.search(rb"/Rotate\s+(\d+)", data)
+        if not box:
+            return "no crop box"
+        x1, y1, x2, y2 = (float(v) for v in box.groups())
+        w, h = (y2 - y1, x2 - x1) if turn and int(turn.group(1)) % 180 else (x2 - x1, y2 - y1)  # ROOT turns the page of a wide canvas
+        return "" if abs(aspect(w, h) - aspect(width, height)) < 0.01 else f"page shown {w:.0f} x {h:.0f}, canvas {width} x {height}"
     if mode == "eps":
         box = re.search(rb"%%BoundingBox:\s*(-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)", data)
         if not data.startswith(b"%!PS-Adobe-") or b"EPSF" not in data.split(b"\n", 1)[0] or not box:
@@ -104,17 +126,17 @@ def format_problem(mode, path, canvas):
 # every mode, every kind and variant
 # ---------------------------------------------------------------------------------------------
 for mode in MODES:
-    mine = [(i, case) for i, case in enumerate(todo) if case["mode"] == mode]
+    mine = [(name, case) for name, case in plots.items() if case["mode"] == mode]
     run = p.plot("formats/sub", f"{mode}_.*", mode)
     own = [line for line in run.warnings() if line not in reference.warnings()]
     check(f"mode {mode}: no errors, no warnings of its own", not run.errors() and not own, " | ".join((run.errors() + own)[:3]))
     folder = p.path("out", "formats", "sub")
     written = sorted(os.listdir(folder)) if os.path.isdir(folder) else []
-    expected = sorted(f"{mode}_{i}.{mode}" for i, _ in mine)
+    expected = sorted(f"{name}.{mode}" for name, _ in mine)
     check(f"mode {mode}: one file per plot in <output>/<group>", written == expected, f"{len(written)} files, expected {len(expected)}: {sorted(set(expected) ^ set(written))[:4]}")
-    for i, case in mine:
-        path = os.path.join(folder, f"{mode}_{i}.{mode}")
-        canvas = reference.canvas(f"{mode}_{i}", "formats/sub")
+    for name, case in mine:
+        path = os.path.join(folder, f"{name}.{mode}")
+        canvas = reference.canvas(name, "formats/sub")
         if not os.path.isfile(path) or not canvas:
             continue  # reported above
         problem = format_problem(mode, path, canvas)

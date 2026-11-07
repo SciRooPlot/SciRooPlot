@@ -594,6 +594,53 @@ def base_of(kind):
     return "1d" if DATA_KINDS[kind][0] == 1 else "2d"
 
 
+# Multi-panel plots of a data kind: grid (every panel of <dim>_2x2 draws it; 2d with the colour-scale cell), ratio (1d_2x1_ratio: the
+# kind in both panels, its ratio by itself below each), gap (<dim>_2x1_gap, the panels sharing y or z by ShareAxis), strip (two panels
+# under an empty strip holding a legend with the rows of their data, labelled by a placeholder and in the row), view (beside a 2d
+# histogram drawn as a 3D view sharing z).
+LAYOUTS = ("grid", "ratio", "gap", "strip", "view")
+LAYOUT_BASES = ("1d_2x2", "2d_2x2", "1d_2x1_ratio", "1d_2x1_gap", "2d_2x1_gap", "2d_2x1")  # Project(bases=...) of a test using them
+
+
+def has_layout(kind, layout):
+    """whether a multi-panel plot of that layout is made of data of a kind: ratio panels for 1d frames, 3D views beside 2d and 3d data"""
+    dim, _, props = DATA_KINDS[kind]
+    if layout == "ratio":
+        return dim == 1 and "polar" not in props
+    return layout != "view" or dim > 1
+
+
+def layout_plot(name, group, kind, layout, source="inputs", variant="normal"):
+    """a multi-panel plot (see LAYOUTS) whose panels draw data of a kind in a variant"""
+    dim, cls, props = DATA_KINDS[kind]
+    flat = "1d" if dim == 1 else "2d"
+    if layout == "strip":
+        plot = S.Plot(name, S.PanelLayout([[S.Empty(1, 0.2).Span(2)], [S.Panel(), S.Panel()]]))
+        plot.SetGroup(group)
+        legend = plot[1].AddLegend()
+        legend.SetNumColumns(2)
+        add_data(plot[2], kind, source, variant).SetLegendLabel("<name>")
+        add_data(plot[3], kind, source, variant)
+        legend.AddDataEntry(2, 1)
+        legend.AddDataEntry(3, 1).SetLabel("own label")
+        return plot
+    base = {"grid": f"{flat}_2x2", "ratio": "1d_2x1_ratio", "gap": f"{flat}_2x1_gap", "view": "2d_2x1"}[layout]
+    plot = S.Plot(name, group, base)
+    pads = {"1d_2x2": (1, 2, 3, 4), "2d_2x2": (1, 2, 4, 5), "1d_2x1_ratio": (1, 2), "1d_2x1_gap": (1, 2), "2d_2x1_gap": (1, 2), "2d_2x1": (1,)}[base]
+    for pad in pads:
+        add_data(plot[pad], kind, source, variant)
+    if layout == "ratio":
+        for pad in (3, 4):
+            ratio = plot[pad].AddRatio(ratio_input(kind, source, variant), ratio_input(kind, source, variant))
+            if "formula" in props:
+                ratio.SetRangeX(*axis_range(variant))
+    if layout == "gap" and "polar" not in props and cls != "TF3":  # polar drawings and TF3s share no y or z
+        plot.ShareAxis("Y" if flat == "1d" else "Z", [1, 2])
+    if layout == "view":
+        add_data(plot[2], "hist2d").SetDrawOption(S.lego_colz)
+    return plot
+
+
 def drawn_type(kind):
     """the type data of a kind is drawn as (the columns of the drawing option tables): hist1d, graph, function, hist2d, graph2d,
     function2d, hist3d, function3d; a TEfficiency as the graph or 2d histogram ROOT makes of it, a THn as its projection"""

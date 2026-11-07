@@ -1,11 +1,12 @@
 """Mode macro writes for every plot a ROOT macro that runs in ROOT and makes its canvas again: the macro compiles and runs without errors,
 and the canvas it makes has the primitives of the canvas of mode file (Plots.root), with the same drawing options, in every sub-pad, and
-the setup of every pad (palette, text format, kept axis ranges) runs before the pad is painted; for every data kind of srptest in every
-variant (every value at least once in the fast run, the normal variant of every kind always), and for a plot with an image. The macro is
-<output directory>/<group>/<name>.C, named after the plot as a C++ identifier (ROOT names the macro's function after the file): other
-characters replaced by _, a leading digit and names C++ or ROOT's interpreter know (keywords, types, C functions, main) prefixed or followed
-by _; names that give the same file get a number, with a warning. Mode macro needs a display: without one it is refused with an error and
-writes nothing.
+the same legend rows (label and symbol), and the setup of every pad (palette, text format, kept axis ranges) runs before the pad is
+painted; for every data kind of srptest in every variant (every value at least once in the fast run, the normal variant of every kind
+always), for multi-panel plots of every kind (srptest's LAYOUTS: a grid with a colour-scale cell, ratio panels, a gap, a legend strip
+with the rows of other pads, a flat panel beside a 3D view) and for a plot with an image. The macro is <output directory>/<group>/<name>.C,
+named after the plot as a C++ identifier (ROOT names the macro's function after the file): other characters replaced by _, a leading
+digit and names C++ or ROOT's interpreter know (keywords, types, C functions, main) prefixed or followed by _; names that give the same
+file get a number, with a warning. Mode macro needs a display: without one it is refused with an error and writes nothing.
 The macro is written by ROOT (TCanvas::SaveAs): what ROOT's SavePrimitive gets wrong is not SciRooPlot's to guarantee, and these data are
 left out (ROOT_CANNOT): a TF3 of compiled code (ROOT writes its title as formula), a TGraphMultiErrors with an error of 0 (an ambiguous
 SetPointEY call), every TProfile3D (its palette refers to a variable ROOT renamed), a TGraph2D of one point (pad ranges written with 6
@@ -18,7 +19,7 @@ import os
 import re
 import subprocess
 
-from srptest import DATA_KINDS, VARIANTS, WORK, Project, ROOT, S, add_data, base_of, canvas_tree, cases, check, describe, display, finish, has_variant, skip, source_of
+from srptest import DATA_KINDS, LAYOUT_BASES, LAYOUTS, VARIANTS, WORK, Project, ROOT, S, add_data, base_of, canvas_tree, cases, check, describe, display, finish, has_layout, has_variant, layout_plot, skip, source_of
 
 if not display():
     skip("mode macro needs a display (DISPLAY, or Xvfb to start one)")
@@ -33,7 +34,7 @@ def root_can(kind, variant):
     return (kind, None) not in ROOT_CANNOT and (kind, variant) not in ROOT_CANNOT
 
 
-p = Project("macros")
+p = Project("macros", bases=("1d", "2d", *LAYOUT_BASES))
 p.inputs(VARIANTS)
 todo = cases(
     {"kind": tuple(DATA_KINDS), "variant": VARIANTS},
@@ -44,6 +45,17 @@ for i, case in enumerate(todo):
     plot = S.Plot(f"m{i}", "macros", base_of(case["kind"]))
     add_data(plot[1], case["kind"], source_of(case["variant"]), case["variant"])
     p.pm.AddPlot(plot)
+# multi-panel plots; named: the plots of the first test of the macros of layouts (d29a380: legend strip, 1d grid, 3D views; maps below)
+multi = cases(
+    {"kind": tuple(DATA_KINDS), "layout": LAYOUTS},
+    valid=lambda c: has_layout(c["kind"], c["layout"]) and root_can(c["kind"], "normal"),
+    named=[
+        *({"kind": kind, "layout": layout, "why": "d29a380"} for kind, layout in (("hist", "strip"), ("hist", "grid"), ("hist2d", "view"))),
+        {"kind": "hist2d", "layout": "grid", "why": "the setup of a colour-scale cell runs before it in macros"},
+    ],
+)
+for i, case in enumerate(multi):
+    p.pm.AddPlot(layout_plot(f"l{i}", "macros", case["kind"], case["layout"]))
 logo = p.path("logo.png")
 c = ROOT.TCanvas("logo", "", 300, 100)
 c.SetFillColor(ROOT.kAzure + 2)
@@ -84,6 +96,10 @@ void tree(TPad* pad, int depth) {
     TObject* obj = link->GetObject();
     printf("TREE|%d|%s|%s|%s\\n", depth, obj->ClassName(), obj->GetName(), link->GetOption());
     if (obj->InheritsFrom(TPad::Class())) tree(static_cast<TPad*>(obj), depth + 1);
+    if (obj->InheritsFrom(TLegend::Class())) {
+      for (auto* entry : *static_cast<TLegend*>(obj)->GetListOfPrimitives())
+        printf("ROW|%s|%s|%s\\n", obj->GetName(), static_cast<TLegendEntry*>(entry)->GetLabel(), static_cast<TLegendEntry*>(entry)->GetOption());
+    }
   }
 }
 void replay(const char* macro) {
@@ -100,16 +116,41 @@ def replay(path):
     proc = subprocess.run(["root", "-l", "-q", f'{DRIVER}("{path}")'], capture_output=True, text=True, timeout=300, check=False)
     lines = (proc.stdout + proc.stderr).splitlines()
     tree = [(int(depth), cls, obj, opt) for depth, cls, obj, opt in (line[5:].split("|", 3) for line in lines if line.startswith("TREE|"))]
+    rows = sorted(tuple(line[4:].split("|", 2)) for line in lines if line.startswith("ROW|"))
     errors = [line for line in lines if re.search(r"error:|Error in <|Fatal|\*\*\* Break", line)]
     if proc.returncode:
         errors.append(f"exit status {proc.returncode}")
-    return tree, errors
+    return tree, rows, errors
+
+
+def legend_rows(pad):
+    """the rows of every legend of a canvas or pad and its sub-pads: (legend, label, option)"""
+    found = []
+    for obj in pad.GetListOfPrimitives():
+        if obj.InheritsFrom("TPad"):
+            found += legend_rows(obj)
+        elif obj.InheritsFrom("TLegend"):
+            found += [(obj.GetName(), str(entry.GetLabel()), str(entry.GetOption())) for entry in obj.GetListOfPrimitives()]
+    return found
 
 
 def drawn(tree):
     """what a canvas draws, in any order (ROOT makes the grid of a polar graph again when it draws the graph): its primitives without the
     TExecs (see setups), images without name and option (a macro makes them under a name of its own)"""
     return sorted((depth, cls, "", "") if cls == "TASImage" else (depth, cls, name, opt) for depth, cls, name, opt in tree if cls != "TExec")
+
+
+def pad_setups(tree):
+    """the pads holding a setup (a TExec setup_pad_<n> among their own primitives, wherever it stands)"""
+    found, pads = set(), []  # pads: the pads enclosing the current primitive, as (depth, name)
+    for depth, cls, name, _ in tree:
+        while pads and pads[-1][0] >= depth:
+            pads.pop()
+        if cls == "TExec" and name.startswith("setup_pad_") and pads and pads[-1][0] == depth - 1:
+            found.add((pads[-1][1], name))
+        if cls == "TPad":
+            pads.append((depth, name))
+    return found
 
 
 def setups(tree):
@@ -128,6 +169,7 @@ def setups(tree):
 run = p.plot("macros|names/a-b", ".+", "macro")
 check("mode macro: no errors", not run.errors(), " | ".join(run.errors()[:3]))
 jobs = [(f"macro runs in ROOT and makes the canvas: {describe(case)}", p.path("out", "macros", f"m{i}.C"), f"m{i}", "macros") for i, case in enumerate(todo)]
+jobs += [(f"macro runs in ROOT and makes the canvas: {describe(case)}", p.path("out", "macros", f"l{i}.C"), f"l{i}", "macros") for i, case in enumerate(multi)]
 jobs.append(("macro runs in ROOT and makes the canvas: plot with an image", p.path("out", "macros", "image.C"), "image", "macros"))
 for name, file in NAMES.items():
     jobs.append((f"plot {name!r}: macro {file}.C runs in ROOT and makes the canvas", p.path("out", "names", "a-b", f"{file}.C"), name, "names/a-b"))
@@ -136,7 +178,7 @@ for _, path, name, group in jobs:
     canvas = reference.canvas(name, group)
     if canvas:
         tree = canvas_tree(canvas)
-        wanted[path] = (drawn(tree), setups(tree))
+        wanted[path] = (drawn(tree), pad_setups(tree), sorted(legend_rows(canvas)))
     del canvas
 # the macros run in ROOT processes of their own, side by side
 with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as pool:
@@ -146,13 +188,15 @@ for title, path, _, _ in jobs:
     if result is None or want is None:
         check(title, False, "no macro written" if result is None else "no canvas in Plots.root")
         continue
-    tree, errors = result
+    tree, rows, errors = result
     got = drawn(tree)
     missing, extra = [e for e in want[0] if e not in got], [e for e in got if e not in want[0]]
     diff = f"missing {missing[:2]}, not in Plots.root {extra[:2]}" if missing or extra else ""
     lost = sorted(want[1] - setups(tree))
     if not diff and lost:
         diff = f"the setup runs after the pad is painted: {lost[:2]}"
+    if not diff and rows != want[2]:
+        diff = f"legend rows {rows[:3]}, in Plots.root {want[2][:3]}"
     check(title, not errors and not diff, " | ".join(errors[:2]) or diff)
 written = sorted(f[:-2] for f in os.listdir(p.path("out", "names", "a-b")) if f.endswith(".C")) if os.path.isdir(p.path("out", "names", "a-b")) else []
 check("macros named after the plots as C++ identifiers", written == sorted(NAMES.values()), f"{written}")
