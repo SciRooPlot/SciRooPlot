@@ -192,7 +192,7 @@ plot[2].AddRatio(...).Both().Normalize().Result().SetColor(kRed);            // 
 plot[2].AddRatio({"data", "src"}, Function("1250*exp(-x)"));                // by a formula of the plot definition (= {"1250*exp(-x)", kUserFunctions})
 plot[2].AddRatio({"model", "src"}, {"data", "src"});                         // model / data: a function numerator is evaluated at the data points, errors from the data
 ```
-Incompatible binnings are divided via spline interpolation; a profile is divided as the histogram of its means (after its `Numer()`/`Denom()` modifiers). Modifiers in `Result()` mode (the default) act on the ratio itself; Rebin, Cumulative, DivideBinWidth and Normalize there warn. Data selections (projections, profiles, `Scatter`, `Define`, `Filter`, `Entries`) always act on the inputs: in `Result()` mode they are taken as `Numer()` with a warning — write `Numer()`, `Denom()` or `Both()` explicitly.
+Incompatible binnings are divided via spline interpolation (a histogram through its filled bins: inside an empty bin of the denominator the ratio has no value); a profile is divided as the histogram of its means (after its `Numer()`/`Denom()` modifiers). Modifiers in `Result()` mode (the default) act on the ratio itself; Rebin, Cumulative, DivideBinWidth and Normalize there warn. Data selections (projections, profiles, `Scatter`, `Define`, `Filter`, `Entries`) always act on the inputs: in `Result()` mode they are taken as `Numer()` with a warning — write `Numer()`, `Denom()` or `Both()` explicitly.
 
 ## Trees and tables (TTree, RNTuple, CSV)
 

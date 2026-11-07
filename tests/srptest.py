@@ -1211,11 +1211,13 @@ class Points:
     """data as divided point by point: x, y and the y errors (kind none, sym or asym), per error dimension for a TGraphMultiErrors"""
 
     def __init__(self, obj):
+        self.edges = None  # the bin edges of a histogram
         if obj.InheritsFrom("TH1"):
             n = obj.GetNbinsX()
             self.x = [obj.GetBinCenter(b) for b in range(1, n + 1)]
             self.y = [obj.GetBinContent(b) for b in range(1, n + 1)]
             self.kind, self.e = "sym", [obj.GetBinError(b) for b in range(1, n + 1)]
+            self.edges = [obj.GetXaxis().GetBinLowEdge(b) for b in range(1, n + 2)]
             self.multi = None
             return
         v = graph_values(obj)
@@ -1230,12 +1232,21 @@ class Points:
 
 
 def interpolate(num, den, exp):
-    """the denominator at the numerator's positions: (values, errors as sym list or (low, high) lists or None), or None if impossible"""
-    n = len(den.x)
+    """the denominator at the numerator's positions: (values, errors as sym list or (low, high) lists or None), or None if impossible;
+    a histogram through its filled bins only (an empty bin, no content and no error, has no value: zero where a numerator point lies in it)"""
+    knots = range(len(den.x))
+    inEmptyBin = [False] * len(num.x)
+    if den.edges:
+        knots = [i for i in knots if den.y[i] or den.e[i]]
+        empty = [(den.edges[i], den.edges[i + 1]) for i in range(len(den.x)) if not (den.y[i] or den.e[i])]
+        inEmptyBin = [any(lo <= x < hi for lo, hi in empty) for x in num.x]
+        if not knots:
+            return [0.0] * len(num.x), None
+    n = len(knots)
     if n < 2:
         exp.error(f"Cannot interpolate {exp.den} for the division")
         return None
-    order = sorted(range(n), key=lambda i: den.x[i])
+    order = sorted(knots, key=lambda i: den.x[i])
     xs = [den.x[i] for i in order]
     if any(a == b for a, b in itertools.pairwise(xs)):
         exp.error(f"Cannot divide {exp.num} by graph {exp.den}: it has two points at x")
@@ -1257,10 +1268,11 @@ def interpolate(num, den, exp):
         elif num.kind == "asym":
             errors = ([abs(v - lo) for v, lo in zip(values, low)], [abs(hi - v) for v, hi in zip(values, high)])
     lo, hi = exp.denRange if exp.denRange else (xs[0], xs[-1])
-    if any(x < lo or x > hi for x in num.x):
+    if any((x < lo or x > hi) and not skip for x, skip in zip(num.x, inEmptyBin)):
         exp.warn(f"points of {exp.num} are outside the range")
+    values = [0.0 if skip else v for v, skip in zip(values, inEmptyBin)]
     oneSign = all(y > 0 for y in ys) or all(y < 0 for y in ys)
-    if oneSign and any((v <= 0) if ys[0] > 0 else (v >= 0) for v in values):
+    if oneSign and any((v <= 0) if ys[0] > 0 else (v >= 0) for v, skip in zip(values, inEmptyBin) if not skip):
         exp.warn(f"The interpolation of {exp.den} for")
     return values, errors
 

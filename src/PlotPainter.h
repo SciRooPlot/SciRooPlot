@@ -332,9 +332,11 @@ class PlotPainter
   static TF3* ScaleFunc(TF3* func, double_t domainFactorX, double_t domainFactorY, double_t domainFactorZ, double_t contentFactor);
 
   // warnings about the division are given only with verbose (the frame of a ratio pad is a second copy of the same division)
-  static bool Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors = false, bool verbose = true);
+  // a histogram denominator (denominatorBins: its graph is the denominator) is interpolated through its filled bins only, and the ratio is
+  // undefined in its empty bins
+  static bool Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors = false, bool verbose = true, const TH1* denominatorBins = nullptr);
   static bool Divide(TH1* numerator, TH1* denominator, bool binomialErrors = false, bool verbose = true);
-  static bool Divide(TH1* numerator, TGraph* denominator, bool binomialErrors = false, bool verbose = true);
+  static bool Divide(TH1* numerator, TGraph* denominator, bool binomialErrors = false, bool verbose = true, const TH1* denominatorBins = nullptr);
   static bool Divide(TGraph* numerator, TH1* denominator, bool binomialErrors = false, bool verbose = true);
   static bool Divide(TH1* numerator, TF1* denominator, bool binomialErrors = false, bool verbose = true);
   static bool Divide(TGraph* numerator, TF1* denominator, bool binomialErrors = false, bool verbose = true);

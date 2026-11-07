@@ -3,7 +3,8 @@ the ratio plain ROOT gives, or is reported with an error and loses only its plot
 without the division (profiles as the histograms of their means, TEfficiency as the graph or 2d histogram ROOT makes of it, THn projected).
 Histograms by histograms of the same binning: TH1::Divide (TH2Poly only by the same polygons). Otherwise the division is that of the points
 (the bin centres of a 1d histogram, with its errors): a denominator at other positions is interpolated with a cubic spline (TSpline3) of its
-values and of its error envelope; a zero denominator drops the point (empty bin); uncorrelated errors add in quadrature, binomial ones as
+values and of its error envelope, a histogram through its filled bins only (no knots at zero for empty bins); a zero denominator, or a
+point inside an empty bin of a histogram denominator, drops the point (empty bin); uncorrelated errors add in quadrature, binomial ones as
 TH1::Divide with option B; a negative denominator swaps asymmetric errors; a numerator without errors takes the errors of the denominator.
 By a function: the value at the bin centre or point (no binomial errors), bins and points outside its range left out (a formula of the plot
 definition has none). A function as numerator: sampled at the positions of the denominator. The result of a histogram is a histogram, of a
@@ -11,7 +12,8 @@ graph or function a graph. Every warning is expected.
 Covers: 82a875c (function numerator by a denominator with errors), e3de5c4 (graph points removed with their errors), 4986674 (profiles
 divided as their means), 5d432dd (formulas as denominators divide the whole numerator), f934095 (TGraphMultiErrors divided); TH2Poly
 divided without reading past its bins; NaN in a denominator removed before the division (a spline through it was NaN everywhere); two
-formulas without a range reported once; a TGraphMultiErrors denominator sorted with its errors.
+formulas without a range reported once; a TGraphMultiErrors denominator sorted with its errors; empty denominator bins (also NaN) no
+knots of the interpolation (the ratio swung around them).
 """
 
 from srptest import (
@@ -63,6 +65,9 @@ todo = cases(
         {"num": "hist2poly", "den": "hist2poly", "num_variant": "normal", "den_variant": "normal", "correlated": True, "why": "TH2Poly statistics"},
         {"num": "hist", "den": "graph_errors", "num_variant": "normal", "den_variant": "nan", "correlated": False, "why": "NaN denominator"},
         {"num": "graph_errors", "den": "hist_var", "num_variant": "normal", "den_variant": "nan", "correlated": False, "why": "NaN denominator"},
+        {"num": "hist", "den": "hist_var", "num_variant": "normal", "den_variant": "nan", "correlated": False, "why": "empty denominator bins"},
+        {"num": "graph_errors", "den": "hist_var", "num_variant": "normal", "den_variant": "empty", "correlated": False, "why": "empty denominator bins"},
+        {"num": "tf1", "den": "hist", "num_variant": "normal", "den_variant": "single", "correlated": False, "why": "empty denominator bins"},
         {"num": "function", "den": "function", "num_variant": "normal", "den_variant": "normal", "correlated": False, "why": "one error for two formulas"},
         {"num": "graph_multi", "den": "graph_errors", "num_variant": "normal", "den_variant": "unsorted", "correlated": False, "why": "sorting a TGraphMultiErrors"},
         {"num": "hist", "den": "graph_multi", "num_variant": "normal", "den_variant": "unsorted", "correlated": False, "why": "sorting a TGraphMultiErrors"},

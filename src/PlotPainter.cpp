@@ -6253,8 +6253,17 @@ string PlotPainter::GetAxisStr(int16_t i)
  * Return false if the division is not possible.
  */
 //**************************************************************************************************
-bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors, bool verbose)
+bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors, bool verbose, const TH1* denominatorBins)
 {
+  // the empty bins of a histogram denominator (no content and no error, also those that held NaN) have no value: interpolated, they are
+  // no knots (a knot at zero made the ratio swing around it), and the points of the numerator inside them are left out
+  vector<bool> inEmptyBin;
+  if (denominatorBins) {
+    const TAxis* axis = denominatorBins->GetXaxis();
+    auto isEmpty = [&](int32_t bin) { return bin >= 1 && bin <= axis->GetNbins() && !denominatorBins->GetBinContent(bin) && !denominatorBins->GetBinError(bin); };
+    for (int32_t i = 0; i < numerator->GetN(); ++i)
+      inEmptyBin.push_back(isEmpty(axis->FindFixBin(numerator->GetX()[i])));
+  }
   int32_t numN = numerator->GetN();
   double_t* numX = numerator->GetX();
   double_t* numY = numerator->GetY();
@@ -6284,9 +6293,34 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   }
 
   bool deleteDenom = false;
+  std::unique_ptr<TGraph> filledBins;
   if (doInterpol) {
+    if (denominatorBins) {
+      auto* filled = new TGraphErrors();
+      filledBins.reset(filled);
+      filled->SetName(denominator->GetName());  // used in messages
+      for (int32_t i = 0; i < denomN; ++i) {
+        if (!denomY[i] && !(denominator->GetErrorY(i) > 0.)) continue;
+        const int32_t n = filled->GetN();
+        filled->SetPoint(n, denomX[i], denomY[i]);
+        filled->SetPointError(n, denominator->GetErrorX(i), denominator->GetErrorY(i));
+      }
+      if (!filled->GetN()) {
+        if (verbose && numN) logger::warning("{} is zero at every point of {}: the ratio has no values.", denominator->GetName(), numerator->GetName());
+        for (int32_t i = numN - 1; i >= 0; --i)
+          RemoveGraphPoint(numerator, i);
+        return true;
+      }
+      denominator = filled;
+      denomN = filled->GetN();
+      denomX = filled->GetX();
+      denomY = filled->GetY();
+      denomEy = filled->GetEY();
+      denomEyLow = filled->GetEYlow();
+      denomEyHigh = filled->GetEYhigh();
+    }
     if (denomN < 2) {
-      logger::error("Cannot interpolate {} for the division: it has {}, at least 2 are needed.", denominator->GetName(), plural(denomN, "point"));
+      logger::error("Cannot interpolate {} for the division: it has {}, at least 2 are needed.", denominator->GetName(), plural(denomN, (denominatorBins) ? "filled bin" : "point"));
       return false;
     }
     // spline interpolation requires sorted values
@@ -6355,7 +6389,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
     int32_t nOutside = 0;
     double_t maxDistance = 0.;
     for (int32_t i = 0; i < numN; ++i) {
-      if (const double_t distance = std::max(xMin - numX[i], numX[i] - xMax); distance > 0.) {
+      if (const double_t distance = std::max(xMin - numX[i], numX[i] - xMax); distance > 0. && !(denominatorBins && inEmptyBin[i])) {
         ++nOutside;
         maxDistance = std::max(maxDistance, distance);
       }
@@ -6375,7 +6409,10 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
     const bool allPositive = std::all_of(knotY, knotY + denomN, [](double_t y) { return y > 0.; });
     const bool allNegative = !allPositive && std::all_of(knotY, knotY + denomN, [](double_t y) { return y < 0.; });
     if (verbose && (allPositive || allNegative)) {
-      const auto nFlipped = std::count_if(denomY, denomY + numN, [&](double_t y) { return (allPositive) ? y <= 0. : y >= 0.; });
+      int32_t nFlipped{};
+      for (int32_t i = 0; i < numN; ++i) {
+        if (!(denominatorBins && inEmptyBin[i]) && ((allPositive) ? denomY[i] <= 0. : denomY[i] >= 0.)) ++nFlipped;
+      }
       if (nFlipped) {
         logger::warning("The interpolation of {} for {} of {} points of {} has the wrong sign (the spline overshoots): the ratio there is not meaningful.",
                         denominator->GetName(), nFlipped, numN, numerator->GetName());
@@ -6386,7 +6423,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   // compute ratio and errors
   vector<int32_t> undefined;  // points where the denominator is zero: removed, as ROOT does not draw the empty bins of TH1::Divide
   for (int32_t i = 0; i < numN; ++i) {
-    if (!denomY[i]) {
+    if (!denomY[i] || (denominatorBins && inEmptyBin[i])) {
       undefined.push_back(i);
     } else {
       // the ratio decreases with the denominator if numerator and denominator have the same sign: the lower error of the numerator
@@ -6431,7 +6468,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   }
   return true;
 }
-bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialErrors, bool verbose)
+bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialErrors, bool verbose, const TH1* denominatorBins)
 {
   if (numerator->GetDimension() != 1) {
     logger::error("Cannot divide {} by graph {}: only a 1d histogram can be divided by a graph.", numerator->GetName(), denominator->GetName());
@@ -6443,7 +6480,7 @@ bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialError
   }
   TGraphErrors numeratorGraph(numerator);
   numeratorGraph.SetName(numerator->GetName());  // used in messages
-  if (!Divide(&numeratorGraph, denominator, binomialErrors, verbose)) return false;
+  if (!Divide(&numeratorGraph, denominator, binomialErrors, verbose, denominatorBins)) return false;
   const double_t entries = numerator->GetEntries();  // SetBinContent counts one entry per bin
   numerator->Reset();
   // by position: the points of bins with a zero denominator were removed, those bins stay empty
@@ -6467,7 +6504,7 @@ bool PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialError
   }
   TGraphErrors denominatorGraph(denominator);
   denominatorGraph.SetName(denominator->GetName());  // used in messages
-  return Divide(numerator, &denominatorGraph, binomialErrors, verbose);
+  return Divide(numerator, &denominatorGraph, binomialErrors, verbose, denominator);
 }
 bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, bool verbose)
 {
@@ -6546,7 +6583,7 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, 
   if (numerator->GetDimension() == 1 && denominator->GetDimension() == 1) {
     TGraphErrors denominatorGraph(denominator);
     denominatorGraph.SetName(denominator->GetName());  // used in messages
-    return Divide(numerator, &denominatorGraph, binomialErrors, verbose);
+    return Divide(numerator, &denominatorGraph, binomialErrors, verbose, denominator);
   }
   logger::error("Cannot divide {} by {}: their binnings differ (interpolated division of {}d histograms is not supported).", numerator->GetName(), denominator->GetName(), numerator->GetDimension());
   return false;

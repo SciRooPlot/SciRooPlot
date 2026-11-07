@@ -65,6 +65,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A graph with a point whose x is not finite (NaN, inf; not drawn, with a warning) also gave ROOT's error `Axis limits need to be finite numbers` | Only the warning | behaviour | Nothing. |
 | A table whose columns are aligned by several spaces in the header too (`x     y`) was refused without the hint to use one delimiter | With the hint | behaviour | Nothing. |
 | A graph giving the frame on a log x axis without an x range had ROOT's y range of all its points, also of the points at x ≤ 0 that a log axis does not draw (the frame reached far below the points shown) | Its y range comes from the points drawn, as with an x range | behaviour | Nothing. |
+| A histogram denominator of another binning (or one dividing a graph) was interpolated through all its bins: its empty bins (also those that held NaN) were knots at zero, and the ratio swung around them | It is interpolated through its filled bins only; points or bins of the numerator inside an empty bin of the denominator are left out, as for a denominator of zero | behaviour | Check ratios by histograms with empty bins and another binning. |
 
 ### Files
 
