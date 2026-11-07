@@ -1,0 +1,319 @@
+"""An invalid argument of the plot definition is reported once, and nothing is stored silently.
+
+The cases are every overload of the Python interface (as round_trip.py: every object it can be called on) with each invalid value of
+one of its parameters (INVALID: not a number, values outside of what the parameter means, empty expressions, numbers of things that do
+not exist ...), the other parameters plain. Reference: the same call with the plain value on the same object, defined and plotted.
+- the call raises (the plot is not made), or it gives exactly one message more than the plain call, either when the plot is defined
+  or when it is plotted (loading the saved plot may say again what was said when it was defined): an invalid value is ignored, what was
+  set before stays;
+  named: the same tree joined again, a selection of the entries (Filter) of data that is not projected;
+- values that mean something in ROOT (VALID: ROOT's default palette, a digit 0 of an alignment, ticks on the other side, no reference
+  function, the forms of functions) give no message;
+- a call repeated with another value replaces the first one, in either order (the saved plot equals the one with only the second call);
+  a call that adds something (Filter, Define, Join, AddSymbolOf, ApplyLayout) keeps the first one; named cases of calls replacing each
+  other (Entries, a drawing option and an alias, SetDefinesFrame(False), SetTransparent after a fill colour).
+Style numbers (markers, lines, fills) are not checked: ROOT draws an unknown style in its default style.
+"""
+
+import os
+import re
+
+import numpy as np
+
+import srptest as S
+
+NAN, INF = float("nan"), float("inf")
+# the invalid values of the parameters, by name (or method.name, Class.method.name, which win); None: the parameter has none
+INVALID = {
+    "alpha": [1.5, -0.2, NAN],
+    "size": [NAN],
+    "SetTextSize.size": [-1.0, NAN],
+    "SetText.size": [-1.0, NAN],
+    "SetDefaultTextSize.size": [-1.0, NAN],
+    "SetLabelSize.size": [-1.0, NAN],
+    "SetTitleSize.size": [-1.0, NAN],
+    "width": [NAN],  # a negative line width draws the exclusion side of a graph
+    "SetSize.width": [-0.2, NAN],
+    "SetSize.height": [-0.2, NAN],
+    "ImageBox.SetWidth.width": [-0.2, NAN],
+    "ImageBox.SetHeight.height": [-0.2, NAN],
+    "Axis.SetColorScaleWidth.width": [-0.02, NAN],
+    "margin": [-0.1, NAN],
+    "lineSpacing": [-1.0, NAN],
+    "spacing": [-0.1, NAN],
+    "scale": [-1.0, NAN],
+    "numColumns": [0],
+    "align": [99, 14, -12],
+    "font": [999, -1],
+    "contours": [[3.0, 1.0, 2.0], [1.0, NAN]],
+    "nContours": [0, -3],
+    "nIterSmooth": [0],
+    "nGroup": [0],
+    "nGroupX": [0],
+    "nGroupY": [0],
+    "nGroupZ": [0],
+    "nx": [0, -5],
+    "ny": [0],
+    "scaleFactor": [NAN, INF],
+    "min": [NAN],
+    "max": [NAN],
+    "frameFraction": [1.0, -0.5, NAN],
+    "nEntries": [0],
+    "entryMin": [50],
+    "dims": [[]],
+    "dataDims": [[("x", 0)], [("", 10)]],
+    "ranges": [[(0, 7.0, 2.0)], [(0, NAN, 2.0)]],
+    "filter": [""],
+    "key": [""],
+    "value": [""],
+    "weight": [""],
+    "keys": [["k1", "k1"], ["a b"], ["k1", "k2", "x"]],
+    "alias": ["1x"],
+    "tree": [""],
+    "symbolElements": ["zq"],
+    "tickOrientation": ["x"],
+    "angle": [NAN],
+    "theta": [NAN],
+    "phi": [NAN],
+    "phiMin": [NAN],
+    "phiMax": [NAN],
+    "offset": [NAN],
+    "tickLength": [NAN],
+    "palette": [9999],
+    "gradient": [[(633, 0.0)], [(633, 0.0), (600, NAN)]],
+    "rgbEndpoints": [[(0.0, 1.0, 0.0, 0.0)]],
+    "nColors": [0],
+    "color": [99999, "#xyz", (2.0, 0.0, 0.0)],
+    "padID": [300],
+    "pads": [[0]],
+    "dataID": [0],
+    "dataIDs": [[0]],
+    "refDataID": [0],
+    "radiusX": [-1.0, NAN],
+    "radiusY": [-1.0, NAN],
+    "points": [[(1.0, 2.0), (3.0, 4.0)], [(1.0, 2.0), (NAN, 4.0), (5.0, 1.0)]],
+    "group": ["/x//", ""],
+    "subgroup": [""],
+    "xlow": [0.95, -0.5, NAN],
+    "ylow": [1.5],
+    "xup": [1.5],
+    "yup": [NAN],
+    "top": [-0.1, 1.5, NAN],
+    "bottom": [-0.1, 1.5, NAN],
+    "left": [-0.1, 1.5, NAN],
+    "right": [-0.1, 1.5, NAN],
+    "range": [-0.5, 1.5, NAN],
+    "axis": [S.Char("Q")],
+    "format": ["xyz"],
+    "function": ["[0]*x", "gaus", ""],
+    "textFormat": ["%q"],
+    "startX": [NAN],
+    "endX": [NAN],
+    "startY": [NAN],
+    "endY": [NAN],
+    "x": [NAN],
+    "y": [NAN],
+    "xPos": [NAN],
+    "yPos": [NAN],
+    "x1": [NAN],
+    "x2": [NAN],
+    "y1": [NAN],
+    "y2": [NAN],
+    "pos1": [(NAN, 1.0)],
+    "pos2": [(3.0, NAN)],
+    "positions": [[(NAN, 1.0), (2.0, 3.0)]],
+    "AddPoints.x": [[1.0, NAN, 3.0]],
+    "AddPoints.y": [[3.0, 1.0, INF]],
+}
+# values that mean something in ROOT or SciRooPlot: no message
+VALID = {
+    "palette": [0, -1, 1, 20],  # up to 0: ROOT's default palette, 1: its rainbow, up to 50: so many colours of the default palette
+    "align": [0, 10, 3],  # a digit 0: left, middle
+    "tickLength": [-0.03],  # ticks on the other side
+    "offset": [-0.2],
+    "refFunc": [""],  # none: hides the one of the base plot or of pad 0
+    "margin": [0.0],
+    "frameFraction": [0.0],
+    "function": ["TMath::Pi()*x", "x[0]*2", "[](double* x, double* p) { return 2 * x[0]; }"],  # 1f27574
+}
+SKIPPED = ("PlotManager", "PanelLayout", "Panel", "BasePlotShape")  # the project (cli tests); the layouts (layouts/geometry.py)
+# base plots are left out: their setters are those of plots, and a base plot is not made by itself; the C axis too: it is ignored for
+# data other than 3d histograms (with a warning), its setters are those of the other axes
+
+
+def invalid_values(cls, method, param):
+    for key in (f"{cls}.{method}.{param}", f"{method}.{param}", param):
+        if key in INVALID:
+            return INVALID[key]
+    return []
+
+
+# the cases: each invalid value with its plain twin on the same host
+cases = []
+for case in S.setter_cases()[0]:
+    if case["variant"] != "plain" or not case["meant"] or case["unset"] or case["host"] in ("statement", "base", "base_pad", "c") or case["cls"] in SKIPPED:
+        continue
+    plain = {"py": case["py"], "label": f"{case['cls']}.{case['method']}({', '.join(case['params'])}) on {case['host']}"}
+    for i, param in enumerate(case["params"]):
+        for key in (f"{case['cls']}.{case['method']}.{param}", f"{case['method']}.{param}", param):
+            if key in VALID:
+                valids = VALID[key]
+                break
+        else:
+            valids = []
+        for valid, values in ((False, invalid_values(case["cls"], case["method"], param)), (True, valids)):
+            for bad in values:
+                given = list(case["values"])
+                given[i] = bad
+                host = S.SETTER_HOSTS[case["cls"]][case["host"]][0]
+                cases.append({**plain, "plainCase": plain, "param": param, "bad": bad, "valid": valid, "py": host.replace("{call}", S.call(case["method"], given, "py"))})
+# named: a Join of the same tree again is ignored with a warning [07fb006]
+join = 'p = Plot("{name}", "g", "1d")\np[1].AddData("t", "s").Project1D("x").Join("t2", ["k1"]){again}\npm.AddPlot(p)'
+plain = {"py": join.replace("{again}", ""), "label": "Data.Join(tree, keys) on tree"}
+cases.append({**plain, "plainCase": plain, "param": "tree", "bad": "the same tree again", "valid": False, "py": join.replace("{again}", '.Join("t2", ["k1"])')})
+# named: a selection of the entries of a tree that is not projected has no effect [446f576]
+for given, data in (("tree", 'p[1].AddData("t", "s")'), ("ratio denominator", 'p[1].AddRatio("h", "s", "h2", "s2").Denom()')):
+    plain = {"py": f'p = Plot("{{name}}", "g", "1d")\n{data}\npm.AddPlot(p)', "label": f"Data.Filter(filter) on a {given} without projection"}
+    cases.append({**plain, "plainCase": plain, "param": "filter", "bad": "x > 2", "valid": False, "py": f'p = Plot("{{name}}", "g", "1d")\n{data}.Filter("x > 2")\npm.AddPlot(p)'})
+plains = list({id(case["plainCase"]): case["plainCase"] for case in cases}.values())
+# projections need data that can be projected: a 3d histogram for those of histograms, the trees for the requests
+REQUESTS = ("Project1D", "Project2D", "Profile1D", "Profile2D", "Scatter")
+for case in plains + cases:
+    method = case["label"].split("(")[0].split(".")[1]
+    if method in S.SELECTIONS:
+        names = ("t", "t2") if method in REQUESTS else ("h3", "h3")
+        case["py"] = case["py"].replace('AddData("h", "s")', f'AddData("{names[0]}", "s")').replace('AddRatio("h", "s", "h2", "s2")', f'AddRatio("{names[0]}", "s", "{names[1]}", "s2")')
+for case in plains + cases:  # every plot draws something (a pad without data warns)
+    case["py"] = case["py"].replace('p = Plot("{name}", "g", "1d")\n', 'p = Plot("{name}", "g", "1d")\np[1].AddData("h", "s")\n')
+
+# a call repeated with another value: the plot is the one with only the second call; one that adds something keeps the first
+ADDERS = ("Filter", "Define", "Join", "AddSymbolOf", "ApplyLayout")  # ApplyLayout merges the layout into what is set
+repeated = S.S.PlotManager("repeated")
+namespace = dict(vars(S.S), pm=repeated)
+pairs = []
+for case in S.setter_cases()[0]:
+    if case["variant"] == "plain" or not case["meant"] or case["unset"] or case["host"] == "statement" or case["method"].startswith("Add") and case["method"] not in ADDERS:
+        continue  # (an Add... of a pad or box adds another object, which a second call cannot reach)
+    hostPy = S.SETTER_HOSTS[case["cls"]][case["host"]][0]
+    plainValues = [S.setter_value(case["cls"], case["method"], param, "plain") for param in case["params"]]
+    calls = {"plain": S.call(case["method"], plainValues, "py"), case["variant"]: S.call(case["method"], case["values"], "py")}
+    for first, second in ((case["variant"], "plain"), ("plain", case["variant"])):
+        name = f"r{len(pairs)}"
+        results = [S.captured(lambda code=hostPy.replace("{call}", given).replace("{name}", name + suffix): exec(code, namespace))[0] for suffix, given in (("_twice", calls[first] + calls[second]), ("_once", calls[second]))]  # noqa: S102
+        pairs.append((name, f"{case['cls']}.{case['method']}({', '.join(case['params'])}) on {case['host']}, {first} then {second}", case["method"] in ADDERS, results[0]))
+# calls replacing each other, named: (what, the calls, the calls with the same result)
+REPLACING = [
+    ("Entries(n) after Entries(min, max) [07fb006]", 'p[1].AddData("t", "s").Project1D("x").Entries(20, 40).Entries(10)', 'p[1].AddData("t", "s").Project1D("x").Entries(10)'),
+    ("Denom().Entries(n) after Denom().Entries(min, max) [07fb006]", 'p[1].AddRatio("t", "s", "t2", "s2").Both().Project1D("x").Denom().Entries(20, 40).Entries(10)', 'p[1].AddRatio("t", "s", "t2", "s2").Both().Project1D("x").Denom().Entries(10)'),
+    ("a drawing option after an alias [264cea6]", 'p[1].AddData("h", "s").SetDrawOption(points_line).SetDrawOption("hist e")', 'p[1].AddData("h", "s").SetDrawOption("hist e")'),
+    ("an alias after a drawing option [264cea6]", 'p[1].AddData("h", "s").SetDrawOption("hist e").SetDrawOption(points_line)', 'p[1].AddData("h", "s").SetDrawOption(points_line)'),
+    ("SetDefinesFrame(False) after SetDefinesFrame() [3130156]", 'p[1].AddData("h", "s").SetDefinesFrame().SetDefinesFrame(False)', 'p[1].AddData("h", "s")'),
+    ("SetDefinesFrame(False) on a ratio [3130156]", 'p[1].AddRatio("h", "s", "h2", "s2").SetDefinesFrame().SetDefinesFrame(False)', 'p[1].AddRatio("h", "s", "h2", "s2")'),
+    ("SetTransparent of a plot keeps its fill colour [3130156]", "p.SetFillColor(632).SetTransparent()", "p.SetFillColor(632).SetFillStyle(0)"),
+    ("SetTransparent of a pad keeps its fill colour [3130156]", "p[1].SetFillColor(600).SetTransparent()", "p[1].SetFillColor(600).SetFillStyle(0)"),
+]
+for what, given, same in REPLACING:
+    name = f"r{len(pairs)}"
+    for suffix, code in (("_twice", given), ("_once", same)):
+        S.captured(lambda code=code, suffix=suffix: exec(f'p = Plot("{name}{suffix}", "g", "1d")\n{code}\npm.AddPlot(p)', namespace))  # noqa: S102
+    pairs.append((name, what, False, None))
+repeatedFile = os.path.join(S.WORK, "repeated.info")
+repeated.SavePlots(file=repeatedFile)
+saved = {key.split(":")[0]: values for key, values in S.info_plots(repeatedFile).items()}
+for name, label, adds, raised in pairs:
+    if isinstance(raised, Exception):  # a second call that cannot be added to the first (a Join of another tree with the same column names)
+        S.check(f"{label}: the second call refused with a reason", adds and bool(str(raised).strip()), repr(raised))
+        continue
+    twice = {k: v for k, v in saved.get(f"{name}_twice", {}).items() if k != "name"}
+    once = {k: v for k, v in saved.get(f"{name}_once", {}).items() if k != "name"}
+    if adds:
+        S.check(f"{label}: both calls stored", bool(twice) and twice != once, "the first call is lost")
+    else:
+        S.check(f"{label}: the second call replaces the first", bool(twice) and twice == once, str({k: (twice.get(k), once.get(k)) for k in set(twice) | set(once) if twice.get(k) != once.get(k)})[:300])
+
+p = S.Project("setters", bases=("1d", "2d", "1d_ratio"))
+rows = 30
+columns = {name: np.linspace(0.5, 9.5, rows) for name in ("x", "y", "z", "w", "xErr", "yErr", "xErrLow", "xErrHigh", "yErrLow", "yErrHigh")}
+columns.update(k1=np.arange(rows, dtype=float), k2=np.arange(rows, dtype=float) % 3)
+for source, (hist, tree) in {"s": ("h", "t"), "s2": ("h2", "t2")}.items():
+    h = S.ROOT.TH1D(hist, "", 10, 0, 10)
+    for b in range(1, 11):
+        h.SetBinContent(b, 5 + b)
+        h.SetBinError(b, 1.0)
+    h3 = S.ROOT.TH3D("h3", "", 10, 0, 10, 8, 0, 8, 6, 0, 6)
+    for i in range(500):
+        h3.Fill(i % 10 + 0.5, i % 8 + 0.5, i % 6 + 0.5)
+    S.write_objects(p.path(f"{source}.root"), {hist: h, "h3": h3} if source == "s" else {hist: h, "h": h.Clone("h"), "h3": h3})
+    S.write_tree(p.path(f"{source}.root"), columns, tree)
+    p.pm.AddDataSource(source, p.path(f"{source}.root"))
+namespace = dict(vars(S.S), pm=p.pm, nan=NAN, inf=INF)
+start = S.S.Plot("c_start", "g", "1d")  # made first: the messages before it are those of reading the data
+start[1].AddData("h", "s")
+p.pm.AddPlot(start)
+for i, case in enumerate(plains + cases):
+    case["name"] = f"c{i}"
+    result, printed = S.captured(lambda case=case: exec(case["py"].replace("{name}", case["name"]), namespace))  # noqa: S102  the cases
+    case["raised"] = result if isinstance(result, Exception) else None
+    case["defined"] = [line.strip() for line in printed.splitlines() if line.strip()]
+    # a plot after each one, to tell its messages from those of the next one (a plot that is not made says so before the next plot)
+    after = S.S.Plot(f"{case['name']}_next", "g", "1d")
+    after[1].AddData("h", "s")
+    p.pm.AddPlot(after)
+    if case["raised"]:
+        continue
+    # the plot run loads the saved file first (its messages come before the plots are made): the plot loaded alone
+    single = os.path.join(S.WORK, "single.info")
+    p.pm.SavePlots(name=f"{case['name']}(_renamed)?", file=single)
+    _, printed = S.captured(lambda: S.S.PlotManager("loaded").LoadPlots(file=single))
+    case["loaded"] = [line.strip() for line in printed.splitlines() if line.strip() and "[ INFO" not in line]
+
+run = p.plot()
+# lines that only follow from a message before them (the plot or data that could not be made because of it)
+CONSEQUENCES = re.compile(r"could not be created|^- missing |Projection failed for |plots? cannot be created due to")
+lines = run.log.splitlines()
+lines = [line.strip() for line in lines[next(i for i, line in enumerate(lines) if "plots matching the request" in line) + 1 :]]
+lines = [line for line in lines if line and "[ INFO" not in line and not CONSEQUENCES.search(line)]
+created = {m.group(1): i for i, line in enumerate(lines) if (m := re.search(r"Created plot (\S+) from group \S+\.$", line))}
+reading = lines[: created["c_start"]]
+previous = created["c_start"]
+for case in plains + cases:
+    # the lines between the plot before (the next one of the case before) and the case's next one; messages of reading the data that
+    # name the value (a function is named by its formula)
+    end = created.get(case["name"] + "_next", -1)
+    segment = lines[previous + 1 : end] if end >= 0 else []
+    case["made"] = [line for line in segment if "[ LOG" not in line] if end >= 0 else None
+    if case.get("bad") and isinstance(case["bad"], str) and case["made"] is not None:
+        case["made"] += [line for line in reading if f"'{case['bad']}'" in line]
+    previous = max(previous, end)
+
+
+def new_messages(case, plain, phase):
+    """the messages of a phase that the plain call does not give (the plot named as in the plain one)"""
+    left = [line.replace(plain["name"], "{name}") for line in plain[phase] or []]
+    new = []
+    for line in case[phase] or []:
+        line = line.replace(case["name"], "{name}")
+        if line in left:
+            left.remove(line)
+        else:
+            new.append(line)
+    return new
+
+
+def label(case):
+    return f"{case['label']} with {case['param']}={case['bad']!r}"
+
+
+for case in cases:
+    plain = case["plainCase"]
+    if case["valid"]:
+        new = {phase: new_messages(case, plain, phase) for phase in ("defined", "loaded", "made")} if not case["raised"] else {}
+        S.check(f"{label(case)}: accepted without a message", not case["raised"] and case["made"] is not None and not any(new.values()), f"{case['raised']!r} {new}")
+        continue
+    if case["raised"]:
+        S.check(f"{label(case)}: raised with a reason", bool(str(case["raised"]).strip()), repr(case["raised"]))
+        continue
+    new = {phase: new_messages(case, plain, phase) for phase in ("defined", "loaded", "made")}
+    ok = case["made"] is not None and len(new["defined"]) <= 1 and len(new["loaded"] + new["made"]) <= 1 and any(new.values())
+    S.check(f"{label(case)}: reported once", ok, f"new messages: {new}" if any(new.values()) else "no new message")
+S.finish()

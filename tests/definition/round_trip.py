@@ -10,6 +10,7 @@ the file format escapes), empty text and false (srptest.SETTER_VALUES). The refe
 - a call made where it is not meant to be (data in pad 0 or a base plot, a selection of the ratio itself, the arc of a line ...): stored
   or reported, never dropped silently;
 - loading the saved file and saving it again gives the same file, plot by plot, without a message.
+Named: a ratio denominator without data source takes the numerator's (every form of AddRatio), a numerator needs one.
 An overload without a test value fails, so a new setter needs its values in srptest.SETTER_VALUES. The whole list takes a second.
 """
 
@@ -113,4 +114,30 @@ for case in cases:
         S.check(f"{label(case)}: read back as stored", not diff, str(diff)[:400])
 with open(first, "rb") as a, open(second, "rb") as b:
     S.check("the file saved after loading is the same file", a.read() == b.read())
+
+# a ratio denominator without data source takes the numerator's, in every form; a numerator needs one [72984ac]
+FORMS = {
+    'p[1].AddRatio(["h", "s"], ["g"])': ("s", "s"),
+    'p[1].AddRatio(["h", "s2"], ["g"], "label")': ("s2", "s2"),
+    'p[1].AddRatio("h", "s", "g", "")': ("s", "s"),
+    'p[1].AddRatio(Data("h", "s2"), Data("g"))': ("s2", "s2"),
+    'p[1].AddRatio(Ratio(Data("h", "s2"), Data("g")))': ("s2", "s2"),
+    'p[1].AddRatio(["h", "s"], ["g", "s2"])': ("s", "s2"),
+    'p[1].AddRatio(["h"], ["g"])': None,
+    'p[1].AddRatio(Data("h"), Data("g", "s"))': None,
+    'p[1].AddRatio(["h", "s", "x"], ["g"])': None,
+    'p[1].AddData(Data("g"))': None,
+}
+sources = S.S.PlotManager("sources")
+namespace["pm"] = sources
+for i, (form, expected) in enumerate(FORMS.items()):
+    result, _ = S.captured(lambda form=form, i=i: exec(f'p = Plot("r{i}", "g", "1d")\n{form}\npm.AddPlot(p)', namespace))  # noqa: S102
+    if expected is None:
+        S.check(f"{form}: refused with a reason", isinstance(result, Exception) and bool(str(result).strip()), repr(result))
+        continue
+    path = os.path.join(S.WORK, "sources.info")
+    sources.SavePlots(name=f"r{i}", file=path)
+    data = next(iter(S.info_plots(path).values()), {})
+    found = (data.get("PAD_1/DATA_1/data_source"), data.get("PAD_1/DATA_1/denom_data_source"))
+    S.check(f"{form}: data sources of numerator and denominator {expected}", not isinstance(result, Exception) and found == expected, f"{result!r} {found}")
 S.finish()
