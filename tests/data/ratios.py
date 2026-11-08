@@ -108,7 +108,10 @@ for kind, variant in bases:
         expectedWarnings.append((f" {kind} has", "NaN or infinite"))
     if stand_in(kind, variant) is not None:
         expectedWarnings.append((f"Graph {kind} ", "has no points: it is not drawn"))
-for i, case in enumerate(todo):
+
+
+def compare(i, case):
+    """checks one ratio against its reference; collects its expected messages"""
     what = describe(case)
     objs = []
     for k in ("num", "den"):
@@ -117,7 +120,7 @@ for i, case in enumerate(todo):
     numObj, denObj = objs
     if not numObj or not denObj:
         check(f"data drawn alone: {what}", False, " | ".join(run.errors()[:2]))
-        continue
+        return
     denInput = inputs[case["den_variant"]].get(case["den"])
     exp = DivisionExpected(division_name(case["num"], case["num_variant"], f"n{i}"), division_name(case["den"], case["den_variant"], f"d{i}"), input_range(denInput) if denInput else None)
     caseWarnings = []
@@ -133,19 +136,19 @@ for i, case in enumerate(todo):
     ref = division_reference(numObj, denObj, funcs.get("num"), funcs.get("den"), binomial, exp)
     caseWarnings += [(exp.num, w) for w in exp.warnings]
     if ref is not None:  # a failing ratio, the first data of its pad, stops the plot before the pass that reports warnings
-        expectedWarnings += caseWarnings
+        expectedWarnings.extend(caseWarnings)
     drawn = run.drawn(f"r{i}", "ratios")
     if ref is None:
-        expectedErrors += exp.errors + [f"Plot r{i} from group ratios could not be created"]
+        expectedErrors.extend(exp.errors + [f"Plot r{i} from group ratios could not be created"])
         check(f"reported as not possible: {what}", not drawn, "the ratio was drawn")
-        continue
+        return
     if isinstance(ref, dict) and not ref["x"]:  # no points left: a graph without points is not drawn
         expectedWarnings.append((f"Graph {data_name(case['num'], case['num_variant'])} ", "has no points: it is not drawn"))
         check(f"a ratio without points not drawn: {what}", not drawn, "drawn")
-        continue
+        return
     if not drawn:
         check(f"ratio made: {what}", False, " | ".join(line for line in run.errors() if f":n{i}" in line or f"r{i} " in line)[:300])
-        continue
+        return
     obs = drawn[0][0]
     rel = 1e-6 if numObj.ClassName().endswith("F") or denObj.ClassName().endswith("F") or "_cpp" in case["num"] + case["den"] else 1e-9
     if isinstance(ref, dict):
@@ -154,6 +157,11 @@ for i, case in enumerate(todo):
     else:
         diff = hist_diff(ref, obs, rel)
     check(f"as plain ROOT: {what}", not diff, diff)
+
+
+for i, case in enumerate(todo):
+    with run.held(colours=False):  # thousands of canvases: each case frees those it read
+        compare(i, case)
 
 
 unmatched, unexpected = match_messages(run.warnings(), expectedWarnings, True)

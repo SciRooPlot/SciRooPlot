@@ -8,6 +8,7 @@ Environment (set by CTest): SRP_PREFIX, a build or install directory with bin/pl
 SRP_TESTS_FULL=1 for the full case lists (weekly), otherwise a subset holding every value of every dimension at least once.
 """
 
+import contextlib
 import functools
 import glob
 import itertools
@@ -1827,6 +1828,7 @@ class Run:
     def __init__(self, proc, plotsFile, snapshot):
         self.rc = proc.returncode
         self.log = re.sub(r"\x1b\[[0-9;]*m", "", proc.stdout + proc.stderr).replace("\r\n", "\n")
+        self._held, self._colours = None, True
         self.file = None
         if os.path.exists(plotsFile):
             shutil.copyfile(plotsFile, snapshot)  # the next run deletes the output folder
@@ -1847,12 +1849,26 @@ class Run:
             for key in groupDir.GetListOfKeys():
                 if key.GetName().split(":")[0] == name:
                     canvas = key.ReadObj()
+                    if self._held is not None:
+                        ROOT.SetOwnership(canvas, True)
+                        self._held.append(canvas)
                     # the colours of the plot (rgb colours, gradients) are defined when it is painted: define them as the plot did
                     define = canvas.GetListOfPrimitives().FindObject("define_colors")
-                    if define:
+                    if define and self._colours:
                         define.Exec()
                     return canvas
         return None
+
+    @contextlib.contextmanager
+    def held(self, colours=True):
+        """The canvases read inside the block (and everything read from them) are deleted at its end: a canvas read keeps about 25 kB, the
+        run of its define_colors about 30 kB of interpreter memory (ROOT bug 15), so that a loop over thousands of plots runs out of
+        memory. colours=False leaves the colours of the plots undefined (for checks that do not read colours)."""
+        self._held, self._colours = [], colours
+        try:
+            yield
+        finally:
+            self._held, self._colours = None, True
 
     def pad(self, name, group, pad=1):
         canvas = self.canvas(name, group)
