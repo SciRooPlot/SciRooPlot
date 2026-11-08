@@ -7201,8 +7201,38 @@ double_t PlotPainter::MaxLabelWidth(TPad* pad, const TAxis* axis, const vector<d
     largest = std::max(largest, std::abs(value));
   }
   const int32_t maxDigits = (axis->GetNdivisions() / 1000000 > 0) ? axis->GetNdivisions() / 1000000 : TGaxis::GetMaxDigits();
-  double_t factor = 1.;
-  if (!isLog && !axis->GetNoExponent() && largest >= TMath::Power(10., maxDigits)) factor = TMath::Power(10., 3. * std::floor(std::log10(largest) / 3.));
+  // the power of ten TGaxis takes out of the labels (a multiple of 3, TGaxis::PaintAxis): for labels finer than maxDigits decimals below
+  // 1, for more digits than maxDigits the smallest one leaving at most maxDigits - 1 digits, for fewer than -maxDigits the largest one
+  // leaving at least 10^(2 - maxDigits)
+  int32_t exponent{};
+  if (!isLog && !axis->GetNoExponent() && largest > 0.) {
+    constexpr double_t epsilon = 1e-5;
+    const double_t step = (values.size() > 1) ? std::abs(values[1] - values[0]) : 0.;
+    if (step > 0. && step < TMath::Power(10., -maxDigits) && std::log10(largest) + epsilon < 0.) {
+      int32_t digits = std::abs(static_cast<int32_t>(std::log10(largest) + epsilon));
+      if (digits % 3 == 1) {
+        digits += 2;
+      } else if (digits % 3 == 2) {
+        digits += 1;
+      }
+      exponent = -digits;
+    } else {
+      const int32_t nDigits = static_cast<int32_t>(((largest >= 1.) ? std::log10(largest) : std::log10(largest * 0.0001)) + epsilon) + 1;
+      double_t shown = largest;
+      if (nDigits > maxDigits) {
+        do {
+          ++exponent;
+          shown /= 10.;
+        } while (exponent % 3 != 0 || shown > TMath::Power(10., maxDigits - 1));
+      } else if (nDigits < -maxDigits) {
+        do {
+          --exponent;
+          shown *= 10.;
+        } while (exponent % 3 != 0 || shown < TMath::Power(10., 2 - maxDigits));
+      }
+    }
+  }
+  const double_t factor = TMath::Power(10., exponent);
   double_t width{};
   for (double_t value : values) {
     string text;
