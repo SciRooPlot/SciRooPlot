@@ -4922,6 +4922,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     double_t contentWidthPixel{};
     double_t titleWidthPixel{};
     vector<uint32_t> contentWidthPixelPerColumn(nColumns, 1);
+    vector<double_t> layoutWidthPerColumn(nColumns, 0.);  // the widths TLegend shares its columns out by (TLatex::GetXsize)
 
     const double_t textHeightPixel = TextHeightPixel(textFont, textSize, pad);  // lines with sub- or superscripts are higher
     double_t lineHeightPixel = textHeightPixel;
@@ -4967,10 +4968,25 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       if (auto& columnWidth = contentWidthPixelPerColumn[columnOf(lineID)]; width > columnWidth) {
         columnWidth = width;
       }
+      if (nColumns > 1) {
+        auto& layoutWidth = layoutWidthPerColumn[columnOf(lineID)];
+        layoutWidth = std::max(layoutWidth, textLine.GetXsize());
+      }
       ++lineID;
     }
     for (const auto& length : contentWidthPixelPerColumn) {
       contentWidthPixel += length;
+    }
+    if (nColumns > 1) {
+      // TLegend gives each column a share of the width for the labels in proportion to their widths as TLatex lays them out, which
+      // differ from the painted ones for drawn parts (#frac, #sqrt): the labels get the width that gives every column its painted width
+      double_t layoutTotal{};
+      for (const auto& length : layoutWidthPerColumn) {
+        layoutTotal += length;
+      }
+      for (uint8_t column = 0; column < nColumns; ++column) {
+        if (layoutWidthPerColumn[column] > 0.) contentWidthPixel = std::max(contentWidthPixel, contentWidthPixelPerColumn[column] * layoutTotal / layoutWidthPerColumn[column]);
+      }
     }
     uint32_t symbolColWidthPixel{0};
     if constexpr (isLegend) {
