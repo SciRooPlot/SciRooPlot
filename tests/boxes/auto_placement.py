@@ -4,10 +4,11 @@ the data, the polar grid or shapes unless the plot warns that there is not enoug
 2d and 3d data count as a map: a box may cover it when there is no room beside it (the convex hull of what is drawn for the data, for a
 3d view of its box), which in a 3d view is the rule (ROOT fits the box of the view into the frame).
 Cases: every data kind of srptest with the drawing options of what it is drawn as that fill the frame differently (points, lines,
-fills, bars, bands, error boxes, maps, 3d views), values crossing zero and unsorted graphs; one legend, a legend and a text, a legend
-and three texts, a legend of two columns and a text; at the best corner and at each corner; with a statistics box, a shape (a region over the height of the frame, or over
-the whole frame), an image placed before them, or other viewing angles of 3d views; on a frame ending at the data or twice as wide;
-linear and log y.
+fills, bars, bands, error boxes, maps, 3d views; ROOT's option F of a graph, its points as a filled polygon), values crossing zero and
+unsorted graphs; one legend, a legend and a text, a legend and three texts, a legend of two columns and a text; at the best corner and at
+each corner; with a statistics box, a shape (a region over the height of the frame, or over the whole frame), an image placed before them,
+other viewing angles of 3d views, or the boxes in the ratio pad below the data (the data divided by itself); on a frame ending at the
+data or twice as wide; linear and log y.
 Reference: the pixels painted for the data (the canvas painted with and without the data) inside each box, in the PNG of the plot.
 Covers: the commits of this file's first version (functions drawn with a fill, histograms with an error option but no errors drawn as
 steps, lines and bands of histograms through the bin centres, graphs without errors drawn with error boxes or bands, multi-error graphs
@@ -19,11 +20,11 @@ import re
 
 import numpy as np
 
-from srptest import DATA_KINDS, ROOT, WORK, Project, S, add_data, base_of, cases, check, describe, drawn_type, finish, has_variant, in_chunks, is_box, is_data, pixels, source_of
+from srptest import DATA_KINDS, ROOT, WORK, Project, S, add_data, axis_range, base_of, cases, check, describe, drawn_type, finish, has_variant, in_chunks, is_box, is_data, pixels, ratio_input, source_of
 
 OPTIONS = {
     "hist1d": ["default", "hist", "area", "area_smooth", "bars", "hbars", "band", "boxes", "line"],
-    "graph": ["default", "line", "curve", "area", "bars", "band", "boxes"],
+    "graph": ["default", "line", "curve", "area", "bars", "band", "boxes", "raw_F"],  # raw_F: ROOT's option F, the points as a filled polygon
     "function": ["default", "area"],
     "hist2d": ["default", "box", "cont", "lego"],
     "graph2d": ["default", "points", "lego"],
@@ -37,7 +38,7 @@ BOXES = {  # the number of boxes; legend_columns: a legend of two columns with t
     "legend_texts": 4,
     "legend_columns": 2,
 }
-EXTRAS = ("none", "stats", "region", "image", "full", "view")  # full: a region over the whole frame, no room beside the data; view: other viewing angles
+EXTRAS = ("none", "stats", "region", "image", "full", "view", "ratio")  # full: a region over the whole frame, no room beside the data; view: other viewing angles; ratio: the boxes in the ratio pad below
 PLACEMENTS = ("best_corner", "top_left", "top_right", "bottom_right", "bottom_left")
 NO_SPACE = ("Could not find enough space", "is larger than the space inside the frame")
 
@@ -63,6 +64,8 @@ def valid(case):
     if polar(kind) and (case["range"] != "data" or case["extra"] in ("region", "stats", "full")):  # shapes need a cartesian frame
         return False
     if case["extra"] == "view" and DATA_KINDS[kind][0] == 1:
+        return False
+    if case["extra"] == "ratio" and (DATA_KINDS[kind][0] > 1 or polar(kind) or case["option"] == "hbars"):
         return False
     if case["log"] and (DATA_KINDS[kind][0] > 1 or polar(kind)):
         return False
@@ -104,6 +107,7 @@ todo = cases(
         named("hist2d", "lego", "3d view at other angles", "place boxes beside 2d graphs and functions drawn as maps", boxes="legend", extra="view"),
         named("hist3d", "default", "3d view at other angles", "place boxes beside 2d graphs and functions drawn as maps", boxes="legend", extra="view"),
         named("tf2", "surf", "3d view at other angles", "place boxes beside 2d graphs and functions drawn as maps", extra="view"),
+        named("hist", "default", "boxes in the pad of a ratio", "ratio pads of the old suite of boxes", boxes="legend_texts", extra="ratio"),
     ],
 )
 
@@ -115,14 +119,22 @@ level, ROOT.gErrorIgnoreLevel = ROOT.gErrorIgnoreLevel, ROOT.kWarning
 logo.Print(image)
 ROOT.gErrorIgnoreLevel = level
 
-p = Project("auto_placement")
+p = Project("auto_placement", bases=("1d", "1d_ratio", "2d"))
 p.inputs(VARIANTS)
 for i, case in enumerate(todo):
     kind, placement = case["kind"], getattr(S, case["placement"])
-    plot = S.Plot(f"c{i}", "boxes", base_of(kind))
+    plot = S.Plot(f"c{i}", "boxes", "1d_ratio" if case["extra"] == "ratio" else base_of(kind))
     pad = plot[1]
     data = add_data(pad, kind, source_of(case["variant"]), case["variant"]).SetLegendLabel("data of a kind").SetFill(1001, S.kOrange + 7)
-    if case["option"] != "default":
+    if case["extra"] == "ratio":  # the kind by itself in the ratio pad, which holds the boxes
+        pad = plot[2]
+        data = pad.AddRatio(ratio_input(kind, source_of(case["variant"]), case["variant"]), ratio_input(kind, source_of(case["variant"]), case["variant"]))
+        data.SetLegendLabel("ratio").SetFill(1001, S.kOrange + 7)
+        if "formula" in DATA_KINDS[kind][2]:
+            data.SetRangeX(*axis_range(case["variant"]))
+    if case["option"].startswith("raw_"):
+        data.SetDrawOption(case["option"][4:])
+    elif case["option"] != "default":
         data.SetDrawOption(getattr(S, case["option"]))
     if case["extra"] == "stats":
         data.SetShowStats()
@@ -180,7 +192,8 @@ def compare(i, case):
     canvas = run.canvas(f"c{i}", "boxes")
     if not canvas:
         return [(f"plot made: {what}", False, " | ".join(run.errors()[:3]))]
-    pad = canvas.GetPrimitive("Pad_1")
+    padID = 2 if case["extra"] == "ratio" else 1
+    pad = canvas.GetPrimitive(f"Pad_{padID}")
     W, H = canvas.GetWw(), canvas.GetWh()
     tol = (2.0 / (W * pad.GetAbsWNDC()), 2.0 / (H * pad.GetAbsHNDC()))  # two pixels in NDC of the pad
     boxes = [(obj.GetName(), rect(obj)) for obj in pad.GetListOfPrimitives() if is_box(obj)]
@@ -194,12 +207,12 @@ def compare(i, case):
     results.append((f"boxes inside the frame: {what}", not outside, ", ".join(f"{n} {rect_text(r)}" for n, r in boxes if n in outside) + f" frame {rect_text(area)}"))
     overlaps = [f"{a[0]} and {b[0]}" for k, a in enumerate(boxes) for b in boxes[k + 1 :] if overlap(a[1], b[1], tol)]
     results.append((f"boxes apart: {what}", not overlaps, ", ".join(overlaps)))
-    frame, _ = pixels(run.canvas(f"c{i}", "boxes"), lambda o: not is_box(o) and not is_data(o))
-    drawn, toPixel = pixels(run.canvas(f"c{i}", "boxes"), lambda o: not is_box(o))
+    frame, _ = pixels(run.canvas(f"c{i}", "boxes"), lambda o: not is_box(o) and not is_data(o), padID)
+    drawn, toPixel = pixels(run.canvas(f"c{i}", "boxes"), lambda o: not is_box(o), padID)
     data = drawn != frame
     # a 3d view: what may be covered when there is no room beside it is the outline of its box (painted with the frame)
-    frameHist = run.frame_hist(f"c{i}", "boxes")
-    if frameHist and (frameHist.GetDimension() == 3 or re.search("LEGO|SURF", run.frame_option(f"c{i}", "boxes") or "")):
+    frameHist = run.frame_hist(f"c{i}", "boxes", padID)
+    if frameHist and (frameHist.GetDimension() == 3 or re.search("LEGO|SURF", run.frame_option(f"c{i}", "boxes", padID) or "")):
         left, top = toPixel(area[0], area[3])
         right, bottom = toPixel(area[2], area[1])
         inside = np.zeros_like(data)

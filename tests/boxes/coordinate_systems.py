@@ -6,8 +6,11 @@ boxes and shapes that set none (SetDefaultBoxCoordinates, SetDefaultShapeCoordin
 before the one of plot[0]. In frame coordinates the size set for a box (SetSize, SetWidth)
 and the radii of an ellipse are fractions of the frame too, so a box or shape sits at the same place relative to the frame in every
 panel of a layout, whose pads differ in size; a region in frame or user coordinates is cut at the frame, one in pad coordinates is not.
+A text of one line is aligned at its position by SetTextAlign (left, centre, right; bottom, middle, top), one of several lines has its
+upper left corner there.
 Cases: a single panel, a grid of touching panels (pads with and without margins), the main and ratio pad of 1d_ratio, log axes, a 3d
-view (boxes only), an empty layout cell (boxes only); each coordinate system, the built-in defaults and the defaults of the pads.
+view (boxes only), an empty layout cell (boxes only); each coordinate system, the built-in defaults and the defaults of the pads; every
+text alignment in each coordinate system on log axes.
 Reference: the frame of each drawn pad (its axis range within the pad, the margins for a 3d view) and the coordinates of the drawn objects.
 Covers: the commit of this file's first version (boxes in a multi-panel layout moved against the frame from pad to pad).
 """
@@ -167,7 +170,23 @@ for x, y in EMPTY_TEXTS:
     plot[2].AddText(x, y, "text")
 p.pm.AddPlot(plot)
 
-run = p.plot("coords|coords_empty")
+# a text of one line placed at a position is aligned at it by SetTextAlign (tens: left, centre, right; units: bottom, middle, top),
+# a text of several lines has its upper left corner there
+ALIGNS = (11, 12, 13, 21, 22, 23, 31, 32, 33)
+ALIGN_SYSTEMS = {"frame": (0.5, 0.5), "pad": (0.5, 0.5), "user": (5.0, 10.0)}
+for system, (x, y) in ALIGN_SYSTEMS.items():
+    plot = S.Plot(f"align_{system}", "coords_align", "1d")
+    plot[1].AddData("h1", "src", "data")
+    plot[1]["X"].SetRange(1.0, 9.0)
+    plot[1]["Y"].SetRange(1.0, 100.0)
+    plot[1]["X"].SetLog()
+    plot[1]["Y"].SetLog()
+    for align in ALIGNS:
+        setter(plot[1].AddText(x, y, f"aligned {align}").SetTextAlign(align), "text", system, 1)
+    setter(plot[1].AddText(x, y, ["two", "lines"]).SetTextAlign(22), "text", system, 1)
+    p.pm.AddPlot(plot)
+
+run = p.plot("coords|coords_empty|coords_align")
 check("the plots are drawn without errors", not run.errors(), " | ".join(run.errors()[:3]))
 
 
@@ -274,6 +293,29 @@ for i, case in enumerate(todo):
         for k in range(polygon.GetN() - 1):  # the last point closes it
             pts += point(polygon.GetX()[k], polygon.GetY()[k])
         same(tuple(pts), given("polygon", s, padID), "polygon")
+
+for system, (x, y) in ALIGN_SYSTEMS.items():
+    padObj = run.pad(f"align_{system}", "coords_align")
+    texts = [o for o in padObj.GetListOfPrimitives() if o.GetName().startswith("TextBox_")] if padObj else []
+    if len(texts) != len(ALIGNS) + 1:
+        check(f"aligned texts in {system} coordinates are drawn", False, f"{len(texts)} texts")
+        continue
+    f = frame_of(padObj, False)
+    w, h = padObj.GetX2() - padObj.GetX1(), padObj.GetY2() - padObj.GetY1()
+    if system == "frame":
+        anchor = (f[0] + x * (f[2] - f[0]), f[1] + y * (f[3] - f[1]))
+    elif system == "user":
+        anchor = ((math.log10(x) - padObj.GetX1()) / w, (math.log10(y) - padObj.GetY1()) / h)
+    else:
+        anchor = (x, y)
+    for text, align in zip(texts, (*ALIGNS, None)):
+        x1, y1, x2, y2 = text.GetX1NDC(), text.GetY1NDC(), text.GetX2NDC(), text.GetY2NDC()
+        if align is None:
+            found, label = (x1, y2), "two lines aligned 22: the upper left corner"
+        else:
+            found = ((x1, 0.5 * (x1 + x2), x2)[align // 10 - 1], (y1, 0.5 * (y1 + y2), y2)[align % 10 - 1])
+            label = f"one line aligned {align}"
+        check(f"{system} coordinates on log axes, {label} at the position", abs(found[0] - anchor[0]) < TOL and abs(found[1] - anchor[1]) < TOL, f"found {found}, position {anchor}")
 
 padObj = run.pad("empty", "coords_empty", 2)
 texts = [o for o in padObj.GetListOfPrimitives() if o.GetName().startswith("TextBox_")] if padObj else []
