@@ -3,7 +3,7 @@ scale and of the map, also fewer than ROOT's 20 (its default without levels); le
 own and leave the scale alone unless they are more. The boxes of a 3d histogram, which ROOT colours from the whole palette, take the
 colours of the scale: the pad paints with a palette of one colour per level; levels given as values warn there (equal steps).
 Every 2d kind and the 3d histograms.
-Covers: 2489ef5 (the frame takes the levels of the first data, a 3d histogram a palette of one colour per level); levels of 2d graphs and 2d
+Covers: the frame takes the levels of the first data, a 3d histogram a palette of one colour per level; levels of 2d graphs and 2d
 functions (were ignored; contour lines over them gave the scale their levels).
 """
 

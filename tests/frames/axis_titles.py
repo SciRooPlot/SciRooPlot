@@ -6,7 +6,7 @@ Cases: every 2d data kind and the 3d histograms drawn with their colour scale ×
 ten taken out and small ones × in a pad or with a ColorScale() cell; y axes of such labels in panels above each other; and the named cases.
 Reference: the pixels of the painted pad: the gap between the labels and the title right of a colour scale and left of a y axis, against
 the gap of the same plot with short labels.
-Covers: 1383e06, 126c535 (titles of colour scales and 3d views placed by their widest label), the power of ten TGaxis takes out of the
+Covers: titles of colour scales and 3d views placed by their widest label, the power of ten TGaxis takes out of the
 labels (estimated other than TGaxis does it: titles on top of the labels or far from them).
 """
 

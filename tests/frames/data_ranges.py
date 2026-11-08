@@ -7,8 +7,8 @@ the whole data is drawn. A 2d function in a 3d view is drawn over the range of t
 Cases: every data kind of a flat frame × a range on x or y (2d data, graphs) inside the data × the data first in its pad or after a
 wider histogram that gives the frame, and the named cases.
 Reference: the input objects (bins holding the range ends, points inside it).
-Covers: f49b65a (a data range without bins), the range of a 2d graph (y ignored, x lost in the saved canvas), the range of functions in 3d
-views (backlog 44 of the old harness: cut to the coordinates of the view), and the named cases.
+Covers: a data range without bins, the range of a 2d graph (y ignored, x lost in the saved canvas), the range of functions in 3d
+views (cut to the coordinates of the view), and the named cases.
 """
 
 from srptest import DATA_1D, DATA_2D, DATA_KINDS, ROOT, Project, S, add_data, axis_range, base_of, cases, check, close, data_objects, describe, finish

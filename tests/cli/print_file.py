@@ -2,7 +2,7 @@
 kind at the top, in directories, lists, stacks (their histograms) and multigraphs (their graphs), trees with their branches; below a path
 only what is there; also for files below a folder with ':' in its name. A missing file, a file that is no ROOT file and a path not in the
 file fail with exit status 1 and one error.
-Covers: 1dd8464 (stack and multigraph members), 7d65935 (file below a folder with ':')."""
+Covers: stack and multigraph members, file below a folder with ':'."""
 
 import os
 
@@ -77,14 +77,14 @@ for start in ("dir", "dir/sub", "stack", "mg", "list"):
     want = {k: v for k, v in expected.items() if k.startswith(start + "/")}
     check(f"srp print below {start} lists only what is there", out.rc == 0 and found == want, f"{found}")
 
-# a file below a folder with ':' in its name (7d65935)
+# a file below a folder with ':' in its name
 inner = os.path.join(special, "f.root")
 f = ROOT.TFile(inner, "RECREATE")
 objects["hist"].Write("h")
 f.Close()
 for suffix in ("", ":h"):
     out = run(SRP, "print", inner + suffix)
-    check(f"srp print of a file below a folder with ':' ({suffix or 'whole file'}) [7d65935]", out.rc == 0 and listing(out.stdout)[0] == {"h": "TH1D"}, out.tail())
+    check(f"srp print of a file below a folder with ':' ({suffix or 'whole file'})", out.rc == 0 and listing(out.stdout)[0] == {"h": "TH1D"}, out.tail())
 
 text = os.path.join(folder, "notes.txt")
 with open(text, "w") as fh:

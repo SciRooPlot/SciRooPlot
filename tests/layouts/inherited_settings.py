@@ -3,8 +3,7 @@ pad 0 of the base plot (ROOT's default without any), for every kind of pad setti
 log scales, axis titles and ranges, the frame fill colour and the palette, each set in every combination of these four places.
 An empty cell of a layout is no panel: the ranges of pad 0 make no frame there. A pad added in one plot made from a base plot does not
 reach the other plots made from it.
-Covers: e4d7ecb (reference function from pad 0 of the base plot), 09c8d2a (view angles from pad 0), 05312cc (empty cells), 52d49d5 (pads of other plots), the commits of this file's first
-version.
+Covers: reference function from pad 0 of the base plot, view angles from pad 0, empty cells, pads of other plots.
 """
 
 import itertools
@@ -63,7 +62,7 @@ for i, (setting, places) in enumerate(todo):
         apply(target, setting, value(setting, place))
     p.pm.AddBasePlot(base)
     p.pm.AddPlot(plot)
-# an empty cell is no panel: the ranges of pad 0 make no frame there (05312cc)
+# an empty cell is no panel: the ranges of pad 0 make no frame there
 plot = S.Plot("empty_cell", S.PanelLayout([[S.Panel(), S.Empty(1, 1)]]))
 plot.SetGroup("inherited")
 add_data(plot[1], "hist")

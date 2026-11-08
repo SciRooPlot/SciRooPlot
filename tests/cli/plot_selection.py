@@ -6,8 +6,8 @@ reference is that rule written with Python's re, for every combination of the se
 subgroups and case variants. It exits 1 with one error when nothing matches (naming shell wildcards it suspects), for an invalid pattern
 (naming it), an invalid mode (before the plots are looked up), wrong arguments or no selected project; srp plotmode sets the mode used
 when none is given.
-Covers: cc729f2 (trailing slash ends the group name), f934095 (wildcard hint keeps \\d*), suite_cli #13 and #18 (invalid mode rejected
-early, exit codes)."""
+Covers: trailing slash ends the group name, wildcard hint keeps \\d*, invalid mode rejected
+early, exit codes."""
 
 import re
 
@@ -58,11 +58,11 @@ todo = cases({"group": GROUP_PATTERNS, "name": ["p", ".+"], "setting": list(SETT
 todo += cases(
     {"group": [".+"], "name": NAME_PATTERNS, "setting": list(SETTINGS)},
     named=[
-        {"group": "group/", "name": ".+", "setting": "exact", "why": "cc729f2"},
-        {"group": "group/", "name": ".+", "setting": "contains", "why": "cc729f2: not groupx"},
-        {"group": "group//", "name": "p", "setting": "contains", "why": "cc729f2"},
-        {"group": "a\\/", "name": "p", "setting": "exact", "why": "cc729f2: an escaped slash stays"},
-        {"group": "/", "name": "p", "setting": "exact", "why": "cc729f2: a slash alone stays"},
+        {"group": "group/", "name": ".+", "setting": "exact", "why": "a trailing slash ends the group name"},
+        {"group": "group/", "name": ".+", "setting": "contains", "why": "not groupx"},
+        {"group": "group//", "name": "p", "setting": "contains", "why": "a trailing slash ends the group name"},
+        {"group": "a\\/", "name": "p", "setting": "exact", "why": "an escaped slash stays"},
+        {"group": "/", "name": "p", "setting": "exact", "why": "a slash alone stays"},
     ],
 )
 current = None
@@ -91,7 +91,7 @@ for case in sorted(todo, key=lambda c: c["setting"]):
 settings("exact")
 for group, name in (("a", "p"), ("nosuchgroup", "p")):
     out = run(PLOT, group, name, "nosuchmode")
-    check(f"invalid mode refused before reading the plots ({group}) [suite_cli #13]", out.rc == 1 and any("Invalid plot mode 'nosuchmode'" in line for line in out.errors()) and not out.lines("Found no plots") and not listed(out), out.tail())
+    check(f"invalid mode refused before reading the plots ({group})", out.rc == 1 and any("Invalid plot mode 'nosuchmode'" in line for line in out.errors()) and not out.lines("Found no plots") and not listed(out), out.tail())
 out = run(PLOT, "a", "p", "list", "extra")
 check("too many arguments refused", out.rc == 1 and any("Too many arguments" in line for line in out.errors()), out.tail())
 out = run(PLOT, "a")
@@ -103,10 +103,10 @@ p.srp("plotmode", "show")
 out = run(PLOT, "a", "p", "list", config=config_folder("config_none"))
 check("no project selected: exit 1 with the reason", out.rc == 1 and any("No plotting project is selected" in line for line in out.errors()), out.tail())
 
-# shell wildcards in the patterns: named in the error when nothing matches; a * after an escape is a regex repetition (f934095)
+# shell wildcards in the patterns: named in the error when nothing matches; a * after an escape is a regex repetition
 for group, name, hint in (("QA*", "p", "did you mean group 'QA.*'"), ("a", "x*", "did you mean name 'x.*'"), ("zz*", "q*", "group 'zz.*' and name 'q.*'"), ("zz", "q\\d*", None)):
     out = run(PLOT, group, name, "list")
     message = " ".join(out.errors())
     ok = out.rc == 1 and (hint in message if hint else "did you mean" not in message and "plot .+ .+ list shows all plots" in message)
-    check(f"no match for {group} {name}: {'hint ' + hint if hint else 'no wildcard hint'}" + (" [f934095]" if hint is None else ""), ok, message[-300:])
+    check(f"no match for {group} {name}: {'hint ' + hint if hint else 'no wildcard hint'}" + ("" if hint is None else ""), ok, message[-300:])
 finish()

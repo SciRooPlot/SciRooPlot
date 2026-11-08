@@ -134,7 +134,7 @@ VALID = {
     "refFunc": [""],  # none: hides the one of the base plot or of pad 0
     "margin": [0.0],
     "frameFraction": [0.0],
-    "function": ["TMath::Pi()*x", "x[0]*2", "[](double* x, double* p) { return 2 * x[0]; }"],  # 1f27574
+    "function": ["TMath::Pi()*x", "x[0]*2", "[](double* x, double* p) { return 2 * x[0]; }"],
 }
 SKIPPED = ("PlotManager", "PanelLayout", "Panel", "BasePlotShape")  # the project (cli tests); the layouts (layouts/geometry.py)
 # base plots are left out: their setters are those of plots, and a base plot is not made by itself; the C axis too: it is ignored for
@@ -167,11 +167,11 @@ for case in S.setter_cases()[0]:
                 given[i] = bad
                 host = S.SETTER_HOSTS[case["cls"]][case["host"]][0]
                 cases.append({**plain, "plainCase": plain, "param": param, "bad": bad, "valid": valid, "py": host.replace("{call}", S.call(case["method"], given, "py"))})
-# named: a Join of the same tree again is ignored with a warning [07fb006]
+# named: a Join of the same tree again is ignored with a warning
 join = 'p = Plot("{name}", "g", "1d")\np[1].AddData("t", "s").Project1D("x").Join("t2", ["k1"]){again}\npm.AddPlot(p)'
 plain = {"py": join.replace("{again}", ""), "label": "Data.Join(tree, keys) on tree"}
 cases.append({**plain, "plainCase": plain, "param": "tree", "bad": "the same tree again", "valid": False, "py": join.replace("{again}", '.Join("t2", ["k1"])')})
-# named: a selection of the entries of a tree that is not projected has no effect [446f576]
+# named: a selection of the entries of a tree that is not projected has no effect
 for given, data in (("tree", 'p[1].AddData("t", "s")'), ("ratio denominator", 'p[1].AddRatio("h", "s", "h2", "s2").Denom()')):
     plain = {"py": f'p = Plot("{{name}}", "g", "1d")\n{data}\npm.AddPlot(p)', "label": f"Data.Filter(filter) on a {given} without projection"}
     cases.append({**plain, "plainCase": plain, "param": "filter", "bad": "x > 2", "valid": False, "py": f'p = Plot("{{name}}", "g", "1d")\n{data}.Filter("x > 2")\npm.AddPlot(p)'})
@@ -203,14 +203,14 @@ for case in S.setter_cases()[0]:
         pairs.append((name, f"{case['cls']}.{case['method']}({', '.join(case['params'])}) on {case['host']}, {first} then {second}", case["method"] in ADDERS, results[0]))
 # calls replacing each other, named: (what, the calls, the calls with the same result)
 REPLACING = [
-    ("Entries(n) after Entries(min, max) [07fb006]", 'p[1].AddData("t", "s").Project1D("x").Entries(20, 40).Entries(10)', 'p[1].AddData("t", "s").Project1D("x").Entries(10)'),
-    ("Denom().Entries(n) after Denom().Entries(min, max) [07fb006]", 'p[1].AddRatio("t", "s", "t2", "s2").Both().Project1D("x").Denom().Entries(20, 40).Entries(10)', 'p[1].AddRatio("t", "s", "t2", "s2").Both().Project1D("x").Denom().Entries(10)'),
-    ("a drawing option after an alias [264cea6]", 'p[1].AddData("h", "s").SetDrawOption(points_line).SetDrawOption("hist e")', 'p[1].AddData("h", "s").SetDrawOption("hist e")'),
-    ("an alias after a drawing option [264cea6]", 'p[1].AddData("h", "s").SetDrawOption("hist e").SetDrawOption(points_line)', 'p[1].AddData("h", "s").SetDrawOption(points_line)'),
-    ("SetDefinesFrame(False) after SetDefinesFrame() [3130156]", 'p[1].AddData("h", "s").SetDefinesFrame().SetDefinesFrame(False)', 'p[1].AddData("h", "s")'),
-    ("SetDefinesFrame(False) on a ratio [3130156]", 'p[1].AddRatio("h", "s", "h2", "s2").SetDefinesFrame().SetDefinesFrame(False)', 'p[1].AddRatio("h", "s", "h2", "s2")'),
-    ("SetTransparent of a plot keeps its fill colour [3130156]", "p.SetFillColor(632).SetTransparent()", "p.SetFillColor(632).SetFillStyle(0)"),
-    ("SetTransparent of a pad keeps its fill colour [3130156]", "p[1].SetFillColor(600).SetTransparent()", "p[1].SetFillColor(600).SetFillStyle(0)"),
+    ("Entries(n) after Entries(min, max)", 'p[1].AddData("t", "s").Project1D("x").Entries(20, 40).Entries(10)', 'p[1].AddData("t", "s").Project1D("x").Entries(10)'),
+    ("Denom().Entries(n) after Denom().Entries(min, max)", 'p[1].AddRatio("t", "s", "t2", "s2").Both().Project1D("x").Denom().Entries(20, 40).Entries(10)', 'p[1].AddRatio("t", "s", "t2", "s2").Both().Project1D("x").Denom().Entries(10)'),
+    ("a drawing option after an alias", 'p[1].AddData("h", "s").SetDrawOption(points_line).SetDrawOption("hist e")', 'p[1].AddData("h", "s").SetDrawOption("hist e")'),
+    ("an alias after a drawing option", 'p[1].AddData("h", "s").SetDrawOption("hist e").SetDrawOption(points_line)', 'p[1].AddData("h", "s").SetDrawOption(points_line)'),
+    ("SetDefinesFrame(False) after SetDefinesFrame()", 'p[1].AddData("h", "s").SetDefinesFrame().SetDefinesFrame(False)', 'p[1].AddData("h", "s")'),
+    ("SetDefinesFrame(False) on a ratio", 'p[1].AddRatio("h", "s", "h2", "s2").SetDefinesFrame().SetDefinesFrame(False)', 'p[1].AddRatio("h", "s", "h2", "s2")'),
+    ("SetTransparent of a plot keeps its fill colour", "p.SetFillColor(632).SetTransparent()", "p.SetFillColor(632).SetFillStyle(0)"),
+    ("SetTransparent of a pad keeps its fill colour", "p[1].SetFillColor(600).SetTransparent()", "p[1].SetFillColor(600).SetFillStyle(0)"),
 ]
 for what, given, same in REPLACING:
     name = f"r{len(pairs)}"

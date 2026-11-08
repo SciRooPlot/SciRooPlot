@@ -9,9 +9,9 @@ cycles of a key the latest counts; a directory hidden by a newer key of its name
 (src:folder) leaves tables out. Data of an unknown data source is reported missing with the reason, and a data source with an
 illegal name is refused. Inputs added after GeneratePlots (appended or replaced) are read by the next GeneratePlots; without a change
 the data is not read again.
-Covers: 505b135 (the same file through a symlink in a directory source, or ./, chained once), 5434a4e (tables read only when requested;
-the same table name in two inputs: the first wins), 52d49d5 (a second AddDataSource replacing an input warns), 7d65935 (a file added
-before a second GeneratePlots: the tree read again over both), f934095 (inputs below a directory with ':' in its name).
+Covers: the same file through a symlink in a directory source, or ./, chained once, tables read only when requested;
+the same table name in two inputs: the first wins, a second AddDataSource replacing an input warns, a file added
+before a second GeneratePlots: the tree read again over both, inputs below a directory with ':' in its name.
 """
 
 import os

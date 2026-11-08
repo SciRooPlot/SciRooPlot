@@ -6,7 +6,7 @@ TGraphErrors with optional errors; table makes a tree of a dict of arrays, a str
 names: numbers and bools keep their type, strings become std::string, columns that cannot be stored are skipped with a warning naming
 the reason. Wrong input raises an exception saying what is wrong (a TypeError for the wrong kind of argument, a ValueError for wrong
 values). Handed to AddDataSource, a table works with Project1D and Filter (also on strings), a histogram is drawn as filled.
-Covers: 9dbb776 (histo, histo2d, graph, table and their checks).
+Covers: histo, histo2d, graph, table and their checks.
 """
 
 import math

@@ -6,7 +6,7 @@ match (any match in contains mode), a name word the names of the plots plot sele
 included. bash inserts a single match and keeps the typed word when the matches do not all start with it. srp: the commands, plot modes and
 setting values it offers are exactly those srp help documents, and srp accepts each of them; the projects offered are the registered ones (also with a ~ in SCIROOPLOT_CONFIG_PATH that the shell did not expand).
 Completing 3000 plots takes well below two seconds.
-Covers: cd59237 (regex dialect), cc729f2 (trailing slash), e7af591 (projects with a brace in a property), suite_cli (speed)."""
+Covers: regex dialect, trailing slash, projects with a brace in a property, completion speed."""
 
 import os
 import re
@@ -90,10 +90,10 @@ printf '%s\\n' "${{matches[@]}}" """,
 todo = cases(
     {"shell": list(SHELLS), "setting": list(SETTINGS), "word": [("group", w) for w in GROUP_WORDS] + [("name", w) for w in NAME_WORDS]},
     named=[
-        {"shell": "bash", "setting": "contains", "word": ("name", ("group/", "")), "why": "cc729f2: not groupx"},
-        {"shell": "bash", "setting": "exact", "word": ("name", ("group/sub/", "")), "why": "cc729f2"},
-        {"shell": "bash", "setting": "exact", "word": ("group", "QA\\d"), "why": "cd59237"},
-        {"shell": "bash", "setting": "exact_icase", "word": ("name", ("ab", "h_\\d")), "why": "cd59237"},
+        {"shell": "bash", "setting": "contains", "word": ("name", ("group/", "")), "why": "not groupx"},
+        {"shell": "bash", "setting": "exact", "word": ("name", ("group/sub/", "")), "why": "a trailing slash ends the group name"},
+        {"shell": "bash", "setting": "exact", "word": ("group", "QA\\d"), "why": "regex classes of ECMAScript translated"},
+        {"shell": "bash", "setting": "exact_icase", "word": ("name", ("ab", "h_\\d")), "why": "regex classes of ECMAScript translated"},
     ],
 )
 current = None
@@ -117,7 +117,7 @@ for case in sorted(todo, key=lambda c: c["setting"]):
 settings("exact")
 for sh in SHELLS:
     got, out = offered_groups(sh, "(?:QA)1")
-    check(f"{sh}: (?:...) completes nothing [cd59237]", got == set() and not out.stderr.strip(), f"{sorted(got)} {out.stderr[-200:]}")
+    check(f"{sh}: (?:...) completes nothing", got == set() and not out.stderr.strip(), f"{sorted(got)} {out.stderr[-200:]}")
 
 
 def bash_complete(*words, cfg=config):
@@ -154,13 +154,13 @@ for sh in SHELLS[1:]:  # the lists zsh offers come from the same helper
     out = shell('_scirooplot_helper load_srp_lists; printf "%s\\n" "${general_commands[@]}" "${project_commands[@]}" "${file_commands[@]}"', sh, config=config, interactive=True)
     check(f"{sh}: srp offers the commands of srp help", set(out.stdout.split()) == commands, f"{sorted(set(out.stdout.split()) ^ commands)}")
 
-# the projects offered: the registered ones and @current, also with braces in a property value (e7af591)
+# the projects offered: the registered ones and @current, also with braces in a property value
 run(SRP, "add", "second", "/tmp/second/def.py", config=config)
 run(SRP, "set", "comp", "zz", "{x}", config=config)
 run(SRP, "set", "comp", "yy", "a {", config=config)
 for sh in SHELLS:
     out = shell('_scirooplot_helper load_srp_lists; printf "%s\\n" "${projects[@]}"', sh, config=config, interactive=True)
-    check(f"{sh}: the projects offered are the registered ones [e7af591]", sorted(out.stdout.split()) == ["@current", "comp", "second"], out.tail())
+    check(f"{sh}: the projects offered are the registered ones", sorted(out.stdout.split()) == ["@current", "comp", "second"], out.tail())
 got, out = bash_complete("srp", "select", "")
 check("srp select offers the projects", sorted(got) == ["@current", "comp", "second"], f"{got}")
 got, out = bash_complete("srp", "get", "comp", "")

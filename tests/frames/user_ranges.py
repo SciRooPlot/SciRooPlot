@@ -3,7 +3,7 @@ inside the data, beyond it (the frame is widened: SciRooPlot's rule, unlike ROOT
 bins of a histogram the frame shows whole bins (ROOT): it ends at the edges of the bins holding the requested values. Graphs and
 functions have no bins: their frame ends exactly at the values.
 Also: no histogram bin outside the frame is drawn, and widening x around all the data leaves the automatic y range as it is.
-Covers: 7c2f879 (range beyond the axis), 08f2af5 (exact ends on graph frames, log y headroom), 5b47ca3 (bins outside the frame)."""
+Covers: range beyond the axis, exact ends on graph frames, log y headroom, bins outside the frame."""
 
 from srptest import BINNED_AXES, DATA_1D, DATA_2D, DATA_KINDS, Project, S, add_data, cases, check, close, describe, finish
 
@@ -19,12 +19,12 @@ todo = cases(
     # a lower end above all values (efficiencies end below 1) is an empty range: whole axis with a warning, see robust_frames.py
     valid=lambda c: c["range"] in (X_RANGES if c["axis"] == "X" else Y_RANGES) and not (c["kind"] in DATA_2D and "y" in c["scale"]) and not (DATA_KINDS[c["kind"]][1] == "TEfficiency" and c["axis"] == "Y" and c["range"] == "min_only"),
     named=[
-        {"kind": "hist", "scale": "lin", "axis": "X", "range": "above", "why": "7c2f879"},
-        {"kind": "graph", "scale": "logxy", "axis": "X", "range": "inside", "why": "08f2af5"},
-        {"kind": "graph", "scale": "lin", "axis": "X", "range": "min_only", "why": "08f2af5"},
-        {"kind": "hist", "scale": "logy", "axis": "X", "range": "beyond", "why": "08f2af5 log y headroom"},
-        {"kind": "hist_var", "scale": "logx", "axis": "X", "range": "inside", "why": "5b47ca3"},
-        {"kind": "hist2d", "scale": "lin", "axis": "Y", "range": "beyond", "why": "7c2f879"},
+        {"kind": "hist", "scale": "lin", "axis": "X", "range": "above", "why": "a range ending at the axis edge does not overshoot"},
+        {"kind": "graph", "scale": "logxy", "axis": "X", "range": "inside", "why": "graph frame on log x and y"},
+        {"kind": "graph", "scale": "lin", "axis": "X", "range": "min_only", "why": "graph frame with only a lower range"},
+        {"kind": "hist", "scale": "logy", "axis": "X", "range": "beyond", "why": "log y headroom"},
+        {"kind": "hist_var", "scale": "logx", "axis": "X", "range": "inside", "why": "lines stay inside the frame"},
+        {"kind": "hist2d", "scale": "lin", "axis": "Y", "range": "beyond", "why": "a range ending at the axis edge does not overshoot"},
         {"kind": "function", "scale": "lin", "axis": "X", "range": "inside", "why": "frame ended on the sampling grid"},
         {"kind": "function2d", "scale": "lin", "axis": "Y", "range": "inside", "why": "frame ended on the sampling grid"},
     ],

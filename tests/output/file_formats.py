@@ -34,11 +34,11 @@ for i, case in enumerate(todo):
     plot = S.Plot(f"{case['mode']}_{i}", "formats/sub", base_of(case["kind"]))
     add_data(plot[1], case["kind"], source_of(case["variant"]), case["variant"])
     p.pm.AddPlot(plot)
-# multi-panel plots; named: the plots of the first test of the output of layouts (d29a380: maps, legend strip, 1d grid, 3D views)
+# multi-panel plots; named: the plots of the first test of the output of layouts (maps, legend strip, 1d grid, 3D views)
 multi = cases(
     {"mode": MODES, "kind": tuple(DATA_KINDS), "layout": LAYOUTS},
     valid=lambda c: has_layout(c["kind"], c["layout"]) and (c["mode"] == "pdf" or c["kind"] in ("hist", "hist2d")),
-    named=[{"mode": "pdf", "kind": kind, "layout": layout, "why": "d29a380"} for kind, layout in (("hist2d", "grid"), ("hist", "strip"), ("hist", "grid"), ("hist2d", "view"))],
+    named=[{"mode": "pdf", "kind": kind, "layout": layout, "why": "multi-panel plots: maps, legend strip, grid, 3d views"} for kind, layout in (("hist2d", "grid"), ("hist", "strip"), ("hist", "grid"), ("hist2d", "view"))],
 )
 for i, case in enumerate(multi):
     plots[f"{case['mode']}_L{i}"] = case

@@ -3,7 +3,7 @@ Pad::SetFrame or marked SetDefinesFrame(), for every data kind and every stored 
 one. Drawn data that does not define the frame discards them silently: its frame is the one of the same data without stored ranges.
 Projections and profiles do not apply stored ranges either and warn once for an axis that is integrated out (invisible in the result);
 the input keeps its stored ranges for other plots.
-Covers: e290323 (stored ranges kept by frames, discarded by data, projection warnings; ratio pads framed by stored dummies).
+Covers: stored ranges kept by frames, discarded by data, projection warnings; ratio pads framed by stored dummies.
 """
 
 import numpy as np
@@ -58,11 +58,11 @@ todo = cases(
     {"kind": list(KINDS), "stored": list(STORED), "role": ["frame", "defines", "data"], "explicit": [False, True]},
     valid=lambda c: c["stored"] in stored_kinds(c["kind"]) and not (c["explicit"] and c["role"] == "data"),
     named=[
-        {"kind": "hist", "stored": "y", "role": "frame", "explicit": False, "why": "e290323"},
-        {"kind": "hist", "stored": "yaxis", "role": "frame", "explicit": False, "why": "e290323 ratio pad framed by a dummy"},
-        {"kind": "hist", "stored": "y", "role": "data", "explicit": False, "why": "e290323"},
-        {"kind": "graph", "stored": "y", "role": "frame", "explicit": False, "why": "e290323"},
-        {"kind": "hist2d", "stored": "z", "role": "frame", "explicit": False, "why": "e290323"},
+        {"kind": "hist", "stored": "y", "role": "frame", "explicit": False, "why": "stored ranges kept by the frame"},
+        {"kind": "hist", "stored": "yaxis", "role": "frame", "explicit": False, "why": "ratio pad framed by a dummy"},
+        {"kind": "hist", "stored": "y", "role": "data", "explicit": False, "why": "stored ranges of drawn data reset silently"},
+        {"kind": "graph", "stored": "y", "role": "frame", "explicit": False, "why": "stored ranges kept by the frame"},
+        {"kind": "hist2d", "stored": "z", "role": "frame", "explicit": False, "why": "stored ranges kept by the frame"},
     ],
 )
 

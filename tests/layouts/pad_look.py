@@ -7,8 +7,7 @@ The labels and title of an axis are hidden towards a touching panel (below for x
 drawing shares no x and y axes and keeps its own; a flat panel beside one keeps them hidden (no room for them) with a warning, once per axis.
 Every data kind is drawn in every panel of a base plot of its dimension (1d: a grid with ratio and pull panels, 2d: a grid with one
 colour scale and a gap grid with own scales, 3d: a touching grid), in the map-with-projections layout and in layouts with spanning panels.
-Covers: 1bcc1d8 (sizes given to MakeBasePlot), a71579b (colour scales in pixels), 7476c1b (pull panels), the commits of this file's first
-version, f717ec7 (labels hidden only where the axis is shared) and its fix "flat panels beside 3d views keep their labels hidden".
+Covers: sizes given to MakeBasePlot, colour scales in pixels, pull panels, labels hidden only where the axis is shared and flat panels beside 3d views keeping their labels hidden.
 """
 
 from srptest import DATA_3D, DATA_KINDS, DATA_POLAR, ROOT, Project, S, add_data, cases, check, describe, finish
@@ -22,7 +21,7 @@ LAYOUTS = {  # by dimension of the data: layouts and the pads with data (a Color
     2: {"2d_2x2": (1, 2, 4, 5), "2d_2x1_gap": (1, 2), "projections": (2,)},
     3: {"2d_2x1": (1, 2), "projections": (2,)},
 }
-OWN = {  # own layouts (a71579b): a panel spanning two rows beside two after a gap, a panel spanning two columns above two after a gap row
+OWN = {  # own layouts: a panel spanning two rows beside two after a gap, a panel spanning two columns above two after a gap row
     "tall_span": [[S.Panel().Span(1, 2), S.Gap(), S.Panel(1, 0.62)], [S.Panel(1, 0.38)]],
     "wide_span": [[S.Panel(1, 0.75).Span(2)], [S.Gap()], [S.Panel(), S.Panel()]],
 }

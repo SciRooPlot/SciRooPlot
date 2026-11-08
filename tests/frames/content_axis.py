@@ -5,7 +5,7 @@ scale; a 'C' axis in a pad without a 3d histogram is warned about.
 Cases: every 3d histogram kind × a range on 'C' (both ends, minimum, maximum), a title on 'C', a log 'C', a range and title on 'Z', and the
 named cases.
 Reference: the frame and data read back (minimum, maximum, colour levels, the colour scale's axis title, the z axis).
-Covers: 49752f6, 126c535 (the content axis of 3d histograms).
+Covers: the content axis of 3d histograms.
 """
 
 from srptest import DATA_3D, DATA_KINDS, Project, S, add_data, cases, check, close, describe, finish

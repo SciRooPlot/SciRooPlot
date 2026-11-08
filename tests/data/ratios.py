@@ -9,8 +9,8 @@ TH1::Divide with option B; a negative denominator swaps asymmetric errors; a num
 By a function: the value at the bin centre or point (no binomial errors), bins and points outside its range left out (a formula of the plot
 definition has none). A function as numerator: sampled at the positions of the denominator. The result of a histogram is a histogram, of a
 graph or function a graph. Every warning is expected.
-Covers: 82a875c (function numerator by a denominator with errors), e3de5c4 (graph points removed with their errors), 4986674 (profiles
-divided as their means), 5d432dd (formulas as denominators divide the whole numerator), f934095 (TGraphMultiErrors divided); TH2Poly
+Covers: function numerator by a denominator with errors, graph points removed with their errors, profiles
+divided as their means, formulas as denominators divide the whole numerator, TGraphMultiErrors divided; TH2Poly
 divided without reading past its bins; NaN in a denominator removed before the division (a spline through it was NaN everywhere); two
 formulas without a range reported once; a TGraphMultiErrors denominator sorted with its errors; empty denominator bins (also NaN) no
 knots of the interpolation (the ratio swung around them).
@@ -56,11 +56,11 @@ todo = cases(
     valid=lambda c: has_variant(c["num"], c["num_variant"]) and has_variant(c["den"], c["den_variant"]) and "normal" in (c["num_variant"], c["den_variant"]),
     always=lambda c: c["num_variant"] == c["den_variant"] == "normal" and not c["correlated"],
     named=[
-        {"num": "function", "den": "graph_errors", "num_variant": "normal", "den_variant": "normal", "correlated": False, "why": "82a875c"},
-        {"num": "graph_multi", "den": "graph", "num_variant": "nan", "den_variant": "normal", "correlated": False, "why": "e3de5c4"},
-        {"num": "graph_multi", "den": "graph_errors", "num_variant": "normal", "den_variant": "negative", "correlated": False, "why": "f934095"},
-        {"num": "profile", "den": "hist", "num_variant": "normal", "den_variant": "normal", "correlated": True, "why": "4986674"},
-        {"num": "hist2d", "den": "function2d", "num_variant": "normal", "den_variant": "normal", "correlated": False, "why": "5d432dd"},
+        {"num": "function", "den": "graph_errors", "num_variant": "normal", "den_variant": "normal", "correlated": False, "why": "a function numerator by a denominator with errors"},
+        {"num": "graph_multi", "den": "graph", "num_variant": "nan", "den_variant": "normal", "correlated": False, "why": "graph points removed with their errors"},
+        {"num": "graph_multi", "den": "graph_errors", "num_variant": "normal", "den_variant": "negative", "correlated": False, "why": "a TGraphMultiErrors divided"},
+        {"num": "profile", "den": "hist", "num_variant": "normal", "den_variant": "normal", "correlated": True, "why": "profiles divided as their means"},
+        {"num": "hist2d", "den": "function2d", "num_variant": "normal", "den_variant": "normal", "correlated": False, "why": "a formula denominator divides the whole numerator"},
         {"num": "hist2poly", "den": "function2d", "num_variant": "normal", "den_variant": "normal", "correlated": False, "why": "TH2Poly statistics"},
         {"num": "hist2poly", "den": "hist2poly", "num_variant": "normal", "den_variant": "normal", "correlated": True, "why": "TH2Poly statistics"},
         {"num": "hist", "den": "graph_errors", "num_variant": "normal", "den_variant": "nan", "correlated": False, "why": "NaN denominator"},

@@ -4,9 +4,9 @@ other type converts histograms to graphs and graphs to histograms; an alias a ty
 Documented adjustments: polar graphs draw the error bars of the points aliases with E, 2d graphs with errors add ERR, a TH2Poly is drawn
 flat (col, colz) with a warning instead of lego and surf, and the frame of a 3d view is an empty lego plot (no surface), keeping POL.
 The drawn data carries the name of the input.
-Covers: d37e829 (colz_text, clamped maps, 3d histograms), 4a19931 (functions, 2d functions, 2d graphs), 126e340 (TH2Poly drawn flat),
-25f66cf (frame of 3d views), 0129b1f (error bars of polar graphs), 2896742 (frame of 2d graphs drawn in 3d), and the commits of this
-file's first version (a TEfficiency drawn under the name ROOT gives the graph or histogram it makes).
+Covers: colz_text, clamped maps, 3d histograms, functions, 2d functions, 2d graphs, TH2Poly drawn flat,
+frame of 3d views, error bars of polar graphs, frame of 2d graphs drawn in 3d, and a TEfficiency drawn
+under the name ROOT gives the graph or histogram it makes.
 """
 
 import re
@@ -40,14 +40,14 @@ todo = cases(
     {"kind": list(DATA_KINDS), "alias": ALIASES},
     always=lambda c: c["kind"] in REPRESENTATIVE,
     named=[
-        {"kind": "hist2d", "alias": "colz_text", "why": "d37e829"},
-        {"kind": "hist3d", "alias": "iso", "why": "d37e829"},
-        {"kind": "tf1", "alias": "area", "why": "4a19931"},
-        {"kind": "graph2d_errors", "alias": "points_col", "why": "4a19931"},
-        {"kind": "hist2poly", "alias": "lego_colz", "why": "126e340"},
-        {"kind": "hist2d", "alias": "surf_col", "why": "25f66cf"},
-        {"kind": "graph_polar", "alias": "points", "why": "0129b1f"},
-        {"kind": "graph2d", "alias": "triangles", "why": "2896742"},
+        {"kind": "hist2d", "alias": "colz_text", "why": "colz with text"},
+        {"kind": "hist3d", "alias": "iso", "why": "iso of a 3d histogram"},
+        {"kind": "tf1", "alias": "area", "why": "area of a function"},
+        {"kind": "graph2d_errors", "alias": "points_col", "why": "coloured points of a 2d graph with errors"},
+        {"kind": "hist2poly", "alias": "lego_colz", "why": "a TH2Poly drawn flat for lego"},
+        {"kind": "hist2d", "alias": "surf_col", "why": "the frame of a 3d view is an empty lego"},
+        {"kind": "graph_polar", "alias": "points", "why": "polar legend rows show error bars only with e"},
+        {"kind": "graph2d", "alias": "triangles", "why": "the frame of a 2d graph drawn as triangles is an empty lego"},
         {"kind": "efficiency", "alias": "points", "why": "drawn as eff_graph"},
         {"kind": "efficiency2d", "alias": "colz", "why": "drawn as eff_histo"},
     ],

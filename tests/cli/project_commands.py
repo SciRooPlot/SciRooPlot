@@ -6,10 +6,10 @@ the shell did not expand in SCIROOPLOT_CONFIG_PATH is the home folder. Removing,
 kept or refused; clean forgets the projects whose code is gone (the folder of the program, for a C++ project also the sources above its
 build folder). Registering is safe against srp commands and programs running at the same time, and in-memory data moves with a renamed
 project.
-Covers: suite_cli #15, #18, #43 (unknown projects), f6e960e (confdir of an unknown project, unset program), b334843 (confdir ..),
-07fb006 and e7af591 (add with an unset variable: one message, nothing left), 5b7c72f (program before srp add), f934095 (concurrent
-srp add, SaveProject keeping changes made meanwhile, rename with in-memory data), 446f576 (srp set while a program saves), c4fc70a (rename
-with the configuration reached through a symlink), 7d65935 and f49b65a (unreadable projects.info: exit 1, reported once)."""
+Covers: unknown projects, confdir of an unknown project, unset program, confdir ..,
+add with an unset variable: one message, nothing left, program before srp add, concurrent
+srp add, SaveProject keeping changes made meanwhile, rename with in-memory data, srp set while a program saves, rename
+with the configuration reached through a symlink, unreadable projects.info: exit 1, reported once."""
 
 import os
 import shutil
@@ -79,13 +79,13 @@ todo = cases(
     valid=lambda c: not (c["target"] == "empty" and c["command"] in ("projects", "confdir")),
     always=lambda c: True,
     named=[
-        {"command": "set", "target": "unknown", "why": "suite_cli #15: no project created"},
-        {"command": "get", "target": "unknown", "why": "suite_cli #43"},
-        {"command": "select", "target": "unknown", "why": "suite_cli #18"},
-        {"command": "remove", "target": "unknown", "why": "suite_cli #18"},
-        {"command": "confdir", "target": "unknown", "why": "f6e960e"},
-        {"command": "confdir", "target": "dotdot", "why": "b334843"},
-        {"command": "unset_program", "target": "existing", "why": "f6e960e"},
+        {"command": "set", "target": "unknown", "why": "set on an unknown project creates none"},
+        {"command": "get", "target": "unknown", "why": "get on an unknown project fails"},
+        {"command": "select", "target": "unknown", "why": "select of an unknown project fails"},
+        {"command": "remove", "target": "unknown", "why": "remove of an unknown project fails"},
+        {"command": "confdir", "target": "unknown", "why": "confdir of an unknown project fails"},
+        {"command": "confdir", "target": "dotdot", "why": "confdir of '..' fails"},
+        {"command": "unset_program", "target": "existing", "why": "unset program is refused, plots.info kept"},
     ],
 )
 for case in todo:
@@ -119,12 +119,12 @@ for args in (("projects",), ("projects", "A"), ("select", "A"), ("add", "C", pro
     lines = out.text.splitlines()
     reasons = [line for line in lines if "Cannot load projects file" in line and "unmatched" in line]
     check(
-        f"unreadable projects.info: srp {' '.join(args)} fails, the reason given once, nothing written [7d65935, f49b65a]",
+        f"unreadable projects.info: srp {' '.join(args)} fails, the reason given once, nothing written",
         out.rc == 1 and len(reasons) == 1 and len(set(lines)) == len(lines) and sum("could not be read" in line for line in lines) <= 1 and config_files(config) == before,
         f"rc {out.rc}: {out.tail()}",
     )
 
-# srp add: paths are checked before anything is stored (a program is no folder), an unset variable gives one message (07fb006, e7af591)
+# srp add: paths are checked before anything is stored (a program is no folder), an unset variable gives one message
 config = setup()
 before = config_files(config)
 for args, reason in (
@@ -137,7 +137,7 @@ for args, reason in (
     (("add", "C"), "Specify program"),
 ):
     out = run(SRP, *args, config=config)
-    check(f"srp {' '.join(args)}: one error naming {reason}, nothing stored [07fb006, e7af591]", out.rc == 1 and len(out.errors()) == 1 and reason in out.errors()[0] and config_files(config) == before, out.tail())
+    check(f"srp {' '.join(args)}: one error naming {reason}, nothing stored", out.rc == 1 and len(out.errors()) == 1 and reason in out.errors()[0] and config_files(config) == before, out.tail())
 out = run(SRP, "add", "C", program("C"), "${HOME}/out", config=config)
 check("srp add with a variable in the path stores it as written, expanded by get", out.rc == 0 and get(config, "C", "outdir") == os.path.join(os.environ["HOME"], "out") and "${HOME}/out" in open(os.path.join(config, "projects.info")).read(), out.tail())
 
@@ -175,13 +175,13 @@ os.remove(os.path.join(PROGRAMS, "cpp", "CMakeLists.txt"))
 out = run(SRP, "clean", config=config)
 check("clean removes it once its CMakeLists.txt is gone too", out.rc == 0 and project_names(config) == ["A", "B"], out.tail())
 
-# concurrent registration (f934095)
+# concurrent registration
 config = config_folder("config_concurrent")
 procs = [subprocess.Popen([SRP, "add", f"p{i}", program("A")], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, env=dict(os.environ, SCIROOPLOT_CONFIG_PATH=config)) for i in range(12)]
 for proc in procs:
     proc.wait()
-check("12 srp add at the same time: all registered [f934095]", project_names(config) == sorted(f"p{i}" for i in range(12)), f"{project_names(config)}")
-# a program saving its project while srp commands change projects, properties and settings (f934095, 446f576)
+check("12 srp add at the same time: all registered", project_names(config) == sorted(f"p{i}" for i in range(12)), f"{project_names(config)}")
+# a program saving its project while srp commands change projects, properties and settings
 config = setup()
 out = python(
     f"""
@@ -197,9 +197,9 @@ pm.SaveProject()
 )
 settings = open(os.path.join(config, "settings.info")).read()
 ok = project_names(config) == ["A", "B", "D"] and get(config, "A", "user") == "x" and get(config, "A", "outdir") == os.path.join(PROGRAMS, "A", "out2")
-check("SaveProject keeps the projects, properties, selection and settings changed meanwhile [f934095, 446f576]", ok and "verbosity warning" in settings and "@current D" in open(os.path.join(config, "projects.info")).read(), out.tail() + str(project_names(config)))
+check("SaveProject keeps the projects, properties, selection and settings changed meanwhile", ok and "verbosity warning" in settings and "@current D" in open(os.path.join(config, "projects.info")).read(), out.tail() + str(project_names(config)))
 
-# a program run before srp add saves its definitions, but registers nothing; srp add then takes them (5b7c72f)
+# a program run before srp add saves its definitions, but registers nothing; srp add then takes them
 config = config_folder("config_early")
 out = python(
     """
@@ -214,12 +214,12 @@ pm.SaveProject()
     config=config,
 )
 confdir = run(SRP, "confdir", "early", config=config)
-check("a program before srp add registers nothing, its folder is known [5b7c72f]", project_names(config) == [] and confdir.rc == 0 and os.path.isfile(os.path.join(confdir.stdout.strip(), "plots.info")), out.tail() + confdir.tail())
+check("a program before srp add registers nothing, its folder is known", project_names(config) == [] and confdir.rc == 0 and os.path.isfile(os.path.join(confdir.stdout.strip(), "plots.info")), out.tail() + confdir.tail())
 run(SRP, "add", "early", program("early"), config=config)
 listing = run(os.path.join(os.path.dirname(SRP), "plot"), "g", "p", "list", config=config)
-check("srp add afterwards uses the saved definitions [5b7c72f]", listing.rc == 0 and " - p in group g" in listing.stdout, listing.tail())
+check("srp add afterwards uses the saved definitions", listing.rc == 0 and " - p in group g" in listing.stdout, listing.tail())
 
-# rename moves the in-memory data with the project, also when the program reached the configuration through a symlink (f934095, c4fc70a)
+# rename moves the in-memory data with the project, also when the program reached the configuration through a symlink
 config = config_folder("config_memory")
 link = os.path.join(os.path.dirname(config), "config_memory_link")
 os.symlink(config, link)
@@ -243,5 +243,5 @@ pm.SaveProject()
 out = run(SRP, "rename", "mem", "moved", config=config)
 sources = open(os.path.join(config, "moved", "dataSources.info")).read()
 made = run(os.path.join(os.path.dirname(SRP), "plot"), "g", "p", "file", config=config)
-check("rename: the in-memory data moves with the project [f934095, c4fc70a]", out.rc == 0 and os.path.join(config, "moved", "UserData.root") in sources and made.rc == 0 and not made.errors(), sources + made.tail())
+check("rename: the in-memory data moves with the project", out.rc == 0 and os.path.join(config, "moved", "UserData.root") in sources and made.rc == 0 and not made.errors(), sources + made.tail())
 finish()

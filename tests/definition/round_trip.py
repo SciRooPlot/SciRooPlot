@@ -115,7 +115,7 @@ for case in cases:
 with open(first, "rb") as a, open(second, "rb") as b:
     S.check("the file saved after loading is the same file", a.read() == b.read())
 
-# a ratio denominator without data source takes the numerator's, in every form; a numerator needs one [72984ac]
+# a ratio denominator without data source takes the numerator's, in every form; a numerator needs one
 FORMS = {
     'p[1].AddRatio(["h", "s"], ["g"])': ("s", "s"),
     'p[1].AddRatio(["h", "s2"], ["g"], "label")': ("s2", "s2"),

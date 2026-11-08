@@ -20,7 +20,7 @@ cases, problems = S.setter_cases()
 S.check("every overload of the interface has a case", not problems, "; ".join(problems))
 cases = [case for case in cases if case["cpp"] is not None]
 # C++ forms: braced lists for the projections of histograms and trees (Project/Profile share names; a single range also fits the weight
-# or the profile string, two strings the iterator constructor of std::vector<uint8_t>), the Ratio returned by each call [004ef2a]
+# or the profile string, two strings the iterator constructor of std::vector<uint8_t>), the Ratio returned by each call
 BRACED = [
     ('Project([2], [(0, 10, 50)])', "Project({2}, {{0, 10, 50}})"),
     ('Profile([2], [(0, 10, 50)])', "Profile({2}, {{0, 10, 50}})"),
@@ -35,7 +35,9 @@ BRACED = [
 for i, (py, cpp) in enumerate(BRACED):
     for host, expr in (("data", 'p[1].AddData("h", "s")'), ("ratio", 'p[1].AddRatio("h", "s", "h2", "s2").Denom()')):
         tail = ".SetCorrelated()" if host == "ratio" else ".SetColor(633)"  # SetCorrelated: only a Ratio has it
-        cases.append({"cls": "C++", "method": cpp, "params": (), "host": host, "variant": "braced", "why": "004ef2a", "py": f'p = Plot("{{name}}", "g", "1d")\n{expr}.{py}{tail}\npm.AddPlot(p)', "cpp": f'{{\n  Plot p("{{name}}", "g", "1d");\n  {expr}.{cpp}{tail};\n  pm.AddPlot(p);\n}}'})
+        cases.append(
+            {"cls": "C++", "method": cpp, "params": (), "host": host, "variant": "braced", "why": "braced lists of projections", "py": f'p = Plot("{{name}}", "g", "1d")\n{expr}.{py}{tail}\npm.AddPlot(p)', "cpp": f'{{\n  Plot p("{{name}}", "g", "1d");\n  {expr}.{cpp}{tail};\n  pm.AddPlot(p);\n}}'}
+        )
 
 
 def label(case):

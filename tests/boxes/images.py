@@ -6,7 +6,7 @@ format that can hold one (svg, eps, png); a pdf holds none before ROOT 6.42, whi
 Cases: png and jpg pictures wide and tall × the size set by width, height, both or neither × pad and frame coordinates × a wide and a
 tall canvas, and the named cases.
 Reference: the size of the image box against the size of the picture in pixels, and the picture's colour in the png of the plot.
-Covers: the commit adding images (backlog 9 of the old harness), and the named cases.
+Covers: images placed and sized, and the named cases.
 """
 
 import os

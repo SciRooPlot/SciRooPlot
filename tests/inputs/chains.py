@@ -7,8 +7,8 @@ and Entries(a, b) count the rows of the whole chain, across the boundaries of it
 path in every input (also given as a path in the name). Inputs that cannot be chained are reported, the plot is lost: a column of another
 type or missing in one input (the error names what the tree is chained from and the reason ROOT's tree reader gives), RNTuples under different paths, a TTree in some inputs and
 an RNTuple in others. The reading summary names the inputs a chain is made of.
-Covers: the chained trees of the old chain suite (AO2D-like folders in the order of the file, wildcards in directories, ordering by
-Entries, the first match per whole file, schema problems), the RNTuple chains of backlog 56.
+Covers: chained trees (AO2D-like folders in the order of the file, wildcards in directories, ordering by
+Entries, the first match per whole file, schema problems), RNTuple chains.
 """
 
 import os

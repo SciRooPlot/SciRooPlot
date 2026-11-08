@@ -4,7 +4,7 @@ a row of data or a pad that does not exist is warned about and left out. A legen
 takes such rows as well.
 Cases: every data kind in the panel of a two-panel layout, its row in a legend of the other panel and in an empty strip above both.
 Reference: the legend of the data's own pad.
-Covers: the legend rows for data of other pads of the multi-panel features (shared_axes of the old harness), and the named cases.
+Covers: the legend rows for data of other pads of the multi-panel features, and the named cases.
 """
 
 from srptest import DATA_KINDS, Project, S, add_data, cases, check, data_name, describe, finish

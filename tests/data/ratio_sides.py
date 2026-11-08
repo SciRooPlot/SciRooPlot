@@ -4,8 +4,8 @@ done as data/ratios.py does it (spline of a denominator at other positions, erro
 plain ratio as for any data. Every input kind divided by itself, and pairs of a histogram, a graph and a function. Each warning names its
 data (the modifiers of an input name that input; the denominator of a function numerator, prepared to sample it and to divide by,
 reports once), and every warning is expected.
-Covers: the ratio sides of the old core suite (both normalized, both rebinned, result scaled, numerator scaled), 4986674 (profiles
-rebinned before the division).
+Covers: the ratio sides (both normalized, both rebinned, result scaled, numerator scaled), profiles
+rebinned before the division.
 """
 
 from srptest import (
@@ -65,9 +65,9 @@ todo = cases(
     {"pair": PAIRS, "side": list(SIDES), "mods": [(m,) for m in MODIFIERS] + list(COMBINATIONS)},
     always=lambda c: c["pair"] == ("hist", "hist"),
     named=[
-        {"pair": ("hist", "hist"), "side": "both", "mods": ("normalize",), "why": "ratio_both_normalized of the old core suite"},
+        {"pair": ("hist", "hist"), "side": "both", "mods": ("normalize",), "why": "both sides normalized"},
         {"pair": ("hist", "hist"), "side": "numer", "mods": ("rebin_x",), "why": "numerator rebinned: other binning, interpolated"},
-        {"pair": ("profile", "profile"), "side": "both", "mods": ("rebin_x",), "why": "4986674"},
+        {"pair": ("profile", "profile"), "side": "both", "mods": ("rebin_x",), "why": "profiles divided as their means"},
         {"pair": ("tf1", "tf1"), "side": "denom", "mods": ("normalize",), "why": "the denominator of a function numerator reported once"},
     ],
 )

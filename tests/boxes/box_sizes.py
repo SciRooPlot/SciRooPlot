@@ -7,8 +7,8 @@ warned about, so is a box at a position set for it that reaches beyond its pad (
 Cases: legends (one column, two columns), texts and statistics boxes × a font sized relative to the pad (42) or in pixels (43) × plain
 text, TLatex with drawn parts (#sqrt, #frac), unicode, three rows × a wide, square and tall canvas × bitmapscale 1 and 2.
 Reference: the png of the plot: the box's outline (drawn red) and its rows (black) found by their colour.
-Covers: 88ff215 (a #sqrt row measured with a few pixels of garbage), 345772e (shadows at bitmapscale 2), a legend row with #frac touching the bottom of the outline in a pad taller than wide, the box sizes of the old regression
-tests of precision-3 texts in tall pads and of boxes at bitmapscale 2, and the named cases.
+Covers: a #sqrt row measured with a few pixels of garbage, shadows at bitmapscale 2, a legend row with #frac touching the bottom of the outline in a pad taller than wide, precision-3 texts in
+tall pads, boxes at bitmapscale 2, and the named cases.
 """
 
 import numpy as np

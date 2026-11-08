@@ -47,12 +47,12 @@ for i, case in enumerate(todo):
     plot = S.Plot(f"m{i}", "macros", base_of(case["kind"]))
     add_data(plot[1], case["kind"], source_of(case["variant"]), case["variant"])
     p.pm.AddPlot(plot)
-# multi-panel plots; named: the plots of the first test of the macros of layouts (d29a380: legend strip, 1d grid, 3D views; maps below)
+# multi-panel plots; named: the plots of the first test of the macros of layouts (legend strip, 1d grid, 3D views; maps below)
 multi = cases(
     {"kind": tuple(DATA_KINDS), "layout": LAYOUTS},
     valid=lambda c: has_layout(c["kind"], c["layout"]) and root_can(c["kind"], "normal"),
     named=[
-        *({"kind": kind, "layout": layout, "why": "d29a380"} for kind, layout in (("hist", "strip"), ("hist", "grid"), ("hist2d", "view"))),
+        *({"kind": kind, "layout": layout, "why": "multi-panel plots: legend strip, grid, 3d views"} for kind, layout in (("hist", "strip"), ("hist", "grid"), ("hist2d", "view"))),
         {"kind": "hist2d", "layout": "grid", "why": "the setup of a colour-scale cell runs before it in macros"},
         {"kind": "hist", "layout": "ratio", "why": "max digits of axes and black lines of histograms in macros"},
     ],

@@ -7,8 +7,8 @@ A second AddDataSource with the same name adds to the data source (an object of 
 replace only the new inputs are left; objects and files can be mixed in one data source. A nameless object is skipped with a warning.
 Trees in lists, from memory or read from a file, are copied with all their entries. Two PlotManagers of one project keep the objects of
 both. The objects reach the plot program through the project (UserData.root); GeneratePlots in the defining process draws the same.
-Covers: 52d49d5 (lists, directories and files handed over; trees in lists copied; same-name folders merged; the replace warning also across
-calls; the caller's lists and files unchanged), 446f576 (two PlotManagers of one project keep both in-memory sources).
+Covers: lists, directories and files handed over; trees in lists copied; same-name folders merged; the replace warning also across
+calls; the caller's lists and files unchanged, two PlotManagers of one project keep both in-memory sources.
 """
 
 import gc

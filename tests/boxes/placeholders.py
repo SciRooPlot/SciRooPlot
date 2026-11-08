@@ -12,8 +12,8 @@
 Cases: every data kind × every numeric placeholder × legend label or text × the frame at the data or an x range inside it, and named
 definitions for the descriptive ones.
 Reference: the drawn objects read back (bins with their centre inside the frame, the points inside it) and the documented descriptions.
-Covers: the commits of the old regression tests (5a84481 <name> for every kind, 8287d76 axis titles in <projection>/<selection>, 09e8946
-<stddev> and data numbers in texts, 57036b4 formats with '>' and look-alike typos), <mean> and <stddev> of a TH2Poly (0 from ROOT's empty
+Covers: <name> for every kind, axis titles in <projection>/<selection>, <stddev> and data numbers in texts, formats with '>' and
+look-alike typos, <mean> and <stddev> of a TH2Poly (0 from ROOT's empty
 statistics of its grid), and the named cases.
 """
 

@@ -5,7 +5,7 @@ any of the three moves the next data on to the next entry, data setting all thre
 its colours as stored) does not, nor does the reference function of the pad. Alpha setters change only the transparency.
 Every data kind, with lists of the pad, of pad 0 and of both, separate marker, line and fill lists of different lengths, and plots
 without a base plot.
-Covers: c7ba1b2 (each colour setter sets only its own part), cdc80db (marker and line of one data item from the same entry).
+Covers: each colour setter sets only its own part, marker and line of one data item from the same entry.
 """
 
 from srptest import DATA_KINDS, DEFAULT_COLORS, ROOT, Project, S, add_data, base_of, cases, check, colour_diff, data_objects, describe, finish, source_of
@@ -89,9 +89,9 @@ todo = cases(
     valid=lambda c: c["pads"] != "ref_func" or DATA_KINDS[c["kind"]][0] == 1,
     always=lambda c: c["kind"] in ("hist", "graph") and c["before"] == 1,
     named=[
-        {"kind": "hist", "pads": "srp", "setup": "marker", "before": 1, "why": "c7ba1b2"},
-        {"kind": "hist", "pads": "srp", "setup": "marker_line", "before": 1, "why": "c7ba1b2"},
-        {"kind": "hist", "pads": "parts", "setup": "none", "before": 8, "why": "cdc80db"},
+        {"kind": "hist", "pads": "srp", "setup": "marker", "before": 1, "why": "a colour setter sets only its own part"},
+        {"kind": "hist", "pads": "srp", "setup": "marker_line", "before": 1, "why": "a colour setter sets only its own part"},
+        {"kind": "hist", "pads": "parts", "setup": "none", "before": 8, "why": "the default colours of a data item stay together"},
         {"kind": "tf3", "pads": "srp", "setup": "alpha", "before": 1, "why": "the faces of a 3d function transparent with the alpha"},
     ],
 )

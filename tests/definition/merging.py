@@ -114,37 +114,32 @@ NAMED = [
         "the implicit legend of added data is the added pad's own first legend",
         'p = Plot("{name}", "g", "1d")\np[1].AddData("h", "s")\np[1].AddLegend()\nq = Plot("{name}", "g", "1d")\nq[1].AddData("h2", "s2")\nq[1].AddLegend()\np += q\npm.AddPlot(p)',
         'p = Plot("{name}", "g", "1d")\np[1].AddData("h", "s")\np[1].AddLegend()\np[1].AddData("h2", "s2").SetLegend(2)\np[1].AddLegend()\npm.AddPlot(p)',
-        "f6e960e",
     ),
     (
         "added data without legends there go to the first legend",
         'p = Plot("{name}", "g", "1d")\np[1].AddData("h", "s")\np[1].AddLegend()\nq = Plot("{name}", "g", "1d")\nq[1].AddData("h2", "s2")\np += q\npm.AddPlot(p)',
         'p = Plot("{name}", "g", "1d")\np[1].AddData("h", "s")\np[1].AddLegend()\np[1].AddData("h2", "s2")\npm.AddPlot(p)',
-        "f6e960e",
     ),
     (
         "legend rows placed at, showing or referring to data of the added pad",
         'p = Plot("{name}", "g", "1d")\np[1].AddData("h", "s")\nq = Plot("{name}", "g", "1d")\nq[1].AddData("h2", "s2")\nq[1].AddData("h", "s").GetLegendEntry().BeforeData(1).AddSymbolOf(1)\nq[1].AddLegend().AddEntry("row").SetRefData(2)\nq[1].GetLegend(1).AddDataEntry(1, 1)\np += q\npm.AddPlot(p)',
         'p = Plot("{name}", "g", "1d")\np[1].AddData("h", "s")\np[1].AddData("h2", "s2")\np[1].GetData(2).SetLegend(1)\np[1].AddData("h", "s").SetLegend(1).GetLegendEntry().BeforeData(2).AddSymbolOf(2)\np[1].AddLegend().AddEntry("row").SetRefData(3)\np[1].GetLegend(1).AddDataEntry(1, 2)\npm.AddPlot(p)',
-        "bd9ad55",
     ),
     (
         "placeholders of texts naming data of their own pad and of other pads",
         'p = Plot("{name}", "g", "1d_ratio")\np[1].AddData("h", "s")\np[2].AddData("h", "s")\nq = Plot("{name}", "g", "1d_ratio")\nq[1].AddData("h2", "s2")\nq[2].AddData("h2", "s2")\nq[1].AddText(0.3, 0.5, "<mean:1> <mean:1@2>")\np += q\npm.AddPlot(p)',
         'p = Plot("{name}", "g", "1d_ratio")\np[1].AddData("h", "s")\np[2].AddData("h", "s")\np[1].AddData("h2", "s2")\np[2].AddData("h2", "s2")\np[1].AddText(0.3, 0.5, "<mean:2> <mean:2@2>")\npm.AddPlot(p)',
-        "bbf4989",
     ),
     (
         "an own gradient takes neither the alpha nor the number of colours of the gradient it replaces",
         'p = Plot("{name}", "g", "1d")\np[1].AddData("h", "s")\np[0].SetDefaultColors([(633, 0.), (600, 1.)], None, 7).SetDefaultAlpha(0.5)\nq = Plot("{name}", "g", "1d")\nq[0].SetDefaultColors([(416, 0.), (1, 1.)])\np += q\npm.AddPlot(p)',
         'p = Plot("{name}", "g", "1d")\np[1].AddData("h", "s")\np[0].SetDefaultColors([(416, 0.), (1, 1.)])\npm.AddPlot(p)',
-        "b0583e2",
     ),
 ]
-for k, (what, merged, reference, why) in enumerate(NAMED):
+for k, (what, merged, reference) in enumerate(NAMED):
     a, b = define(f"n{k}", merged), define(f"n{k}_ref", reference)
-    S.check(f"{what} [{why}]: defined", not a and not b, f"{a!r} {b!r}")
-    checks.append((f"{what} [{why}]", f"n{k}", f"n{k}_ref", ()))
+    S.check(f"{what}: defined", not a and not b, f"{a!r} {b!r}")
+    checks.append((what, f"n{k}", f"n{k}_ref", ()))
 
 saved = os.path.join(S.WORK, "merging.info")
 pm.SavePlots(file=saved)

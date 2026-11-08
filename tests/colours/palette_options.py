@@ -2,7 +2,7 @@
 with the same options into one pad with the same palette: the frame and other things SciRooPlot draws are not counted. Every 1d kind,
 alone and several in a pad, with only some data asking for palette colours (not functions: ROOT colours the histogram it paints a
 function with, which is not stored).
-Covers: 8ee23f2 (a single HIST PLC got the last palette colour: the frame was counted).
+Covers: a single HIST PLC got the last palette colour: the frame was counted.
 """
 
 from srptest import DATA_1D, ROOT, Project, S, add_data, cases, check, describe, drawn_type, finish, option, rgba

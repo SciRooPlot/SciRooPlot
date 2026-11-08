@@ -12,9 +12,9 @@ value and coordinates at and below zero (variant crossing), without a range and 
   zero (2d functions as drawn, sampled as the frame), and is off with a warning where 2d data shows no positive value
 - a positive lower range below the data widens the frame to exactly that value, also below bins that end at or cross zero; a lower range
   at or below zero is reported and ignored: the frame is the one with only the upper end of the range set
-Covers: 6251b3b (lowest bins of log z not drawn), 57036b4 (log y minimum from bins and points outside the frame), d89603e (graph on log x
-lost its small-x points), d15c937 (widening below the first positive bin edge), f934095 (log x frame below zero ends at the last bin),
-f49b65a (lower range at or below zero warns), the y range of a graph from the points shown, the z range of a 2d graph read before it is
+Covers: lowest bins of log z not drawn, log y minimum from bins and points outside the frame, graph on log x
+lost its small-x points, widening below the first positive bin edge, log x frame below zero ends at the last bin,
+lower range at or below zero warns, the y range of a graph from the points shown, the z range of a 2d graph read before it is
 deleted, the positive TH2Poly bins of a widened frame, a function drawn with the samples of the frame.
 """
 
@@ -52,7 +52,7 @@ def valid(c):
 
 p = Project("log_axes")
 p.inputs(VARIANTS)
-# Mario's case of 6251b3b: rows of ones next to a maximum of 2e4 on log z
+# rows of ones next to a maximum of 2e4 on log z
 ones = ROOT.TH2D("ones", "", 20, 0.0, 1.0, 20, 0.0, 1.0)
 for i in range(1, 21):
     ones.SetBinContent(i, 10, 2e4 * i / 20)
@@ -68,13 +68,13 @@ todo = cases(
     {"kind": list(KINDS), "variant": list(VARIANTS), "log": ["X", "Y", "Z", "XY", "XYZ"], "range": list(RANGES)},
     valid=valid,
     named=[
-        {"kind": "hist", "variant": "normal", "log": "Y", "range": "inside", "why": "57036b4"},
-        {"kind": "graph", "variant": "negative", "log": "Y", "range": "inside", "why": "57036b4"},
-        {"kind": "graph_errors", "variant": "crossing", "log": "X", "range": "none", "why": "d89603e"},
-        {"kind": "hist_var", "variant": "crossing", "log": "X", "range": "wide", "why": "d15c937"},
-        {"kind": "hist", "variant": "crossing", "log": "X", "range": "wide", "why": "d15c937"},
-        {"kind": "hist", "variant": "normal", "log": "X", "range": "nonpositive_end", "why": "f934095"},
-        {"kind": "hist", "variant": "crossing", "log": "X", "range": "zero", "why": "f49b65a"},
+        {"kind": "hist", "variant": "normal", "log": "Y", "range": "inside", "why": "log y minimum from the bins inside the frame"},
+        {"kind": "graph", "variant": "negative", "log": "Y", "range": "inside", "why": "log y minimum from the points inside the frame"},
+        {"kind": "graph_errors", "variant": "crossing", "log": "X", "range": "none", "why": "a graph on log x keeps its points at small x"},
+        {"kind": "hist_var", "variant": "crossing", "log": "X", "range": "wide", "why": "frame widened below the first positive bin edge"},
+        {"kind": "hist", "variant": "crossing", "log": "X", "range": "wide", "why": "frame widened below the first positive bin edge"},
+        {"kind": "hist", "variant": "normal", "log": "X", "range": "nonpositive_end", "why": "a range ending at or below zero: the frame ends at the last bin"},
+        {"kind": "hist", "variant": "crossing", "log": "X", "range": "zero", "why": "a lower range at or below zero is warned about"},
         {"kind": "graph_multi", "variant": "normal", "log": "X", "range": "inside", "why": "y range of a graph from the points shown"},
         {"kind": "graph_asymm", "variant": "crossing", "log": "XY", "range": "inside", "why": "y range of a graph from the points shown"},
         {"kind": "graph", "variant": "crossing", "log": "X", "range": "none", "why": "y range of a graph from the points shown"},
@@ -320,7 +320,7 @@ for i, case in enumerate(todo):
             check(f"log z of values at or below zero starts at ROOT's floor: {what}", close(z[0], floor, 1e-6) and z[1] >= max(values) * (1 - 1e-9), f"z {fmt(z)}, values up to {max(values):.6g}, floor {floor:.6g}")
 
 fh = run.frame_hist("ones", "log")
-check("log z colours the ones next to a maximum of 2e4 [6251b3b]", bool(fh) and 0 < fh.GetMinimum() <= 1.0, f"z from {fh.GetMinimum()}" if fh else "plot not made")
+check("log z colours the ones next to a maximum of 2e4", bool(fh) and 0 < fh.GetMinimum() <= 1.0, f"z from {fh.GetMinimum()}" if fh else "plot not made")
 warned = run.warnings("is not positive and cannot be shown on a log scale")
 check("each lower range at or below zero on log x is reported", len(warned) == nIgnored, f"{len(warned)} warnings for {nIgnored} cases")
 errors = run.errors()

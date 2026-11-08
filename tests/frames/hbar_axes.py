@@ -6,8 +6,8 @@ a side panel of a map shares the map's vertical range, with its labels hidden on
 Cases: every 1d histogram kind drawn with hbars and HBAR × no setting, an x range, a y range inside the bins, room above the maximum, a log
 x axis, titles and label sizes, and the named cases.
 Reference: the pad ranges and the axes of the frame histogram.
-Covers: 72cdb45 (hbars axes), the hbars parts of the 4th and 5th sweep (log minimum from the bins in range, centred titles of the redrawn
-axes, user ranges on the axis drawn there), and the named cases.
+Covers: hbars axes, log minimum from the bins in range, centred titles of the redrawn
+axes, user ranges on the axis drawn there, and the named cases.
 """
 
 from srptest import DATA_1D, DATA_KINDS, ROOT, Project, S, add_data, cases, check, close, data_objects, describe, finish

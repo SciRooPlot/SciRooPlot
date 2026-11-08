@@ -5,7 +5,7 @@ data takes its frame from the ranges of its axes.
 Cases: every data kind of a flat frame giving the frame, first, marked or set, with other data of a wider range in the pad, and the named
 cases.
 Reference: the frame of the same data drawn alone.
-Covers: c4fc70a (an empty graph as first or marked data), the frame of a pad without data from its axis ranges (the old pad frame test).
+Covers: an empty graph as first or marked data, the frame of a pad without data from its axis ranges.
 """
 
 from srptest import DATA_1D, DATA_2D, DATA_KINDS, ROOT, Project, S, add_data, base_of, cases, check, close, describe, finish

@@ -9,8 +9,8 @@ The model of these rules (below) is computed from the documented lengths; it is 
 layouts (grids with touching panels, gaps or spaces, wide and tall panels, ratio rows, own colour scales, colour-scale cells, spanning
 cells, strips and holes) and against the layouts of past bugs. Invalid arrangements throw naming the problem; unknown base-plot names
 and 2d base plots with ratio or pull panels are refused with an error.
-Covers: a71579b (spanning cells, BasePlotShape, colour scales in pixels), 7476c1b (pull panels), 7f371a8 (holes), c059c44 (spacing per
-boundary), the commits of this file's first version.
+Covers: spanning cells, BasePlotShape, colour scales in pixels, pull panels, holes, spacing per
+boundary.
 """
 
 import math
@@ -286,22 +286,22 @@ def generated_lengths(case):
 
 
 EXPLICIT = {  # layouts of past bugs and of the documentation
-    "legend strip over three panels (a71579b)": [[empty(1.0, 0.2, span=(3, 1))], [panel(), panel(), panel()]],
-    "wide panel above two after a gap row (a71579b)": [[panel(1.0, 0.75, span=(2, 1))], [gap()], [panel(), panel()]],
-    "tall panel spanning two rows (a71579b)": [[panel(span=(1, 2)), gap(), panel(1.0, 0.62)], [panel(1.0, 0.38)]],
-    "map with projections, corner hole (7f371a8)": [[panel(1.0, 0.37), empty(hole=True, span=(2, 1))], [panel(), panel(0.37, 1.0), scale_cell(of=2)]],
+    "legend strip over three panels": [[empty(1.0, 0.2, span=(3, 1))], [panel(), panel(), panel()]],
+    "wide panel above two after a gap row": [[panel(1.0, 0.75, span=(2, 1))], [gap()], [panel(), panel()]],
+    "tall panel spanning two rows": [[panel(span=(1, 2)), gap(), panel(1.0, 0.62)], [panel(1.0, 0.38)]],
+    "map with projections, corner hole": [[panel(1.0, 0.37), empty(hole=True, span=(2, 1))], [panel(), panel(0.37, 1.0), scale_cell(of=2)]],
     "map with projections, corner empty": [[panel(1.0, 0.37), empty(span=(2, 1))], [panel(), panel(0.37, 1.0), scale_cell(of=3)]],
-    "ratio below, panel right, hole (7f371a8)": [[panel(), panel(0.37, 1.0)], [panel(1.0, 0.37), empty(hole=True)]],
-    "sized hole between panels (7f371a8)": [[panel(), empty(0.3, 1.0, hole=True), panel()]],
+    "ratio below, panel right, hole": [[panel(), panel(0.37, 1.0)], [panel(1.0, 0.37), empty(hole=True)]],
+    "sized hole between panels": [[panel(), empty(0.3, 1.0, hole=True), panel()]],
     "sized empty between panels": [[panel(), empty(0.3, 1.0), panel()]],
-    "ratio set off from its panel (c059c44)": [[panel()], [panel(1.0, 0.37, above=12.0)]],
-    "two ratios set off (c059c44)": [[panel(), panel()], [panel(1.0, 0.37, above=12.0), panel(1.0, 0.37)]],
-    "projection set off from its map (c059c44)": [[panel(), panel(0.37, 1.0, left=10.0), scale_cell(of=1)]],
+    "ratio set off from its panel": [[panel()], [panel(1.0, 0.37, above=12.0)]],
+    "two ratios set off": [[panel(), panel()], [panel(1.0, 0.37, above=12.0), panel(1.0, 0.37)]],
+    "projection set off from its map": [[panel(), panel(0.37, 1.0, left=10.0), scale_cell(of=1)]],
     "no space at one boundary, global elsewhere": [[panel(), panel()], [panel(1.0, 0.37, above=0.0), panel(1.0, 0.37, above=0.0)]],
     "scale cells per row": [[panel(), panel(), scale_cell()], [panel(), panel(), scale_cell()]],
     "own scale before a scale cell": [[panel(scale=True), scale_cell()]],
     "own scales with a gap": [[panel(scale=True), gap(), panel(scale=True)]],
-    "gap next to a cell from above (a71579b)": [[panel(span=(1, 2)), gap(), panel()], [panel()]],
+    "gap next to a cell from above": [[panel(span=(1, 2)), gap(), panel()], [panel()]],
 }
 EXPLICIT_LENGTHS = {"no space at one boundary, global elsewhere": dict(DEFAULT, spacing=20.0)}
 
@@ -393,7 +393,7 @@ p.pm.AddBasePlot(base)
 plot = S.Plot("shaped_ignored", chunks.add("shaped_ignored"), "shaped_ignored")
 fill(plot, base_rows("1d_wide_ratio_pull", SHAPE), DEFAULT)
 p.pm.AddPlot(plot)
-plots["shaped_ignored"] = ("base plot 1d_wide_ratio_pull with shapes that are not positive and finite (f6e960e)", base_rows("1d_wide_ratio_pull", SHAPE), DEFAULT)
+plots["shaped_ignored"] = ("base plot 1d_wide_ratio_pull with shapes that are not positive and finite", base_rows("1d_wide_ratio_pull", SHAPE), DEFAULT)
 layouts = [(f"layout {describe(case)}", generated_rows(case), generated_lengths(case)) for case in generated]
 layouts += [(f"layout of {what}", rows, EXPLICIT_LENGTHS.get(what, DEFAULT)) for what, rows in EXPLICIT.items()]
 for i, (what, rows, lengths) in enumerate(layouts):
@@ -422,7 +422,7 @@ for what, (call, message) in INVALID_SETTERS.items():
 shapes = python("import SciRooPlot as S\nshape = S.BasePlotShape()\nfor value in (0.0, -1.0, float('nan'), float('inf')):\n    shape.SetAspectRatio(value).SetRatioHeight(value).SetPullHeight(value)\nS.PlotManager.MakeBasePlot('1d_wide_ratio_pull', S.PanelLayout(), shape)\n")
 for setter in ("SetAspectRatio", "SetRatioHeight", "SetPullHeight"):
     warned = [line for line in shapes.warnings() if f"BasePlotShape::{setter}(" in line and "ignoring it" in line]
-    check(f"BasePlotShape::{setter} with 0, a negative, NaN or infinite value warns and keeps its value (f6e960e)", len(warned) == 4 and shapes.rc == 0, shapes.tail())
+    check(f"BasePlotShape::{setter} with 0, a negative, NaN or infinite value warns and keeps its value", len(warned) == 4 and shapes.rc == 0, shapes.tail())
 refused = python("import SciRooPlot as S\n" + "".join(f"S.PlotManager.MakeBasePlot({name!r})\n" for name in REFUSED))
 for name in REFUSED:
     lines = [line for line in refused.errors() if f"base plot {name}:" in line or f"Base plot {name} " in line]

@@ -11,7 +11,7 @@
 Cases: a ratio layout (linear and log main pad) and panels side by side with labels at the shared edges × the flag on or off; layouts of
 one, two and three panels, an hbars side panel, 3d views × the divisions set or not; every angle of ROOT's orientations and others.
 Reference: the pixels of each pad painted alone at its edges; ROOT's scaling of the divisions; ROOT's angles of its label orientations.
-Covers: 9c6f0f3, dc9e1ac (labels cut at the edge), 508d207 (divisions of narrow panels), d2f67a5 (label and text angles).
+Covers: labels cut at the edge, divisions of narrow panels, label and text angles.
 """
 
 import numpy as np

@@ -12,10 +12,10 @@ Weighted profiles read in parallel, where some inputs hold weights of 1 only, ha
 the rows are read, a scatter in 3d of a collection, a profile with too many axes, a tree without request) loses only its own plot, with
 the reason; the others of the same tree are read as usual. The reading summary names the entries, the inputs a tree is chained from and
 the passes over the data (at most two per group of requests: the automatic ranges, then the results).
-Covers: 4d1cb15 (typed requests: the column types, 'return' in identifiers, function bodies), 6c5dae4 (C-string columns in filters),
-e1a1639 (Scatter in 3d), the weighted profiles merged by ROOT (TProfile::Merge, ROOT's merge of profiles) and the axis titles of function bodies
-(semicolons), the automatic ranges of columns with inf and nan (open item 5), b334843 (a throwing expression loses only its
-request).
+Covers: typed requests: the column types, 'return' in identifiers, function bodies, C-string columns in filters,
+Scatter in 3d, the weighted profiles merged by ROOT (TProfile::Merge, ROOT's merge of profiles) and the axis titles of function bodies
+(semicolons), the automatic ranges of columns with inf and nan, a throwing expression loses only its
+request.
 """
 
 import math
@@ -327,19 +327,19 @@ todo = cases(
     {"format": list(FORMATS), "kind": list(KINDS), "column": [*SCALARS, "vec"], "selection": list(SELECTIONS)},
     valid,
     named=[
-        {"format": "tree", "kind": "project1d", "column": "i32", "selection": "define", "why": "4d1cb15"},
-        {"format": "tree", "kind": "project1d", "column": "x", "selection": "body", "why": "4d1cb15"},
+        {"format": "tree", "kind": "project1d", "column": "i32", "selection": "define", "why": "requests booked with the types of their columns"},
+        {"format": "tree", "kind": "project1d", "column": "x", "selection": "body", "why": "requests booked with the types of their columns"},
         {"format": "tree", "kind": "project4d", "column": "x", "selection": "body", "why": "axis titles of expressions with ';'"},
         {"format": "tree", "kind": "scatter3", "column": "x", "selection": "body", "why": "axis titles of expressions with ';'"},
-        {"format": "tree", "kind": "project1d_auto", "column": "i32", "selection": "none", "why": "4d1cb15"},
-        {"format": "tree", "kind": "project1d", "column": "x", "selection": "filter_cstring", "why": "6c5dae4"},
-        {"format": "chain", "kind": "project1d", "column": "x", "selection": "filter_cstring", "why": "6c5dae4"},
-        {"format": "memory", "kind": "project1d", "column": "x", "selection": "filter_cstring", "why": "6c5dae4"},
-        {"format": "tree", "kind": "scatter3", "column": "x", "selection": "filter", "why": "e1a1639"},
-        {"format": "csv", "kind": "scatter3", "column": "x", "selection": "none", "why": "e1a1639"},
-        {"format": "tree", "kind": "project1d_auto", "column": "xnf", "selection": "none", "why": "open item 5"},
-        {"format": "csv", "kind": "project1d_auto", "column": "xnf", "selection": "none", "why": "open item 5"},
-        {"format": "tree", "kind": "project1d_auto", "column": "vec", "selection": "none", "why": "open item 5"},
+        {"format": "tree", "kind": "project1d_auto", "column": "i32", "selection": "none", "why": "requests booked with the types of their columns"},
+        {"format": "tree", "kind": "project1d", "column": "x", "selection": "filter_cstring", "why": "filters on C-string columns"},
+        {"format": "chain", "kind": "project1d", "column": "x", "selection": "filter_cstring", "why": "filters on C-string columns"},
+        {"format": "memory", "kind": "project1d", "column": "x", "selection": "filter_cstring", "why": "filters on C-string columns"},
+        {"format": "tree", "kind": "scatter3", "column": "x", "selection": "filter", "why": "scatter of three columns as 3d points"},
+        {"format": "csv", "kind": "scatter3", "column": "x", "selection": "none", "why": "scatter of three columns as 3d points"},
+        {"format": "tree", "kind": "project1d_auto", "column": "xnf", "selection": "none", "why": "automatic binning of values not finite"},
+        {"format": "csv", "kind": "project1d_auto", "column": "xnf", "selection": "none", "why": "automatic binning of values not finite"},
+        {"format": "tree", "kind": "project1d_auto", "column": "vec", "selection": "none", "why": "automatic binning of a collection"},
     ],
     always=lambda case: (case["selection"] == "none" and case["column"] == "x") or (case["format"] == "tree" and case["selection"] == "none"),
 )

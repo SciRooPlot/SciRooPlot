@@ -7,8 +7,8 @@ it floating point, an empty cell of a numeric column is nan; a column with text 
 identifiers can be requested as they are. A table that cannot be read is reported with the reason, and only its plots are lost: lines
 with another number of fields (with a hint for columns aligned by several spaces, also in the header), no data, a value not matching its column (for each
 request); spaces around the delimiters and decimal commas are warned about.
-Covers: the CSV parts of the 2026-10-15 items (decimals after integer rows, inf, BOM), the CSV type inference of open items 4 and 10,
-b334843 (a value not matching its column reported for each request), the bad CSV value of the old command-line suite (only its plot lost), the ROOT error for a graph of points with x values that
+Covers: decimals after integer rows, inf and a BOM in CSV files, the type inference of CSV columns,
+a value not matching its column reported for each request, a bad CSV value (only its plot lost), the ROOT error for a graph of points with x values that
 are not finite, the hint for aligned headers.
 """
 

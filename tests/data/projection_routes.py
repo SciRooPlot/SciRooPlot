@@ -6,7 +6,7 @@ with a filter, and must give the contents and errors of the histogram filled dir
 numbers (0, -1: ROOT's whole axis, flows included) and in axis units (the bins the range reaches into) selects the same events in
 every route. A profile of a histogram averages the centres of the bins of the profiled axis (a tree the values), its under- and overflow
 only when a selection names them by number: ROOT's ProfileX leaves them out for 0, -1, where ProjectionX counts them. Entries are not compared: ROOT counts them differently per class (a THn all fills, a TH3 projection the effective entries).
-Covers: 8287d76 and the projections of the old core suite (ProjectX by bins and in user coordinates, a single bin, the last bin, ProfileX,
+Covers: projected axes named by the axis titles of the input, the projections (ProjectX by bins and in user coordinates, a single bin, the last bin, ProfileX,
 THnSparse with a range).
 """
 
@@ -120,9 +120,9 @@ todo = cases(
     valid=possible,
     always=lambda c: True,  # all of it is fast
     named=[
-        {"input": "TH2D", "target": "x", "selection": "single_bin", "why": "projecty_single_bin of the old core suite"},
-        {"input": "TH2D", "target": "x", "selection": "last_bin", "why": "projectx_user_coords_last_bin of the old core suite"},
-        {"input": "THnSparseD", "target": "x", "selection": "edges", "why": "THnSparse with a range of the old core suite"},
+        {"input": "TH2D", "target": "x", "selection": "single_bin", "why": "a single bin"},
+        {"input": "TH2D", "target": "x", "selection": "last_bin", "why": "the last bin, in user coordinates"},
+        {"input": "THnSparseD", "target": "x", "selection": "edges", "why": "a THnSparse with a range"},
     ],
 )
 

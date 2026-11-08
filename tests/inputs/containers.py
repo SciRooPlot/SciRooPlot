@@ -7,8 +7,8 @@ the same object read from the top level of a file. The rule is the one documente
 Special containers: a map gives its values under the names of their keys, a clones array its objects, an object in two lists is found in
 both, of several cycles of a key only the latest counts, an item of the same name as a list is found as data with the bare name and the
 list's items through the path, a list written after a directory of its name hides the directory (reported once), keys of classes that are no TObject and data that is no named object are not drawn.
-Covers: 1dd8464 (a stored THStack or TMultiGraph read like a list, also inside a TList and in memory), 52d49d5 (lists and directories
-handed over in memory become folders).
+Covers: a stored THStack or TMultiGraph read like a list, also inside a TList and in memory, lists and directories
+handed over in memory become folders.
 """
 
 from srptest import DATA_KINDS, ROOT, Project, S, add_data, base_of, cases, check, data_objects, describe, drawn_diff, finish, missing

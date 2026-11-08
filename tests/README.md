@@ -17,7 +17,7 @@ A failing test prints its failed checks with `--output-on-failure`. A test file 
 One folder per feature: `data/`, `drawing/`, `frames/`, `boxes/`, `layouts/`, `colours/`, `definition/`, `inputs/`, `cli/`, `output/`.
 Each `.py` file in them is a test and gets its folder as CTest label. Each file covers one guarantee (its name says which) for a whole
 area: every data kind, axis kind, option … against an independent reference (plain ROOT, an invariant, the requested values).
-A bug found later adds a case to the list of the file that should have caught it, named after the commit that fixed it.
+A bug found later adds a case to the list of the file that should have caught it, with a short text saying what it checks.
 
 `srptest.py` holds what the tests share: an isolated project per test file, the inputs of every data kind, case lists, reading the
 drawn objects back, and the PASS/FAIL bookkeeping. A test exits 0 if all checks pass, 1 if one fails and 77 if it cannot run (skipped).

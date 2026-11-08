@@ -7,7 +7,7 @@ Smooth (1d and 2d), Integral, GetCumulative (1d), GetMaximum; profiles: their me
 NormalizeToMaximum and the scale factors; functions: the scale factors (of the arguments or of the value). Normalize and
 NormalizeToMaximum within a range in x take the bins reaching into it, the points inside it. Each warning names its data, and every
 warning is expected.
-Covers: f934095 (TGraphMultiErrors scaled: both error dimensions follow); the Normalize range of a TH2Poly; graphs scaled by a negative
+Covers: TGraphMultiErrors scaled: both error dimensions follow; the Normalize range of a TH2Poly; graphs scaled by a negative
 factor (Normalize of values summing up below zero) keep positive errors, low and high swapped; a TGraphMultiErrors sorted for Smooth keeps
 each error with its point; messages after Cumulative name the data.
 """
@@ -47,7 +47,7 @@ todo = cases(
     valid=lambda c: has_variant(c["kind"], c["variant"]),
     always=lambda c: c["variant"] == "normal",
     named=[
-        {"kind": "graph_multi", "mods": ("scale",), "variant": "normal", "why": "f934095"},
+        {"kind": "graph_multi", "mods": ("scale",), "variant": "normal", "why": "both error dimensions of a scaled TGraphMultiErrors follow"},
         {"kind": "hist_var", "mods": ("rebin_x",), "variant": "normal", "why": "bins no multiple of the group"},
         {"kind": "hist2poly", "mods": ("normalize_range",), "variant": "normal", "why": "range of a TH2Poly"},
         {"kind": "hist2poly", "mods": ("norm_max_range",), "variant": "normal", "why": "range of a TH2Poly"},

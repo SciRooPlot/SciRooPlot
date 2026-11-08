@@ -2,7 +2,7 @@
 order by every alias that draws it as a graph, with the values of the input; only area sorts them (the area below the points needs the
 order of x), with one warning; drawn as a histogram (hist, text, ...) or its steps (hist_clipped) a graph becomes bins, whose order is that of x. A function keeps
 the number of points it is sampled at (SetNpx, SetNpy, SetNpz), few or many, for every alias it can be drawn with.
-Covers: the commits of this file's first version (area sorted the points of a graph silently).
+Covers: area sorted the points of a graph silently.
 """
 
 from srptest import ALIASES, DATA_KINDS, Project, S, add_data, alias_table, base_of, cases, check, close, data_objects, describe, drawn_type, finish, has_variant, source_of

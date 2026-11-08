@@ -3,8 +3,8 @@ older than the program, than a Python file next to it or one folder below (a mod
 folder, than the program rebuilt from changed sources; never when nothing changed or only other files did. It then plots what the program
 saved. A failing program stops plot with a non-zero exit status before anything is plotted; a program that saved another project's
 definitions is named in a warning; a missing program is named in a warning and the stored definitions are used. In bash and zsh.
-Covers: suite_cli #8 (a changed imported module), #17 (C++ program in a build folder other than build/), 98e9c91 (program of another
-project, failing program)."""
+Covers: a changed imported module, C++ program in a build folder other than build/, program of another
+project, failing program."""
 
 import os
 import shutil
@@ -59,7 +59,7 @@ def plots_info(config, project):
     return (os.stat(path).st_mtime, open(path).read()) if os.path.exists(path) else (None, "")
 
 
-todo = cases({"shell": list(SHELLS), "change": list(CHANGES)}, named=[{"shell": "bash", "change": "module", "why": "suite_cli #8"}])
+todo = cases({"shell": list(SHELLS), "change": list(CHANGES)}, named=[{"shell": "bash", "change": "module", "why": "a changed module re-runs the program"}])
 for i, case in enumerate(todo):
     what = describe(case)
     config = config_folder(f"config{i}")
@@ -88,7 +88,7 @@ for sh in SHELLS:
     with open(os.path.join(folder, "def.py"), "a") as f:
         f.write("raise SystemExit(3)\n")
     out = shell("plot g p list; echo status $?", sh, config=config)
-    check(f"{sh}: a failing program stops plot, non-zero exit status [98e9c91]", "status 0" not in out.stdout and " - p in group g" not in out.stdout and not out.warnings(), out.tail())
+    check(f"{sh}: a failing program stops plot, non-zero exit status", "status 0" not in out.stdout and " - p in group g" not in out.stdout and not out.warnings(), out.tail())
     # a program that saves another project's definitions
     config = config_folder(f"config_{sh}_foreign")
     python_project(config, os.path.join(config, "..", f"own_{sh}"), "own")
@@ -98,7 +98,7 @@ for sh in SHELLS:
     shutil.copy(os.path.join(config, "..", f"other_{sh}", "def.py"), os.path.join(config, "..", f"own_{sh}", "def.py"))
     touch(os.path.join(config, "..", f"own_{sh}"), os.path.join(config, "own", "plots.info"), os.path.join(config, "..", f"own_{sh}", "def.py"))
     out = shell("plot g p list", sh, config=config)
-    check(f"{sh}: a program saving another project is named in a warning [98e9c91]", out.rc == 0 and any("did not save the plot definitions of the current project" in w for w in out.warnings()), out.tail())
+    check(f"{sh}: a program saving another project is named in a warning", out.rc == 0 and any("did not save the plot definitions of the current project" in w for w in out.warnings()), out.tail())
     # a missing program
     os.remove(os.path.join(config, "..", f"own_{sh}", "def.py"))
     out = shell("plot g p list", sh, config=config)
@@ -127,7 +127,7 @@ else:
     for sh in SHELLS:
         first = shell("plot '.+' '.+' list", sh, config=config)
         stamp, _ = plots_info(config, "cpp")
-        check(f"{sh}: a C++ program in a build folder out-of-tree runs [suite_cli #17]", made.rc == 0 and first.rc == 0 and stamp is not None and " - myFirstPlot" in first.stdout, made.tail() + first.tail())
+        check(f"{sh}: a C++ program in a build folder out-of-tree runs", made.rc == 0 and first.rc == 0 and stamp is not None and " - myFirstPlot" in first.stdout, made.tail() + first.tail())
         touch(folder, os.path.join(config, "cpp", "plots.info"))
         stamp = os.stat(os.path.join(config, "cpp", "plots.info")).st_mtime
         out = shell("plot '.+' '.+' list", sh, config=config)
@@ -137,5 +137,5 @@ else:
         touch(folder, os.path.join(config, "cpp", "plots.info"), os.path.join(folder, "src", "DefinePlots.cpp"))
         stamp = os.stat(os.path.join(config, "cpp", "plots.info")).st_mtime
         out = shell("plot '.+' '.+' list", sh, config=config)
-        check(f"{sh}: a changed C++ source is rebuilt and run [suite_cli #17]", out.rc == 0 and plots_info(config, "cpp")[0] != stamp and " - myFirstPlot" in out.stdout and not out.warnings(), out.tail())
+        check(f"{sh}: a changed C++ source is rebuilt and run", out.rc == 0 and plots_info(config, "cpp")[0] != stamp and " - myFirstPlot" in out.stdout and not out.warnings(), out.tail())
 finish()

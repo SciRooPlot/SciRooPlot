@@ -2,7 +2,7 @@
 data with a marker style or size set, with errors (any non-zero error, as plain ROOT gives them: the square roots of the contents of a
 histogram filled without weights count) or a graph of a single point as points, other data (all errors zero) as hist (graphs as line); 2d data and 3d histograms as colz (the colour scale on the frame); other functions with ROOT's default.
 The fill of the input counts only when its style is kept (SetKeepInputStyle), and the fill ROOT gives every TEfficiency is not a fill.
-Covers: 7cd25b3 (ROOT's default fill of a TEfficiency).
+Covers: ROOT's default fill of a TEfficiency.
 """
 
 from srptest import DATA_KINDS, ROOT, Project, S, add_data, alias_table, base_of, cases, check, close, data_objects, describe, drawn_type, finish, has_variant, no_scale, per_error_set, source_of
@@ -65,7 +65,7 @@ todo = cases(
     valid=lambda c: has_variant(c["kind"], c["variant"]) and (c["style"] not in INPUT_FILL or (c["kind"] in filled and c["variant"] == "normal")),
     always=lambda c: drawn_type(c["kind"]) in ("hist1d", "graph") and c["variant"] == "normal",
     named=[
-        {"kind": "efficiency", "style": "input_style", "variant": "normal", "why": "7cd25b3"},
+        {"kind": "efficiency", "style": "input_style", "variant": "normal", "why": "the default fill ROOT gives a TEfficiency is ignored"},
         {"kind": "hist_counts", "style": "none", "variant": "normal", "why": "counts: points with their square roots"},
         {"kind": "hist_noerrors", "style": "none", "variant": "normal", "why": "errors all zero: hist"},
     ],

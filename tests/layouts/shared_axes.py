@@ -10,9 +10,9 @@ that the layout shows the axis once), a single pad leaves its group, a pad liste
 an unknown axis and pad 0 are refused when defined. Panels spanning other columns share no x with the narrow ones, panels apart by a
 panel spacing still share. The title of a row (x) or column (y) of touching panels showing the same title is drawn once, under or beside
 all of them (centred if the axis says so); panels with titles of their own keep them, and SetCommonTitles(false) keeps all titles.
-Covers: d29a380 (shared axes, common titles, colour-scale cells), 05312cc (undoing the axes of touching panels warns), 7476c1b (a
-colour-scale cell naming its panel), the commits of this file's first version, b59d3ff (3d histograms in z groups), the fix "flat panels
-beside 3d views keep their labels hidden".
+Covers: shared axes, common titles, colour-scale cells, undoing the axes of touching panels warns, a
+colour-scale cell naming its panel, 3d histograms in z groups, flat panels
+beside 3d views keeping their labels hidden.
 """
 
 from srptest import Chunks, DATA_1D, DATA_2D, DATA_3D, DATA_POLAR, Project, S, add_data, cases, check, close, data_objects, describe, finish, has_variant, hist_diff, python, source_of
@@ -26,7 +26,7 @@ FLAT = DATA_1D + FLAT_2D
 pairs = cases(
     {"first": list(FLAT), "second": list(FLAT), "variant": list(VARIANTS), "axis": ["X", "Y"], "log": [False, True], "group": ["layout", "explicit"]},
     valid=lambda c: has_variant(c["second"], c["variant"]) and FLAT.index(c["first"]) <= FLAT.index(c["second"]) and (c["group"] == "layout" or c["first"] == c["second"]) and (not c["log"] or c["variant"] in ("normal", "huge")),
-    named=[{"first": "hist", "second": "graph_errors", "variant": "normal", "axis": "Y", "log": False, "group": "layout", "why": "d29a380"}],
+    named=[{"first": "hist", "second": "graph_errors", "variant": "normal", "axis": "Y", "log": False, "group": "layout", "why": "touching panels share y"}],
 )
 # z shared by two 2d pads (one colour scale in a cell, or ShareAxis between panels with own scales)
 COLOURED = tuple(k for k in FLAT_2D + DATA_3D if not k.startswith("tf3"))  # drawn with a colour scale
@@ -121,8 +121,8 @@ CELLS = {  # name: (rows of the layout, kind by pad (variant huge for the pads l
     "a cell in front naming its panel": ([[S.ColorScale(2), S.Panel(), S.Panel()]], {2: "hist2d", 3: "hist2d"}, (3,), ([2, 3],)),
     "a cell without z group": ([[S.Panel(), S.Panel(), S.ColorScale()]], {1: "hist2d", 2: "hist2d"}, (2,), ()),
     "z shared without a cell": ([[S.Panel().ColorScale(), S.Gap(), S.Panel().ColorScale()]], {1: "hist2d", 2: "hist2d"}, (2,), ([1, 2],)),
-    "map with projections and a hole (7f371a8)": ([[S.Panel(1, 0.37), S.Hole().Span(2)], [S.Panel(), S.Panel(0.37, 1), S.ColorScale(2)]], {1: "hist", 2: "hist2d", 3: "hist"}, (2,), ()),
-    "map with a projection set off (c059c44)": ([[S.Panel(), S.Panel(0.37, 1).SpacingLeft(10), S.ColorScale(1)]], {1: "hist2d", 2: "hist"}, (1,), ()),
+    "map with projections and a hole": ([[S.Panel(1, 0.37), S.Hole().Span(2)], [S.Panel(), S.Panel(0.37, 1), S.ColorScale(2)]], {1: "hist", 2: "hist2d", 3: "hist"}, (2,), ()),
+    "map with a projection set off": ([[S.Panel(), S.Panel(0.37, 1).SpacingLeft(10), S.ColorScale(1)]], {1: "hist2d", 2: "hist"}, (1,), ()),
 }
 for name, variant in (("zref_normal", "normal"), ("zref_huge", "huge")):  # the z range of a map on its own
     plot = S.Plot(name, chunks.add(name), "2d")
@@ -327,12 +327,12 @@ name = cells["a cell without z group"]
 check("a cell without z group shows the scale of the panel on its left", same(cell_range(name, 3), zalone["huge"]) and same(axis_range(name, 1, "Z"), zalone["normal"]), f"cell {cell_range(name, 3)}, pad 1 {axis_range(name, 1, 'Z')}")
 name = cells["z shared without a cell"]
 check("z shared without a cell: both panels keep their scales, with the common range", own_scale(name, 1) and own_scale(name, 2) and same(axis_range(name, 1, "Z"), both) and same(axis_range(name, 2, "Z"), both), f"{axis_range(name, 1, 'Z')}, {axis_range(name, 2, 'Z')}")
-for what in ("map with projections and a hole (7f371a8)", "map with a projection set off (c059c44)"):
+for what in ("map with projections and a hole", "map with a projection set off"):
     name = cells[what]
     cell, mapPad = (4, 2) if "hole" in what else (3, 1)
     check(f"the cell shows the scale of the map it names: {what}", same(cell_range(name, cell), zalone["huge"]), str(cell_range(name, cell)))
     check(f"the map draws no scale of its own: {what}", not own_scale(name, mapPad))
-name = cells["map with projections and a hole (7f371a8)"]
+name = cells["map with projections and a hole"]
 check("map with projections and a hole: projection and map share x", same(axis_range(name, 1, "X"), axis_range(name, 2, "X")), f"{axis_range(name, 1, 'X')}, {axis_range(name, 2, 'X')}")
 
 for i, (what, (base, nPads, titles, _, wantX, wantY)) in enumerate(TITLES.items()):

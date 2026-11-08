@@ -2,7 +2,7 @@
 object gets exactly that colour (rgb colours are stored in the plot definitions as "#rrggbb"), with the transparency of the alpha given
 with it (the alpha setter or the alpha of a combined setter); colour forms that are not valid raise when they are set. An index ROOT
 does not know is drawn black (as by ROOT) with a warning, once per index and run.
-Covers: f943c45 (rgb colours in every colour setter).
+Covers: rgb colours in every colour setter.
 """
 
 import itertools
@@ -150,7 +150,7 @@ p = Project("colour_forms")
 p.inputs()
 todo = cases(
     {"setter": list(SETTERS), "form": list(FORMS), "alpha": [None, 0.4]},
-    named=[{"setter": "Data.SetColor", "form": "rgb", "alpha": None, "why": "f943c45"}],
+    named=[{"setter": "Data.SetColor", "form": "rgb", "alpha": None, "why": "an rgb colour of data"}],
 )
 for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "forms", "1d")

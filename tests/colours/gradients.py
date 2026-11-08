@@ -6,7 +6,7 @@ pad wins over pad 0's; the alpha given with it makes every colour transparent. A
 are checked when set: fewer than two stops, a number of colours below 1, positions outside 0 to 1, decreasing positions and components
 outside 0 to 1 warn and the gradient is ignored (the colours stay as before, nothing is said again when plotted), equal neighbours (a hard
 step) do not.
-Covers: 2e30e68 (no gradient error without data taking colours), 9f1978c (stops checked, end colours beyond the first and last stop).
+Covers: no gradient error without data taking colours, stops checked, end colours beyond the first and last stop.
 """
 
 from srptest import DEFAULT_COLORS, ROOT, Project, S, add_data, cases, check, describe, finish, python, rgba
@@ -60,8 +60,8 @@ todo = cases(
     {"setter": list(SETTERS), "stops": list(STOPS), "form": list(FORMS), "where": ["pad", "pad0", "both"], "takers": [1, 3, 7], "alpha": [None, 0.6], "count": [None, 4], "extras": list(EXTRAS)},
     valid=lambda c: c["setter"] != "SetPalette" or (c["takers"] == 1 and c["extras"] == "none"),
     named=[
-        {"setter": "SetDefaultColors", "stops": "inner", "form": "rgb_position", "where": "pad", "takers": 7, "alpha": None, "count": None, "extras": "none", "why": "9f1978c"},
-        {"setter": "SetPalette", "stops": "inner", "form": "rgb_position", "where": "pad", "takers": 1, "alpha": None, "count": 11, "extras": "none", "why": "9f1978c"},
+        {"setter": "SetDefaultColors", "stops": "inner", "form": "rgb_position", "where": "pad", "takers": 7, "alpha": None, "count": None, "extras": "none", "why": "the end colours beyond the inner stops of a gradient"},
+        {"setter": "SetPalette", "stops": "inner", "form": "rgb_position", "where": "pad", "takers": 1, "alpha": None, "count": 11, "extras": "none", "why": "the end colours beyond the inner stops of a gradient"},
     ],
 )
 OTHER = [((0.0, 1.0, 0.0), 0.0), ((0.0, 0.0, 0.0), 1.0)]  # pad 0's gradient where the pad has its own

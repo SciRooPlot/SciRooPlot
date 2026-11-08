@@ -6,7 +6,7 @@ regions and polygons a translucent fill, ellipses no fill, arrows a head in the 
 Cases: every kind × every layer × a histogram, a graph, a map and a log axis giving the frame × the default or a set look, and the named
 cases (lines at the limits of a log axis, positions a log axis cannot show, shapes of a base plot and of pad 0, arrow heads, arcs).
 Reference: the primitives of the pad and the same plot without the shape.
-Covers: the commit adding shapes (backlog 28 of the old harness), f49b65a (a line at the limit of a log axis), and the named cases.
+Covers: shapes in their layers, a line at the limit of a log axis, and the named cases.
 """
 
 import math

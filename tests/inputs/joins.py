@@ -9,7 +9,7 @@ not possible is reported with the reason and loses the plot: keys appearing more
 row counts that differ (per input, or in total from another data source), a joined tree or key column missing (also in only one input),
 a tree written by a multi-threaded Snapshot joined row by row, a tree in a list, a table or an RNTuple, an undefined data source, an
 alias equal to the name of the tree.
-Covers: the joins of the old join suite (row by row, by key, inner join, shuffled tracks, entry ranges, ratios, the error cases).
+Covers: joins (row by row, by key, inner join, shuffled tracks, entry ranges, ratios, the error cases).
 """
 
 import random

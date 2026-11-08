@@ -10,10 +10,10 @@ each corner; with a statistics box, a shape (a region over the height of the fra
 other viewing angles of 3d views, or the boxes in the ratio pad below the data (the data divided by itself); on a frame ending at the
 data or twice as wide; linear and log y.
 Reference: the pixels painted for the data (the canvas painted with and without the data) inside each box, in the PNG of the plot.
-Covers: the commits of this file's first version (functions drawn with a fill, histograms with an error option but no errors drawn as
+Covers: functions drawn with a fill, histograms with an error option but no errors drawn as
 steps, lines and bands of histograms through the bin centres, graphs without errors drawn with error boxes or bands, multi-error graphs
 by their largest errors, the edges of bands between the cells of the placement, 2d graphs and functions drawn as maps, the frame of 3d
-views of functions, boxes on top of each other when there is no room), and the named cases.
+views of functions, boxes on top of each other when there is no room, and the named cases.
 """
 
 import re
@@ -72,9 +72,9 @@ def valid(case):
     return plain(case, "boxes", "range", "log") or plain(case, "placement", "range") or plain(case, "extra", "range") or plain(case, "variant")
 
 
-def named(kind, option, what, commit, **values):
+def named(kind, option, what, **values):
     case = {"kind": kind, "option": option, "boxes": "legend_text", "placement": "best_corner", "extra": "none", "range": "data", "log": False, "variant": "normal"}
-    return {**case, **values, "why": f"{what}, {commit}"}
+    return {**case, **values, "why": what}
 
 
 todo = cases(
@@ -91,23 +91,23 @@ todo = cases(
     valid=valid,
     always=lambda c: plain(c, "range"),
     named=[
-        named("hist", "hist", "filled steps, also on a frame below zero (the fill starts at zero)", "43a33d6", variant="negative"),
-        named("hist", "area_smooth", "filled smooth curve", "43a33d6"),
-        named("graph", "bars", "bar chart of a graph", "43a33d6"),
-        named("hist", "hbars", "horizontal bar chart", "43a33d6"),
-        named("graph_polar", "default", "four boxes around the polar grid", "2559b88", boxes="legend_texts"),
-        named("hist_counts", "default", "error bars of a histogram without Sumw2", "53427f7"),
-        named("graph", "default", "markers only: any point order", "f934095", variant="unsorted"),
-        named("hist", "default", "a region", "1cf5e2c", extra="region"),
-        named("hist", "default", "no room: on top of the data, apart", "keep automatic boxes apart when there is no room", boxes="legend_texts", extra="full"),
-        named("hist_var", "line", "a line through the centres of wide bins", "keep automatic boxes off data as root draws it", placement="top_right"),
-        named("hist", "band", "a band through the bin centres", "keep automatic boxes off data as root draws it", placement="bottom_left"),
-        named("graph_multi", "band", "the larger of two sets of errors", "keep automatic boxes off data as root draws it", placement="top_right"),
-        named("graph_multi", "boxes", "the larger of two sets of errors", "keep automatic boxes off data as root draws it", placement="top_right"),
-        named("hist2d", "lego", "3d view at other angles", "place boxes beside 2d graphs and functions drawn as maps", boxes="legend", extra="view"),
-        named("hist3d", "default", "3d view at other angles", "place boxes beside 2d graphs and functions drawn as maps", boxes="legend", extra="view"),
-        named("tf2", "surf", "3d view at other angles", "place boxes beside 2d graphs and functions drawn as maps", extra="view"),
-        named("hist", "default", "boxes in the pad of a ratio", "ratio pads of the old suite of boxes", boxes="legend_texts", extra="ratio"),
+        named("hist", "hist", "filled steps, also on a frame below zero (the fill starts at zero)", variant="negative"),
+        named("hist", "area_smooth", "filled smooth curve"),
+        named("graph", "bars", "bar chart of a graph"),
+        named("hist", "hbars", "horizontal bar chart"),
+        named("graph_polar", "default", "four boxes around the polar grid", boxes="legend_texts"),
+        named("hist_counts", "default", "error bars of a histogram without Sumw2"),
+        named("graph", "default", "markers only: any point order", variant="unsorted"),
+        named("hist", "default", "a region", extra="region"),
+        named("hist", "default", "no room: on top of the data, apart", boxes="legend_texts", extra="full"),
+        named("hist_var", "line", "a line through the centres of wide bins", placement="top_right"),
+        named("hist", "band", "a band through the bin centres", placement="bottom_left"),
+        named("graph_multi", "band", "the larger of two sets of errors", placement="top_right"),
+        named("graph_multi", "boxes", "the larger of two sets of errors", placement="top_right"),
+        named("hist2d", "lego", "3d view at other angles", boxes="legend", extra="view"),
+        named("hist3d", "default", "3d view at other angles", boxes="legend", extra="view"),
+        named("tf2", "surf", "3d view at other angles", extra="view"),
+        named("hist", "default", "boxes in the pad of a ratio", boxes="legend_texts", extra="ratio"),
     ],
 )
 
@@ -231,7 +231,7 @@ def compare(i, case):
         if covered and not (DATA_KINDS[case["kind"]][0] > 1 and not room_beside(outline, name, inPixels, toPixel, area)):
             covering.append(f"{name} covers {covered} pixels")
     results.append((f"boxes off the data unless warned: {what}", warned or not covering, "; ".join(covering)))
-    if "2559b88" in case.get("why", ""):
+    if case.get("why") == "four boxes around the polar grid":
         results.append((f"room for four boxes around the polar grid: {what}", not warned, " | ".join(run.messages(f"c{i}", "boxes"))))
     return results
 

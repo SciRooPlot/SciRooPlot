@@ -2,7 +2,7 @@
 kBird: the colours plain ROOT gives for that palette (gStyle->SetPalette(n, nullptr, alpha)), set before anything of the pad is painted and
 restored to kBird after the canvas, so a session drawing other things afterwards is unaffected. A ColorScale() cell shows its map's scale
 in the palette the map is painted with; panels sharing one colour scale warn once when they are painted with different palettes.
-Covers: 0a3fd83 (the scale cell in the palette of its map), 1a72819 (different palettes in a shared scale warn); no warning for settings
+Covers: the scale cell in the palette of its map, different palettes in a shared scale warn; no warning for settings
 giving the same palette (ROOT's default or alpha 1 set explicitly).
 """
 

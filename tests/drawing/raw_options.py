@@ -10,7 +10,7 @@ first data drawn the same way; only SciRooPlot's own cleanups change it:
 A histogram is drawn with stored errors (Sumw2) only where its input has them, so the empty option draws a histogram filled without
 weights as ROOT does: as steps, without its errors.
 The colour scale Z of 2d and 3d data is drawn by the frame (see aliases.py), so it is compared without it.
-Covers: 54eff86 (SAME, RX/RY), 6c87cc7 (A of graphs), 9c7c462 (polar grid letters), arrow width (backlog 47), AXIS/AXIG.
+Covers: SAME, RX/RY, A of graphs, polar grid letters, arrow width, AXIS/AXIG.
 """
 
 import re

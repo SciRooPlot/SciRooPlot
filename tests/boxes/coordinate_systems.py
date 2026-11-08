@@ -12,7 +12,7 @@ Cases: a single panel, a grid of touching panels (pads with and without margins)
 view (boxes only), an empty layout cell (boxes only); each coordinate system, the built-in defaults and the defaults of the pads; every
 text alignment in each coordinate system on log axes.
 Reference: the frame of each drawn pad (its axis range within the pad, the margins for a 3d view) and the coordinates of the drawn objects.
-Covers: the commit of this file's first version (boxes in a multi-panel layout moved against the frame from pad to pad).
+Covers: boxes in a multi-panel layout moved against the frame from pad to pad.
 """
 
 import math

@@ -3,8 +3,8 @@ near the largest float) gives a plot with a finite frame and no ROOT errors, on 
 keeps a positive range (or is switched off with a warning when there is nothing positive). Data with a NaN or infinite value is
 reported with a warning naming it, as data with contents beyond the largest float (ROOT finds axis ranges only below it). A plot that
 ROOT throws an exception on while painting is reported and loses only itself.
-Covers: the commits of this file's first version (crashes on NaN points of TGraphMultiErrors and on empty 2d graphs, misplaced errors of
-2d graphs after removing NaN points, the whole run lost to one plot ROOT could not paint).
+Covers: crashes on NaN points of TGraphMultiErrors and on empty 2d graphs, misplaced errors of
+2d graphs after removing NaN points, the whole run lost to one plot ROOT could not paint.
 """
 
 import math

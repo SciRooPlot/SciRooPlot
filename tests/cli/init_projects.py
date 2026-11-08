@@ -2,7 +2,7 @@
 run: plot makes its plots without warnings or errors. They refuse, with a message and without registering or creating anything, an
 existing project name (whose program stays where it is), an existing folder, @current, a name that is no project name and a missing name.
 C++ projects need cmake and a compiler (left out without them); the examples run in the full test only (they plot every example).
-Covers: suite_cli #16 (init over an existing project from another folder)."""
+Covers: init over an existing project from another folder."""
 
 import os
 import shutil
@@ -13,7 +13,7 @@ hasCpp = bool(shutil.which("cmake") and (shutil.which("c++") or shutil.which("g+
 if not hasCpp:
     print("no cmake or C++ compiler: the C++ projects are left out")
 KINDS = ["init-py", "init-cpp", "example-py", "example-cpp"]
-todo = cases({"shell": list(SHELLS), "kind": KINDS}, valid=lambda c: (hasCpp or "cpp" not in c["kind"]) and (FULL or "example" not in c["kind"]), named=[{"shell": "bash", "kind": "init-py", "why": "suite_cli #16"}])
+todo = cases({"shell": list(SHELLS), "kind": KINDS}, valid=lambda c: (hasCpp or "cpp" not in c["kind"]) and (FULL or "example" not in c["kind"]), named=[{"shell": "bash", "kind": "init-py", "why": "init over an existing project"}])
 for i, case in enumerate(todo):
     what = describe(case)
     config = config_folder(f"config{i}")
