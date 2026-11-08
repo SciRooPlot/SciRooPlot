@@ -1,12 +1,13 @@
 """A box (legend, text, statistics box) is as large as what it shows, as painted in the image the plot is saved as: its rows lie inside
-its outline, which leaves them no more room than a margin; the outline of a box is a line (no shadow); a text of a font sized in pixels
+its outline, apart from it (also rows with drawn parts below or above the line, such as #frac), which leaves them no more room than
+a margin; the outline of a box is a line (no shadow); a text of a font sized in pixels
 (precision 3) has the same size in pixels in any canvas, and so has its box where the smaller side of the pad is the same; at bitmapscale 2
 everything of a box is twice as large in pixels (within the few % rendered text grows more); an automatic box wider than the frame is
 warned about, so is a box at a position set for it that reaches beyond its pad (drawn, cut off at the pad).
 Cases: legends (one column, two columns), texts and statistics boxes × a font sized relative to the pad (42) or in pixels (43) × plain
 text, TLatex with drawn parts (#sqrt, #frac), unicode, three rows × a wide, square and tall canvas × bitmapscale 1 and 2.
 Reference: the png of the plot: the box's outline (drawn red) and its rows (black) found by their colour.
-Covers: 88ff215 (a #sqrt row measured with a few pixels of garbage), 345772e (shadows at bitmapscale 2), the box sizes of the old regression
+Covers: 88ff215 (a #sqrt row measured with a few pixels of garbage), 345772e (shadows at bitmapscale 2), a legend row with #frac touching the bottom of the outline in a pad taller than wide, the box sizes of the old regression
 tests of precision-3 texts in tall pads and of boxes at bitmapscale 2, and the named cases.
 """
 
@@ -127,9 +128,8 @@ for i, case in enumerate(todo):
         sides = m["sides"]
         check(f"{where}: the outline is a line, no shadow", sides[0] == sides[1] and sides[2] == sides[3], f"left {sides[0]}, right {sides[1]}, top {sides[2]}, bottom {sides[3]} pixels")
         gaps = (cLeft - left - sides[0], right - sides[1] - cRight, cTop - top - sides[2], bottom - sides[3] - cBottom)
-        # apart from it on the left and right; ROOT centres a row by the height of its font, so that drawn parts below the line (#frac) may
-        # reach down to the outline
-        check(f"{where}: the rows lie inside the outline, apart from it on the sides", min(gaps[:2]) >= 1 and min(gaps[2:]) >= 0 and not m["outside"], f"gaps left, right, top, bottom {gaps}; {m['outside']} black pixels just outside")
+        # also rows with drawn parts below or above the line (#frac), which TLegend does not centre in pads taller than wide
+        check(f"{where}: the rows lie inside the outline, apart from it", min(gaps) >= 1 and not m["outside"], f"gaps left, right, top, bottom {gaps}; {m['outside']} black pixels just outside")
         # no more room than a margin: on each side at most the height of a row (the content height divided by the rows)
         nRows = len(CONTENTS[case["content"]]) if case["box"] in ("text", "legend") else 3 if case["box"] == "legend_columns" else 4
         rowHeight = (cBottom - cTop + 1) / nRows

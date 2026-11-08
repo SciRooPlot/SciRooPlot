@@ -4939,6 +4939,11 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       return {font, static_cast<float_t>((font % 10 > 2) ? heightPixel / mScale : heightPixel / std::min(width, height))};
     };
 
+    struct LineExtent {
+      double_t over;
+      double_t under;
+    };
+    vector<LineExtent> lineExtents;  // legend rows: how far they reach above and below their baseline
     uint16_t lineID{};
     for (auto& line : lines) {
       auto lineTextFont = textFont;
@@ -4966,6 +4971,10 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       textLine.SetTextSize(lineTextSize);
       auto [width, height] = GetTextDimensions(textLine, pad);
       if (height > lineHeightPixel) lineHeightPixel = height;
+      if constexpr (isLegend) {
+        const auto [over, under] = GetTextExtentPixel(textLine, pad);
+        lineExtents.push_back({over, under});
+      }
       if (auto& columnWidth = contentWidthPixelPerColumn[columnOf(lineID)]; width > columnWidth) {
         columnWidth = width;
       }
@@ -5007,6 +5016,20 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       }
     }
 
+    float_t marginNDC = box->GetMargin().value_or(0.01);
+    double_t lineSpacing = box->GetLineSpacing().value_or(0.3);
+    if constexpr (isLegend) {
+      // TLegend centres a row in its place (by its drawn extent) only if half a place is at least the text size of the legend, read
+      // as a fraction of the pad height also when it is relative to the smaller pad side (so not in pads taller than wide); otherwise
+      // it puts the baseline 0.45 of half a place below the centre (TLegend::PaintPrimitives). Rows reaching further below (#frac) or
+      // above get higher places, whichever way TLegend places them, so that the box does not depend on the shape of the pad.
+      const double_t gap = mScale;
+      for (const auto& extent : lineExtents) {
+        const double_t needed = std::max((extent.under + gap) / 0.55, (extent.over + gap) / 1.45);
+        lineHeightPixel = std::max(lineHeightPixel, needed / (0.5 * (1 + lineSpacing)));
+      }
+    }
+
     double_t contentWidthNDC = contentWidthPixel / padWidthPixel;
     double_t lineHeightNDC = lineHeightPixel / padHeightPixel;
     double_t symbolColWidthNDC = symbolColWidthPixel / padWidthPixel;
@@ -5016,8 +5039,6 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     double_t totalWidthNDC{};
     double_t totalHeightNDC{};
 
-    float_t marginNDC = box->GetMargin().value_or(0.01);
-    double_t lineSpacing = box->GetLineSpacing().value_or(0.3);
     double_t totalMarginWidthNDC = (0.5 * borderWidthNDC + marginNDC + symbolColWidthNDC);
 
     if constexpr (isLegend) {
@@ -7061,6 +7082,38 @@ tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad* pad
     textBox.GetBoundingBox(width, height);
   }
   return {width, height};
+}
+
+//**************************************************************************************************
+/**
+ * Returns how far in pixel the text with latex formatting reaches above and below its baseline, as TLatex lays it out (its sizes
+ * are protected: read in a class of its own, as TLatex::GetYsize does). A text in TMathText syntax counts as all above.
+ */
+//**************************************************************************************************
+std::pair<double_t, double_t> PlotPainter::GetTextExtentPixel(TLatex& text, TPad* pad)
+{
+  struct Extent : public TLatex {
+    std::pair<double_t, double_t> OverUnder()
+    {
+      TString title = GetTitle();
+      if (title.Length() == 0 || title.Contains("\\") || CheckLatexSyntax(title)) return {0., 0.};
+      fError = nullptr;
+      const Double_t angle = fTextAngle;
+      const TLatexFormSize form = FirstParse(0, GetTextSize(), title.Data());
+      fTextAngle = angle;
+      fTabSize.clear();
+      return {form.Over(), form.Under()};
+    }
+  };
+  Extent extent;
+  text.Copy(extent);
+  // a size in pixels measured as the same size relative to the smaller pad side (see GetTextDimensions)
+  if (const int16_t font = text.GetTextFont(); font % 10 > 2) {
+    extent.SetTextFont(font - 1);
+    const auto [padWidthPixel, padHeightPixel] = TextPadSizePixel(pad);
+    extent.SetTextSize(text.GetTextSize() * mScale / std::min(padWidthPixel, padHeightPixel));
+  }
+  return extent.OverUnder();
 }
 
 //**************************************************************************************************

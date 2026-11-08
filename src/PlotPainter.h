@@ -350,6 +350,7 @@ class PlotPainter
   static void LimitToFrame(TAxis* axis, const TAxis* frameAxis);
   static void CheckFontSizes(TList* list);
   std::tuple<uint32_t, uint32_t> GetTextDimensions(TLatex& text, TPad* pad);
+  std::pair<double_t, double_t> GetTextExtentPixel(TLatex& text, TPad* pad);
   void HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel);
   static std::vector<double_t> LabelValues(TPad* pad, const TAxis* axis, char axisLabel);
   static std::vector<double_t> LabelValues(const TAxis* axis, double_t padMin, double_t padMax, bool isLog, double_t divisionScale = 1.);
