@@ -7731,6 +7731,19 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
           replaceStr = formatValue(static_cast<TH1*>(data_ptr)->GetEntries());
         } else if (str_contains(matchStr, "integral")) {
           replaceStr = formatValue(static_cast<TH1*>(data_ptr)->Integral());
+        } else if (auto* poly = dynamic_cast<TH2Poly*>(data_ptr); poly && (str_contains(matchStr, "mean") || str_contains(matchStr, "stddev"))) {
+          // from the polygons at their centres: ROOT's statistics of a TH2Poly read the cells of its TH2 grid, which hold nothing
+          double_t sumW{}, sumWX{}, sumWX2{};
+          for (int32_t bin = 1; bin <= poly->GetNumberOfBins(); ++bin) {
+            auto* polyBin = static_cast<TH2PolyBin*>(poly->GetBins()->At(bin - 1));
+            const double_t x = 0.5 * (polyBin->GetXMin() + polyBin->GetXMax());
+            const double_t w = polyBin->GetContent();
+            sumW += w;
+            sumWX += w * x;
+            sumWX2 += w * x * x;
+          }
+          const double_t mean = (sumW != 0.) ? sumWX / sumW : 0.;
+          replaceStr = formatValue(str_contains(matchStr, "mean") ? mean : ((sumW != 0.) ? std::sqrt(std::max(sumWX2 / sumW - mean * mean, 0.)) : 0.));
         } else if (str_contains(matchStr, "mean")) {
           replaceStr = formatValue(static_cast<TH1*>(data_ptr)->GetMean());
         } else if (str_contains(matchStr, "stddev")) {

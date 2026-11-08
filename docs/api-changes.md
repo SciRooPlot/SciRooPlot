@@ -73,6 +73,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A graph giving the frame on a log x axis without an x range had ROOT's y range of all its points, also of the points at x ≤ 0 that a log axis does not draw (the frame reached far below the points shown) | Its y range comes from the points drawn, as with an x range | behaviour | Nothing. |
 | A histogram denominator of another binning (or one dividing a graph) was interpolated through all its bins: its empty bins (also those that held NaN) were knots at zero, and the ratio swung around them | It is interpolated through its filled bins only; points or bins of the numerator inside an empty bin of the denominator are left out, as for a denominator of zero | behaviour | Check ratios by histograms with empty bins and another binning. |
 | A directory of an input file with a list or folder of the same name written after it was silently unreachable: paths into it and the search read the list | A warning names the hidden directory, once per reading of the inputs | behaviour | Rename the directory or the list. |
+| `<mean>` and `<stddev>` in labels of a TH2Poly were 0 (ROOT's statistics of a TH2Poly read the cells of its grid, which hold nothing) | Mean and standard deviation in x of the bin contents at the centres of their polygons | behaviour | Nothing. |
 
 ### Files
 
