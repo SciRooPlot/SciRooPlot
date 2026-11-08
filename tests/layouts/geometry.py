@@ -357,7 +357,7 @@ def fill(plot, rows, lengths):
         if kind == "panel":
             plot[padID].AddData("hist2d" if scales else "hist", "inputs")
         elif kind == "empty":
-            plot[padID].AddText(0.5, 0.5, "text")
+            plot[padID].AddText(0.25, 0.75, "text").SetSize(0.5, 0.5)  # inside the cell, however narrow
 
 
 for name in NAMES:

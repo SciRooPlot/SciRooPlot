@@ -77,6 +77,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `<entries>`, `<maximum>` and `<minimum>` in labels of a 2d graph (TGraph2D) were left in the label with the warning `Placeholder … is not available` | `<entries>` is its number of points, `<maximum>` and `<minimum>` the largest and smallest z of its points inside the frame | behaviour | Nothing. |
 | A range set on a 2d graph (TGraph2D) was ignored for y (`SetRangeY`) and held for x (`SetRangeX`) in the images drawn directly only, not in `Plots.root`, `root` and macro outputs | Points outside the x and y ranges are left out, in every output; a range containing none of the points is warned about and all points are drawn | behaviour | Nothing. |
 | A legend of several columns (`SetNColumns`) with labels containing drawn parts (`#frac`, `#sqrt`) was too narrow: labels ran into the next column or were cut off | Every column gets the width of its labels as painted | behaviour | Nothing; such legends get wider. |
+| A legend, text or statistics box at a position set for it (no automatic placement) reaching beyond its pad was cut off without a word | It is drawn as before, with a warning giving its corner and size | behaviour | Move or shrink the box. |
 
 ### Files
 

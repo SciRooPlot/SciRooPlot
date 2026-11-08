@@ -3529,6 +3529,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       const double_t borderX = mScale * stats->GetLineWidth() / padWidthPixel;
       const double_t borderY = mScale * stats->GetLineWidth() / padHeightPixel;
       const auto [upperLeftX, upperLeftY] = PlaceBox(*statsBox, coordinates, pad_ptr, widthNDC, heightNDC, borderX, borderY, "statistics box");
+      if (!statsBox->IsAutoPlacement()) WarnIfBeyondPad("statistics box", upperLeftX, upperLeftY, widthNDC, heightNDC);
       stats->SetX1NDC(upperLeftX);
       stats->SetY1NDC(upperLeftY - heightNDC);
       stats->SetX2NDC(upperLeftX + widthNDC);
@@ -5066,6 +5067,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         upperLeftY += 0.5 * (3 - std::clamp(*align % 10, 1, 3)) * totalHeightNDC;
       }
     }
+    if (!box->IsAutoPlacement()) WarnIfBeyondPad((isLegend) ? "legend" : "text", upperLeftX, upperLeftY, totalWidthNDC, totalHeightNDC);
 
     if constexpr (isLegend) {
       TLegend* legend = new TLegend(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "", "NDC NB");
@@ -5358,6 +5360,19 @@ std::pair<double_t, double_t> PlotPainter::PlaceBox(const BoxType& box, coordina
     return {(pad->XtoPad(box.GetXPosition()) - pad->GetX1()) / (pad->GetX2() - pad->GetX1()), (pad->YtoPad(box.GetYPosition()) - pad->GetY1()) / (pad->GetY2() - pad->GetY1())};
   }
   return {box.GetXPosition(), box.GetYPosition()};
+}
+
+//**************************************************************************************************
+/**
+ * Warns about a box at a position set for it that reaches beyond its pad (it is drawn: the part outside is cut off).
+ */
+//**************************************************************************************************
+void PlotPainter::WarnIfBeyondPad(const string& boxType, double_t upperLeftX, double_t upperLeftY, double_t widthNDC, double_t heightNDC)
+{
+  constexpr double_t tolerance = 1e-9;
+  if (upperLeftX < -tolerance || upperLeftY - heightNDC < -tolerance || upperLeftX + widthNDC > 1. + tolerance || upperLeftY > 1. + tolerance) {
+    logger::warning("The {} reaches beyond its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}, in units of the pad): the part outside of it is cut off.", boxType, upperLeftX, upperLeftY, widthNDC, heightNDC);
+  }
 }
 
 //**************************************************************************************************
