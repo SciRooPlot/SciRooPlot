@@ -2474,8 +2474,58 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     logger::error("Could not write {}.", fullName);
     return false;
   }
+  if (isMacroMode) RepairMacro(fullName);
   logCreated();
   return true;
+}
+
+//**************************************************************************************************
+/**
+ * Adds to a macro written by ROOT what its SavePrimitive leaves out: the max digits of an axis, which ROOT writes into SetNdivisions
+ * (n / 1000000) but drops when the macro calls it, so the divisions are no longer scaled by the pad width (crowded labels in narrow
+ * panels), and line colour 1 of histograms, which ROOT leaves out as default while a histogram made by the macro takes the colour of the
+ * style (black histograms came back blue). The added lines change nothing where ROOT restores both itself.
+ */
+//**************************************************************************************************
+void PlotManager::RepairMacro(const string& path)
+{
+  vector<string> lines;
+  {
+    std::ifstream in(path);
+    for (string line; std::getline(in, line);)
+      lines.push_back(line);
+  }
+  static const std::regex newHist(R"(^\s*(TH[123][A-Z]\w*|TProfile\w*)\s*\*\s*(\w+)\s*=\s*new\s)");
+  static const std::regex divisions(R"(^(\s*)(\S+->Get[XYZ]axis\(\))->SetNdivisions\((\d+)\);\s*$)");
+  auto indent = [](const string& line) { return line.substr(0, line.find_first_not_of(' ')); };
+  set<string> withoutColor;
+  std::smatch match;
+  for (const auto& line : lines) {
+    if (line.find(" = new ") != string::npos && std::regex_search(line, match, newHist)) withoutColor.insert(match[2]);
+  }
+  for (const auto& line : lines) {
+    const size_t call = line.find("->SetLineColor(");
+    if (call != string::npos) withoutColor.erase(line.substr(indent(line).size(), call - indent(line).size()));
+  }
+  std::ofstream out(path);
+  string made;  // a histogram without line colour, whose constructor statement has not ended yet
+  string madeIndent;
+  for (const auto& line : lines) {
+    out << line << '\n';
+    if (line.find(" = new ") != string::npos && std::regex_search(line, match, newHist) && withoutColor.count(match[2])) {
+      made = match[2];
+      madeIndent = indent(line);
+    }
+    // right after the statement making it: ROOT writes loops without braces, so not before the first call on it
+    if (!made.empty() && !line.empty() && line.back() == ';' && indent(line) == madeIndent) {
+      out << madeIndent << made << "->SetLineColor(1);\n";
+      made.clear();
+    }
+    if (line.find("->SetNdivisions(") != string::npos && std::regex_match(line, match, divisions) && std::stoll(match[3]) >= 1000000) {
+      out << match[1] << match[2] << "->SetMaxDigits(" << std::stoll(match[3]) / 1000000 << ");\n";
+    }
+  }
+  if (!out) logger::warning("Could not complete the macro {}.", path);
 }
 
 //**************************************************************************************************

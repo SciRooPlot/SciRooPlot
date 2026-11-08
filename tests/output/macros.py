@@ -1,7 +1,8 @@
 """Mode macro writes for every plot a ROOT macro that runs in ROOT and makes its canvas again: the macro compiles and runs without errors,
 and the canvas it makes has the primitives of the canvas of mode file (Plots.root), with the same drawing options, in every sub-pad, and
 the same legend rows (label and symbol), and the setup of every pad (palette, text format, kept axis ranges) runs before the pad is
-painted; for every data kind of srptest in every variant (every value at least once in the fast run, the normal variant of every kind
+painted, and every histogram (frames included) has the line colour and the divisions of its axes (with their max digits, which
+scale the divisions by the pad width) of Plots.root; for every data kind of srptest in every variant (every value at least once in the fast run, the normal variant of every kind
 always), for multi-panel plots of every kind (srptest's LAYOUTS: a grid with a colour-scale cell, ratio panels, a gap, a legend strip
 with the rows of other pads, a flat panel beside a 3D view) and for a plot with an image. The macro is <output directory>/<group>/<name>.C,
 named after the plot as a C++ identifier (ROOT names the macro's function after the file): other characters replaced by _, a leading
@@ -10,9 +11,10 @@ file get a number, with a warning. Mode macro needs a display: without one it is
 The macro is written by ROOT (TCanvas::SaveAs): what ROOT's SavePrimitive gets wrong is not SciRooPlot's to guarantee, and these data are
 left out (ROOT_CANNOT): a TF3 of compiled code (ROOT writes its title as formula), a TGraphMultiErrors with an error of 0 (an ambiguous
 SetPointEY call), every TProfile3D (its palette refers to a variable ROOT renamed), a TGraph2D of one point (pad ranges written with 6
-digits give an illegal range) and an empty polar graph (the grid drawn alone is not written). Attributes the macro does not restore (ROOT
-leaves out line colour 1, so black histograms come back in the style's colour; colour scales in the frame's contour levels) are not
-compared: only what is drawn, with which option."""
+digits give an illegal range) and an empty polar graph (the grid drawn alone is not written). SciRooPlot completes what ROOT leaves out
+of every macro: the max digits of axes (ROOT drops them from SetNdivisions) and line colour 1 of histograms (ROOT takes it as default, a
+histogram made by the macro takes the colour of the style). Other attributes are not compared (colour scales in the frame's contour
+levels)."""
 
 import concurrent.futures
 import os
@@ -52,6 +54,7 @@ multi = cases(
     named=[
         *({"kind": kind, "layout": layout, "why": "d29a380"} for kind, layout in (("hist", "strip"), ("hist", "grid"), ("hist2d", "view"))),
         {"kind": "hist2d", "layout": "grid", "why": "the setup of a colour-scale cell runs before it in macros"},
+        {"kind": "hist", "layout": "ratio", "why": "max digits of axes and black lines of histograms in macros"},
     ],
 )
 for i, case in enumerate(multi):
@@ -95,6 +98,11 @@ void tree(TPad* pad, int depth) {
   for (auto link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
     TObject* obj = link->GetObject();
     printf("TREE|%d|%s|%s|%s\\n", depth, obj->ClassName(), obj->GetName(), link->GetOption());
+    if (obj->InheritsFrom(TH1::Class())) {
+      auto* hist = static_cast<TH1*>(obj);
+      TColor* colour = gROOT->GetColor(hist->GetLineColor());
+      printf("LOOK|%d|%s|%s|%d|%d|%d\\n", depth, hist->GetName(), colour ? colour->AsHexString() : "none", hist->GetXaxis()->GetNdivisions(), hist->GetYaxis()->GetNdivisions(), hist->GetZaxis()->GetNdivisions());
+    }
     if (obj->InheritsFrom(TPad::Class())) tree(static_cast<TPad*>(obj), depth + 1);
     if (obj->InheritsFrom(TLegend::Class())) {
       for (auto* entry : *static_cast<TLegend*>(obj)->GetListOfPrimitives())
@@ -117,10 +125,11 @@ def replay(path):
     lines = (proc.stdout + proc.stderr).splitlines()
     tree = [(int(depth), cls, obj, opt) for depth, cls, obj, opt in (line[5:].split("|", 3) for line in lines if line.startswith("TREE|"))]
     rows = sorted(tuple(line[4:].split("|", 2)) for line in lines if line.startswith("ROW|"))
+    hists = sorted(tuple(line[5:].split("|")) for line in lines if line.startswith("LOOK|"))
     errors = [line for line in lines if re.search(r"error:|Error in <|Fatal|\*\*\* Break", line)]
     if proc.returncode:
         errors.append(f"exit status {proc.returncode}")
-    return tree, rows, errors
+    return tree, rows, hists, errors
 
 
 def legend_rows(pad):
@@ -131,6 +140,19 @@ def legend_rows(pad):
             found += legend_rows(obj)
         elif obj.InheritsFrom("TLegend"):
             found += [(obj.GetName(), str(entry.GetLabel()), str(entry.GetOption())) for entry in obj.GetListOfPrimitives()]
+    return found
+
+
+def looks(pad, depth=0):
+    """the line colour (rgb) and the divisions of the axes of every histogram of a canvas or pad and its sub-pads, as replay prints them"""
+    found = []
+    for obj in pad.GetListOfPrimitives():
+        if obj.InheritsFrom("TPad"):
+            found += looks(obj, depth + 1)
+        elif obj.InheritsFrom("TH1"):
+            colour = ROOT.gROOT.GetColor(obj.GetLineColor())
+            divisions = (str(axis.GetNdivisions()) for axis in (obj.GetXaxis(), obj.GetYaxis(), obj.GetZaxis()))
+            found.append((str(depth), obj.GetName(), str(colour.AsHexString()) if colour else "none", *divisions))
     return found
 
 
@@ -178,7 +200,7 @@ for _, path, name, group in jobs:
     canvas = reference.canvas(name, group)
     if canvas:
         tree = canvas_tree(canvas)
-        wanted[path] = (drawn(tree), pad_setups(tree), sorted(legend_rows(canvas)))
+        wanted[path] = (drawn(tree), pad_setups(tree), sorted(legend_rows(canvas)), sorted(looks(canvas)))
     del canvas
 # the macros run in ROOT processes of their own, side by side
 with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as pool:
@@ -188,7 +210,7 @@ for title, path, _, _ in jobs:
     if result is None or want is None:
         check(title, False, "no macro written" if result is None else "no canvas in Plots.root")
         continue
-    tree, rows, errors = result
+    tree, rows, hists, errors = result
     got = drawn(tree)
     missing, extra = [e for e in want[0] if e not in got], [e for e in got if e not in want[0]]
     diff = f"missing {missing[:2]}, not in Plots.root {extra[:2]}" if missing or extra else ""
@@ -197,6 +219,8 @@ for title, path, _, _ in jobs:
         diff = f"the setup runs after the pad is painted: {lost[:2]}"
     if not diff and rows != want[2]:
         diff = f"legend rows {rows[:3]}, in Plots.root {want[2][:3]}"
+    if not diff and hists != want[3]:
+        diff = f"histograms {[h for h in hists if h not in want[3]][:2]}, in Plots.root {[h for h in want[3] if h not in hists][:2]}"
     check(title, not errors and not diff, " | ".join(errors[:2]) or diff)
 written = sorted(f[:-2] for f in os.listdir(p.path("out", "names", "a-b")) if f.endswith(".C")) if os.path.isdir(p.path("out", "names", "a-b")) else []
 check("macros named after the plots as C++ identifiers", written == sorted(NAMES.values()), f"{written}")
