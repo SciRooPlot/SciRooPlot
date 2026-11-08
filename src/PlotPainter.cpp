@@ -1941,10 +1941,31 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                 const TAxis* frameX = axisHist_ptr->GetXaxis();
                 const TAxis* frameY = axisHist_ptr->GetYaxis();
                 mGraph2DFrameRange[data_ptr] = {frameX->GetBinLowEdge(frameX->GetFirst()), frameX->GetBinUpEdge(frameX->GetLast()), frameY->GetBinLowEdge(frameY->GetFirst()), frameY->GetBinUpEdge(frameY->GetLast())};
+                // the points inside the data range: ROOT paints a 2d graph through a histogram it makes when painting and does not store, so a
+                // range on that one would be lost in the saved canvas
+                if (hasRangeX || hasRangeY) {
+                  auto outside = [&](int32_t i) {
+                    const double_t x = data_ptr->GetX()[i];
+                    const double_t y = data_ptr->GetY()[i];
+                    return (data->GetMinRangeX() && x < *data->GetMinRangeX()) || (data->GetMaxRangeX() && x > *data->GetMaxRangeX()) || (data->GetMinRangeY() && y < *data->GetMinRangeY()) ||
+                           (data->GetMaxRangeY() && y > *data->GetMaxRangeY());
+                  };
+                  int32_t nInside{};
+                  for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
+                    if (!outside(i)) ++nInside;
+                  }
+                  if (nInside == 0) {
+                    logger::warning("The range of {} contains none of its points: all points are drawn.", data->GetName());
+                  } else {
+                    for (int32_t i = data_ptr->GetN() - 1; i >= 0; --i) {  // from the back, so that the indices of the remaining points stay valid
+                      if (outside(i)) RemoveGraphPoint(data_ptr, i);
+                    }
+                  }
+                }
               }
             }
             if (!pad_ptr->GetView() || projected) {
-              if (hasRangeX && !projected && !SetBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX())) {
+              if (hasRangeX && !projected && !is_graph_2d<data_type>() && !SetBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX())) {
                 logger::warning("The x range of {} contains none of its bins: all bins are drawn.", data->GetName());
               }
               if (cutXAtFrame) LimitToFrame(data_ptr->GetXaxis(), axisHist_ptr->GetXaxis());
