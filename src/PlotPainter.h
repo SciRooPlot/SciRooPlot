@@ -433,6 +433,8 @@ class PlotPainter
   std::unordered_map<const TObject*, std::vector<std::string>> mProjectionAxisTitles;
   // x range of the frame a graph is drawn in: its <maximum> and <minimum> take the points inside, as those of histograms the bins in the frame
   std::unordered_map<const TObject*, std::pair<double_t, double_t>> mGraphFrameRangeX;
+  // x and y range of the flat frame a 2d graph is drawn in: its <maximum> and <minimum> take the z of the points inside
+  std::unordered_map<const TObject*, std::array<double_t, 4>> mGraph2DFrameRange;
   struct StyleSizes {
     Width_t lineWidth;
     int32_t hatchesLineWidth;

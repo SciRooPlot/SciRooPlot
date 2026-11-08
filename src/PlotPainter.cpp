@@ -407,6 +407,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     mDataDefinitions.clear();
     mProjectionAxisTitles.clear();
     mGraphFrameRangeX.clear();
+    mGraph2DFrameRange.clear();
     mUndrawn.clear();
   });
 
@@ -1934,6 +1935,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
               upper.ToUpper();
               if (hasRangeX || hasRangeY) logger::warning("The range of {} does not apply to a map projection, which must cover the range of the frame: set the range on the pad instead.", data->GetName());
               if (upper.Contains("COL")) logger::warning("{}: ROOT paints COL with a map projection twice, unprojected below the projected map. For a colour scale add Z to the projection alone.", data->GetName());
+            }
+            if constexpr (is_graph_2d<data_type>()) {
+              if (!pad_ptr->GetView()) {
+                const TAxis* frameX = axisHist_ptr->GetXaxis();
+                const TAxis* frameY = axisHist_ptr->GetYaxis();
+                mGraph2DFrameRange[data_ptr] = {frameX->GetBinLowEdge(frameX->GetFirst()), frameX->GetBinUpEdge(frameX->GetLast()), frameY->GetBinLowEdge(frameY->GetFirst()), frameY->GetBinUpEdge(frameY->GetLast())};
+              }
             }
             if (!pad_ptr->GetView() || projected) {
               if (hasRangeX && !projected && !SetBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX())) {
@@ -7781,6 +7789,27 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
             const double_t x = graph->GetX()[i];
             if (range != mGraphFrameRangeX.end() && (x < range->second.first || x > range->second.second)) continue;
             extreme = (isMax) ? std::max(extreme, graph->GetY()[i]) : std::min(extreme, graph->GetY()[i]);
+          }
+          replaceStr = formatValue(std::isfinite(extreme) ? extreme : 0.);
+        }
+      } catch (const fmt::format_error& e) {
+        logger::error("Incompatible format string in {}: {}.", matchStr, e.what());
+        replaceStr = matchStr;
+      }
+    } else if (auto* graph2d = dynamic_cast<TGraph2D*>(data_ptr); graph2d && (str_contains(matchStr, "entries") || (graph2d->GetN() > 0 && (str_contains(matchStr, "maximum") || str_contains(matchStr, "minimum"))))) {
+      // as for graphs: the number of points and the smallest / largest z of the points inside the frame
+      try {
+        if (str_contains(matchStr, "entries")) {
+          replaceStr = formatValue(static_cast<double_t>(graph2d->GetN()));
+        } else {
+          const bool isMax = str_contains(matchStr, "maximum");
+          const auto range = mGraph2DFrameRange.find(graph2d);
+          double_t extreme = (isMax) ? -std::numeric_limits<double_t>::infinity() : std::numeric_limits<double_t>::infinity();
+          for (int32_t i = 0; i < graph2d->GetN(); ++i) {
+            const double_t x = graph2d->GetX()[i];
+            const double_t y = graph2d->GetY()[i];
+            if (range != mGraph2DFrameRange.end() && (x < range->second[0] || x > range->second[1] || y < range->second[2] || y > range->second[3])) continue;
+            extreme = (isMax) ? std::max(extreme, graph2d->GetZ()[i]) : std::min(extreme, graph2d->GetZ()[i]);
           }
           replaceStr = formatValue(std::isfinite(extreme) ? extreme : 0.);
         }

@@ -74,6 +74,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A histogram denominator of another binning (or one dividing a graph) was interpolated through all its bins: its empty bins (also those that held NaN) were knots at zero, and the ratio swung around them | It is interpolated through its filled bins only; points or bins of the numerator inside an empty bin of the denominator are left out, as for a denominator of zero | behaviour | Check ratios by histograms with empty bins and another binning. |
 | A directory of an input file with a list or folder of the same name written after it was silently unreachable: paths into it and the search read the list | A warning names the hidden directory, once per reading of the inputs | behaviour | Rename the directory or the list. |
 | `<mean>` and `<stddev>` in labels of a TH2Poly were 0 (ROOT's statistics of a TH2Poly read the cells of its grid, which hold nothing) | Mean and standard deviation in x of the bin contents at the centres of their polygons | behaviour | Nothing. |
+| `<entries>`, `<maximum>` and `<minimum>` in labels of a 2d graph (TGraph2D) were left in the label with the warning `Placeholder … is not available` | `<entries>` is its number of points, `<maximum>` and `<minimum>` the largest and smallest z of its points inside the frame | behaviour | Nothing. |
 
 ### Files
 
