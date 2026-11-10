@@ -1671,7 +1671,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             // reset the axis histogram which owns the z axis, while keeping default range defined by the data
             double_t min = axisHist_ptr->GetMinimum();
             double_t max = axisHist_ptr->GetMaximum();
-            if constexpr (is_hist_2d<data_type>()) storedRangeZ = {axisHist_ptr->GetMinimumStored() != -1111, axisHist_ptr->GetMaximumStored() != -1111};
+            if constexpr (is_hist_2d<data_type>() || is_func_2d<data_type>()) storedRangeZ = {axisHist_ptr->GetMinimumStored() != -1111, axisHist_ptr->GetMaximumStored() != -1111};
             // ROOT draws a log z axis of a histogram without a positive minimum from min(1, 0.001 * maximum) (THistPainter::PaintInit),
             // but for data drawn SAME on a frame with a stored minimum of zero it leaves out the bins of the lowest contents.
             // This floor is ROOT's default on purpose, not a choice of SciRooPlot: the smallest positive content could be used instead, but it
@@ -2213,7 +2213,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           }
           // ROOT maps the colours of 2d data drawn on top with the range of the frame, which also draws the colour axis:
           // without a z range set by the user, that range covers all 2d data of the pad (not only the data the frame is made of)
-          if constexpr (is_hist_2d<data_type>() || is_graph_2d<data_type>()) {
+          if constexpr (is_hist_2d<data_type>() || is_graph_2d<data_type>() || is_func_2d<data_type>()) {
             bool hasUserRangeZ = false;
             for (const auto* axis : AxisSettings(pad, padDefaults, 'Z')) {
               if (axis->GetMinRange() || axis->GetMaxRange()) hasUserRangeZ = true;
@@ -2225,6 +2225,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
               if constexpr (is_hist_2d<data_type>()) {
                 minimum = data_ptr->GetMinimum();
                 maximum = data_ptr->GetMaximum();
+              } else if constexpr (is_func_2d<data_type>()) {
+                const TH1* samples = data_ptr->GetHistogram();  // the values ROOT paints
+                minimum = samples->GetMinimum();
+                maximum = samples->GetMaximum();
               } else {
                 minimum = data_ptr->GetZmin();
                 maximum = data_ptr->GetZmax();
