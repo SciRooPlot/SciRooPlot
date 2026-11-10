@@ -433,6 +433,7 @@ install(CODE [[
 
 # the tests in tests/ (ctest -L <folder>): they run the programs of the build directory through the Python bindings
 option(BUILD_TESTING "register the tests in tests/ with CTest" OFF)
+option(SCIROOPLOT_EXTENDED_TESTS "also register the long tests of tests/extended (ctest -L extended, weekly)" OFF)
 if(BUILD_TESTING AND BUILD_PYTHON_BINDINGS)
   enable_testing()
   add_subdirectory(tests)

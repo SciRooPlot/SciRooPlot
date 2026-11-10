@@ -65,7 +65,9 @@ jobs:
             -G Ninja \
             -DCMAKE_PREFIX_PATH="${CONDA_PREFIX}" \
             -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined -Wno-maybe-uninitialized -Wno-array-bounds -Wno-stringop-overread"
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=undefined -Wno-maybe-uninitialized -Wno-array-bounds -Wno-stringop-overread" \
+            -DBUILD_TESTING=ON \
+            -DSCIROOPLOT_EXTENDED_TESTS=ON
 
       - name: Build
         shell: bash -el {0}
@@ -90,6 +92,16 @@ jobs:
           export LD_PRELOAD
           ./.github/scripts/test-example-project.sh
 
+      # random plot definitions, random nests of containers and repeated runs (tests/extended) with the sanitizer build; the runtimes
+      # preloaded as above, but not into the virtual display
+      - name: Extended tests
+        shell: bash -el {0}
+        env:
+          ASAN_OPTIONS: detect_leaks=0
+          UBSAN_OPTIONS: print_stacktrace=1
+        run: |
+          xvfb-run -a env LD_PRELOAD="$(gcc -print-file-name=libasan.so) $(gcc -print-file-name=libubsan.so)" ctest --test-dir build -L extended --output-on-failure
+
       # only the C++ programs, which are all instrumented here (the user program via CXXFLAGS and LDFLAGS), so nothing is
       # preloaded: python and the build tools do not free all their memory at exit; ROOT's known leaks are suppressed
       - name: Leak check
@@ -107,7 +119,7 @@ jobs:
             plot '.+' '.+' "${mode}"
           done
 
-  # consistency of what SciRooPlot draws over all data types, drawing options and styles, and the tests in tests/
+  # consistency of what SciRooPlot draws over all data types, drawing options and styles: the tests in tests/ with tests/extended
   consistency:
     needs: changes
     if: needs.changes.outputs.run == 'true'
@@ -146,7 +158,8 @@ jobs:
             -G Ninja \
             -DCMAKE_PREFIX_PATH="${CONDA_PREFIX}" \
             -DCMAKE_BUILD_TYPE=Release \
-            -DBUILD_TESTING=ON
+            -DBUILD_TESTING=ON \
+            -DSCIROOPLOT_EXTENDED_TESTS=ON
 
       - name: Build
         shell: bash -el {0}

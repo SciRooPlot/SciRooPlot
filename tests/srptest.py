@@ -431,6 +431,33 @@ def write_objects(path, objects):
 # ---------------------------------------------------------------------------------------------
 # tables: the same columns as tree, RNTuple or CSV file
 # ---------------------------------------------------------------------------------------------
+_kept = []  # objects handed to ROOT containers, kept alive for the whole test
+
+
+def own(obj):
+    """obj, owned by the test until it ends (not deleted by Python while a ROOT container holds it)"""
+    ROOT.SetOwnership(obj, False)
+    _kept.append(obj)
+    return obj
+
+
+def collection(kind, name):
+    """an empty in-memory container of a class (TList, THashList, TObjArray, TOrdCollection, TSortedList, THashTable, TFolder, TMap) and a name"""
+    if kind == "TFolder":
+        return own(ROOT.TFolder(name, ""))
+    obj = own(getattr(ROOT, kind)())
+    obj.SetName(name)
+    return obj
+
+
+def put(container, obj):
+    """adds obj to an in-memory container (a map under a key of the object's name)"""
+    if container.InheritsFrom("TMap"):
+        container.Add(own(ROOT.TObjString(obj.GetName())), obj)
+    else:
+        container.Add(obj)
+
+
 class Texts(list):
     """a column of strings (std::string; in a CSV file the text)"""
 
@@ -2208,6 +2235,12 @@ def python(code, config=None, cwd=None, env=None, timeout=600):
     return run(sys.executable, "-u", "-W", "ignore", "-c", code, config=config, cwd=cwd, env=environ, timeout=timeout)
 
 
+def prefix_env(prefix, config):
+    """the environment for the programs of another build or installation (the tools compare two): its Python module, a configuration"""
+    paths = [path for path in [os.path.join(prefix, "lib"), *glob.glob(os.path.join(prefix, "lib", "python*", "site-packages"))] if glob.glob(os.path.join(path, "SciRooPlot*.so"))]
+    return dict(os.environ, PYTHONPATH=os.pathsep.join(paths), SCIROOPLOT_CONFIG_PATH=config)
+
+
 def config_folder(name):
     """a new, empty configuration folder"""
     path = os.path.join(WORK, name)
@@ -2779,6 +2812,195 @@ def setter_cases():
                 calls = {lang: (call(method, values, lang) if not unset else call(method, values, lang) + call(method, [], lang)) for lang in ("py", "cpp")}
                 found.append({"cls": cls, "method": method, "params": names, "host": host, "variant": variant, "values": values, "unset": unset, "meant": meant, "py": py.replace("{call}", calls["py"]), "cpp": cpp.replace("{call}", calls["cpp"])})
     return found, problems
+
+
+# ---------------------------------------------------------------------------------------------
+# random plot definitions: the interface combined at random, written in Python and in C++ alike
+# ---------------------------------------------------------------------------------------------
+RANDOM_BASES = ("1d", "1d_ratio", "1d_ratio_pull", "1d_wide", "1d_tall", "1d_2x1", "1d_3x1", "1d_2x2", "1d_2x1_ratio", "1d_2x1_gap", "1d_1x2_ratio_gap", "2d", "2d_wide", "2d_2x1", "2d_2x2", "2d_2x1_gap")
+RANDOM_HOSTS = {
+    "plot": "Plot",
+    "pad": "Pad",
+    "x": "Axis",
+    "data": "Data",
+    "ratio": "Ratio",
+    "numer": "Ratio",
+    "denom": "Ratio",
+    "both": "Ratio",
+    "result": "Ratio",
+    "data_row": "LegendEntry",
+    "legend": "LegendBox",
+    "text": "TextBox",
+    "line": "Shape",
+    "arrow": "Shape",
+    "ellipse": "Shape",
+    "region": "Shape",
+}
+# what the random calls leave alone: the name, group and base plot of a plot, the data source of data (data of the kind stays drawn),
+# and raw drawing options (ROOT's own, for any kind: drawing/raw_options.py)
+RANDOM_FIXED = {("Plot", "SetName"), ("Plot", "SetGroup"), ("Plot", "AppendGroup"), ("Plot", "SetBasePlot"), ("Data", "SetDataSource"), ("Ratio", "SetDataSource"), ("Data", "SetDrawOption", ("drawOption",)), ("Ratio", "SetDrawOption", ("drawOption",))}
+
+
+def base_pads(base):
+    """the pads of a shipped base plot: (dimension, panel pads, ratio pads, pull pads), numbered as documented: row by row, the ratio and
+    pull pads after the panels of their row, the colour-scale cell of a 2d grid after the panels of the first row"""
+    m = re.match(r"^(1d|2d)(?:_(?:wide|tall))?(?:_(\d+)x(\d+))?(_ratio)?(_pull)?(_gap)?$", base)
+    dim, cols, rows = int(m.group(1)[0]), int(m.group(2) or 1), int(m.group(3) or 1)
+    panels, ratios, pulls, pad = [], [], [], 1
+    for row in range(rows):
+        panels += range(pad, pad + cols)
+        pad += cols
+        if dim == 2 and cols * rows > 1 and not m.group(6) and row == 0:
+            pad += 1
+        if m.group(4):
+            ratios += range(pad, pad + cols)
+            pad += cols
+        if m.group(5):
+            pulls += range(pad, pad + cols)
+            pad += cols
+    return dim, panels, ratios, pulls
+
+
+def _returns_self(cls, method, params):
+    """the method returns the object it is called on (a setter calls can be chained to)"""
+    for line in (getattr(getattr(S, cls), method).__doc__ or "").splitlines():
+        found = re.match(r"^(?:\d+\. )?(\w+)\((.*)\) -> (.*)$", line.strip())
+        if found and found.group(1) == method and tuple(a.split(":")[0].strip() for a in split_args(found.group(2))[1:]) == params:
+            return found.group(3).strip().split(".")[-1] == cls
+    return False
+
+
+def random_calls():
+    """the setters of the interface that can be chained, with their test values: {host: [(method, values, unset)]} (see setter_cases;
+    the hosts of RANDOM_HOSTS, the axes as x), without selections, adders and RANDOM_FIXED"""
+    pool = {}
+    for case in setter_cases()[0]:
+        cls, method, host = case["cls"], case["method"], {"y": "x", "z": "x", "c": "x"}.get(case["host"], case["host"])
+        if host not in RANDOM_HOSTS or not case["meant"] or case["variant"] not in ("plain", "precise", "false"):
+            continue
+        if (cls, method) in RANDOM_FIXED or (cls, method, case["params"]) in RANDOM_FIXED or method in SELECTIONS + TREE_SELECTIONS:
+            continue
+        if (cls != "Pad" or not method.startswith("Add") and method != "SetFrame") and _returns_self(cls, method, case["params"]):
+            pool.setdefault(host, []).append((method, case["values"], case["unset"]))
+    return pool
+
+
+def random_inputs(folder):
+    """the data sources of random definitions, written into folder: inputs and inputs_<variant> (every data kind, see data_objects), s and
+    s2 (the histograms h, h2 and trees t, t2 the test values of the setters name); {data source: file}"""
+    sources = {}
+    for variant in VARIANTS:
+        sources[source_of(variant)] = os.path.join(folder, f"{source_of(variant)}.root")
+        write_objects(sources[source_of(variant)], data_objects(variant))
+    rng = np.random.default_rng(1)
+    for source, (hist, tree) in {"s": ("h", "t"), "s2": ("h2", "t2")}.items():
+        sources[source] = os.path.join(folder, f"{source}.root")
+        h = ROOT.TH1D(hist, "", 9, 1.0, 10.0)
+        for b in range(1, 10):
+            h.SetBinContent(b, b)
+        write_objects(sources[source], {hist: h})
+        columns = {c: rng.uniform(1, 10, 200) for c in "xyz"}
+        write_tree(sources[source], {**columns, "w": rng.uniform(0.5, 1.5, 200), "k1": np.arange(200, dtype=np.int32), "k2": np.arange(200, dtype=np.int32)}, tree)
+    return sources
+
+
+def random_definition(seed, nPlots, sources, project):
+    """A plot definition made at random, as Python and as C++ program (the same calls): nPlots plots of the base plots RANDOM_BASES, each
+    pad with data of every kind and variant of its dimension (data_objects; ratios of 1d data in ratio and pull pads, tree requests), boxes
+    and shapes, and random setters of every host with their test values (random_calls). sources: {data source: file} (random_inputs)."""
+    rng = random.Random(seed)
+    pool = random_calls()
+    variants = {kind: [v for v in VARIANTS if has_variant(kind, v)] for kind in DATA_KINDS}
+
+    def chain(host, low, high):
+        picked = [rng.choice(pool[host]) for _ in range(rng.randint(low, high))]
+        return {lang: "".join(call(m, values, lang) + (call(m, [], lang) if unset else "") for m, values, unset in picked) for lang in ("py", "cpp")}
+
+    def data(kind, variant):
+        """a Data of a kind in a variant, in both languages"""
+        dim, _, props = DATA_KINDS[kind]
+        if "formula" in props:
+            return {lang: f"Data({literal(formula(kind, variant), lang)}, kUserFunctions)" for lang in ("py", "cpp")}
+        project = {lang: call("Project", [[0] if dim == 1 else [0, 1]], lang) if "projected" in props else "" for lang in ("py", "cpp")}
+        return {lang: f'Data("{kind}", "{source_of(variant)}"){project[lang]}' for lang in ("py", "cpp")}
+
+    def variant(kind, divided=False):
+        """normal in half of the cases; data of no or one point cannot be divided (an error)"""
+        choices = [v for v in variants[kind] if not (divided and v in ("empty", "single"))]
+        return "normal" if rng.random() < 0.5 else rng.choice(choices)
+
+    shapes = [
+        ("line", ("AddLine((2., 3.), (5., 4.))", "AddLine({2., 3.}, {5., 4.})")),
+        ("arrow", ("AddArrow((2., 3.), (5., 4.))", "AddArrow({2., 3.}, {5., 4.})")),
+        ("ellipse", ("AddEllipse((5., 3.), 1., 0.5)", "AddEllipse({5., 3.}, 1., 0.5)")),
+        ("region", ("AddRegionX(3., 4.)", "AddRegionX(3., 4.)")),
+    ]
+    requests = [("Project1D", ["x"]), ("Project1D", [("x", 20, (0.0, 12.0)), "w"]), ("Profile1D", [("x", 10), "y"]), ("Scatter", ["x", "y"])]
+    plots = []
+    for i in range(nPlots):
+        base = rng.choice(RANDOM_BASES)
+        dim, panels, ratios, pulls = base_pads(base)
+        statements = []  # {lang: statement on the plot p}
+        for pad in panels + ratios + pulls:
+            if pad in ratios + pulls:
+                for _ in range(rng.randint(0, 2)):
+                    num, den = (data(k, variant(k, True)) for k in (rng.choice(DATA_1D), rng.choice(DATA_1D)))
+                    side = rng.choice(["ratio", "numer", "denom", "both", "result"])
+                    select, more = ("" if side == "ratio" else f".{side.capitalize()}()"), chain(side, 0, 3)
+                    statements.append({lang: f"p[{pad}].AddRatio({num[lang]}, {den[lang]}){select}{more[lang]}" for lang in ("py", "cpp")})
+                continue
+            kinds = DATA_1D if dim == 1 else DATA_2D + DATA_3D
+            if dim == 1 and rng.random() < 0.05:
+                kinds = DATA_POLAR  # alone in their pad
+            items = 0
+            for _ in range(rng.randint(1 if pad == panels[0] else 0, 3)):
+                kind = rng.choice(kinds)
+                ref, more = data(kind, variant(kind)), chain("data", 0, 4)
+                statements.append({lang: f"p[{pad}].AddData({ref[lang]}){more[lang]}" for lang in ("py", "cpp")})
+                items += 1
+                if rng.random() < 0.15:
+                    more = chain("data_row", 1, 2)
+                    statements.append({lang: f"p[{pad}].GetData({items}).GetLegendEntry(){more[lang]}" for lang in ("py", "cpp")})
+            if dim == 1 and kinds is not DATA_POLAR and rng.random() < 0.3:
+                method, args = rng.choice(requests)
+                extra = rng.choice([[], [("Filter", ["y > 2"])], [("Define", ["xx", "x*2"]), ("Entries", [50])]])
+                statements.append({lang: f'p[{pad}].AddData("t", "s"){call(method, args, lang)}' + "".join(call(m, a, lang) for m, a in extra) for lang in ("py", "cpp")})
+            for _ in range(rng.randint(0, 3)):
+                what = rng.choice(["pad", "axis", "legend", "text", "shape"])
+                if what == "pad":
+                    more = chain("pad", 1, 1)
+                    statements.append({lang: f"p[{pad}]{more[lang]}" for lang in ("py", "cpp")})
+                elif what == "axis":
+                    axis, more = rng.choice("XY" if dim == 1 else "XYZC"), chain("x", 1, 2)
+                    statements.append({lang: f"p[{pad}]['{axis}']{more[lang]}" for lang in ("py", "cpp")})
+                elif what in ("legend", "text"):
+                    adder, more = ("AddLegend()" if what == "legend" else 'AddText("text #alpha")'), chain(what, 0, 3)
+                    statements.append({lang: f"p[{pad}].{adder}{more[lang]}" for lang in ("py", "cpp")})
+                else:
+                    host, adders = rng.choice(shapes)
+                    more = chain(host, 0, 2)
+                    statements.append({lang: f"p[{pad}].{adders[lang == 'cpp']}{more[lang]}" for lang in ("py", "cpp")})
+        if rng.random() < 0.3:
+            more = chain("plot", 1, 1)
+            statements.append({lang: f"p{more[lang]}" for lang in ("py", "cpp")})
+        plots.append((f"p{i:03d}", rng.choice(["g", "g/sub", "h"]), base, statements))
+    py = ["from SciRooPlot import *", "", f"pm = PlotManager({literal(project, 'py')})"]
+    py += [f"pm.AddDataSource({literal(k, 'py')}, {literal(v, 'py')})" for k, v in sources.items()]
+    py += [f'pm.AddBasePlot(PlotManager.MakeBasePlot("{b}"))' for b in RANDOM_BASES]
+    cpp = ['#include "SciRooPlot/PlotManager.h"', "", "using namespace SciRooPlot;", "using Data = Plot::Pad::Data;", "using LegendEntry = Plot::Pad::LegendEntry;", "using StatsBox = Plot::Pad::StatsBox;", ""]
+    functions = range(0, nPlots, 20)  # a function per 20 plots: the compiler needs less memory for many small functions than for one large one
+    for k in functions:
+        cpp += [f"void define{k}(PlotManager& pm)", "{"]
+        for name, group, base, statements in plots[k : k + 20]:
+            py += [f'p = Plot("{name}", "{group}", "{base}")', *[s["py"] for s in statements], "pm.AddPlot(p)"]
+            cpp += ["  {", f'    Plot p("{name}", "{group}", "{base}");', *[f"    {s['cpp']};" for s in statements], "    pm.AddPlot(p);", "  }"]
+        cpp += ["}", ""]
+    py += ["pm.SaveProject()", ""]
+    cpp += ["int main()", "{", f"  PlotManager pm({literal(project, 'cpp')});"]
+    cpp += [f"  pm.AddDataSource({literal(k, 'cpp')}, {literal(v, 'cpp')});" for k, v in sources.items()]
+    cpp += [f'  pm.AddBasePlot(PlotManager::MakeBasePlot("{b}"));' for b in RANDOM_BASES]
+    cpp += [f"  define{k}(pm);" for k in functions] + ["  pm.SaveProject();", "  return 0;", "}", ""]
+    return "\n".join(py), "\n".join(cpp)
 
 
 def cpp_program(folder, source, name="definePlots"):

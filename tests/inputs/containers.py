@@ -11,19 +11,12 @@ Covers: a stored THStack or TMultiGraph read like a list, also inside a TList an
 handed over in memory become folders.
 """
 
-from srptest import DATA_KINDS, ROOT, Project, S, add_data, base_of, cases, check, data_objects, describe, drawn_diff, finish, missing
+from srptest import DATA_KINDS, ROOT, Project, S, add_data, base_of, cases, check, collection, data_objects, describe, drawn_diff, finish, missing, own, put
 
 LEAVES = ("THStack", "TMultiGraph")  # hold only histograms or graphs: the last level of a chain
 COLLECTIONS = ("TList", "THashList", "TObjArray", "TOrdCollection", "TSortedList", "THashTable", "TFolder", "TMap")
 INNER = ("dir", *COLLECTIONS)  # a directory only below a directory (or the file)
 SUBS = ("a", "b")  # the names of the containers below the first level
-keep = []
-
-
-def own(obj):
-    ROOT.SetOwnership(obj, False)
-    keep.append(obj)
-    return obj
 
 
 def ident_object(kind, name, ident):
@@ -45,22 +38,6 @@ def ident_of(obj):
     if obj.InheritsFrom("TGraph"):
         return obj.GetPointY(0)
     return None
-
-
-def collection(kind, name):
-    if kind == "TFolder":
-        return own(ROOT.TFolder(name, ""))
-    obj = own(getattr(ROOT, kind)())
-    obj.SetName(name)
-    return obj
-
-
-def put(container, obj):
-    """adds obj to an in-memory container (a map under a key of the object's name)"""
-    if container.InheritsFrom("TMap"):
-        container.Add(own(ROOT.TObjString(obj.GetName())), obj)
-    else:
-        container.Add(obj)
 
 
 def level_items(chain, i, k):
