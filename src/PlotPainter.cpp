@@ -667,8 +667,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     // the polar grid of a pad with polar graphs, drawn instead of a cartesian frame, and the axis settings of such a pad (not drawn)
     TGraphPolargram* polargram{nullptr};
     unique_ptr<TH1> polarAxisHist;
-    // the frame is a 2d histogram drawn as a map projection (AITOFF, MERCATOR, SINUSOIDAL, PARABOLIC, MOLLWEIDE)
-    bool projectedPad{};
+    // the map projection the frame is drawn with (AITOFF, MERCATOR, SINUSOIDAL, PARABOLIC, MOLLWEIDE), empty if none
+    string padProjection;
     // the frame is a 3d histogram: its colour scale shows the contents (the C axis), not the binned z axis
     bool contentFrame{};
     vector<std::pair<unique_ptr<TPaveStats>, std::shared_ptr<const Plot::Pad::StatsBox>>> statsBoxes;  // filled by ROOT while drawing the data, placed after all data are drawn
@@ -854,6 +854,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         // a 2d histogram drawn as a map: ROOT's projection options select CONT4, which paints in projected coordinates, so data and frame
         // fit together only when they cover the same range (data drawn SAME is projected over its own range into the frame of the first)
         bool projected{};
+        string projection;  // the projection keyword
         if constexpr (is_hist_2d<data_type>()) {
           TString upper(drawOption);
           upper.ToUpper();
@@ -875,9 +876,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
               upper = drawOption;
             }
           }
-          projected = upper.Contains("AITOFF") || upper.Contains("MERCATOR") || upper.Contains("SINUSOIDAL") || upper.Contains("PARABOLIC") || upper.Contains("MOLLWEIDE");
+          for (const char* keyword : {"AITOFF", "MERCATOR", "SINUSOIDAL", "PARABOLIC", "MOLLWEIDE"}) {
+            if (upper.Contains(keyword)) projection = keyword;
+          }
+          projected = !projection.empty();
         }
-        if (dataIndex == 0) projectedPad = projected;
+        if (dataIndex == 0) padProjection = projection;
 
         // appearances that ROOT has no drawing option for are prepared on the copy that is drawn
         if constexpr (is_graph_2d<data_type>()) {
@@ -1725,7 +1729,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             axisHist_ptr->SetMarkerSize(0);
             axisHist_ptr->SetLineWidth(0);
             axisHist_ptr->SetFillStyle(0);
-            if (projectedPad && TString(drawOption).Contains("Z", TString::kIgnoreCase) && !TString(drawOption).Contains("COL", TString::kIgnoreCase)) {  // with COL, ROOT makes one
+            if (!padProjection.empty() && TString(drawOption).Contains("Z", TString::kIgnoreCase) && !TString(drawOption).Contains("COL", TString::kIgnoreCase)) {  // with COL, ROOT makes one
               // ROOT reads the Z of a projection but its CONT4 painting never paints the colour scale: a copy of the frame drawn as COLZ
               // makes it, with the range and contours of the frame; its cells are moved beyond the pad, so it paints none (on a linear scale
               // ROOT paints empty cells when the minimum is negative, on a log scale cells below the minimum)
@@ -1738,11 +1742,32 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           }
           pad_ptr->Update();
         } else {
-          if constexpr (is_graph_2d<data_type>()) {
-            bool triangles{}, points{};
-            paints3dGraph(drawOption, triangles, points);
-            if ((triangles || points) && !pad_ptr->GetView()) {
-              logger::warning("Data {} is drawn in 3d ({}) and needs a 3d frame: the first data of the pad drawn in 3d (e.g. lego, surf, triangles or points). It is not drawn.", data->GetName(), (optionAlias) ? draw_option_name(*optionAlias) : drawOption);
+          // data drawn in 3d needs the 3d frame of a first data drawn in 3d, flat data a flat frame: ROOT paints a 3d view over a flat map
+          // (its box over the frame) and a flat drawing in a 3d frame not at all or at the wrong place; likewise a map projection needs a
+          // frame of the same projection (flat data in a projected frame, or a map in an unprojected one, is painted in other coordinates)
+          if constexpr (is_2d<data_type>() || is_3d<data_type>()) {
+            bool drawn3d = is_3d<data_type>() || isView3d(drawOption);
+            if constexpr (is_graph_2d<data_type>()) {
+              bool triangles{}, points{};
+              paints3dGraph(drawOption, triangles, points);
+              drawn3d |= triangles || points;
+            }
+            if (drawn3d != (pad_ptr->GetView() != nullptr)) {
+              TString option = (optionAlias) ? TString(draw_option_name(*optionAlias).data()) : TString(drawOption).ReplaceAll("SAME", "");
+              option = option.Strip(TString::kBoth);
+              if (drawn3d) {
+                logger::warning("Data {} is drawn in 3d ({}) and needs a 3d frame: the first data of the pad drawn in 3d (e.g. lego, surf, triangles or points). It is not drawn.", data->GetName(), option.Data());
+              } else {
+                logger::warning("Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the first data of the pad is drawn in 3d). It is not drawn.", data->GetName(), option.Data());
+              }
+              delete data_ptr;
+              ++dataIndex;  // the next data keeps its number
+              drawOption = "SAME ";
+              return;
+            }
+            if (projection != padProjection) {
+              auto drawn = [](const string& keyword) { return (keyword.empty()) ? string("without a map projection") : "as a map (" + keyword + ")"; };
+              logger::warning("Data {} is drawn {} and cannot be drawn in its pad, whose first data is drawn {}. It is not drawn.", data->GetName(), drawn(projection), drawn(padProjection));
               delete data_ptr;
               ++dataIndex;  // the next data keeps its number
               drawOption = "SAME ";
@@ -3370,7 +3395,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         TObject* found = (hist) ? hist->GetListOfFunctions()->FindObject("palette") : nullptr;
         // the colour scale of a 3D view of 2d data stays where ROOT put it; a map projection paints in a view too, but its scale sits beside a
         // flat frame, and so does the scale of a 3d histogram (its contents)
-        if (!found || !found->InheritsFrom("TPaletteAxis") || (pad_ptr->GetView() && !projectedPad && !th3Frame)) continue;
+        if (!found || !found->InheritsFrom("TPaletteAxis") || (pad_ptr->GetView() && padProjection.empty() && !th3Frame)) continue;
         auto* palette = static_cast<TPave*>(found);  // TPaletteAxis lives in libHistPainter, which is not linked: its TPave part is enough
         const double_t x1 = 1. - pad_ptr->GetRightMargin() + scaleOffset.value_or(0.005f);
         palette->SetX1NDC(x1);
@@ -3401,7 +3426,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       radial->SetName("radial_axis");
       radial->SetBit(kCanDelete);
       radial->Draw();
-    } else if (redrawAxes && axisHist_ptr && !pad_ptr->GetView() && !polargram && !projectedPad) {  // a map projection has no frame box (ROOT removes it)
+    } else if (redrawAxes && axisHist_ptr && !pad_ptr->GetView() && !polargram && padProjection.empty()) {  // a map projection has no frame box (ROOT removes it)
       // re-draw frame
       TLine line;
       pad_ptr->GetFrame()->TAttLine::Copy(line);  // only the line attributes: TFrame::Copy would write a whole TWbox into the TLine

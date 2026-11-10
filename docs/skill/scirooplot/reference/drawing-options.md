@@ -95,8 +95,10 @@ outside OpenGL): lego and surf options fall back to `col`/`colz` with a warning,
 at the mean content of the cells (`SetView` turns them); the colour range follows the contents (the Z axis of a 3D histogram is its third binned axis).
 3D functions (TF3) are drawn as the surface f(x, y, z) = 0 (`iso`, also without an option; write f - c for the surface at the value c),
 with white faces and the mesh in the data's colour, or faces in the fill colour if the data sets one.
-the triangle and points aliases of 2D graphs (and `line`, the polyline through the points) are drawn in 3D: as the first data of a pad they get an empty lego frame,
-later data needs such a 3D frame (otherwise a WARNING and the data is not drawn); `points` of a graph with errors also draws the error bars;
+the triangle and points aliases of 2D graphs (and `line`, the polyline through the points) are drawn in 3D: as the first data of a pad they get an empty lego frame;
+`points` of a graph with errors also draws the error bars. Data drawn in 3D (lego, surf, triangles, the points and lines of 2D graphs, 3D histograms and functions)
+needs the 3D frame of a first data drawn in 3D, flat data (colours, contours, boxes, text) a flat frame: otherwise a WARNING and the data is not drawn (the next data
+keeps its number);
 `area` of graphs is the polygon between the points and zero (points not in the order of x are sorted, with a warning); `candle` is ROOT preset 2 (box, median, whiskers at 1.5 IQR, outliers), `candle_minmax` preset 1 (whiskers to the extremes).
 `hist_clipped`, `hist_open_clipped`, `curve_clipped` draw a histogram as a graph, whose lines ROOT cuts at the frame (`HIST`, and `HIST C` on a log axis,
 move bins outside of the frame onto its edge); `hist_clipped` and `hist_open_clipped` are the steps of `hist` and `hist_open` cut at the frame: the outer edges and
@@ -114,7 +116,8 @@ automatically placed legends and texts keep off the grid and its angle labels, s
 Maps: a 2D histogram in degrees drawn with a raw projection option (`"AITOFF"`, `"MOLLWEIDE"`, `"SINUSOIDAL"`, `"PARABOLIC"`, `"MERCATOR"`) is coloured
 over the z range of the pad; add `Z` (`"MOLLWEIDE Z"`) for a colour scale, which ROOT itself does not draw for projections; not `COL`, which ROOT also
 paints unprojected below the map. The map covers the range of the frame: restrict it on the pad (`plot[1]['Y'].SetRange(45, 90)` for the Arctic), a range
-on the data is ignored with a warning. As in ROOT, the x and y axes show the projected coordinates: on a whole-sphere map they match longitude and latitude
+on the data is ignored with a warning; data drawn after a map must be a map of the same projection (otherwise a WARNING and it is not drawn).
+As in ROOT, the x and y axes show the projected coordinates: on a whole-sphere map they match longitude and latitude
 at its edges, on a part of the sphere not (hide them with `SetLabelSize(0)`, `SetTickLength(0)` and `SetAxisColor(kWhite)`: ROOT draws transparent
 lines opaque in png); `"MERCATOR"` gives the latitude in units of
 ln tan(π/4 + b/2) and needs latitudes strictly inside ±90 (otherwise ROOT draws the map unprojected).
