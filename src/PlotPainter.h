@@ -429,6 +429,8 @@ class PlotPainter
   // histograms drawn as graphs (by an alias only graphs have), with the graph they are drawn as: their statistics box and placeholders refer to the histogram
   std::unordered_map<const TObject*, std::unique_ptr<TH1>> mSourceHists;
   std::vector<std::unique_ptr<TObject>> mUndrawn;  // data that is not drawn (an empty graph): deleted with the plot's temporaries
+  // data with a legend row and statistics box but nothing to paint (a histogram without filled bins drawn as a graph), with its option, by pad and number
+  std::map<std::pair<const TVirtualPad*, uint16_t>, std::pair<TObject*, std::string>> mNotPainted;
   // definition of the drawn data (also for the histogram a graph is drawn from): for <name>, <source>, <projection> and <selection>
   std::unordered_map<const TObject*, std::shared_ptr<const Plot::Pad::Data>> mDataDefinitions;
   // axis titles of the input a projection was made from, keyed by the projection: <projection> and <selection> name the axes by them

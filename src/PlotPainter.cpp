@@ -409,6 +409,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     mGraphFrameRangeX.clear();
     mGraph2DFrameRange.clear();
     mUndrawn.clear();
+    mNotPainted.clear();
   });
 
   // ROOT reads some absolute sizes from gStyle only at paint time (see end of this function): undo the scale of a previous plot before drawing
@@ -2257,7 +2258,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             data_ptr->AppendPad(option.Data());
           } else if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
             // ROOT reports an empty graph as an error at every paint
-            if (data_ptr->GetN() == 0) {
+            if (data_ptr->GetN() == 0 && mSourceHists.count(data_ptr)) {
+              // a histogram without filled bins drawn as a graph: nothing to paint, but its legend row and statistics box, as drawn as histogram
+              mNotPainted[{pad_ptr, static_cast<uint16_t>(dataIndex - hasRefFunc)}] = {data_ptr, drawOption};
+              mUndrawn.emplace_back(data_ptr);
+            } else if (data_ptr->GetN() == 0) {
               logger::warning("Graph {} has no points: it is not drawn.", data->GetName());
               mUndrawn.emplace_back(data_ptr);
               // no legend row and no statistics box either, as for other data that is not drawn (TH2Poly in 3d)
@@ -4920,12 +4925,15 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     // the drawn data a legend row refers to (named "<number of the data in the pad>:<name>" when drawn), in this pad or in another one
     // (with the option it is drawn with, which TObject::GetDrawOption finds only in the current pad)
-    auto findDrawn = [pad](uint16_t dataID, const optional<uint8_t>& padID) -> std::pair<TObject*, string> {
+    auto findDrawn = [this, pad](uint16_t dataID, const optional<uint8_t>& padID) -> std::pair<TObject*, string> {
       TPad* source = (padID) ? dynamic_cast<TPad*>(pad->GetCanvas()->GetPrimitive(("Pad_" + std::to_string(*padID)).data())) : pad;
       if (!source) return {nullptr, ""};
       const string prefix = std::to_string(dataID) + ":";
       for (TObjLink* link = source->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
         if (str_starts_with(link->GetObject()->GetName(), prefix)) return {link->GetObject(), link->GetOption()};
+      }
+      if (auto notPainted = mNotPainted.find({source, dataID}); notPainted != mNotPainted.end()) {
+        return notPainted->second;
       }
       return {nullptr, ""};
     };
