@@ -2239,6 +2239,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             bool triangles{}, points{};
             paints3dGraph(drawOption, triangles, points);
             if (points && !triangles) data_ptr->GetHistogram()->Reset("ICE");  // not its functions: they hold the triangulation
+            // painted as triangles or points, a 2d graph fills the pad behind the 3d box with the frame fill colour (TView3D::PadRange), also
+            // drawn after other data: everything painted before it would be covered
+            if (triangles || points) pad_ptr->SetFrameFillColor(0);
           }
           if (projected) {
             // ROOT projects the range of a map only when it is painted without SAME (THistPainter::RecalculateRange): drawn SAME, a map
