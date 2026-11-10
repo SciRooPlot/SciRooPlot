@@ -3,7 +3,8 @@ plot gets its patterns unexpanded (.* is not a list of dot files), also after &&
 file globbing works again afterwards, also after plot in a pipeline. srp makes relative program and output paths absolute (add, set),
 keeps other values and paths starting with ~ or a variable as written; srp cd goes to the program folder; srp cd and srp out of an
 unknown project, srp out without an output folder or before it exists fail with a message. The srp program alone refuses the
-commands that need env.sh, unknown commands and a missing command, with exit status 1.
+commands that need env.sh, unknown commands and a missing command, with exit status 1. In zsh without a terminal, env.sh registers the
+completion silently also with an insecure directory in fpath.
 Covers: the bash plot alias in compound commands (pre-release braces rule), 2026-11-03 (zsh read-only names in env.sh)."""
 
 import os
@@ -79,6 +80,14 @@ grep note "$SCIROOPLOT_CONFIG_PATH/projects.info" """,
     out = shell("srp out proj; echo status $?", sh, config=config)
     check(f"{sh}: srp out before the output folder exists fails with a message", out.stdout.strip() == "status 1" and "does not exist yet" in out.stderr, out.tail())
     run(SRP, "unset", "proj", "outdir", config=config)
+
+# an insecure directory in fpath (group or world writable, as Homebrew's on macOS): compinit cannot ask without a terminal
+if "zsh" in SHELLS:
+    insecure = config_folder("fpath_insecure")
+    os.chmod(insecure, 0o777)
+    default = run("zsh", "-f", "-c", "print -r -- $FPATH").stdout.strip()
+    out = shell("print -r -- $_comps[plot]", "zsh", config=config, interactive=True, env={"FPATH": f"{insecure}:{default}"})
+    check("zsh: without a terminal and with an insecure directory in fpath, env.sh registers the completion silently", out.stdout.strip() == "_plot_completions_zsh" and not out.stderr.strip(), out.tail())
 
 # the srp program alone
 for args, message in ((("init-py", "x"), "Source environment script"), (("cd",), "Source environment script"), (("nosuch",), "Unknown command nosuch"), ((), "Not enough arguments")):
