@@ -2361,10 +2361,24 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                 drawLabel(data_ptr->GetBinCenter(bin), content + data_ptr->GetBinError(bin), content);
               }
             } else if constexpr (is_graph_1d<data_type>()) {
-              // points outside the data range are removed already
-              for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
-                if (!inFrame(data_ptr->GetPointX(i), data_ptr->GetPointY(i))) continue;
-                drawLabel(data_ptr->GetPointX(i), data_ptr->GetPointY(i) + std::max(data_ptr->GetErrorYhigh(i), 0.), data_ptr->GetPointY(i));  // -1 for graphs without errors
+              if (polargram && data_ptr->InheritsFrom(TGraphPolar::Class())) {
+                // the points where TGraphPainter::PaintGraphPolar puts them: the radial range from the centre to the edge of the grid, the
+                // range of angles over a full turn, the points beyond the edge not drawn
+                const double_t unit = (polargram->IsDegree()) ? 180. / TMath::Pi() : ((polargram->IsGrad()) ? 100. / TMath::Pi() : 1.);
+                const double_t radialRange = polargram->GetRMax() - polargram->GetRMin();
+                const double_t turn = (polargram->GetTMax() - polargram->GetTMin()) / TMath::TwoPi();
+                for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
+                  const double_t radius = (data_ptr->GetPointY(i) - polargram->GetRMin()) / radialRange;
+                  if (!(radius >= 0. && radius <= 1.)) continue;
+                  const double_t angle = unit * (data_ptr->GetPointX(i) - polargram->GetTMin()) / turn;
+                  drawLabel(radius * std::cos(angle), radius * std::sin(angle), data_ptr->GetPointY(i));
+                }
+              } else {
+                // points outside the data range are removed already
+                for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
+                  if (!inFrame(data_ptr->GetPointX(i), data_ptr->GetPointY(i))) continue;
+                  drawLabel(data_ptr->GetPointX(i), data_ptr->GetPointY(i) + std::max(data_ptr->GetErrorYhigh(i), 0.), data_ptr->GetPointY(i));  // -1 for graphs without errors
+                }
               }
             }
           }
