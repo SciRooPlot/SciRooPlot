@@ -18,7 +18,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / "python/SciRooPlot-stubs"
-FIXED_SIZE = re.compile(r"typing\.Annotated\[(list\[[\w.]+\]), pybind11_stubgen\.typing_ext\.FixedSize\(\d+\)\]")
+FIXED_SIZE = re.compile(r"typing\.Annotated\[(list\[[\w.]+\]), (?:pybind11_stubgen\.typing_ext\.FixedSize\(\d+\)|\"FixedSize\(\d+\)\")\]")
+# pybind11 3 names the argument types by the protocols its casters take: written as pybind11 2 does, the stubs do not depend on its version
+PYBIND11_3 = {"typing.SupportsInt": "int", "typing.SupportsFloat": "float", "collections.abc.Sequence[": "list[", "import collections.abc\n": ""}
 DATA_ARGUMENT = re.compile(r"(\w+: )Data(?=[,)])")
 SIGNATURE = re.compile(r"^(\s*def \w+\()(.*)(\) -> .*)$", re.MULTILINE)
 LIST_PARAMETER = re.compile(r"\blist\[(?!str\])")
@@ -31,8 +33,11 @@ def generate(target: Path) -> dict[str, str] | None:
         return None
     stubs = {}
     for file in sorted((target / "SciRooPlot-stubs").rglob("*.pyi")):
+        text = file.read_text()
+        for spelling, plain in PYBIND11_3.items():
+            text = text.replace(spelling, plain)
         # std::array arguments are annotated with a class of pybind11-stubgen itself: keep the plain list type, so the stubs import nothing extra
-        text = FIXED_SIZE.sub(r"\1", file.read_text()).replace("import pybind11_stubgen.typing_ext\n", "")
+        text = FIXED_SIZE.sub(r"\1", text).replace("import pybind11_stubgen.typing_ext\n", "")
         # a Data argument also takes a [name, dataSource] list (py::implicitly_convertible), which the signatures do not show
         text = DATA_ARGUMENT.sub(r"\1Data | list[str]", text)
         # std::vector arguments take any sequence; list is invariant, so a list variable of e.g. (str, float) stops would not match
