@@ -93,6 +93,7 @@ for compiler in ("g++", "clang++"):
 out = S.run("bash", "-c", f'"{program}" 2>&1')  # messages in the order they are written
 S.check("the C++ program runs", out.rc == 0, out.tail())
 cppMessages = {}
+current = []  # lines before the first case belong to no call (a warning of the system's fontconfig at the first text)
 for line in out.text.splitlines():
     if line.startswith("CASE "):
         current = cppMessages.setdefault(line[5:].strip(), [])
