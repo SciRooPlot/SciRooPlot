@@ -57,6 +57,7 @@
 #include "Validation.h"
 #include "util/RootContainers.h"
 #include "util/ScopeGuard.h"
+#include "util/Strings.h"
 
 using boost::property_tree::ptree;
 using std::string;
@@ -415,7 +416,6 @@ int RunCommand(const string& command, const string& project, const string& prope
       logger::print("No projects yet: srp init-py <project>, srp init-cpp <project> or srp add <project> <program>.");
       return 0;
     }
-    auto count = [](size_t n, const string& what) { return fmt::format("{} {}{}", n, what, (n == 1) ? "" : "s"); };
     bool readable = true;
     for (const string& name : projects) {
       // the tab-completion list has one line <name>,<group> per plot
@@ -463,8 +463,8 @@ int RunCommand(const string& command, const string& project, const string& prope
       }
       for (const auto& [property, value] : properties)
         if (!value.empty()) row(property, value);
-      row("plots", fmt::format("{} in {}", nPlots, count(groups.size(), "group")));
-      row("data sources", fmt::format("{} with {}", nDataSources, count(nInputs, "input")));
+      row("plots", fmt::format("{} in {}", nPlots, util::plural(groups.size(), "group")));
+      row("data sources", fmt::format("{} with {}", nDataSources, util::plural(nInputs, "input")));
       row("last saved", lastSaved);
     }
     if (!readable) return 1;

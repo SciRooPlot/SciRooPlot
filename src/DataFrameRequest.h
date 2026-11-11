@@ -434,7 +434,7 @@ bool DataFrameRequest<DataInfo>::Book()
     if (mAutoRanges[i]) {
       const auto [min, max, nNonFinite] = mAutoRanges[i]();
       if (nNonFinite) {
-        logger::warning("{} value{} of {} in {} {} not finite (inf or nan): the axis range is determined without {}.", nNonFinite, (nNonFinite > 1) ? "s" : "", dataDims[i].var, mContext, (nNonFinite > 1) ? "are" : "is", (nNonFinite > 1) ? "them" : "it");
+        logger::warning("{} of {} in {} {} not finite (inf or nan): the axis range is determined without {}.", util::plural(static_cast<size_t>(nNonFinite), "value"), dataDims[i].var, mContext, (nNonFinite > 1) ? "are" : "is", (nNonFinite > 1) ? "them" : "it");
       }
       if (mIsIntegerAxis[i] && min <= max) {
         std::tie(dataDims[i].nBins, dataDims[i].edges[0], dataDims[i].edges[1]) = util::integer_binning(min, max, dataDims[i].nBins);

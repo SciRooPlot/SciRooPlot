@@ -226,7 +226,7 @@ bool PlotManager::SavePlotsToRootFile() const
       ++nPlots;
     }
     outputFile.Close();
-    logger::info("Saved {} plots to file {}/{}.", nPlots, mOutputDirectory, mPlotsRootFile);
+    logger::info("Saved {} to file {}/{}.", plural(nPlots, "plot"), mOutputDirectory, mPlotsRootFile);
   }
   return true;
 }
@@ -604,12 +604,12 @@ void PlotManager::WriteInfoFile(const ptree& tree, const string& path, const str
   }
   std::error_code ec;
   if (filePath.has_parent_path() && std::filesystem::create_directories(filePath.parent_path(), ec)) {
-    logger::info("Created config folder: {}.", filePath.parent_path().string());
+    logger::info("Created folder: {}.", filePath.parent_path().string());
   }
   try {
     boost::property_tree::write_info(filePath.string(), tree);
   } catch (const std::exception& e) {
-    logger::error("Cannot save {} to {}: {}.", content, filePath.string(), e.what());
+    logger::error("Cannot save {} to {}: {}.", content, filePath.string(), util::without_final_period(e.what()));
   }
 }
 
@@ -625,7 +625,7 @@ void PlotManager::LoadDataSources(const optional<string>& file, bool replace)
     using boost::property_tree::read_info;
     read_info(expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName)).value_or(""), dataSourcesTree);
   } catch (const std::exception& e) {
-    logger::error("Cannot load dataSources file: {}.", e.what());
+    logger::error("Cannot load dataSources file: {}.", util::without_final_period(e.what()));
     return;
   }
   for (const auto& [dataSource, inputsTree] : dataSourcesTree) {
@@ -1183,7 +1183,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
     using boost::property_tree::read_info;
     read_info(plotsFile, fileTree);
   } catch (const std::exception& e) {
-    logger::error("Cannot open plots file: {}.", e.what());
+    logger::error("Cannot open plots file: {}.", util::without_final_period(e.what()));
     return false;
   }
 
@@ -1258,9 +1258,9 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
     const string hint = WildcardHint(name, group);
     logger::error("Found no plots matching the request {}{}{} in {}{}{}{}.", logger::begin_color(logger::Color::Green), name, logger::end_color(), logger::begin_color(logger::Color::Yellow), group, logger::end_color(), hint.empty() ? " (plot .+ .+ list shows all plots of the project)" : hint);
   } else if (nLoaded == 0) {
-    logger::error("{} plot(s) matched the request but none could be loaded.", nMatched);
+    logger::error("{} matched the request but none could be loaded.", plural(nMatched, "plot"));
   } else if (nLoaded > 1) {
-    logger::info("Found {} plots matching the request.", nLoaded);
+    logger::info("Found {} matching the request.", plural(nLoaded, "plot"));
   }
   return nLoaded != 0;
 }
@@ -1542,7 +1542,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     }
     return allCreated && saved;
   } catch (const std::exception& e) {
-    logger::error("An unexpected error occurred: {}.", e.what());
+    logger::error("An unexpected error occurred: {}.", util::without_final_period(e.what()));
     return false;
   }
 }
@@ -1690,7 +1690,7 @@ bool PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
               dataPtr.reset(new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data()));
               static_cast<TGraph*>(dataPtr.get())->SetName(dataName.data());
             } catch (const std::invalid_argument& e) {
-              logger::error("Cannot read the points {}: {}", dataName, e.what());
+              logger::error("Cannot read the points {}: {}.", dataName, util::without_final_period(e.what()));
             }
           }
         }
@@ -2409,7 +2409,7 @@ std::unique_ptr<TCanvas> PlotManager::Paint(PlotPainter& painter, Plot& toPaint)
   try {
     return painter.GeneratePlot(toPaint, mDataBuffer);
   } catch (const std::exception& e) {
-    logger::error("Plot {} could not be painted: {}.", toPaint.GetName(), e.what());
+    logger::error("Plot {} could not be painted: {}.", toPaint.GetName(), util::without_final_period(e.what()));
     return nullptr;
   }
 }
@@ -3983,7 +3983,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
             if (std::find(rejected.begin(), rejected.end(), info) == rejected.end()) processGroup({info}, sequential);
           }
         } else {
-          logger::error("Cannot read {} {} ({}): it contains a value that does not match the type of its column, or an expression failed ({}).", type, DataLocation(dataSource, name), infos[0]->GetDescription(), e.what());
+          logger::error("Cannot read {} {} ({}): it contains a value that does not match the type of its column, or an expression failed ({}).", type, DataLocation(dataSource, name), infos[0]->GetDescription(), util::without_final_period(e.what()));
         }
       } else if (requests.size() > 1) {
         // an invalid expression only shows up when the event loop starts and then spoils all requests of this data frame: process them one by one
