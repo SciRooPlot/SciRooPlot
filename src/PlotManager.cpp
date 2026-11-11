@@ -1176,9 +1176,12 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
   auto reportUnknownKeys = [&](const Plot& plot, const ptree& read) {
     vector<string> unknown;
     std::function<void(const ptree&, const ptree&, const string&)> compare = [&](const ptree& readNode, const ptree& writtenNode, const string& path) {
+      std::map<string, size_t> occurrence;  // repeated keys (the rows of a legend) are compared in their order
       for (const auto& [key, child] : readNode) {
-        const auto written = writtenNode.find(key);
-        if (written == writtenNode.not_found()) {
+        auto [written, end] = writtenNode.equal_range(key);
+        for (size_t i = occurrence[key]++; i > 0 && written != end; --i)
+          ++written;
+        if (written == end) {
           unknown.push_back(path + key);
         } else if (!child.empty()) {
           compare(child, written->second, path + key + ".");

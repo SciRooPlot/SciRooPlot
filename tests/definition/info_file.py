@@ -7,7 +7,8 @@ plot is loaded together with an unchanged one. Reference: what was written:
 - the value is read as written (a text), or loading reports it naming the key or the value (the plot is then left out), never
   silently read as something else or dropped;
 - a misspelt key, and a part under a changed key, are read as before (the key names its kind) or reported naming the key;
-- the unchanged plot loads in every case, and the file as written names no key as unknown.
+- the unchanged plot loads in every case, and the file as written names no key as unknown (also where repeated parts, the rows of a
+  legend, hold different keys).
 (Text after a value on the same line is dropped by the reader of the format, before SciRooPlot sees it: not checked.)
 """
 
@@ -24,6 +25,12 @@ for i, case in enumerate(cases):
 intact = S.S.Plot("intact", "g", "1d")
 intact[1].AddData("h", "s").SetColor(633)
 pm.AddPlot(intact)
+rows = S.S.Plot("legend_rows", "g", "1d")  # repeated parts (legend rows) holding different keys
+legend = rows[1].AddLegend()
+legend.AddEntry("plain")
+legend.AddEntry("filled").SetFillColor(633)
+legend.AddEntry("marked").SetMarkerStyle(20).SetLineWidth(3.0)
+pm.AddPlot(rows)
 path = os.path.join(S.WORK, "written.info")
 pm.SavePlots(file=path)
 with open(path) as f:
