@@ -105,6 +105,7 @@ todo = cases(
         named("graph_multi", "band", "the larger of two sets of errors", placement="top_right"),
         named("graph_multi", "boxes", "the larger of two sets of errors", placement="top_right"),
         named("hist2d", "lego", "3d view at other angles", boxes="legend", extra="view"),
+        named("function2d", "cont", "an image beside contour lines, in a corner they leave free", extra="image"),
         named("hist3d", "default", "3d view at other angles", boxes="legend", extra="view"),
         named("tf2", "surf", "3d view at other angles", extra="view"),
         named("hist", "default", "boxes in the pad of a ratio", boxes="legend_texts", extra="ratio"),

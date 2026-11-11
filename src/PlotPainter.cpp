@@ -5726,8 +5726,70 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   // (TGraphPainter::PaintGrapHist and Smooth)
   auto fillBaseY = [&]() { return (pad->GetLogy()) ? pad->GetUymin() : std::clamp(0., pad->GetUymin(), pad->GetUymax()); };
 
+  // contour lines of 2d data (CONT, CONT1 to CONT3; CONT0 and CONT4 fill, COL is a map): only the cells a line passes through, i.e. where a
+  // level lies between the values at the corners of the cell (widened by half a cell for the width of the lines); the levels are those of
+  // the painted histogram (that of a 2d function is made when it is painted); without levels the whole range counts as before
+  auto isLineContour = [](TObject* obj) {
+    TString option = obj->GetDrawOption();
+    option.ToUpper();
+    return option.Contains("CONT") && !option.Contains("CONT0") && !option.Contains("CONT4") && !option.Contains("COL");
+  };
+  auto markContourLines = [&](TH1* levelsFrom, const std::function<double_t(double_t, double_t)>& valueAt, double_t xMin, double_t yMin, double_t xMax, double_t yMax) {
+    const int32_t nLevels = (levelsFrom) ? levelsFrom->GetContour() : 0;
+    if (nLevels <= 0) return false;
+    const int32_t i1 = std::max(0, static_cast<int32_t>(std::floor(cellX(padX(xMin)))));
+    const int32_t i2 = std::min(nx - 1, static_cast<int32_t>(std::floor(cellX(padX(xMax)))));
+    const int32_t j1 = std::max(0, static_cast<int32_t>(std::floor(cellY(padY(yMin)))));
+    const int32_t j2 = std::min(ny - 1, static_cast<int32_t>(std::floor(cellY(padY(yMax)))));
+    if (i1 > i2 || j1 > j2) return true;
+    vector<double_t> levels(nLevels);
+    for (int32_t k = 0; k < nLevels; ++k)
+      levels[k] = levelsFrom->GetContourLevel(k);
+    std::sort(levels.begin(), levels.end());
+    // the values on the corners of half cells, from which each widened cell takes its 4 x 4 corners
+    const auto user = [](double_t padValue, bool isLog) { return (isLog) ? std::pow(10., padValue) : padValue; };
+    const int32_t nCornersX = 2 * (i2 - i1 + 1) + 3;
+    const int32_t nCornersY = 2 * (j2 - j1 + 1) + 3;
+    vector<double_t> corners(static_cast<size_t>(nCornersX) * nCornersY);
+    for (int32_t a = 0; a < nCornersX; ++a) {
+      const double_t x = std::clamp(user(pad->GetX1() + (i1 - 0.5 + 0.5 * a) / cellsPerX, pad->GetLogx()), xMin, xMax);
+      for (int32_t b = 0; b < nCornersY; ++b) {
+        const double_t y = std::clamp(user(pad->GetY1() + (j1 - 0.5 + 0.5 * b) / cellsPerY, pad->GetLogy()), yMin, yMax);
+        corners[a + static_cast<size_t>(b) * nCornersX] = valueAt(x, y);
+      }
+    }
+    for (int32_t i = i1; i <= i2; ++i) {
+      for (int32_t j = j1; j <= j2; ++j) {
+        double_t low = std::numeric_limits<double_t>::infinity();
+        double_t high = -low;
+        for (int32_t a = 2 * (i - i1); a <= 2 * (i - i1) + 3; ++a) {
+          for (int32_t b = 2 * (j - j1); b <= 2 * (j - j1) + 3; ++b) {
+            const double_t value = corners[a + static_cast<size_t>(b) * nCornersX];
+            if (!std::isfinite(value)) continue;
+            low = std::min(low, value);
+            high = std::max(high, value);
+          }
+        }
+        if (!(low < high)) continue;
+        const auto level = std::upper_bound(levels.begin(), levels.end(), low);  // a level above the lowest corner and not above the highest
+        if (level != levels.end() && *level <= high) setRect(i, j, i, j, kMap);
+      }
+    }
+    return true;
+  };
+
   auto markHist = [&](TH1* hist) {
     if (hist->GetDimension() == 2 && !pad->GetView()) {
+      if (!dynamic_cast<TH2Poly*>(hist) && isLineContour(hist)) {
+        TAxis* xAxis = hist->GetXaxis();
+        TAxis* yAxis = hist->GetYaxis();
+        auto* map = static_cast<TH2*>(hist);
+        // between the outer bin centres, where ROOT draws the contours of a histogram (Interpolate refuses points beyond them)
+        const double_t xLow = xAxis->GetBinCenter(xAxis->GetFirst()), xHigh = xAxis->GetBinCenter(xAxis->GetLast());
+        const double_t yLow = yAxis->GetBinCenter(yAxis->GetFirst()), yHigh = yAxis->GetBinCenter(yAxis->GetLast());
+        const auto value = [map, xLow, xHigh, yLow, yHigh](double_t x, double_t y) { return map->Interpolate(std::clamp(x, xLow, xHigh), std::clamp(y, yLow, yHigh)); };
+        if (markContourLines(hist, value, xAxis->GetBinLowEdge(xAxis->GetFirst()), yAxis->GetBinLowEdge(yAxis->GetFirst()), xAxis->GetBinUpEdge(xAxis->GetLast()), yAxis->GetBinUpEdge(yAxis->GetLast()))) return;
+      }
       // maps drawn in the frame (col, box, text, ...): the filled bins of the visible range; ROOT leaves empty bins blank
       if (auto* poly = dynamic_cast<TH2Poly*>(hist)) {
         for (auto* obj : *poly->GetBins()) {
@@ -5908,9 +5970,11 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   };
   auto markFunc = [&](TF1* func) {
     if (func->GetNdim() == 2 && !pad->GetView()) {
-      // a 2d function drawn into the frame (colours, contours): a map over its range
+      // a 2d function drawn into the frame (colours, contours): a map over its range, contour lines where they pass
       double_t xMin{}, yMin{}, xMax{}, yMax{};
       func->GetRange(xMin, yMin, xMax, yMax);
+      const auto value = [func](double_t x, double_t y) { return func->Eval(x, y); };
+      if (isLineContour(func) && markContourLines(func->GetHistogram(), value, xMin, yMin, xMax, yMax)) return;
       setRect(cellX(padX(xMin)), cellY(padY(yMin)), cellX(padX(xMax)), cellY(padY(yMax)), kMap);
       return;
     }
