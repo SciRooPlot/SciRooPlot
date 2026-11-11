@@ -71,6 +71,18 @@ for name, position in (("too_long", ()), ("too_long_fixed", (0.2, 0.9))):
     plot[1].AddText(*position, "#it{p}_{T} " * 30)
     p.pm.AddPlot(plot)
 
+# texts with a backslash (drawn by TMathText) and an empty group, on which ROOT crashes: in every kind of text, and plots after it
+EMPTY_GROUPS = {"legend row": "\\alpha {} row", "legend title": "\\LaTeX{} title", "text": "{{ }}\\beta text", "axis title": "\\gamma{} axis", "stats title": "\\delta {} stats"}
+plot = S.Plot("empty_groups", "groups", "1d")
+plot[1].AddData("h", "s", EMPTY_GROUPS["legend row"]).SetShowStats("e", EMPTY_GROUPS["stats title"])
+plot[1].AddLegend(EMPTY_GROUPS["legend title"])
+plot[1].AddText(EMPTY_GROUPS["text"])
+plot[1]["X"].SetTitle(EMPTY_GROUPS["axis title"])
+p.pm.AddPlot(plot)
+plot = S.Plot("after_groups", "groups", "1d")
+plot[1].AddData("h", "s")
+p.pm.AddPlot(plot)
+
 images = {}
 for scale in (1, 2):
     p.srp("bitmapscale", str(scale))
@@ -148,6 +160,23 @@ for box in ("legend", "text"):
     check(f"an automatic {box} wider than the frame is warned about", any(f"The {box} (" in m and "is larger than the space inside the frame" in m for m in long.messages("too_long", "long")), " | ".join(long.messages("too_long", "long")))
     check(f"a {box} at a position reaching beyond its pad is warned about", any(f"The {box} reaches beyond its pad" in m for m in long.messages("too_long_fixed", "long")), " | ".join(long.messages("too_long_fixed", "long")))
 check("boxes at positions inside their pad give no such warning", not any("reaches beyond its pad" in m for m in run.warnings()), " | ".join(run.warnings()[:3]))
+
+groups = p.plot("groups")
+check("texts with an empty group and a backslash: the plot and the plots after it are made", groups.canvas("empty_groups", "groups") and groups.canvas("after_groups", "groups"), " | ".join(groups.errors()[:3]))
+groupPad = groups.pad("empty_groups", "groups")
+drawnTexts = []
+if groupPad:
+    for obj in groupPad.GetListOfPrimitives():
+        if obj.InheritsFrom("TLegend") or obj.InheritsFrom("TPaveText"):
+            drawnTexts += [str(entry.GetLabel() if obj.InheritsFrom("TLegend") else entry.GetTitle()) for entry in (obj.GetListOfPrimitives() if obj.InheritsFrom("TLegend") else obj.GetListOfLines())]
+            if obj.InheritsFrom("TLegend") and obj.GetHeader():
+                drawnTexts.append(str(obj.GetHeader()))
+        elif obj.InheritsFrom("TH1"):
+            drawnTexts.append(str(obj.GetXaxis().GetTitle()))
+groupMessages = groups.messages("empty_groups", "groups")
+for kind, text in EMPTY_GROUPS.items():
+    shown = text.replace("{{ }}", "").replace("{}", "")
+    check(f"{kind} '{text}': drawn as '{shown}', warned once", shown in drawnTexts and sum(f"Text '{text}' has an empty group" in m for m in groupMessages) == 1, f"drawn {drawnTexts}; {' | '.join(groupMessages)}")
 
 # the same text in pads whose smaller side is the same: the same box in pixels
 for i, case in enumerate(todo):

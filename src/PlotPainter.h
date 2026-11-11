@@ -369,6 +369,8 @@ class PlotPainter
   void DrawCommonTitle(TCanvas* canvas, char axisLabel, const std::vector<uint8_t>& pads, size_t index);
   // rowData: the data of a legend row; findData (for texts): the data a placeholder names (<mean:2>, <mean:1@4>), by number and pad
   void ReplacePlaceholders(std::string& str, TNamed* rowData, const std::function<TNamed*(uint16_t, const std::optional<uint8_t>&)>& findData = {});
+  // a text with a backslash is drawn by ROOT's TMathText, which crashes on an empty group ({}, { }): such groups are dropped, warned once per text
+  void DropEmptyGroups(std::string& text);
   // the outline of a fill symbol: the line of the data (as TLegend draws it), none, or thin and solid in the line colour (boxes)
   enum class Outline { line,
                        none,
@@ -426,6 +428,7 @@ class PlotPainter
   // on screen: the free user-defined line styles that stand in for styles 2-4 (their dash strings from gStyle), 0 if there is none
   std::array<Style_t, 3> mScreenDashStyles{};
   std::set<std::pair<const TObject*, size_t>> mReportedStoredRanges;  // input axes whose stored range a projection of this plot does not apply (reported once)
+  std::set<std::string> mReportedTexts;                               // texts whose empty groups were dropped (reported once)
   // histograms drawn as graphs (by an alias only graphs have), with the graph they are drawn as: their statistics box and placeholders refer to the histogram
   std::unordered_map<const TObject*, std::unique_ptr<TH1>> mSourceHists;
   std::vector<std::unique_ptr<TObject>> mUndrawn;  // data that is not drawn (an empty graph): deleted with the plot's temporaries

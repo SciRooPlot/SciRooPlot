@@ -1378,6 +1378,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                 }
               }
             }
+            // the title set above or stored with the input
+            if (string title = axis_ptr->GetTitle(); title.find('\\') != string::npos) {
+              DropEmptyGroups(title);
+              axis_ptr->SetTitle(title.data());
+            }
 
             // labels and title a layout hides towards touching panels (see PanelLayout::ApplyTo): in a flat frame (known from an earlier paint, see
             // SetFlatPads; a 3D view or a polar drawing keeps its own, it shares no axis), unless the pad sets their size itself
@@ -1707,6 +1712,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
               }
               if (isLog) logger::warning("Log scale of the C axis in pad {} ignored: ROOT colours the boxes of a 3d histogram linearly.", padID);
               if (title) {
+                DropEmptyGroups(*title);
                 TAxis* zAxis = axisHist_ptr->GetZaxis();
                 TString zTitle = zAxis->GetTitle();
                 if (zTitle.Index(";") >= 0) zTitle.Remove(zTitle.Index(";"));  // a title of the scale stored with the input is replaced
@@ -2318,6 +2324,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
               if (const auto& title = data->GetStatsTitle()) {
                 string titleText = *title;
                 ReplacePlaceholders(titleText, statsHist);
+                DropEmptyGroups(titleText);
                 static_cast<TText*>(stats->GetListOfLines()->First())->SetTitle(titleText.data());  // instead of the name of the histogram
               }
               // without settings for the box: placed automatically, framed in the line colour of the data
@@ -5040,6 +5047,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       } else if (line.find('<') != string::npos) {
         ReplacePlaceholders(line, nullptr, findTextData);
       }
+      DropEmptyGroups(line);
 
       // determine width and height of line to find max width and height (per column)
       TLatex textLine(0, 0, line.data());
@@ -5082,7 +5090,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       auto [w, h] = GetTextDimensions(markerDummy, pad);
       symbolColWidthPixel = box->GetSymbolColScale().value_or(1.) * w;
 
-      if (const auto& title = box->GetTitle()) {
+      if (auto title = box->GetTitle()) {
+        DropEmptyGroups(*title);
         TLatex textLine(0, 0, (*title).data());
         textLine.SetTextFont(textFont);
         textLine.SetTextSize(textSize);
@@ -5178,6 +5187,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       if (const auto& textAlpha = box->GetTextAlpha()) legend->SetTextColor(TColor::GetColorTransparent(legend->GetTextColor(), *textAlpha));
 
       if (auto title = box->GetTitle()) {
+        DropEmptyGroups(*title);
         string center = (nColumns > 1) ? "c" : "";
         legend->SetHeader((*title).data(), center.data());
       }
@@ -7802,6 +7812,26 @@ double_t PlotPainter::TextHeightPixel(int16_t textFont, float_t textSize, const 
   if (textFont % 10 > 2) return mScale * textSize;
   const auto [width, height] = TextPadSizePixel(pad);
   return static_cast<float_t>(textSize * std::min(width, height));
+}
+
+//**************************************************************************************************
+/**
+ * Drops the empty groups of a text drawn by ROOT's TMathText (one with a backslash), on which it crashes.
+ */
+//**************************************************************************************************
+void PlotPainter::DropEmptyGroups(string& text)
+{
+  if (text.find('\\') == string::npos || text.find('{') == string::npos) return;
+  static const std::regex emptyGroup("\\{\\s*\\}");
+  string result = text;
+  while (std::regex_search(result, emptyGroup)) {
+    result = std::regex_replace(result, emptyGroup, "");  // again for nested ones: {{}}
+  }
+  if (result == text) return;
+  if (mReportedTexts.insert(text).second) {
+    logger::warning("Text '{}' has an empty group {{}} and a backslash, on which ROOT crashes: drawn as '{}'.", text, result);
+  }
+  text = result;
 }
 
 //**************************************************************************************************
