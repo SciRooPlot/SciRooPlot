@@ -478,6 +478,11 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
       string subFolder = folder;
       if (!dynamic_cast<TFile*>(object) && !(list && name == object->ClassName())) {
         subDir = target->GetDirectory(name.data());
+        if (!subDir && target->FindKey(name.data())) {
+          // an object of that name is stored there already: a folder cannot be made beside it (ROOT's mkdir would refuse with an error)
+          logger::warning("Data source {}: the list {}{} cannot be stored beside the object of the same name, its items are left out (names inside a list must be unique).", dataSource, folder, name);
+          return;
+        }
         if (!subDir) subDir = target->mkdir(name.data());
         if (!subDir) {
           logger::error("Could not create folder {} in data source {}.", folder + name, dataSource);
