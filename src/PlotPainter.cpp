@@ -408,6 +408,8 @@ struct PlotPainter::pad_state_t {
   };
   Plot::Pad& padDefaults;
   const fill_defaults_t& fillDefaults;
+  const data_buffer_t& dataBuffer;
+  bool& fail;
   Plot::Pad& pad;
   const uint8_t padID;
   TPad*& pad_ptr;
@@ -426,6 +428,7 @@ struct PlotPainter::pad_state_t {
   string& padProjection;
   bool& contentFrame;
   vector<std::pair<unique_ptr<TPaveStats>, std::shared_ptr<const Plot::Pad::StatsBox>>>& statsBoxes;
+  vector<std::pair<TGraph*, bool>>& clippedSteps;
   string& drawOption;
   uint16_t& dataIndex;
   bool& mapDrawn;
@@ -444,6 +447,8 @@ struct PlotPainter::item_state_t {
   const shared_ptr<Plot::Pad::Data>& data;
   bool& isSampledFunc;
   bool& repeated;
+  bool& numeratorMeans;
+  bool& denominatorMeans;
 };
 
 //**************************************************************************************************
@@ -753,7 +758,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     // the range a function giving the frame is sampled over for it (x and y): it is drawn with the same samples
     optional<array<double_t, 4>> frameFuncRange;
     pad_state_t::used_defaults_t usedDefaults{};  // entries of the pad's default lists taken so far
-    pad_state_t padState{padDefaults, fillDefaults, pad, padID, pad_ptr, padSetup, textFont, textSize, textColor, textAlpha, activeTextFormat, hasRefFunc, frameSource, axisHist_ptr, polarFrame, polargram, polarAxisHist, padProjection, contentFrame, statsBoxes, drawOption, dataIndex, mapDrawn, storedRangeZ, frameFuncRange, usedDefaults};
+    pad_state_t padState{padDefaults, fillDefaults, dataBuffer, fail, pad, padID, pad_ptr, padSetup, textFont, textSize, textColor, textAlpha, activeTextFormat, hasRefFunc, frameSource, axisHist_ptr, polarFrame, polargram, polarAxisHist, padProjection, contentFrame, statsBoxes, clippedSteps, drawOption, dataIndex, mapDrawn, storedRangeZ, frameFuncRange, usedDefaults};
     for (const auto& data : drawData) {
       if (fail) break;
       // data 0 is the copy of the first data that gives the frame: ROOT's messages about it come again with the data itself
@@ -801,228 +806,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       }
       bool isSampledFunc{};  // a function given by C++ code is written as values sampled over its range: it has no values outside of it
       bool repeated{};       // an input prepared a second time (the denominator of a function numerator): reported only once
-      item_state_t state{padState, data, isSampledFunc, repeated};
-      auto drawItem = [&](auto&&... args) { return DrawItem(state, std::forward<decltype(args)>(args)...); };
-      auto warn = [&](auto&&... args) { return Warn(state, std::forward<decltype(args)>(args)...); };
+      // the inputs of the ratio were profiles, divided as their means (see PrepareOperand)
+      bool numeratorMeans{}, denominatorMeans{};
+      item_state_t state{padState, data, isSampledFunc, repeated, numeratorMeans, denominatorMeans};
       auto dropStoredFunctions = [&](auto&&... args) { return DropStoredFunctions(state, std::forward<decltype(args)>(args)...); };
-      auto applyModifiers = [&](auto&&... args) { return ApplyModifiers(state, std::forward<decltype(args)>(args)...); };
-      auto removeInvalid = [&](auto&&... args) { return RemoveInvalid(state, std::forward<decltype(args)>(args)...); };
-
-      bool numeratorMeans{}, denominatorMeans{};  // the inputs of the ratio were profiles, divided as their means (see PrepareOperand)
       auto prepareOperand = [&](auto&&... args) { return PrepareOperand(state, std::forward<decltype(args)>(args)...); };
-
-      auto processData = [&](auto&& data_ptr) {
-        using data_type = std::decay_t<decltype(data_ptr)>;
-        if constexpr (is_func<data_type>()) isSampledFunc = !data_ptr->GetFormula();
-        // the drawing option alias of the data (without one, the rule below decides once the data is final)
-        optional<draw_option_t> optionAlias = data->GetDrawOptionAlias();
-
-        if (data->GetType() == "ratio") {
-          auto data_as_ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          bool binomialErrors = data_as_ratio->GetCorrelated();
-          auto processDenominator = [&](auto&& denom_data_ptr) {
-            using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
-            if constexpr (is_func<denom_data_type>()) {
-              // a formula of the plot definition has no range of its own (only ROOT's default [0, 1]): it divides the whole numerator
-              if (data_as_ratio->GetDenomDataSource() == kUserFunctions) {
-                if constexpr (is_hist<data_type>()) {
-                  const TAxis* x = data_ptr->GetXaxis();
-                  const TAxis* y = data_ptr->GetYaxis();
-                  const TAxis* z = data_ptr->GetZaxis();
-                  denom_data_ptr->SetRange(x->GetXmin(), y->GetXmin(), z->GetXmin(), x->GetXmax(), y->GetXmax(), z->GetXmax());
-                } else if constexpr (is_graph_1d<data_type>()) {
-                  if (data_ptr->GetN() > 0) {
-                    denom_data_ptr->SetRange(TMath::MinElement(data_ptr->GetN(), data_ptr->GetX()), TMath::MaxElement(data_ptr->GetN(), data_ptr->GetX()));
-                  }
-                }
-              }
-            }
-            auto unsupported = [&]() {
-              logger::error("Cannot divide {} ({}) by {} ({}): not supported.", data_ptr->GetName(), data_ptr->ClassName(), denom_data_ptr->GetName(), denom_data_ptr->ClassName());
-              fail = true;
-            };
-            if constexpr (is_hist<data_type>()) {
-              if constexpr (is_func<denom_data_type>() || is_hist<denom_data_type>() || (is_hist_1d<data_type>() && is_graph_1d<denom_data_type>())) {
-                if (!Divide(data_ptr, denom_data_ptr, binomialErrors, dataIndex != 0)) fail = true;
-                if constexpr (is_hist_2d<data_type>()) {
-                  data_ptr->GetZaxis()->SetTitle("ratio");
-                } else if constexpr (is_hist_1d<data_type>()) {
-                  data_ptr->GetYaxis()->SetTitle("ratio");
-                }
-              } else {
-                unsupported();
-              }
-            } else if constexpr (is_graph_1d<data_type>()) {
-              if constexpr (is_graph_1d<denom_data_type>() || is_hist_1d<denom_data_type>() || is_func_1d<denom_data_type>()) {
-                // a numerator without errors gets the errors of the denominator (as TH1::Divide): a copy with errors of the same kind
-                if constexpr (is_graph_1d<denom_data_type>() || is_hist_1d<denom_data_type>()) {
-                  bool asymmetric = false;
-                  bool denomErrors = true;  // histograms always have errors
-                  if constexpr (is_graph_1d<denom_data_type>()) {
-                    asymmetric = denom_data_ptr->GetEYlow() && denom_data_ptr->GetEYhigh();
-                    denomErrors = asymmetric || denom_data_ptr->GetEY();
-                  }
-                  if (denomErrors && data_ptr->IsA() == TGraph::Class()) {
-                    TGraph* withErrors = (asymmetric) ? static_cast<TGraph*>(new TGraphAsymmErrors(data_ptr->GetN(), data_ptr->GetX(), data_ptr->GetY()))
-                                                      : static_cast<TGraph*>(new TGraphErrors(data_ptr->GetN(), data_ptr->GetX(), data_ptr->GetY()));
-                    withErrors->SetName(data_ptr->GetName());
-                    withErrors->SetTitle(data_ptr->GetTitle());
-                    withErrors->GetXaxis()->SetTitle(data_ptr->GetXaxis()->GetTitle());
-                    withErrors->SetBit(kCanDelete, data_ptr->TestBit(kCanDelete));
-                    CopyStyle(*data_ptr, *withErrors);
-                    if (auto source = mSourceHists.extract(data_ptr)) {
-                      source.key() = withErrors;
-                      mSourceHists.insert(std::move(source));
-                    }
-                    delete data_ptr;
-                    data_ptr = withErrors;
-                  }
-                }
-                if (!Divide(data_ptr, denom_data_ptr, binomialErrors, dataIndex != 0)) fail = true;
-                data_ptr->GetHistogram()->GetYaxis()->SetTitle("ratio");
-              } else {
-                unsupported();
-              }
-            } else {
-              unsupported();
-            }
-            delete denom_data_ptr;
-          };
-
-          // retrieve the actual pointer to the denominator data
-          optional<data_ptr_t> rawDenomData;
-          try {
-            rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomDataSource()).at(data_as_ratio->GetDenomName() + data_as_ratio->GetDenomDataInfo().GetNameSuffix()).get(), data_as_ratio->GetDenomProjInfo());
-          } catch (std::out_of_range&) {
-            rawDenomData = nullopt;
-          }
-
-          if (rawDenomData) {
-            denominatorMeans = prepareOperand(*rawDenomData, data_as_ratio->GetDenomModify(), data_as_ratio->GetDenomName());
-            if (binomialErrors && (numeratorMeans || denominatorMeans)) {
-              warn("Ratio {}: binomial errors (SetCorrelated) are not defined for the mean values of a profile, ignoring.", data->GetName());
-              binomialErrors = false;
-            }
-            std::visit(processDenominator, *rawDenomData);
-          } else {
-            fail = true;
-          }
-
-          // modifiers on the ratio itself are applied as requested, but most of them are rarely meaningful there
-          constexpr auto hint = "use Numer() / Denom() to apply it to the inputs before the division";
-          if (data->GetRebinGroupX() || data->GetRebinGroupY() || data->GetRebinGroupZ()) {
-            warn("Rebinning ratio {} sums ratio values; {}.", data_ptr->GetName(), hint);
-          }
-          if (data->GetCumulative()) {
-            warn("Cumulative of ratio {} sums ratio values; {}.", data_ptr->GetName(), hint);
-          }
-          if (data->GetDivideBinWidth() && *data->GetDivideBinWidth()) {
-            warn("Dividing ratio {} by bin width is rarely meaningful; {}.", data_ptr->GetName(), hint);
-          }
-          if (data->GetScaleBinWidthNorm()) {
-            warn("Normalizing ratio {} to its integral is rarely meaningful; {}.", data_ptr->GetName(), hint);
-          }
-        }  // end ratio code
-
-        removeInvalid(data_ptr, data->GetName());
-
-        applyModifiers(data_ptr, *data);
-        // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
-        if constexpr (is_graph_1d<data_type>()) data_ptr->SetBit(TGraph::kResetHisto);
-
-        // without a drawing option SciRooPlot decides, the same for histograms and graphs: a fill is drawn (hist, for a graph area),
-        // so is a marker set for the data (points; the defaults of the pad always set one), data with errors is a measurement (points),
-        // data without errors a shape (hist, for a graph line); 2d histograms are coloured
-        if (!optionAlias && !data->GetDrawOption()) {
-          if constexpr (is_hist_1d<data_type>() || is_graph_1d<data_type>()) {
-            constexpr bool isHist = is_hist_1d<data_type>();
-            // the fill the data will be drawn with: set for the data, else the next default of the pad (unless the style of the input is kept), else the input's
-            auto drawnFill = [&](const auto& dataValue, uint16_t index, const auto& padValues, const auto& defaultValues, int16_t inputValue) -> std::decay_t<decltype(*dataValue)> {
-              if (dataValue) return *dataValue;
-              if (!data->GetKeepInputStyle()) {
-                if (auto value = get_first(pick(index, padValues), pick(index, defaultValues))) return *value;
-              }
-              return inputValue;
-            };
-            // the input's fill is visible only with a colour (ROOT's default is colour 0 with a solid style): see keptWithoutFill
-            const int16_t inputFillStyle = (data->GetKeepInputStyle() && !data->GetFillStyle() && data_ptr->GetFillColor() == 0) ? 0 : data_ptr->GetFillStyle();
-            const int16_t fillStyle = drawnFill(data->GetFillStyle(), usedDefaults.fillStyle, pad.GetDefaultFillStyles(), padDefaults.GetDefaultFillStyles(), inputFillStyle);
-            const color_t fillColor = drawnFill(data->GetFillColor(), usedDefaults.color, pad.GetDefaultFillColors(), fillDefaults(pad, *data), data_ptr->GetFillColor());
-            bool singlePoint{};  // a line through a single point draws nothing
-            if constexpr (!isHist) singlePoint = (data_ptr->GetN() == 1);
-            if (fillStyle != 0 && fillColor != 0) {
-              optionAlias = (isHist) ? hist : area;
-            } else if (data->GetMarkerStyle() || data->GetMarkerSize() || HasErrors(data_ptr, true) || singlePoint) {
-              optionAlias = points;
-            } else {
-              optionAlias = (isHist) ? hist : line;
-            }
-          } else if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
-            optionAlias = colz;
-          }
-        }
-
-        // the clipped aliases draw a histogram as a graph: ROOT cuts the lines of a graph at the frame, while it moves the bins of a histogram
-        // that lie outside of the frame onto its edge (HIST, and HIST C on a log axis); the axis frame (first data) is the histogram itself
-        auto drawClipped = [&](TH1* histogram, draw_option_t clippedAlias) {
-          if (dataIndex == 0) {
-            drawItem(histogram, (clippedAlias == curve_clipped) ? curve : ((clippedAlias == hist_clipped) ? hist : hist_open));
-            return;
-          }
-          if (data->GetMinRangeY() || data->GetMaxRangeY()) {
-            logger::warning("The y range of {} is not applied with drawing option {}: it is cut at the frame.", data->GetName(), draw_option_name(clippedAlias));
-          }
-          if (!pad_ptr->GetView()) {
-            if (data->GetMinRangeX() || data->GetMaxRangeX()) SetBinRange(histogram->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
-            LimitToFrame(histogram->GetXaxis(), axisHist_ptr->GetXaxis());  // the bins of the histogram that are drawn (also for its statistics and placeholders)
-          }
-          TGraph* graph = ToClippedGraph(histogram, clippedAlias, pad_ptr->GetLogy());
-          mSourceHists[graph].reset(histogram);
-          drawItem(graph, clippedAlias);
-          if (clippedAlias != curve_clipped) clippedSteps.emplace_back(graph, clippedAlias == hist_open_clipped);
-        };
-        if (optionAlias && (*optionAlias == hist_clipped || *optionAlias == hist_open_clipped || *optionAlias == curve_clipped)) {
-          if constexpr (is_hist_1d<data_type>()) {
-            drawClipped(data_ptr, *optionAlias);
-            return;
-          } else if constexpr (is_graph_1d<data_type>()) {
-            // a graph is cut at the frame anyway: only the steps need its bins
-            if (*optionAlias != curve_clipped) {
-              // steps show no errors: no warning about asymmetric ones
-              if (TH1* histogram = ToHist(data_ptr, dataIndex != 0, false)) {
-                mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
-                drawClipped(histogram, *optionAlias);
-                return;
-              }
-              if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), data->GetName());
-              optionAlias.reset();
-            }
-          }
-        }
-
-        // histograms and graphs can be drawn with the same aliases: where ROOT has no option for one of them, it is drawn as the other
-        if constexpr (is_hist_1d<data_type>()) {
-          if (optionAlias && !defaultDrawOptions_Hist.count(*optionAlias) && defaultDrawOptions_Graph.count(*optionAlias)) {
-            TGraph* graph = ToGraph(data_ptr);
-            mSourceHists[graph].reset(data_ptr);
-            drawItem(graph, optionAlias);
-            return;
-          }
-        } else if constexpr (is_graph_1d<data_type>()) {
-          if (optionAlias && !defaultDrawOptions_Graph.count(*optionAlias) && defaultDrawOptions_Hist.count(*optionAlias)) {
-            // the warning about asymmetric errors (drawn with their mean) only where the option shows errors
-            static const std::set<draw_option_t> withoutErrors{hist, hist_open, hbars, area_smooth};
-            if (TH1* hist = ToHist(data_ptr, dataIndex != 0, !withoutErrors.count(*optionAlias))) {
-              mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
-              drawItem(hist, optionAlias);
-              return;
-            }
-            if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), data->GetName());
-            optionAlias.reset();
-          }
-        }
-        drawItem(data_ptr, optionAlias);
-      };
+      auto processData = [&](auto&&... args) { return ProcessData(state, std::forward<decltype(args)>(args)...); };
 
       optional<data_ptr_t> rawData;
       try {
@@ -3989,6 +3778,247 @@ bool PlotPainter::PrepareOperand(item_state_t& state, data_ptr_t& operand, const
     },
     operand);
   return ProfileMeans(operand);
+}
+
+//**************************************************************************************************
+/**
+ * Prepares the data (the division of a ratio, invalid values, modifiers), decides its drawing option alias and draws it.
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& isSampledFunc = state.isSampledFunc;
+  auto& numeratorMeans = state.numeratorMeans;
+  auto& denominatorMeans = state.denominatorMeans;
+  auto& padDefaults = padState.padDefaults;
+  auto& fillDefaults = padState.fillDefaults;
+  auto& dataBuffer = padState.dataBuffer;
+  auto& fail = padState.fail;
+  auto& pad = padState.pad;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& clippedSteps = padState.clippedSteps;
+  auto& dataIndex = padState.dataIndex;
+  auto& usedDefaults = padState.usedDefaults;
+  auto drawItem = [&](auto&&... args) { return DrawItem(state, std::forward<decltype(args)>(args)...); };
+  auto warn = [&](auto&&... args) { return Warn(state, std::forward<decltype(args)>(args)...); };
+  auto applyModifiers = [&](auto&&... args) { return ApplyModifiers(state, std::forward<decltype(args)>(args)...); };
+  auto removeInvalid = [&](auto&&... args) { return RemoveInvalid(state, std::forward<decltype(args)>(args)...); };
+  auto prepareOperand = [&](auto&&... args) { return PrepareOperand(state, std::forward<decltype(args)>(args)...); };
+
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  if constexpr (is_func<data_type>()) isSampledFunc = !data_ptr->GetFormula();
+  // the drawing option alias of the data (without one, the rule below decides once the data is final)
+  optional<draw_option_t> optionAlias = data->GetDrawOptionAlias();
+
+  if (data->GetType() == "ratio") {
+    auto data_as_ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
+    bool binomialErrors = data_as_ratio->GetCorrelated();
+    auto processDenominator = [&](auto&& denom_data_ptr) {
+      using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
+      if constexpr (is_func<denom_data_type>()) {
+        // a formula of the plot definition has no range of its own (only ROOT's default [0, 1]): it divides the whole numerator
+        if (data_as_ratio->GetDenomDataSource() == kUserFunctions) {
+          if constexpr (is_hist<data_type>()) {
+            const TAxis* x = data_ptr->GetXaxis();
+            const TAxis* y = data_ptr->GetYaxis();
+            const TAxis* z = data_ptr->GetZaxis();
+            denom_data_ptr->SetRange(x->GetXmin(), y->GetXmin(), z->GetXmin(), x->GetXmax(), y->GetXmax(), z->GetXmax());
+          } else if constexpr (is_graph_1d<data_type>()) {
+            if (data_ptr->GetN() > 0) {
+              denom_data_ptr->SetRange(TMath::MinElement(data_ptr->GetN(), data_ptr->GetX()), TMath::MaxElement(data_ptr->GetN(), data_ptr->GetX()));
+            }
+          }
+        }
+      }
+      auto unsupported = [&]() {
+        logger::error("Cannot divide {} ({}) by {} ({}): not supported.", data_ptr->GetName(), data_ptr->ClassName(), denom_data_ptr->GetName(), denom_data_ptr->ClassName());
+        fail = true;
+      };
+      if constexpr (is_hist<data_type>()) {
+        if constexpr (is_func<denom_data_type>() || is_hist<denom_data_type>() || (is_hist_1d<data_type>() && is_graph_1d<denom_data_type>())) {
+          if (!Divide(data_ptr, denom_data_ptr, binomialErrors, dataIndex != 0)) fail = true;
+          if constexpr (is_hist_2d<data_type>()) {
+            data_ptr->GetZaxis()->SetTitle("ratio");
+          } else if constexpr (is_hist_1d<data_type>()) {
+            data_ptr->GetYaxis()->SetTitle("ratio");
+          }
+        } else {
+          unsupported();
+        }
+      } else if constexpr (is_graph_1d<data_type>()) {
+        if constexpr (is_graph_1d<denom_data_type>() || is_hist_1d<denom_data_type>() || is_func_1d<denom_data_type>()) {
+          // a numerator without errors gets the errors of the denominator (as TH1::Divide): a copy with errors of the same kind
+          if constexpr (is_graph_1d<denom_data_type>() || is_hist_1d<denom_data_type>()) {
+            bool asymmetric = false;
+            bool denomErrors = true;  // histograms always have errors
+            if constexpr (is_graph_1d<denom_data_type>()) {
+              asymmetric = denom_data_ptr->GetEYlow() && denom_data_ptr->GetEYhigh();
+              denomErrors = asymmetric || denom_data_ptr->GetEY();
+            }
+            if (denomErrors && data_ptr->IsA() == TGraph::Class()) {
+              TGraph* withErrors = (asymmetric) ? static_cast<TGraph*>(new TGraphAsymmErrors(data_ptr->GetN(), data_ptr->GetX(), data_ptr->GetY()))
+                                                : static_cast<TGraph*>(new TGraphErrors(data_ptr->GetN(), data_ptr->GetX(), data_ptr->GetY()));
+              withErrors->SetName(data_ptr->GetName());
+              withErrors->SetTitle(data_ptr->GetTitle());
+              withErrors->GetXaxis()->SetTitle(data_ptr->GetXaxis()->GetTitle());
+              withErrors->SetBit(kCanDelete, data_ptr->TestBit(kCanDelete));
+              CopyStyle(*data_ptr, *withErrors);
+              if (auto source = mSourceHists.extract(data_ptr)) {
+                source.key() = withErrors;
+                mSourceHists.insert(std::move(source));
+              }
+              delete data_ptr;
+              data_ptr = withErrors;
+            }
+          }
+          if (!Divide(data_ptr, denom_data_ptr, binomialErrors, dataIndex != 0)) fail = true;
+          data_ptr->GetHistogram()->GetYaxis()->SetTitle("ratio");
+        } else {
+          unsupported();
+        }
+      } else {
+        unsupported();
+      }
+      delete denom_data_ptr;
+    };
+
+    // retrieve the actual pointer to the denominator data
+    optional<data_ptr_t> rawDenomData;
+    try {
+      rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomDataSource()).at(data_as_ratio->GetDenomName() + data_as_ratio->GetDenomDataInfo().GetNameSuffix()).get(), data_as_ratio->GetDenomProjInfo());
+    } catch (std::out_of_range&) {
+      rawDenomData = nullopt;
+    }
+
+    if (rawDenomData) {
+      denominatorMeans = prepareOperand(*rawDenomData, data_as_ratio->GetDenomModify(), data_as_ratio->GetDenomName());
+      if (binomialErrors && (numeratorMeans || denominatorMeans)) {
+        warn("Ratio {}: binomial errors (SetCorrelated) are not defined for the mean values of a profile, ignoring.", data->GetName());
+        binomialErrors = false;
+      }
+      std::visit(processDenominator, *rawDenomData);
+    } else {
+      fail = true;
+    }
+
+    // modifiers on the ratio itself are applied as requested, but most of them are rarely meaningful there
+    constexpr auto hint = "use Numer() / Denom() to apply it to the inputs before the division";
+    if (data->GetRebinGroupX() || data->GetRebinGroupY() || data->GetRebinGroupZ()) {
+      warn("Rebinning ratio {} sums ratio values; {}.", data_ptr->GetName(), hint);
+    }
+    if (data->GetCumulative()) {
+      warn("Cumulative of ratio {} sums ratio values; {}.", data_ptr->GetName(), hint);
+    }
+    if (data->GetDivideBinWidth() && *data->GetDivideBinWidth()) {
+      warn("Dividing ratio {} by bin width is rarely meaningful; {}.", data_ptr->GetName(), hint);
+    }
+    if (data->GetScaleBinWidthNorm()) {
+      warn("Normalizing ratio {} to its integral is rarely meaningful; {}.", data_ptr->GetName(), hint);
+    }
+  }  // end ratio code
+
+  removeInvalid(data_ptr, data->GetName());
+
+  applyModifiers(data_ptr, *data);
+  // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
+  if constexpr (is_graph_1d<data_type>()) data_ptr->SetBit(TGraph::kResetHisto);
+
+  // without a drawing option SciRooPlot decides, the same for histograms and graphs: a fill is drawn (hist, for a graph area),
+  // so is a marker set for the data (points; the defaults of the pad always set one), data with errors is a measurement (points),
+  // data without errors a shape (hist, for a graph line); 2d histograms are coloured
+  if (!optionAlias && !data->GetDrawOption()) {
+    if constexpr (is_hist_1d<data_type>() || is_graph_1d<data_type>()) {
+      constexpr bool isHist = is_hist_1d<data_type>();
+      // the fill the data will be drawn with: set for the data, else the next default of the pad (unless the style of the input is kept), else the input's
+      auto drawnFill = [&](const auto& dataValue, uint16_t index, const auto& padValues, const auto& defaultValues, int16_t inputValue) -> std::decay_t<decltype(*dataValue)> {
+        if (dataValue) return *dataValue;
+        if (!data->GetKeepInputStyle()) {
+          if (auto value = get_first(pick(index, padValues), pick(index, defaultValues))) return *value;
+        }
+        return inputValue;
+      };
+      // the input's fill is visible only with a colour (ROOT's default is colour 0 with a solid style): see keptWithoutFill
+      const int16_t inputFillStyle = (data->GetKeepInputStyle() && !data->GetFillStyle() && data_ptr->GetFillColor() == 0) ? 0 : data_ptr->GetFillStyle();
+      const int16_t fillStyle = drawnFill(data->GetFillStyle(), usedDefaults.fillStyle, pad.GetDefaultFillStyles(), padDefaults.GetDefaultFillStyles(), inputFillStyle);
+      const color_t fillColor = drawnFill(data->GetFillColor(), usedDefaults.color, pad.GetDefaultFillColors(), fillDefaults(pad, *data), data_ptr->GetFillColor());
+      bool singlePoint{};  // a line through a single point draws nothing
+      if constexpr (!isHist) singlePoint = (data_ptr->GetN() == 1);
+      if (fillStyle != 0 && fillColor != 0) {
+        optionAlias = (isHist) ? hist : area;
+      } else if (data->GetMarkerStyle() || data->GetMarkerSize() || HasErrors(data_ptr, true) || singlePoint) {
+        optionAlias = points;
+      } else {
+        optionAlias = (isHist) ? hist : line;
+      }
+    } else if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
+      optionAlias = colz;
+    }
+  }
+
+  // the clipped aliases draw a histogram as a graph: ROOT cuts the lines of a graph at the frame, while it moves the bins of a histogram
+  // that lie outside of the frame onto its edge (HIST, and HIST C on a log axis); the axis frame (first data) is the histogram itself
+  auto drawClipped = [&](TH1* histogram, draw_option_t clippedAlias) {
+    if (dataIndex == 0) {
+      drawItem(histogram, (clippedAlias == curve_clipped) ? curve : ((clippedAlias == hist_clipped) ? hist : hist_open));
+      return;
+    }
+    if (data->GetMinRangeY() || data->GetMaxRangeY()) {
+      logger::warning("The y range of {} is not applied with drawing option {}: it is cut at the frame.", data->GetName(), draw_option_name(clippedAlias));
+    }
+    if (!pad_ptr->GetView()) {
+      if (data->GetMinRangeX() || data->GetMaxRangeX()) SetBinRange(histogram->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
+      LimitToFrame(histogram->GetXaxis(), axisHist_ptr->GetXaxis());  // the bins of the histogram that are drawn (also for its statistics and placeholders)
+    }
+    TGraph* graph = ToClippedGraph(histogram, clippedAlias, pad_ptr->GetLogy());
+    mSourceHists[graph].reset(histogram);
+    drawItem(graph, clippedAlias);
+    if (clippedAlias != curve_clipped) clippedSteps.emplace_back(graph, clippedAlias == hist_open_clipped);
+  };
+  if (optionAlias && (*optionAlias == hist_clipped || *optionAlias == hist_open_clipped || *optionAlias == curve_clipped)) {
+    if constexpr (is_hist_1d<data_type>()) {
+      drawClipped(data_ptr, *optionAlias);
+      return;
+    } else if constexpr (is_graph_1d<data_type>()) {
+      // a graph is cut at the frame anyway: only the steps need its bins
+      if (*optionAlias != curve_clipped) {
+        // steps show no errors: no warning about asymmetric ones
+        if (TH1* histogram = ToHist(data_ptr, dataIndex != 0, false)) {
+          mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
+          drawClipped(histogram, *optionAlias);
+          return;
+        }
+        if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), data->GetName());
+        optionAlias.reset();
+      }
+    }
+  }
+
+  // histograms and graphs can be drawn with the same aliases: where ROOT has no option for one of them, it is drawn as the other
+  if constexpr (is_hist_1d<data_type>()) {
+    if (optionAlias && !defaultDrawOptions_Hist.count(*optionAlias) && defaultDrawOptions_Graph.count(*optionAlias)) {
+      TGraph* graph = ToGraph(data_ptr);
+      mSourceHists[graph].reset(data_ptr);
+      drawItem(graph, optionAlias);
+      return;
+    }
+  } else if constexpr (is_graph_1d<data_type>()) {
+    if (optionAlias && !defaultDrawOptions_Graph.count(*optionAlias) && defaultDrawOptions_Hist.count(*optionAlias)) {
+      // the warning about asymmetric errors (drawn with their mean) only where the option shows errors
+      static const std::set<draw_option_t> withoutErrors{hist, hist_open, hbars, area_smooth};
+      if (TH1* hist = ToHist(data_ptr, dataIndex != 0, !withoutErrors.count(*optionAlias))) {
+        mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
+        drawItem(hist, optionAlias);
+        return;
+      }
+      if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), data->GetName());
+      optionAlias.reset();
+    }
+  }
+  drawItem(data_ptr, optionAlias);
 }
 
 //**************************************************************************************************

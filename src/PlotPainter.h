@@ -313,6 +313,8 @@ class PlotPainter
   template <typename ObjT>
   void RemoveInvalid(item_state_t& state, ObjT* ptr, const std::string& name);
   bool PrepareOperand(item_state_t& state, data_ptr_t& operand, const Plot::Pad::Data::modify_t& operandModify, const std::string& name);
+  template <typename T>
+  void ProcessData(item_state_t& state, T&& data_ptr);
   static size_t FrameDataIndex(const std::vector<std::shared_ptr<Plot::Pad::Data>>& data, const data_buffer_t& dataBuffer);
   static TObject* Input(const Plot::Pad::Data& data, const data_buffer_t& dataBuffer);
   void AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefaults, const Plot::Pad& padSettings, uint8_t padID, const Plot::Pad::Data* refFunc, std::string& padSetup);
