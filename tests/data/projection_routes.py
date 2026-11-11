@@ -7,7 +7,7 @@ numbers (0, -1: ROOT's whole axis, flows included) and in axis units (the bins t
 every route. A profile of a histogram averages the centres of the bins of the profiled axis (a tree the values), its under- and overflow
 only when a selection names them by number: ROOT's ProfileX leaves them out for 0, -1, where ProjectionX counts them. Entries are not compared: ROOT counts them differently per class (a THn all fills, a TH3 projection the effective entries).
 Covers: projected axes named by the axis titles of the input, the projections (ProjectX by bins and in user coordinates, a single bin, the last bin, ProfileX,
-THnSparse with a range), profiles of a THn and THnSparse and of a TH3 onto one axis, and the errors for a profile whose averaged axis is not clear.
+THnSparse with a range), profiles of a THn and THnSparse and of a TH3 onto one axis, the axis titles of projections and profiles of TProfile2D and TProfile3D, and the errors for a profile whose averaged axis is not clear.
 """
 
 import numpy as np
@@ -90,13 +90,16 @@ def possible(c):
 
 p = Project("routes")
 f = ROOT.TFile(p.path("in.root"), "RECREATE")
-h3 = ROOT.TH3D("TH3D", "", NBINS, LOW, HIGH, NBINS, LOW, HIGH, NBINS, LOW, HIGH)
+h3 = ROOT.TH3D("TH3D", ";x;y;z", NBINS, LOW, HIGH, NBINS, LOW, HIGH, NBINS, LOW, HIGH)
 axes = np.array([NBINS] * 3, dtype=np.int32)
 lows, highs = np.array([LOW] * 3), np.array([HIGH] * 3)
 hn = ROOT.THnD("THnD", "", 3, axes, lows, highs)
 hs = ROOT.THnSparseD("THnSparseD", "", 3, axes, lows, highs)
 for h in (h3, hn, hs):
     h.Sumw2()
+for h in (hn, hs):
+    for d, title in enumerate(AXES):
+        h.GetAxis(d).SetTitle(title)
 for i in range(N):
     point = np.array([EVENTS[a][i] for a in AXES])
     h3.Fill(*point, EVENTS["w"][i])
@@ -107,7 +110,10 @@ h2.SetName("TH2D")
 hp = h3.Project3DProfile("yx")
 hp.SetName("TProfile2D")
 hn2 = ROOT.THnD("THn2D", "", 2, axes[:2], lows[:2], highs[:2])
-for obj in (h3, hn, hs, h2, hp, hn2):
+hp3 = ROOT.TProfile3D("TProfile3D", ";x;y;z", NBINS, LOW, HIGH, NBINS, LOW, HIGH, NBINS, LOW, HIGH)
+for i in range(N):
+    hp3.Fill(EVENTS["x"][i], EVENTS["y"][i], EVENTS["z"][i], EVENTS["w"][i])
+for obj in (h3, hn, hs, h2, hp, hn2, hp3):
     f.WriteObject(obj, obj.GetName())
 f.Close()
 ROOT.RDF.FromNumpy({k: np.ascontiguousarray(v) for k, v in EVENTS.items()}).Snapshot("tree", p.path("tree.root"))
@@ -181,10 +187,22 @@ UNCLEAR = [
     ("THn2D", lambda d: d.Profile([0, 1]), "Cannot profile THn2D:hists along all of its axes: none is left to average"),
     ("THnD", lambda d: d.Profile(3, [0]), "Cannot average axis 3 of THnD:hists: it only has 3 dimensions"),
     ("TH3D", lambda d: d.Profile([0]), "Cannot profile 3d histogram TH3D:hists onto one axis without the axis to average: name it with Profile(averagedAxis, dims), or give two axes (the mean of the third)"),
-    ("TProfile2D", lambda d: d.Profile(1, [0]), "Cannot average axis 1 of TProfile2D:hists: it is a profile already, the mean of its values is taken"),
+    ("TProfile2D", lambda d: d.Profile(1, [0]), "Cannot average axis 1 of TProfile2D:hists: it is a profile already, Profile(dims) gives the mean of its values"),
 ]
 for i, (name, select, _) in enumerate(UNCLEAR):
     plot = S.Plot(f"u{i}", "routes", "1d")
+    select(plot[1].AddData(name, "hists"))
+    p.pm.AddPlot(plot)
+# the axis titles of projections and profiles of profiles (ROOT's TProfile2D::ProfileX and TProfile3D::Project3DProfile drop them): (input, selection, axes kept)
+TITLED = [
+    ("TProfile2D", lambda d: d.Profile([0]), "x"),
+    ("TProfile2D", lambda d: d.Project([1]), "y"),
+    ("TProfile3D", lambda d: d.Project([0, 1]), "xy"),
+    ("TProfile3D", lambda d: d.Project([2]), "z"),
+    ("TProfile3D", lambda d: d.Profile([1, 2]), "yz"),
+]
+for i, (name, select, _) in enumerate(TITLED):
+    plot = S.Plot(f"t{i}", "routes", "1d" if len(TITLED[i][2]) == 1 else "2d")
     select(plot[1].AddData(name, "hists"))
     p.pm.AddPlot(plot)
 run = p.plot("routes")
@@ -195,6 +213,10 @@ for i, case in enumerate(todo):
     rel = 1e-6 if case["target"].startswith("profile") else 1e-9  # the spread of a profile bin with one value is rounding noise
     diff = hist_diff(reference(case["target"], case["selection"], case["input"] != "tree"), objs[0][0] if objs else None, rel)
     check(f"as the selected events: {describe(case)}", not diff, diff or "")
+for i, (name, _, kept) in enumerate(TITLED):
+    objs = run.drawn(f"t{i}", "routes")
+    titles = [objs[0][0].GetXaxis().GetTitle(), objs[0][0].GetYaxis().GetTitle()][: len(kept)] if objs else None
+    check(f"the axis titles of the input: {name} onto {kept}", titles == list(kept), str(titles))
 for i, (name, _, message) in enumerate(UNCLEAR):
     expectedErrors += [message, f"Projection failed for {name}:hists", f"Plot u{i} from group routes could not be created"]
     check(f"reported as not possible: {message}", not run.drawn(f"u{i}", "routes"), "drawn")

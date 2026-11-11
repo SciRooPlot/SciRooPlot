@@ -6412,7 +6412,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
   std::optional<uint8_t> averagedAxis = projInfo.averagedAxis;
   const bool isInputProfile = obj->InheritsFrom(TProfile2D::Class()) || obj->InheritsFrom(TProfile3D::Class());
   if (isProfile && averagedAxis && isInputProfile) {
-    logger::error("Cannot average axis {} of {}: it is a profile already, the mean of its values is taken.", *averagedAxis, obj->GetName());
+    logger::error("Cannot average axis {} of {}: it is a profile already, Profile(dims) gives the mean of its values.", *averagedAxis, obj->GetName());
     return nullopt;
   }
   if (isProfile && averagedAxis && *averagedAxis >= nDims) {
@@ -6496,6 +6496,12 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     return true;
   };
 
+  // TProfile2D::ProfileX/ProfileY and TProfile3D::Project3DProfile give a result without axis titles (ROOT bug 67): those of the input
+  auto withTitles = [&axes, &projInfo](auto* result) {
+    result->GetXaxis()->SetTitle(axes[projInfo.dims[0]]->GetTitle());
+    if (projInfo.dims.size() == 2) result->GetYaxis()->SetTitle(axes[projInfo.dims[1]]->GetTitle());
+    return result;
+  };
   // a profile ROOT cannot make directly (none of a THn, none of a TH3 onto one axis): the projection onto the kept axes and the averaged one
   // (last, without its range), profiled as a TH2 or TH3 with the range of the averaged axis, so flows and ranges are those of TH2 and TH3
   if (isProfile && averagedAxis && (isTHn || (obj->InheritsFrom(TH3::Class()) && projInfo.dims.size() == 1))) {
@@ -6560,11 +6566,11 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     if (auto* profile = dynamic_cast<TProfile3D*>(histPtr)) {
       // a projection of a profile is the profile of the merged bins (TH3::Project3D would add up their means); Profile alike
       const string target = GetAxisStr(projInfo.dims[0]);
-      if (projInfo.dims.size() == 2) return profile->Project3DProfile((GetAxisStr(projInfo.dims[1]) + target).data());
+      if (projInfo.dims.size() == 2) return withTitles(profile->Project3DProfile((GetAxisStr(projInfo.dims[1]) + target).data()));
       const string other = (projInfo.dims[0] == 0) ? "y" : "x";
       std::unique_ptr<TProfile2D> merged(profile->Project3DProfile((other + target).data()));  // target horizontal
       merged->SetDirectory(nullptr);
-      return merged->ProfileX((string(profile->GetName()) + "_p" + target).data());
+      return withTitles(merged->ProfileX((string(profile->GetName()) + "_p" + target).data()));
     }
     if (projInfo.dims.size() == 2) {
       // get string if it is "xy" or "yx" or "zx"...
@@ -6600,8 +6606,8 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     }
     if (auto* profile = dynamic_cast<TProfile2D*>(histPtr)) {
       // a projection of a profile is the profile of the merged bins (TH2::ProjectionX would add up their means); Profile alike
-      if (projInfo.dims[0] == 0) return profile->ProfileX("_px");
-      if (projInfo.dims[0] == 1) return profile->ProfileY("_py");
+      if (projInfo.dims[0] == 0) return withTitles(profile->ProfileX("_px"));
+      if (projInfo.dims[0] == 1) return withTitles(profile->ProfileY("_py"));
     }
     if (projInfo.dims[0] == 0) {
       if (isProfile) {
