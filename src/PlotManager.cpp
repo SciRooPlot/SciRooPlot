@@ -1786,92 +1786,7 @@ bool PlotManager::FillBuffer()
         }
       }
     }
-    // what a chained tree is made of in words, e.g. "3 files" or "412 folders in 3 files" (empty if it has only one input)
-    auto describeInputs = [](const vector<tree_input_t>& treeInputs) -> string {
-      if (treeInputs.size() < 2) return "";
-      set<string> wholeFiles;
-      set<string> filesWithFolders;
-      size_t nFolders{};
-      for (const auto& treeInput : treeInputs) {
-        if (treeInput.isFolderInput) {
-          ++nFolders;
-          filesWithFolders.insert(treeInput.file);
-        } else {
-          wholeFiles.insert(treeInput.file);
-        }
-      }
-      vector<string> descriptions;
-      if (!wholeFiles.empty()) descriptions.push_back(plural(wholeFiles.size(), "file"));
-      if (nFolders) descriptions.push_back(plural(nFolders, "folder") + " in " + plural(filesWithFolders.size(), "file"));
-      return (descriptions.size() == 1) ? descriptions[0] : descriptions[0] + " and " + descriptions[1];
-    };
-    // process the trees found: chained over all inputs of the data source that contain them
-    for (const auto& [dataSource, treesInputs] : mTreeInputs) {
-      auto& required = requiredData[dataSource];
-      for (const auto& [treeName, treeInputs] : treesInputs) {
-        const auto [path, name] = split_path(treeName);
-        if (auto it = required.find(path); it != required.end()) {
-          auto& names = it->second;
-          names.erase(name);
-          if (names.empty()) required.erase(it);
-        }
-        // requests that join the same trees share one chain
-        using join_t = Plot::Pad::Data::data_info_t::join_t;
-        vector<vector<join_t>> joinGroups;
-        for (const auto& dataInfo : mDataInfoBuffer[dataSource][treeName]) {
-          auto joins = dataInfo.joins.value_or(vector<join_t>{});
-          if (std::find(joinGroups.begin(), joinGroups.end(), joins) == joinGroups.end()) joinGroups.push_back(std::move(joins));
-        }
-        // RNTuples are read by RDataFrame from their files directly; ROOT can chain them only under the same path and cannot join them
-        const bool isRNTuple = treeInputs.front().isRNTuple;
-        const bool isMixed = std::any_of(treeInputs.begin(), treeInputs.end(), [isRNTuple](const tree_input_t& treeInput) { return treeInput.isRNTuple != isRNTuple; });
-        if (isMixed) {
-          logger::error("Cannot read {}: it is a TTree in some inputs and an RNTuple in others.", DataLocation(dataSource, treeName));
-          continue;
-        }
-        if (isRNTuple) {
-          const string& ntuplePath = treeInputs.front().treePath;
-          auto other = std::find_if(treeInputs.begin(), treeInputs.end(), [&ntuplePath](const tree_input_t& treeInput) { return treeInput.treePath != ntuplePath; });
-          if (other != treeInputs.end()) {
-            logger::error("Cannot read RNTuple {}: ROOT chains RNTuples only under the same path, but it is {} in {} and {} in {}.", DataLocation(dataSource, treeName),
-                          ntuplePath, treeInputs.front().file, other->treePath, other->file);
-            continue;
-          }
-          vector<string> files;
-          for (const auto& treeInput : treeInputs)
-            files.push_back(treeInput.file);
-          for (const auto& joins : joinGroups) {
-            if (!joins.empty()) {
-              logger::error("Cannot join {} to RNTuple {}: ROOT cannot join RNTuples.", joins.front().GetDescription(), DataLocation(dataSource, treeName));
-              continue;
-            }
-            ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [ntuplePath, files]() { return std::make_unique<ROOT::RDataFrame>(ntuplePath, files); }, nullptr, describeInputs(treeInputs), joins);
-          }
-          continue;
-        }
-        set<string> failedJoins;  // reported already
-        for (const auto& joins : joinGroups) {
-          auto chain = std::make_shared<TChain>(treeInputs.front().treePath.data());
-          for (const auto& treeInput : treeInputs) {
-            chain->AddFile(treeInput.file.data(), TTree::kMaxEntries, treeInput.treePath.data());
-          }
-          vector<shared_ptr<TChain>> joinedChains;
-          bool isJoined = true;
-          for (const auto& join : joins) {
-            if (failedJoins.count(join.ToString())) {
-              isJoined = false;
-            } else if (auto error = AttachJoin(*chain, treeName, treeInputs, join, joinedChains)) {
-              logger::error("Cannot join {} to tree {}: {}.", join.GetDescription(), DataLocation(dataSource, treeName), *error);
-              failedJoins.insert(join.ToString());
-              isJoined = false;
-            }
-            if (!isJoined) break;
-          }
-          if (!isJoined) continue;
-          ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [chain, joinedChains]() { return std::make_unique<ROOT::RDataFrame>(*chain); /* joinedChains: keeps the joined trees alive */ }, chain.get(), describeInputs(treeInputs), joins);
-        }
-      }
-    }
+    ChainTrees(requiredData);
     mTreeInputs.clear();
     for (const auto& [dataSource, required] : requiredData) {
       for (const auto& [path, names] : required) {
@@ -1883,6 +1798,101 @@ bool PlotManager::FillBuffer()
     success &= allFound();
   }
   return success;
+}
+
+//**************************************************************************************************
+/**
+ * Reads the trees and RNTuples found in the inputs of a data source, each over all inputs that contain it.
+ */
+//**************************************************************************************************
+void PlotManager::ChainTrees(map<string, unordered_map<string, set<string>>>& requiredData)
+{
+  // what a chained tree is made of in words, e.g. "3 files" or "412 folders in 3 files" (empty if it has only one input)
+  auto describeInputs = [](const vector<tree_input_t>& treeInputs) -> string {
+    if (treeInputs.size() < 2) return "";
+    set<string> wholeFiles;
+    set<string> filesWithFolders;
+    size_t nFolders{};
+    for (const auto& treeInput : treeInputs) {
+      if (treeInput.isFolderInput) {
+        ++nFolders;
+        filesWithFolders.insert(treeInput.file);
+      } else {
+        wholeFiles.insert(treeInput.file);
+      }
+    }
+    vector<string> descriptions;
+    if (!wholeFiles.empty()) descriptions.push_back(plural(wholeFiles.size(), "file"));
+    if (nFolders) descriptions.push_back(plural(nFolders, "folder") + " in " + plural(filesWithFolders.size(), "file"));
+    return (descriptions.size() == 1) ? descriptions[0] : descriptions[0] + " and " + descriptions[1];
+  };
+  // process the trees found: chained over all inputs of the data source that contain them
+  for (const auto& [dataSource, treesInputs] : mTreeInputs) {
+    auto& required = requiredData[dataSource];
+    for (const auto& [treeName, treeInputs] : treesInputs) {
+      const auto [path, name] = split_path(treeName);
+      if (auto it = required.find(path); it != required.end()) {
+        auto& names = it->second;
+        names.erase(name);
+        if (names.empty()) required.erase(it);
+      }
+      // requests that join the same trees share one chain
+      using join_t = Plot::Pad::Data::data_info_t::join_t;
+      vector<vector<join_t>> joinGroups;
+      for (const auto& dataInfo : mDataInfoBuffer[dataSource][treeName]) {
+        auto joins = dataInfo.joins.value_or(vector<join_t>{});
+        if (std::find(joinGroups.begin(), joinGroups.end(), joins) == joinGroups.end()) joinGroups.push_back(std::move(joins));
+      }
+      // RNTuples are read by RDataFrame from their files directly; ROOT can chain them only under the same path and cannot join them
+      const bool isRNTuple = treeInputs.front().isRNTuple;
+      const bool isMixed = std::any_of(treeInputs.begin(), treeInputs.end(), [isRNTuple](const tree_input_t& treeInput) { return treeInput.isRNTuple != isRNTuple; });
+      if (isMixed) {
+        logger::error("Cannot read {}: it is a TTree in some inputs and an RNTuple in others.", DataLocation(dataSource, treeName));
+        continue;
+      }
+      if (isRNTuple) {
+        const string& ntuplePath = treeInputs.front().treePath;
+        auto other = std::find_if(treeInputs.begin(), treeInputs.end(), [&ntuplePath](const tree_input_t& treeInput) { return treeInput.treePath != ntuplePath; });
+        if (other != treeInputs.end()) {
+          logger::error("Cannot read RNTuple {}: ROOT chains RNTuples only under the same path, but it is {} in {} and {} in {}.", DataLocation(dataSource, treeName),
+                        ntuplePath, treeInputs.front().file, other->treePath, other->file);
+          continue;
+        }
+        vector<string> files;
+        for (const auto& treeInput : treeInputs)
+          files.push_back(treeInput.file);
+        for (const auto& joins : joinGroups) {
+          if (!joins.empty()) {
+            logger::error("Cannot join {} to RNTuple {}: ROOT cannot join RNTuples.", joins.front().GetDescription(), DataLocation(dataSource, treeName));
+            continue;
+          }
+          ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [ntuplePath, files]() { return std::make_unique<ROOT::RDataFrame>(ntuplePath, files); }, nullptr, describeInputs(treeInputs), joins);
+        }
+        continue;
+      }
+      set<string> failedJoins;  // reported already
+      for (const auto& joins : joinGroups) {
+        auto chain = std::make_shared<TChain>(treeInputs.front().treePath.data());
+        for (const auto& treeInput : treeInputs) {
+          chain->AddFile(treeInput.file.data(), TTree::kMaxEntries, treeInput.treePath.data());
+        }
+        vector<shared_ptr<TChain>> joinedChains;
+        bool isJoined = true;
+        for (const auto& join : joins) {
+          if (failedJoins.count(join.ToString())) {
+            isJoined = false;
+          } else if (auto error = AttachJoin(*chain, treeName, treeInputs, join, joinedChains)) {
+            logger::error("Cannot join {} to tree {}: {}.", join.GetDescription(), DataLocation(dataSource, treeName), *error);
+            failedJoins.insert(join.ToString());
+            isJoined = false;
+          }
+          if (!isJoined) break;
+        }
+        if (!isJoined) continue;
+        ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [chain, joinedChains]() { return std::make_unique<ROOT::RDataFrame>(*chain); /* joinedChains: keeps the joined trees alive */ }, chain.get(), describeInputs(treeInputs), joins);
+      }
+    }
+  }
 }
 
 //**************************************************************************************************

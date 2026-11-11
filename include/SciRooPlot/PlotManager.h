@@ -140,6 +140,7 @@ class PlotManager
                        std::shared_ptr<TCanvas>& canvas);
   static void LogCreated(const Plot& plot);
   bool BrowseInteractively(const Plot& fullPlot, const std::string& mode, std::shared_ptr<TCanvas>& canvas);
+  void ChainTrees(std::map<std::string, std::unordered_map<std::string, std::set<std::string>>>& requiredData);
   bool WriteOutput(const Plot& plot, const Plot& fullPlot, const std::string& mode, std::shared_ptr<TCanvas>& canvas, bool isMacroMode, bool isGifMode,
                    bool silenceNoPdfImages);
   static void KeepOnClose(TCanvas* canvas);
