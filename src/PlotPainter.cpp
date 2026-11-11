@@ -3329,7 +3329,7 @@ std::pair<double_t, double_t> PlotPainter::FuncRange(const item_state_t& state, 
   if (userMin) min = *userMin;
   if (userMax) max = *userMax;
   if (isSampledFunc && (min < funcMin || max > funcMax)) {
-    if (userMin || userMax) logger::warning("Function {} has no values outside of [{:g}, {:g}] in {}: it is stored as values sampled over this range.", data->GetName(), funcMin, funcMax, axisLabel);
+    if (userMin || userMax) Warn(state, "Function {} has no values outside of [{:g}, {:g}] in {}: it is stored as values sampled over this range.", data->GetName(), funcMin, funcMax, axisLabel);
     min = std::max(min, funcMin);
     max = std::min(max, funcMax);
   }
@@ -3342,13 +3342,9 @@ std::pair<double_t, double_t> PlotPainter::FuncRange(const item_state_t& state, 
  */
 //**************************************************************************************************
 template <typename... Args>
-void PlotPainter::Warn(item_state_t& state, Args&&... args)
+void PlotPainter::Warn(const item_state_t& state, Args&&... args)
 {
-  pad_state_t& padState = state.padState;
-  auto& repeated = state.repeated;
-  auto& dataIndex = padState.dataIndex;
-
-  if (dataIndex != 0 && !repeated) logger::warning(std::forward<decltype(args)>(args)...);
+  if (state.padState.dataIndex != 0 && !state.repeated) logger::warning(std::forward<decltype(args)>(args)...);
 }
 
 //**************************************************************************************************

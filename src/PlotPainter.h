@@ -308,7 +308,7 @@ class PlotPainter
   template <typename T>
   void DrawItem(item_state_t& state, T data_ptr, std::optional<draw_option_t> optionAlias);
   template <typename... Args>
-  void Warn(item_state_t& state, Args&&... args);
+  static void Warn(const item_state_t& state, Args&&... args);
   template <typename ObjT>
   void DropStoredFunctions(item_state_t& state, ObjT* ptr, const char* reason);
   template <typename PtrT>
