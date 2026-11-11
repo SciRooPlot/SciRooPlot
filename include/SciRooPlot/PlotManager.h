@@ -138,6 +138,8 @@ class PlotManager
   std::unique_ptr<TCanvas> Paint(PlotPainter& painter, Plot& toPaint);
   bool ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map<char, std::vector<Plot::shared_group_t>>& sharedAxes, const std::map<uint8_t, Plot::Pad>& allPads,
                        std::shared_ptr<TCanvas>& canvas);
+  static void LogCreated(const Plot& plot);
+  bool BrowseInteractively(const Plot& fullPlot, const std::string& mode, std::shared_ptr<TCanvas>& canvas);
   static void KeepOnClose(TCanvas* canvas);
   static bool IsClosed(const TCanvas* canvas);
   void ShowAt(TCanvas* canvas, int32_t topX, int32_t topY) const;
