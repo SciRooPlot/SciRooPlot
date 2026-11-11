@@ -4347,13 +4347,23 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
           continue;
         }
         for (int32_t i = 0; i < graph->GetN(); ++i) {
-          const double_t x = graph->GetPointX(i);
-          const double_t y = graph->GetPointY(i);
+          double_t x = graph->GetPointX(i);
+          double_t y = graph->GetPointY(i);
+          double_t xLow = std::max(graph->GetErrorXlow(i), 0.);  // -1 for graphs without errors
+          double_t xHigh = std::max(graph->GetErrorXhigh(i), 0.);
+          double_t yLow = std::max(graph->GetErrorYlow(i), 0.);
+          double_t yHigh = std::max(graph->GetErrorYhigh(i), 0.);
+          if (hbar) {
+            // drawn in pad coordinates: its x runs along the value axis of the horizontal bars, its y along their binned axis
+            std::swap(x, y);
+            std::swap(xLow, yLow);
+            std::swap(xHigh, yHigh);
+          }
           if (axisLabel == 'X') {
-            add(x - std::max(graph->GetErrorXlow(i), 0.), x, x + std::max(graph->GetErrorXhigh(i), 0.));  // -1 for graphs without errors
+            add(x - xLow, x, x + xHigh);
           } else if (axisLabel == 'Y' && (is2d || inX(x, x))) {
             // y of a 2d pad is binned (all points), y of a 1d pad the value axis (points within the x range)
-            add(y - std::max(graph->GetErrorYlow(i), 0.), y, y + std::max(graph->GetErrorYhigh(i), 0.));
+            add(y - yLow, y, y + yHigh);
           }
         }
       } else if (auto* graph2d = dynamic_cast<TGraph2D*>(obj)) {
@@ -4371,12 +4381,13 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
           }
         }
       } else if (auto* func = dynamic_cast<TF1*>(obj)) {
-        const double_t from = std::max(func->GetXmin(), xMin);
-        const double_t to = std::min(func->GetXmax(), xMax);
         if (func->GetNdim() == 1) {
-          if (axisLabel == 'X') {
+          // drawn in pad coordinates: with horizontal bars its x runs along their value axis and its values along their binned axis
+          const double_t from = std::max(func->GetXmin(), (hbar) ? yMin : xMin);
+          const double_t to = std::min(func->GetXmax(), (hbar) ? yMax : xMax);
+          if (axisLabel == histLabel('X')) {
             if (!spansFrame(data, 'X')) add(func->GetXmin(), 0.5 * (func->GetXmin() + func->GetXmax()), func->GetXmax());
-          } else if (axisLabel == 'Y') {
+          } else if (axisLabel == histLabel('Y')) {
             const int32_t nPoints = std::max(func->GetNpx(), 2);
             for (int32_t i = 0; i < nPoints && from < to; ++i) {
               const double_t value = func->Eval(from + (to - from) * i / (nPoints - 1));
@@ -4384,6 +4395,8 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
             }
           }
         } else if (auto* func2d = dynamic_cast<TF2*>(func); func2d && func->GetNdim() == 2) {
+          const double_t from = std::max(func2d->GetXmin(), xMin);
+          const double_t to = std::min(func2d->GetXmax(), xMax);
           if (axisLabel == 'X') {
             if (!spansFrame(data, 'X')) add(func2d->GetXmin(), 0.5 * (func2d->GetXmin() + func2d->GetXmax()), func2d->GetXmax());
           } else if (axisLabel == 'Y') {
@@ -4423,6 +4436,26 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
       hists.emplace_back(hist, definition->second.get());
     }
     return hists;
+  };
+
+  // functions given as formula span the widened frame along the axis of their own (pad coordinates), the reference function always
+  auto stretchFunctions = [&](char axisLabel, double_t newMin, double_t newMax) {
+    const char funcLabel = histLabel(axisLabel);  // the swap is its own inverse
+    for (TObject* obj : *pad->GetListOfPrimitives()) {
+      auto* func = dynamic_cast<TF1*>(obj);
+      auto definition = mDataDefinitions.find(obj);
+      if (!func || definition == mDataDefinitions.end()) continue;
+      if (definition->second.get() != refFunc && !spansFrame(*definition->second, funcLabel)) continue;
+      if (func->GetNdim() == 1 && funcLabel == 'X') {
+        func->SetRange(newMin, newMax);
+      } else if (auto* func2d = dynamic_cast<TF2*>(func); func2d && func->GetNdim() == 2) {
+        double_t x1{}, y1{}, x2{}, y2{};
+        func2d->GetRange(x1, y1, x2, y2);
+        ((funcLabel == 'X') ? x1 : y1) = newMin;
+        ((funcLabel == 'X') ? x2 : y2) = newMax;
+        func2d->SetRange(x1, y1, x2, y2);
+      }
+    }
   };
 
   for (const auto& room : rooms) {
@@ -4490,6 +4523,7 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
       }
       frame->SetMinimum(newMin);
       frame->SetMaximum(newMax);
+      if (hbar) stretchFunctions(axisLabel, newMin, newMax);
       continue;
     }
     // a binned axis: the contents of the frame only matter for the automatic range of a 1d frame, which is kept as drawn;
@@ -4503,21 +4537,7 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
     axis->SetRange();
     ((axisLabel == 'X') ? xMin : yMin) = newMin;
     ((axisLabel == 'X') ? xMax : yMax) = newMax;
-    for (TObject* obj : *pad->GetListOfPrimitives()) {
-      auto* func = dynamic_cast<TF1*>(obj);
-      auto definition = mDataDefinitions.find(obj);
-      if (!func || definition == mDataDefinitions.end()) continue;
-      if (definition->second.get() != refFunc && !spansFrame(*definition->second, axisLabel)) continue;
-      if (func->GetNdim() == 1 && axisLabel == 'X') {
-        func->SetRange(newMin, newMax);
-      } else if (auto* func2d = dynamic_cast<TF2*>(func); func2d && func->GetNdim() == 2) {
-        double_t x1{}, y1{}, x2{}, y2{};
-        func2d->GetRange(x1, y1, x2, y2);
-        ((axisLabel == 'X') ? x1 : y1) = newMin;
-        ((axisLabel == 'X') ? x2 : y2) = newMax;
-        func2d->SetRange(x1, y1, x2, y2);
-      }
-    }
+    stretchFunctions(axisLabel, newMin, newMax);
   }
 }
 

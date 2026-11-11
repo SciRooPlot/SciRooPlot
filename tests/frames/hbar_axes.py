@@ -1,28 +1,44 @@
 """A pad whose frame is drawn with horizontal bars (hbars or ROOT's HBAR: ROOT draws the histogram's x axis vertically) keeps the meaning of its axes:
 'X' is the horizontal axis (the contents), 'Y' the vertical one (the bins): their ranges, titles and label sizes land on the axis drawn
-there; the room above the maximum is room right of the bars, which start at the left edge of the frame; a log horizontal axis starts at
+there; the room above the maximum is room right of the bars, which start at the left edge of the frame, and room above the bins is
+room above everything drawn there; graphs and functions drawn on top keep their pad coordinates (x horizontal): the room counts their x
+horizontally and their y vertically, and a formula function spans the horizontal frame; a log horizontal axis starts at
 the smallest positive content of the bins shown; axes drawn again on top (SetRedrawAxes) keep the look of the axis drawn at each place;
 a side panel of a map shares the map's vertical range, with its labels hidden on the shared axis only.
-Cases: every 1d histogram kind drawn with hbars and HBAR × no setting, an x range, a y range inside the bins, room above the maximum, a log
-x axis, titles and label sizes, and the named cases.
+Cases: every 1d histogram kind drawn with hbars and HBAR × no setting, an x range, a y range inside the bins, room above the maximum
+(horizontal and vertical), a log x axis, titles and label sizes × nothing, a graph or a formula function drawn on top, and the named cases.
 Reference: the pad ranges and the axes of the frame histogram.
 Covers: hbars axes, log minimum from the bins in range, centred titles of the redrawn
 axes, user ranges on the axis drawn there, and the named cases.
 """
 
-from srptest import DATA_1D, DATA_KINDS, ROOT, Project, S, add_data, cases, check, close, data_objects, describe, finish
+from srptest import DATA_1D, DATA_KINDS, ROOT, Project, S, add_data, axis_range, cases, check, close, data_objects, describe, finish
 
 KINDS = tuple(k for k in DATA_1D if "binned" in DATA_KINDS[k][2] and DATA_KINDS[k][1] != "TEfficiency")  # a TEfficiency is drawn as a graph
-SETTINGS = ("none", "x_range", "y_range", "room", "log", "looks")
+SETTINGS = ("none", "x_range", "y_range", "room", "room_y", "log", "looks")
+LO, HI = axis_range()
+GRAPH = [(10.0 * HI * k, LO + (HI - LO) * k / 4.0) for k in (1, 2, 3)]  # (x, y) of a graph drawn on top: far right of the vertical bins
+GRAPH_ERRORS = (0.0, 0.1)  # (x, y): points draws no x errors
+FUNCTION_VALUE = 0.5 * (LO + HI)  # a constant formula function: inside the vertical bins
 OPTIONS = {"hbars": S.hbars, "raw_HBAR": "HBAR"}  # the alias and ROOT's option as it is
 todo = cases(
-    {"kind": list(KINDS), "option": list(OPTIONS), "setting": list(SETTINGS)},
-    named=[{"kind": "hist_var", "option": "hbars", "setting": "y_range", "why": "a range between the variable bins ends at their edges"}],
+    {"kind": list(KINDS), "option": list(OPTIONS), "setting": list(SETTINGS), "extra": ["none", "graph", "function"]},
+    named=[
+        {"kind": "hist_var", "option": "hbars", "setting": "y_range", "extra": "none", "why": "a range between the variable bins ends at their edges"},
+        {"kind": "hist", "option": "hbars", "setting": "room_y", "extra": "graph", "why": "the x of a graph is horizontal, not vertical extent"},
+        {"kind": "hist", "option": "hbars", "setting": "room", "extra": "function", "why": "a formula function spans the widened horizontal frame"},
+    ],
 )
 
 p = Project("hbar_axes")
 p.inputs()
 inputs = data_objects()
+onTop = ROOT.TGraphErrors(len(GRAPH))
+onTop.SetName("g")
+for k, (x, y) in enumerate(GRAPH):
+    onTop.SetPoint(k, x, y)
+    onTop.SetPointError(k, *GRAPH_ERRORS)
+p.source("top", {"g": onTop})
 for i, case in enumerate(todo):
     plot = S.Plot(f"h{i}", "hbars", "1d")
     pad = plot[1]
@@ -34,11 +50,17 @@ for i, case in enumerate(todo):
         pad["Y"].SetRange(3.0, 7.0)
     elif setting == "room":
         pad["X"].SetRoomAboveMax(0.25)
+    elif setting == "room_y":
+        pad["Y"].SetRoomAboveMax(0.2)
     elif setting == "log":
         pad["X"].SetLog()
     elif setting == "looks":
         pad["X"].SetTitle("contents horizontal").SetLabelSize(0.031)
         pad["Y"].SetTitle("bins vertical").SetLabelSize(0.047)
+    if case["extra"] == "graph":
+        pad.AddData("g", "top").SetDrawOption(S.points)
+    elif case["extra"] == "function":
+        pad.AddFunction(f"{FUNCTION_VALUE}")
     p.pm.AddPlot(plot)
 
 m = ROOT.TH2D("m", ";x;y", 12, -6.0, 6.0, 12, -6.0, 6.0)
@@ -90,12 +112,19 @@ for i, case in enumerate(todo):
     if setting == "x_range":
         check(f"{what}: the x range on the contents (horizontal)", close(f["X"][0], 0.5, 1e-9) and close(f["X"][1], 20.0, 1e-9), f"{f['X']}")
     shown = [c for lo, hi, c in bins if lo >= f["Y"][0] - 1e-9 and hi <= f["Y"][1] + 1e-9]
+    graphX = [x + GRAPH_ERRORS[0] for x, y in GRAPH if case["extra"] == "graph" and f["Y"][0] <= y <= f["Y"][1]]  # right ends of the points shown
+    if case["extra"] == "function":
+        funcs = [o for o in drawn if o.InheritsFrom("TF1")]
+        check(f"{what}: the formula function spans the horizontal frame", len(funcs) == 1 and close(funcs[0].GetXmin(), f["X"][0], 1e-9) and close(funcs[0].GetXmax(), f["X"][1], 1e-9), f"{[(o.GetXmin(), o.GetXmax()) for o in funcs]}, frame {f['X']}")
     if setting == "log":
         positive = [c for c in shown if c > 0]
         check(f"{what}: a log horizontal axis from the smallest positive content shown", padObj.GetLogx() and positive and f["X"][0] <= min(positive) and f["X"][0] > 0.0 and f["X"][0] > 0.05 * min(positive), f"from {f['X'][0]}, smallest {min(positive) if positive else None}")
     elif setting == "room":
-        largest = max(shown)
-        check(f"{what}: a quarter of the width free right of the bars", close((f["X"][1] - largest) / (f["X"][1] - f["X"][0]), 0.25, 1e-6), f"frame {f['X']}, largest {largest}")
+        largest = max(shown + graphX)
+        check(f"{what}: a quarter of the width free right of everything drawn", close((f["X"][1] - largest) / (f["X"][1] - f["X"][0]), 0.25, 1e-6), f"frame {f['X']}, largest {largest}")
+    elif setting == "room_y":
+        top = max([hi for lo, hi, c in bins] + [y + GRAPH_ERRORS[1] for x, y in GRAPH if case["extra"] == "graph"])
+        check(f"{what}: a fifth of the height free above everything drawn", close((f["Y"][1] - top) / (f["Y"][1] - f["Y"][0]), 0.2, 1e-6), f"frame {f['Y']}, top {top}")
     elif setting != "x_range":
         check(f"{what}: the contents fit horizontally", f["X"][0] <= min(min(shown), 0.0) + 1e-9 and f["X"][1] >= max(shown) - 1e-9, f"frame {f['X']}, contents {min(shown)} to {max(shown)}")
     if not padObj.GetLogx():
