@@ -23,6 +23,7 @@
 #include <TApplication.h>
 #include <TArrow.h>
 #include <TAttMarker.h>
+#include <TAxisModLab.h>
 #include <TBox.h>
 #include <TCanvas.h>
 #include <TEfficiency.h>
@@ -3675,6 +3676,40 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         if (axis->GetHideClippedLabels()) hide = *axis->GetHideClippedLabels();
       }
       if (hide && axisHist_ptr && !polarFrame && !polargram) HideClippedLabels(pad_ptr, ((axisLabel == 'X') != hbarFrame) ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis(), axisLabel);
+    }
+    // the numbers of a linear x axis without exponent (the shipped look: no factor at the axis end, where a touching panel or a colour
+    // scale would be) run into each other for wide or offset ranges: said, with the remedy
+    if (axisHist_ptr && !polarFrame && !polargram && !pad_ptr->GetView() && !pad_ptr->GetLogx()) {
+      TAxis* xAxis = (hbarFrame) ? axisHist_ptr->GetYaxis() : axisHist_ptr->GetXaxis();
+      if (xAxis->GetNoExponent() && !xAxis->GetLabels() && xAxis->GetLabelSize() > 0.f) {
+        const vector<double_t> values = LabelValues(pad_ptr, xAxis, 'X');
+        const double_t pixelsPerUnit = PadSizePixel(pad_ptr).first * (1. - pad_ptr->GetLeftMargin() - pad_ptr->GetRightMargin()) / (pad_ptr->GetUxmax() - pad_ptr->GetUxmin());
+        // the labels drawn (HideClippedLabels hides some with size 0, by value or by number), each pair of neighbours by their own widths
+        const auto isHidden = [&](size_t index) {
+          if (!xAxis->GetModifiedLabels()) return false;
+          for (auto* change : TRangeDynCast<TAxisModLab>(xAxis->GetModifiedLabels())) {
+            if (!change || change->GetSize() != 0.) continue;
+            const int32_t number = change->GetLabNum();
+            if (number != 0 && static_cast<int64_t>(index) == ((number > 0) ? number - 1 : static_cast<int64_t>(values.size()) + number)) return true;
+            if (number == 0 && std::abs(change->GetLabValue() - values[index]) < 1e-9 * (std::abs(values[index]) + 1.)) return true;
+          }
+          return false;
+        };
+        bool overlap{};
+        double_t previousValue{}, previousWidth{-1.};
+        for (size_t index = 0; index < values.size() && !overlap; ++index) {
+          if (isHidden(index)) continue;
+          const double_t width = MaxLabelWidth(pad_ptr, xAxis, {values[index]}, false);
+          if (previousWidth >= 0. && 0.5 * (width + previousWidth) > (values[index] - previousValue) * pixelsPerUnit) overlap = true;
+          previousValue = values[index];
+          previousWidth = width;
+        }
+        if (overlap) {
+          if (mReportedIgnored.insert("overlapping x labels").second) {
+            logger::warning("The labels of the X axis in pad {} run into each other: fewer divisions (SetNumDivisions), or SetNoExponent(false) for ROOT's power of ten (with room for it at the end of the axis, e.g. a right margin).", padID);
+          }
+        }
+      }
     }
     if (axisHist_ptr && !polarFrame && !polargram && !hbarFrame && !pad_ptr->GetView()) WarnIfOutsideFrame(pad_ptr);
 

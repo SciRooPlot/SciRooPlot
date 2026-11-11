@@ -152,7 +152,7 @@ for source, (_, name, order, inputs) in sources.items():
     n = len(rows(order))
     want = f" - {location} {n} entries" + (f" from {inputs}," if inputs else ",")
     check(f"{source}: the reading summary names the inputs of the chain", summary and all(want in line for line in summary), f"{summary[:2]}, expected '{want}'")
-expectedWarnings = [f"No folders match DF_[13] in {p.path('ao', 'AO2D_2.root')} (data source folders_some)"]
+expectedWarnings = [f"No folders match DF_[13] in {p.path('ao', 'AO2D_2.root')} (data source folders_some)", "labels of the X axis"]  # the look of long index labels
 other = [w for w in run.warnings() if not any(e in w for e in expectedWarnings)]
 check("the chains give no other warnings", not other, " | ".join(other[:5]))
 check("the chains give no errors", not run.errors(), " | ".join(run.errors()[:5]))

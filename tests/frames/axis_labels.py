@@ -31,7 +31,14 @@ m = ROOT.TH2D("m", "", 10, -5.0, 5.0, 10, -5.0, 5.0)
 for b in range(1, 11):
     for c in range(1, 11):
         m.SetBinContent(b, c, b + c)
-p.source("s", {"h": h, "lab": lab, "m": m})
+# x ranges whose numbers are long (the shipped look writes x labels without exponent; four digits at ROOT's 510 divisions already touch): (low, high, exponent wanted, labels run into each other)
+WIDE = {"wide_1e12": (0.0, 1e12, False, True), "wide_ns": (0.0, 1e-9, False, True), "wide_offset": (1e6, 1e6 + 10.0, False, True), "wide_5000": (0.0, 5000.0, False, True), "wide_100": (0.0, 100.0, False, False), "wide_exponent": (0.0, 1e12, True, False)}
+wide = {}
+for name, (low, high, _, _) in WIDE.items():
+    wide[name] = ROOT.TH1D(name, "", 20, low, high)
+    for b in range(1, 21):
+        wide[name].SetBinContent(b, b)
+p.source("s", {"h": h, "lab": lab, "m": m, **wide})
 
 # ---- labels at the edges of touching panels
 CLIP = {  # layout: (base plot, the edges checked: (pad, side, whether ROOT draws a label there))
@@ -114,9 +121,18 @@ p.pm.AddPlot(plot)
 plot = S.Plot("no_text", "texts", "1d")
 plot[1].AddData("lab", "s").SetTextAngle(30.0)
 p.pm.AddPlot(plot)
+for name, (_, _, exponent, _) in WIDE.items():
+    plot = S.Plot(name, "wide", "1d")
+    plot[1].AddData(name, "s")
+    if exponent:
+        plot[1]["X"].SetNoExponent(False)
+    p.pm.AddPlot(plot)
 
 run = p.plot()
 check("the plots are made without errors", not run.errors(), " | ".join(run.errors()[:3]))
+for name, (low, high, exponent, overlap) in WIDE.items():
+    said = [m for m in run.messages(name, "wide") if "run into each other" in m]
+    check(f"x labels from {low:g} to {high:g}{' with exponent' if exponent else ''}: {'warned once that they run into each other' if overlap else 'no warning'}", len(said) == (1 if overlap else 0), " | ".join(said))
 
 
 def edge_pixels(name, group, padID, side):

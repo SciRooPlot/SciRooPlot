@@ -516,7 +516,7 @@ warned = chunks.warnings()
 for count, var, where in sorted(nonFinite):
     text = f"{count} value{'s' if count > 1 else ''} of {var} in {where} {'are' if count > 1 else 'is'} not finite (inf or nan)"
     check(f"{where}: values of {var} that are not finite are left out of the automatic range, with a warning", any(text in w for w in warned), f"no '{text}'")
-known = re.compile(r"not finite \(inf or nan\)")
+known = re.compile(r"not finite \(inf or nan\)|labels of the X axis in pad \d+ run into each other")  # the look of wide ranges
 other = [w for w in warned if not known.search(w)]
 check("the requests give no other warnings", not other, " | ".join(other[:5]))
 check("the requests give no errors", not chunks.errors(), " | ".join(chunks.errors()[:5]))
