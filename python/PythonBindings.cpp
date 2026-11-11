@@ -945,15 +945,41 @@ void exportPythonDataInterfaces(py::module_& m)
 
   // as numpy.histogram, the last bin includes its upper edge (ROOT fills the overflow): such values are moved below it, as little
   // as the bin lookup allows (with even bins one step can still round into the overflow), in a copy made only if there are any
-  auto fillValues = [](const Values& v, const TAxis* axis, vector<double>& moved) -> const double* {
+  auto fillValues = [](const double* v, size_t n, const TAxis* axis, vector<double>& moved) -> const double* {
     const double upper = axis->GetXmax();
-    if (std::find(v.data(), v.data() + v.size(), upper) == v.data() + v.size()) return v.data();
+    if (std::find(v, v + n, upper) == v + n) return v;
     double inside = std::nextafter(upper, axis->GetXmin());
     while (axis->FindFixBin(inside) > axis->GetNbins())
       inside = std::nextafter(inside, axis->GetXmin());
-    moved.assign(v.data(), v.data() + v.size());
+    moved.assign(v, v + n);
     std::replace(moved.begin(), moved.end(), upper, inside);
     return moved.data();
+  };
+
+  // NaN belongs to no bin (ROOT's FillN would put it into the overflow and count it as an entry): such entries are left out with a
+  // warning, infinite values go into the flows as ROOT fills them; returns the entries kept (the columns of all of them in kept)
+  auto withoutNaN = [](const string& name, const vector<const double*>& columns, size_t n, vector<vector<double>>& kept) -> size_t {
+    vector<char> isNaN(n, 0);
+    size_t nNaN{};
+    for (const double* column : columns) {
+      if (!column) continue;
+      for (size_t i = 0; i < n; ++i) {
+        if (std::isnan(column[i]) && !isNaN[i]) {
+          isNaN[i] = 1;
+          ++nNaN;
+        }
+      }
+    }
+    if (!nNaN) return n;
+    kept.assign(columns.size(), {});
+    for (size_t c = 0; c < columns.size(); ++c) {
+      if (!columns[c]) continue;
+      for (size_t i = 0; i < n; ++i) {
+        if (!isNaN[i]) kept[c].push_back(columns[c][i]);
+      }
+    }
+    logger::warning("Histogram {}: {} {} with NaN left out (NaN belongs to no bin).", name, nNaN, (nNaN == 1) ? "entry" : "entries");
+    return n - nNaN;
   };
 
   auto graph = [bind_owned, values](const string& name, py::object xValues, py::object yValues, py::object xErrors, py::object yErrors) {
@@ -993,8 +1019,12 @@ void exportPythonDataInterfaces(py::module_& m)
     }
     h->SetDirectory(nullptr);
     if (w) h->Sumw2();
+    vector<vector<double>> kept;
+    const size_t n = withoutNaN(name, {x.data(), w ? w->data() : nullptr}, x.size(), kept);
+    const double* xs = kept.empty() ? x.data() : kept[0].data();
+    const double* ws = !w ? nullptr : (kept.empty() ? w->data() : kept[1].data());
     vector<double> xMoved;
-    if (x.size()) h->FillN(static_cast<int>(x.size()), fillValues(x, h->GetXaxis(), xMoved), w ? w->data() : nullptr);
+    if (n) h->FillN(static_cast<int>(n), fillValues(xs, n, h->GetXaxis(), xMoved), ws);
     return bind_owned(reinterpret_cast<std::uintptr_t>(h), "TH1D");
   };
 
@@ -1061,8 +1091,13 @@ void exportPythonDataInterfaces(py::module_& m)
     }
     h->SetDirectory(nullptr);
     if (w) h->Sumw2();
+    vector<vector<double>> kept;
+    const size_t n = withoutNaN(name, {x.data(), y.data(), w ? w->data() : nullptr}, x.size(), kept);
+    const double* xs = kept.empty() ? x.data() : kept[0].data();
+    const double* ys = kept.empty() ? y.data() : kept[1].data();
+    const double* ws = !w ? nullptr : (kept.empty() ? w->data() : kept[2].data());
     vector<double> xMoved, yMoved;
-    if (x.size()) h->FillN(static_cast<int>(x.size()), fillValues(x, h->GetXaxis(), xMoved), fillValues(y, h->GetYaxis(), yMoved), w ? w->data() : nullptr);
+    if (n) h->FillN(static_cast<int>(n), fillValues(xs, n, h->GetXaxis(), xMoved), fillValues(ys, n, h->GetYaxis(), yMoved), ws);
     return bind_owned(reinterpret_cast<std::uintptr_t>(h), "TH2D");
   };
 

@@ -117,8 +117,10 @@ raises("histo: values that are not finite without range", lambda: S.histo("e", [
 raises("histo: weights of another length", lambda: S.histo("e", x, weights=w[:5]), ValueError, "as many entries as the values")
 raises("histo: text values", lambda: S.histo("e", ["a", "b"]), TypeError, "one-dimensional sequence of numbers")
 raises("histo: a 2d array", lambda: S.histo("e", np.ones((3, 3))), TypeError, "one-dimensional")
-h = S.histo("h", [1.0, math.nan, math.inf, -math.inf, 0.5], 2, (0.0, 2.0))
-check("histo: values that are not finite with a range go to the flows", h.GetBinContent(1) == 1 and h.GetBinContent(2) == 1 and h.GetBinContent(0) == 1 and h.GetBinContent(3) == 2, [h.GetBinContent(i) for i in range(4)])
+h, said = captured(lambda: S.histo("h", [1.0, math.nan, math.inf, -math.inf, 0.5], 2, (0.0, 2.0)))
+check("histo: infinite values with a range go to the flows, NaN is left out with a warning", [h.GetBinContent(i) for i in range(4)] == [1, 1, 1, 1] and h.GetEntries() == 4 and said.count("with NaN left out") == 1, f"{[h.GetBinContent(i) for i in range(4)]}, {h.GetEntries()} entries; {said}")
+h2, said = captured(lambda: S.histo2d("h2", [0.5, math.nan, 1.5], [0.5, 0.5, math.nan], 2, ((0.0, 2.0), (0.0, 2.0))))
+check("histo2d: entries with NaN in x or y are left out with a warning", h2.GetEntries() == 1 and h2.GetBinContent(1, 1) == 1 and said.count("2 entries with NaN left out") == 1, f"{h2.GetEntries()} entries; {said}")
 
 # histo2d
 for form in ("float64", "list", "Series"):
