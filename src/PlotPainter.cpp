@@ -1471,7 +1471,6 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   auto& textSize = padState.textSize;
   auto& activeTextFormat = padState.activeTextFormat;
   auto& hasRefFunc = padState.hasRefFunc;
-  auto& frameSource = padState.frameSource;
   auto& axisHist_ptr = padState.axisHist_ptr;
   auto& polargram = padState.polargram;
   auto& padProjection = padState.padProjection;
@@ -1480,7 +1479,6 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   auto& dataIndex = padState.dataIndex;
   auto& mapDrawn = padState.mapDrawn;
   auto& storedRangeZ = padState.storedRangeZ;
-  auto& frameFuncRange = padState.frameFuncRange;
 
   using data_type = std::decay_t<decltype(data_ptr)>;
   draw_option_t alias = optionAlias.value_or(static_cast<draw_option_t>(255));  // 255: no alias
@@ -1695,174 +1693,9 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     ApplyDataStyle(state, data_ptr, alias);
 
     // data ranges
-    double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0;
-    pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
-    xmin = FromPad(xmin, pad_ptr->GetLogx());
-    xmax = FromPad(xmax, pad_ptr->GetLogx());
-    ymin = FromPad(ymin, pad_ptr->GetLogy());
-    ymax = FromPad(ymax, pad_ptr->GetLogy());
-    if (auto view = pad_ptr->GetView()) {
-      // for 3d view ignore individual data ranges and always let it coincide with the axes: the ranges of the frame's axes, since the
-      // view holds the coordinates it paints in (-1 to 1 in polar, cylindrical and spherical systems, logarithms on a log scale)
-      double_t minArr[3];
-      double_t maxArr[3];
-      view->GetRange(minArr, maxArr);
-      const TAxis* frameX = axisHist_ptr->GetXaxis();
-      const TAxis* frameY = axisHist_ptr->GetYaxis();
-      xmin = frameX->GetBinLowEdge(frameX->GetFirst());
-      xmax = frameX->GetBinUpEdge(frameX->GetLast());
-      ymin = frameY->GetBinLowEdge(frameY->GetFirst());
-      ymax = frameY->GetBinUpEdge(frameY->GetLast());
-      data_ptr->SetMinimum(axisHist_ptr->GetMinimum());
-      data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
-      if constexpr (is_hist_3d<data_type>()) {
-        data_ptr->GetZaxis()->SetRangeUser(minArr[2], maxArr[2]);
-      }
-      if constexpr (is_func_3d<data_type>()) {
-        // a 3d function is painted over its own range: that of the frame, which on a log axis starts at its first positive bin edge
-        const TAxis* frameZ = axisHist_ptr->GetZaxis();
-        data_ptr->SetRange(xmin, ymin, frameZ->GetBinLowEdge(frameZ->GetFirst()), xmax, ymax, frameZ->GetBinUpEdge(frameZ->GetLast()));
-      }
-    }
     const bool hasRangeX = data->GetMinRangeX() || data->GetMaxRangeX();
     const bool hasRangeY = data->GetMinRangeY() || data->GetMaxRangeY();
-    if constexpr (is_hist_1d<data_type>()) {
-      // ROOT draws the bars and fill areas of a histogram from its own minimum, also in an existing frame: start them at the lower edge of the frame
-      if (!pad_ptr->GetView()) data_ptr->SetMinimum((TString(drawOption).Contains("HBAR", TString::kIgnoreCase)) ? xmin : ymin);
-    }
-    bool cutXAtFrame = true;
-    bool cutYAtFrame = (axisHist_ptr->GetDimension() > 1);  // the y axis of a 1d frame has no bins
-    if constexpr (is_hist_2d<data_type>()) {
-      // candles and violins show the distribution of the contents along one axis: cutting it would change their statistics
-      TString options(drawOption);
-      options.ToUpper();
-      if (options.Contains("CANDLE") || options.Contains("VIOLIN")) {
-        ((options.Contains("CANDLEY") || options.Contains("VIOLINY")) ? cutXAtFrame : cutYAtFrame) = false;
-      }
-    }
-    if constexpr (is_func_2d<data_type>()) {
-      auto [rangeMinX, rangeMaxX] = FuncRange(state, 'x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
-      auto [rangeMinY, rangeMaxY] = FuncRange(state, 'y', ymin, ymax, data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
-      if (frameFuncRange && data.get() == frameSource) std::tie(rangeMinX, rangeMaxX, rangeMinY, rangeMaxY) = std::tuple_cat(*frameFuncRange);
-      data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
-    } else if constexpr (is_func_1d<data_type>()) {
-      auto [rangeMin, rangeMax] = FuncRange(state, 'x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
-      if (frameFuncRange && data.get() == frameSource) std::tie(rangeMin, rangeMax) = std::make_pair((*frameFuncRange)[0], (*frameFuncRange)[1]);
-      data_ptr->SetRange(rangeMin, rangeMax);
-    } else if constexpr (is_graph_1d<data_type>()) {
-      // (histograms converted for a clipped alias got the x range of the data as bins before, the y range does not apply to them)
-      const bool isClippedHist = (alias == hist_clipped || alias == hist_open_clipped || alias == curve_clipped) && mSourceHists.count(data_ptr);
-      if (!pad_ptr->GetView() && !isClippedHist && alias != area) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
-      if (axisHist_ptr && dataIndex != 0 && !pad_ptr->GetView()) {
-        const TAxis* frameX = axisHist_ptr->GetXaxis();
-        mGraphFrameRangeX[data_ptr] = {frameX->GetBinLowEdge(frameX->GetFirst()), frameX->GetBinUpEdge(frameX->GetLast())};
-      }
-    } else {
-      if (projected) {
-        TString upper(drawOption);
-        upper.ToUpper();
-        if (hasRangeX || hasRangeY) logger::warning("The range of {} does not apply to a map projection, which must cover the range of the frame: set the range on the pad instead.", data->GetName());
-        if (upper.Contains("COL")) logger::warning("{}: ROOT paints COL with a map projection twice, unprojected below the projected map. For a colour scale add Z to the projection alone.", data->GetName());
-      }
-      if constexpr (is_graph_2d<data_type>()) {
-        if (!pad_ptr->GetView()) {
-          const TAxis* frameX = axisHist_ptr->GetXaxis();
-          const TAxis* frameY = axisHist_ptr->GetYaxis();
-          mGraph2DFrameRange[data_ptr] = {frameX->GetBinLowEdge(frameX->GetFirst()), frameX->GetBinUpEdge(frameX->GetLast()), frameY->GetBinLowEdge(frameY->GetFirst()), frameY->GetBinUpEdge(frameY->GetLast())};
-          // the points inside the data range: ROOT paints a 2d graph through a histogram it makes when painting and does not store, so a
-          // range on that one would be lost in the saved canvas
-          if (hasRangeX || hasRangeY) {
-            auto outside = [&](int32_t i) {
-              const double_t x = data_ptr->GetX()[i];
-              const double_t y = data_ptr->GetY()[i];
-              return (data->GetMinRangeX() && x < *data->GetMinRangeX()) || (data->GetMaxRangeX() && x > *data->GetMaxRangeX()) || (data->GetMinRangeY() && y < *data->GetMinRangeY()) ||
-                     (data->GetMaxRangeY() && y > *data->GetMaxRangeY());
-            };
-            int32_t nInside{};
-            for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
-              if (!outside(i)) ++nInside;
-            }
-            if (nInside == 0) {
-              logger::warning("The range of {} contains none of its points: all points are drawn.", data->GetName());
-            } else {
-              for (int32_t i = data_ptr->GetN() - 1; i >= 0; --i) {  // from the back, so that the indices of the remaining points stay valid
-                if (outside(i)) RemoveGraphPoint(data_ptr, i);
-              }
-            }
-          }
-        }
-      }
-      if (!pad_ptr->GetView() || projected) {
-        if (hasRangeX && !projected && !is_graph_2d<data_type>() && !SetBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX())) {
-          logger::warning("The x range of {} contains none of its bins: all bins are drawn.", data->GetName());
-        }
-        if (cutXAtFrame) LimitToFrame(data_ptr->GetXaxis(), axisHist_ptr->GetXaxis());
-      }
-      if constexpr (is_hist_1d<data_type>()) {
-        // the y axis of a 1d histogram has no bins: as for the frame, its range is the minimum and maximum (ROOT uses them e.g. as baseline of bars)
-        if (data->GetMinRangeY()) data_ptr->SetMinimum(*data->GetMinRangeY());
-        if (data->GetMaxRangeY()) data_ptr->SetMaximum(*data->GetMaxRangeY());
-      }
-    }
-    if constexpr (is_func<data_type>()) {
-      if (data->GetNpx()) data_ptr->SetNpx(*data->GetNpx());
-      if constexpr (is_func_2d<data_type>() || is_func_3d<data_type>()) {
-        if (data->GetNpy()) data_ptr->SetNpy(*data->GetNpy());
-      }
-    } else if (data->GetNpx()) {
-      logger::warning("SetNpx applies only to functions, not to {}.", data->GetName());
-    }
-    if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
-      if (!pad_ptr->GetView() || projected) {
-        if (hasRangeY && !projected && !SetBinRange(data_ptr->GetYaxis(), data->GetMinRangeY(), data->GetMaxRangeY())) {
-          logger::warning("The y range of {} contains none of its bins: all bins are drawn.", data->GetName());
-        }
-        if (cutYAtFrame) LimitToFrame(data_ptr->GetYaxis(), axisHist_ptr->GetYaxis());
-      }
-      if constexpr (std::is_same_v<data_type, TH2*>) {
-        // a TH2Poly draws and sums all its polygons whatever the axis ranges: a copy keeps those with their centre inside the ranges
-        auto* poly = dynamic_cast<TH2Poly*>(data_ptr);
-        if (poly && !projected && (hasRangeX || hasRangeY)) {
-          const TAxis* x = poly->GetXaxis();
-          const TAxis* y = poly->GetYaxis();
-          const double_t xMin = x->GetBinLowEdge(x->GetFirst()), xMax = x->GetBinUpEdge(x->GetLast());
-          const double_t yMin = y->GetBinLowEdge(y->GetFirst()), yMax = y->GetBinUpEdge(y->GetLast());
-          auto* kept = new TH2Poly(poly->GetName(), poly->GetTitle(), x->GetXmin(), x->GetXmax(), y->GetXmin(), y->GetXmax());
-          kept->SetDirectory(nullptr);
-          kept->Sumw2();
-          for (TObject* obj : *poly->GetBins()) {
-            auto* polyBin = static_cast<TH2PolyBin*>(obj);
-            const double_t cx = 0.5 * (polyBin->GetXMin() + polyBin->GetXMax());
-            const double_t cy = 0.5 * (polyBin->GetYMin() + polyBin->GetYMax());
-            if (cx < xMin || cx > xMax || cy < yMin || cy > yMax) continue;
-            const int32_t bin = kept->AddBin(polyBin->GetPolygon()->Clone());
-            kept->SetBinContent(bin, polyBin->GetContent());
-            kept->SetBinError(bin, poly->GetBinError(polyBin->GetBinNumber()));
-          }
-          kept->SetEntries(poly->GetEntries());
-          CopyStyle(*poly, *kept);
-          for (auto [from, to] : {std::pair{poly->GetXaxis(), kept->GetXaxis()}, std::pair{poly->GetYaxis(), kept->GetYaxis()}, std::pair{poly->GetZaxis(), kept->GetZaxis()}}) {
-            from->TAttAxis::Copy(*to);
-            to->SetTitle(from->GetTitle());
-          }
-          kept->GetXaxis()->SetRange(x->GetFirst(), x->GetLast());
-          kept->GetYaxis()->SetRange(y->GetFirst(), y->GetLast());
-          kept->SetBit(kCanDelete, poly->TestBit(kCanDelete));
-          mUndrawn.emplace_back(poly);
-          data_ptr = kept;
-        }
-      }
-      if (projected) {
-        // ROOT takes the colours of COL drawn SAME from the frame, those of CONT4 from the histogram itself, and CONT4 also paints
-        // the x and y axes of the histogram itself when drawn SAME: they get the look and titles of the frame's axes
-        data_ptr->SetMinimum(axisHist_ptr->GetMinimum());
-        data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
-        for (auto [frameAxis, dataAxis] : {std::pair{axisHist_ptr->GetXaxis(), data_ptr->GetXaxis()}, std::pair{axisHist_ptr->GetYaxis(), data_ptr->GetYaxis()}}) {
-          frameAxis->TAttAxis::Copy(*dataAxis);
-          dataAxis->SetTitle(frameAxis->GetTitle());
-        }
-      }
-    }
+    DataRanges(state, data_ptr, alias, projected, hasRangeX, hasRangeY);
     // colour levels: the frame, whose colour scale is drawn (and from which COL drawn SAME takes its colours), takes those of the first
     // map of the pad (a 2d or 3d histogram, a 2d graph or a 2d function), the one it is made from, also fewer than ROOT's 20, so that the
     // scale shows the levels of the map; levels of later data (e.g. contour lines over a map) are their own, the frame takes them only if they are more
@@ -2220,6 +2053,193 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   }
   ++dataIndex;
   drawOption = "SAME ";  // next data should be drawn to same pad
+}
+
+//**************************************************************************************************
+/**
+ * Applies the ranges of the data (in a 3d view those of the axes of the frame); a TH2Poly is replaced by the copy of its bins in range.
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, draw_option_t alias, bool projected, bool hasRangeX, bool hasRangeY)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& frameSource = padState.frameSource;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& drawOption = padState.drawOption;
+  auto& dataIndex = padState.dataIndex;
+  auto& frameFuncRange = padState.frameFuncRange;
+
+  using data_type = std::decay_t<decltype(data_ptr)>;
+
+  double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0;
+  pad_ptr->GetRangeAxis(xmin, ymin, xmax, ymax);
+  xmin = FromPad(xmin, pad_ptr->GetLogx());
+  xmax = FromPad(xmax, pad_ptr->GetLogx());
+  ymin = FromPad(ymin, pad_ptr->GetLogy());
+  ymax = FromPad(ymax, pad_ptr->GetLogy());
+  if (auto view = pad_ptr->GetView()) {
+    // for 3d view ignore individual data ranges and always let it coincide with the axes: the ranges of the frame's axes, since the
+    // view holds the coordinates it paints in (-1 to 1 in polar, cylindrical and spherical systems, logarithms on a log scale)
+    double_t minArr[3];
+    double_t maxArr[3];
+    view->GetRange(minArr, maxArr);
+    const TAxis* frameX = axisHist_ptr->GetXaxis();
+    const TAxis* frameY = axisHist_ptr->GetYaxis();
+    xmin = frameX->GetBinLowEdge(frameX->GetFirst());
+    xmax = frameX->GetBinUpEdge(frameX->GetLast());
+    ymin = frameY->GetBinLowEdge(frameY->GetFirst());
+    ymax = frameY->GetBinUpEdge(frameY->GetLast());
+    data_ptr->SetMinimum(axisHist_ptr->GetMinimum());
+    data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
+    if constexpr (is_hist_3d<data_type>()) {
+      data_ptr->GetZaxis()->SetRangeUser(minArr[2], maxArr[2]);
+    }
+    if constexpr (is_func_3d<data_type>()) {
+      // a 3d function is painted over its own range: that of the frame, which on a log axis starts at its first positive bin edge
+      const TAxis* frameZ = axisHist_ptr->GetZaxis();
+      data_ptr->SetRange(xmin, ymin, frameZ->GetBinLowEdge(frameZ->GetFirst()), xmax, ymax, frameZ->GetBinUpEdge(frameZ->GetLast()));
+    }
+  }
+  if constexpr (is_hist_1d<data_type>()) {
+    // ROOT draws the bars and fill areas of a histogram from its own minimum, also in an existing frame: start them at the lower edge of the frame
+    if (!pad_ptr->GetView()) data_ptr->SetMinimum((TString(drawOption).Contains("HBAR", TString::kIgnoreCase)) ? xmin : ymin);
+  }
+  bool cutXAtFrame = true;
+  bool cutYAtFrame = (axisHist_ptr->GetDimension() > 1);  // the y axis of a 1d frame has no bins
+  if constexpr (is_hist_2d<data_type>()) {
+    // candles and violins show the distribution of the contents along one axis: cutting it would change their statistics
+    TString options(drawOption);
+    options.ToUpper();
+    if (options.Contains("CANDLE") || options.Contains("VIOLIN")) {
+      ((options.Contains("CANDLEY") || options.Contains("VIOLINY")) ? cutXAtFrame : cutYAtFrame) = false;
+    }
+  }
+  if constexpr (is_func_2d<data_type>()) {
+    auto [rangeMinX, rangeMaxX] = FuncRange(state, 'x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
+    auto [rangeMinY, rangeMaxY] = FuncRange(state, 'y', ymin, ymax, data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
+    if (frameFuncRange && data.get() == frameSource) std::tie(rangeMinX, rangeMaxX, rangeMinY, rangeMaxY) = std::tuple_cat(*frameFuncRange);
+    data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
+  } else if constexpr (is_func_1d<data_type>()) {
+    auto [rangeMin, rangeMax] = FuncRange(state, 'x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
+    if (frameFuncRange && data.get() == frameSource) std::tie(rangeMin, rangeMax) = std::make_pair((*frameFuncRange)[0], (*frameFuncRange)[1]);
+    data_ptr->SetRange(rangeMin, rangeMax);
+  } else if constexpr (is_graph_1d<data_type>()) {
+    // (histograms converted for a clipped alias got the x range of the data as bins before, the y range does not apply to them)
+    const bool isClippedHist = (alias == hist_clipped || alias == hist_open_clipped || alias == curve_clipped) && mSourceHists.count(data_ptr);
+    if (!pad_ptr->GetView() && !isClippedHist && alias != area) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
+    if (axisHist_ptr && dataIndex != 0 && !pad_ptr->GetView()) {
+      const TAxis* frameX = axisHist_ptr->GetXaxis();
+      mGraphFrameRangeX[data_ptr] = {frameX->GetBinLowEdge(frameX->GetFirst()), frameX->GetBinUpEdge(frameX->GetLast())};
+    }
+  } else {
+    if (projected) {
+      TString upper(drawOption);
+      upper.ToUpper();
+      if (hasRangeX || hasRangeY) logger::warning("The range of {} does not apply to a map projection, which must cover the range of the frame: set the range on the pad instead.", data->GetName());
+      if (upper.Contains("COL")) logger::warning("{}: ROOT paints COL with a map projection twice, unprojected below the projected map. For a colour scale add Z to the projection alone.", data->GetName());
+    }
+    if constexpr (is_graph_2d<data_type>()) {
+      if (!pad_ptr->GetView()) {
+        const TAxis* frameX = axisHist_ptr->GetXaxis();
+        const TAxis* frameY = axisHist_ptr->GetYaxis();
+        mGraph2DFrameRange[data_ptr] = {frameX->GetBinLowEdge(frameX->GetFirst()), frameX->GetBinUpEdge(frameX->GetLast()), frameY->GetBinLowEdge(frameY->GetFirst()), frameY->GetBinUpEdge(frameY->GetLast())};
+        // the points inside the data range: ROOT paints a 2d graph through a histogram it makes when painting and does not store, so a
+        // range on that one would be lost in the saved canvas
+        if (hasRangeX || hasRangeY) {
+          auto outside = [&](int32_t i) {
+            const double_t x = data_ptr->GetX()[i];
+            const double_t y = data_ptr->GetY()[i];
+            return (data->GetMinRangeX() && x < *data->GetMinRangeX()) || (data->GetMaxRangeX() && x > *data->GetMaxRangeX()) || (data->GetMinRangeY() && y < *data->GetMinRangeY()) ||
+                   (data->GetMaxRangeY() && y > *data->GetMaxRangeY());
+          };
+          int32_t nInside{};
+          for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
+            if (!outside(i)) ++nInside;
+          }
+          if (nInside == 0) {
+            logger::warning("The range of {} contains none of its points: all points are drawn.", data->GetName());
+          } else {
+            for (int32_t i = data_ptr->GetN() - 1; i >= 0; --i) {  // from the back, so that the indices of the remaining points stay valid
+              if (outside(i)) RemoveGraphPoint(data_ptr, i);
+            }
+          }
+        }
+      }
+    }
+    if (!pad_ptr->GetView() || projected) {
+      if (hasRangeX && !projected && !is_graph_2d<data_type>() && !SetBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX())) {
+        logger::warning("The x range of {} contains none of its bins: all bins are drawn.", data->GetName());
+      }
+      if (cutXAtFrame) LimitToFrame(data_ptr->GetXaxis(), axisHist_ptr->GetXaxis());
+    }
+    if constexpr (is_hist_1d<data_type>()) {
+      // the y axis of a 1d histogram has no bins: as for the frame, its range is the minimum and maximum (ROOT uses them e.g. as baseline of bars)
+      if (data->GetMinRangeY()) data_ptr->SetMinimum(*data->GetMinRangeY());
+      if (data->GetMaxRangeY()) data_ptr->SetMaximum(*data->GetMaxRangeY());
+    }
+  }
+  if constexpr (is_func<data_type>()) {
+    if (data->GetNpx()) data_ptr->SetNpx(*data->GetNpx());
+    if constexpr (is_func_2d<data_type>() || is_func_3d<data_type>()) {
+      if (data->GetNpy()) data_ptr->SetNpy(*data->GetNpy());
+    }
+  } else if (data->GetNpx()) {
+    logger::warning("SetNpx applies only to functions, not to {}.", data->GetName());
+  }
+  if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
+    if (!pad_ptr->GetView() || projected) {
+      if (hasRangeY && !projected && !SetBinRange(data_ptr->GetYaxis(), data->GetMinRangeY(), data->GetMaxRangeY())) {
+        logger::warning("The y range of {} contains none of its bins: all bins are drawn.", data->GetName());
+      }
+      if (cutYAtFrame) LimitToFrame(data_ptr->GetYaxis(), axisHist_ptr->GetYaxis());
+    }
+    if constexpr (std::is_same_v<data_type, TH2*>) {
+      // a TH2Poly draws and sums all its polygons whatever the axis ranges: a copy keeps those with their centre inside the ranges
+      auto* poly = dynamic_cast<TH2Poly*>(data_ptr);
+      if (poly && !projected && (hasRangeX || hasRangeY)) {
+        const TAxis* x = poly->GetXaxis();
+        const TAxis* y = poly->GetYaxis();
+        const double_t xMin = x->GetBinLowEdge(x->GetFirst()), xMax = x->GetBinUpEdge(x->GetLast());
+        const double_t yMin = y->GetBinLowEdge(y->GetFirst()), yMax = y->GetBinUpEdge(y->GetLast());
+        auto* kept = new TH2Poly(poly->GetName(), poly->GetTitle(), x->GetXmin(), x->GetXmax(), y->GetXmin(), y->GetXmax());
+        kept->SetDirectory(nullptr);
+        kept->Sumw2();
+        for (TObject* obj : *poly->GetBins()) {
+          auto* polyBin = static_cast<TH2PolyBin*>(obj);
+          const double_t cx = 0.5 * (polyBin->GetXMin() + polyBin->GetXMax());
+          const double_t cy = 0.5 * (polyBin->GetYMin() + polyBin->GetYMax());
+          if (cx < xMin || cx > xMax || cy < yMin || cy > yMax) continue;
+          const int32_t bin = kept->AddBin(polyBin->GetPolygon()->Clone());
+          kept->SetBinContent(bin, polyBin->GetContent());
+          kept->SetBinError(bin, poly->GetBinError(polyBin->GetBinNumber()));
+        }
+        kept->SetEntries(poly->GetEntries());
+        CopyStyle(*poly, *kept);
+        for (auto [from, to] : {std::pair{poly->GetXaxis(), kept->GetXaxis()}, std::pair{poly->GetYaxis(), kept->GetYaxis()}, std::pair{poly->GetZaxis(), kept->GetZaxis()}}) {
+          from->TAttAxis::Copy(*to);
+          to->SetTitle(from->GetTitle());
+        }
+        kept->GetXaxis()->SetRange(x->GetFirst(), x->GetLast());
+        kept->GetYaxis()->SetRange(y->GetFirst(), y->GetLast());
+        kept->SetBit(kCanDelete, poly->TestBit(kCanDelete));
+        mUndrawn.emplace_back(poly);
+        data_ptr = kept;
+      }
+    }
+    if (projected) {
+      // ROOT takes the colours of COL drawn SAME from the frame, those of CONT4 from the histogram itself, and CONT4 also paints
+      // the x and y axes of the histogram itself when drawn SAME: they get the look and titles of the frame's axes
+      data_ptr->SetMinimum(axisHist_ptr->GetMinimum());
+      data_ptr->SetMaximum(axisHist_ptr->GetMaximum());
+      for (auto [frameAxis, dataAxis] : {std::pair{axisHist_ptr->GetXaxis(), data_ptr->GetXaxis()}, std::pair{axisHist_ptr->GetYaxis(), data_ptr->GetYaxis()}}) {
+        frameAxis->TAttAxis::Copy(*dataAxis);
+        dataAxis->SetTitle(frameAxis->GetTitle());
+      }
+    }
+  }
 }
 
 //**************************************************************************************************
