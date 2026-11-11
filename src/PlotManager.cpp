@@ -1312,7 +1312,8 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       logger::error("Mode '{}' needs a graphical display, but ROOT runs in batch mode (is DISPLAY set, or was gROOT->SetBatch called?).", mode);
       return false;
     }
-  } else if (!mHasDisplay) {
+  } else if (needsDisplay && !mHasDisplay) {
+    // only the modes with windows probe the display: the probe maps a window, which takes the focus
     // determine OS dependent offset between window and frame
     // (GetWindowTopY gives the current coordinates of the window, but SetWindowPosition moves the frame instead of the window)
     mHasDisplay = false;
