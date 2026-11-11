@@ -2375,8 +2375,7 @@ void PlotPainter::ApplyDataStyle(item_state_t& state, T data_ptr, draw_option_t 
     // an input without a visible fill (ROOT's default fill colour 0 with a solid style) keeps none when the style is kept and the data
     // sets a fill colour (SetColor sets all three) but no fill style, for drawing options that draw no area (points, lines): their
     // fill would otherwise show (as the area of a graph drawn with a line); options that fill (band, area, hist, ...) keep it
-    static const std::set<draw_option_t> fillingAliases{hist, hist_clipped, bars, hbars, area, area_smooth, band, band_smooth, boxes, boxes_nomarkers};
-    const bool keptWithoutFill = keep && !data->GetFillStyle() && data_ptr->GetFillColor() == 0 && alias != static_cast<draw_option_t>(255) && !fillingAliases.count(alias);
+    const bool keptWithoutFill = keep && !data->GetFillStyle() && data_ptr->GetFillColor() == 0 && alias != static_cast<draw_option_t>(255) && !aliasesFilling.count(alias);
     if (auto fillColor = get_first(data->GetFillColor(),
                                    fromPad(pick(usedDefaults.color, pad.GetDefaultFillColors())),
                                    fromPad(pick(usedDefaults.color, fillDefaults(pad, *data))))) {
@@ -4143,8 +4142,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
   } else if constexpr (is_graph_1d<data_type>()) {
     if (optionAlias && !defaultDrawOptions_Graph.count(*optionAlias) && defaultDrawOptions_Hist.count(*optionAlias)) {
       // the warning about asymmetric errors (drawn with their mean) only where the option shows errors
-      static const std::set<draw_option_t> withoutErrors{hist, hist_open, hbars, area_smooth};
-      if (TH1* hist = ToHist(data_ptr, dataIndex != 0, !withoutErrors.count(*optionAlias))) {
+      if (TH1* hist = ToHist(data_ptr, dataIndex != 0, !aliasesWithoutErrors.count(*optionAlias))) {
         mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
         drawItem(hist, optionAlias);
         return;

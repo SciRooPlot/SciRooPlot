@@ -171,6 +171,9 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Graph{
   {boxes_nomarkers, "2"},
   {brackets, "[]"},
 };
+// 1d aliases that draw no error bars (asymmetric errors of a graph drawn as histogram are not shown) and those that fill an area
+inline const std::set<draw_option_t> aliasesWithoutErrors{line, curve, curve_clipped, hist, hist_open, hist_clipped, hist_open_clipped, bars, hbars, area, area_smooth, text};
+inline const std::set<draw_option_t> aliasesFilling{hist, hist_open, hist_clipped, hist_open_clipped, bars, hbars, area, area_smooth, band, band_smooth, boxes, boxes_nomarkers};
 
 // 2d graphs and 2d functions are drawn from a histogram interpolated (or sampled) on a grid, as 2d histograms; box and text would show
 // the grid instead of the data, candles and violins a distribution that does not exist. Only graphs have their points and triangles:
