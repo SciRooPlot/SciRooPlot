@@ -34,6 +34,37 @@ made again and again in one process without leaving ROOT objects behind (`repeat
 (`compare/calls.py`, with gdb), the windows of modes show and spread driven on a virtual display (`interactive/windows.py`), and raw ROOT
 options as SciRooPlot draws them next to plain ROOT (`raw_options.py`). Each says in its docstring how to run it.
 
+## Writing a test
+
+- A test is mostly a case list (`cases(dims, valid, named, always)`) and a check against a reference that does not come from the code
+  under test. Take the data kinds and variants from `DATA_KINDS` and `VARIANTS`, so that a kind added there is covered everywhere.
+- The fast run takes every value of every dimension once and some pairs of values, plus the `always` and named cases; `SRP_TESTS_FULL=1`
+  takes the whole list. A list of all dimensions crossed can be far too large: vary each dimension on its own around plain values
+  (`valid`), or take each pair of kinds once. A combination that matters but the fast run may not pick belongs in `named`.
+- One project and one `plot` run per file where possible (a run costs seconds, hundreds of plots in it little more). An exception while
+  painting loses only that plot, a crash the rest of the run. Thousands of plots: `Chunks` spreads them over runs of 300.
+- A test reading or painting thousands of canvases in one process runs out of memory (ROOT and its interpreter keep some for every
+  canvas read and every `TExec` run): wrap the reading in `Run.held()`, paint in forked chunks (`in_chunks`).
+- Plain ROOT as reference: draw a clone of the drawn object alone on a `TCanvas` with the same log flags and `Print` it (`TCanvas::Update`
+  crashes in batch PyROOT); reset what ROOT sets when painting (PLC/PMC/PFC) on the clone first.
+- Drawn objects are not the input: flows are cleared (unless `SetShowOverflowBins`), graphs drawn as points lose their x errors,
+  points that are not finite and empty graphs are not drawn. Each `Run.canvas`/`pad`/`drawn` call reads a new copy from the file.
+- Colours are compared by rgb and alpha (`rgba`), not by index: ROOT gives an rgb colour the index of an existing colour close to it.
+- Messages: warnings name the data, not the plot. Take the messages of one plot with `Run.messages(name, group)`, or count them per data
+  name as a whole word. Messages of the definition come from the C++ logger and Python out of order: match them by content. `plot`
+  loads the whole `plots.info` before it says which plots it makes: load a saved plot alone to get its loading messages.
+- `AddPlot` stores a copy: set up the data before adding the plot. Objects handed over in memory are found by their own name (a
+  nameless object is skipped), objects in a file by their key. Plot names cannot contain `/`.
+- A program run in a process of its own must not import `srptest` (importing it empties the work folder of the test): write it as plain
+  SciRooPlot code. Histograms it keeps after closing their file need `TH1::AddDirectory(false)`.
+- Read back from a multi-panel plot: a pad that draws nothing is not in the canvas (give every checked pad data or a text that fits
+  inside it).
+- A finding is fixed, or the guarantee is narrowed in the docstring with the reason: no known-failure marks. Named cases, check titles
+  and the "Covers:" line say in words what they check. A new or rewritten check must fail on the code without the fix it covers.
+- To find the plot behind a ROOT error: run `<build>/bin/plot <group> '<name regex>' file` with the configuration of the test
+  (`tests/work/<folder>.<test>/config` of the build directory as `SCIROOPLOT_CONFIG_PATH`) on halves of the names, then the plot alone under
+  `gdb -batch -ex "break Error" -ex run -ex bt --args …`.
+
 The data is created when a test runs, in `tests/work/` of the build directory; nothing is installed.
 The `cli` tests run `srp`, `plot` and the shell functions of `env.sh` of the build directory, in bash and in zsh where it is installed;
 their C++ projects need cmake and a compiler.
