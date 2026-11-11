@@ -486,6 +486,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     if (!inGroup) mScalesInCells.insert(shown);
   }
   vector<std::pair<TPad*, string>> padSetups;  // the setup of each pad painted (see below)
+  bool anyView{};                              // a pad draws in 3d: the viewing angles of pad 0 have a meaning
+  if (padDefaults.GetXLow()) ReportIgnored("The position of pad 0", "pad 0 holds the defaults of all pads and is not drawn");
   for (const auto& [padID, dummy] : plot.GetPads()) {
     if (padID == 0) continue;  // pad 0 is used only to define the defaults
     auto& pad = plot[padID];   // needed because processData lambda cannot capture variable from structured binding ('dummy')
@@ -1370,6 +1372,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                   pad_ptr->SetLogz(*axisLayout.GetLog());
                 }
               }
+              if (axisLabel != 'Z' && (axisLayout.GetColorScaleOffset() || axisLayout.GetColorScaleWidth())) {
+                ReportIgnored(fmt::format("The colour scale offset or width of the {} axis", axisLabel), "only the Z axis (C of a 3d histogram) has a colour scale");
+              }
+              if (axisLabel == 'Z' && (axisLayout.GetGrid() || axisLayout.GetOppositeTicks())) {
+                ReportIgnored("A grid or opposite ticks of the Z axis", "ROOT draws them on X and Y only");
+              }
               if (axisLayout.GetGrid()) {
                 if (axisLabel == 'X') {
                   pad_ptr->SetGridx(*axisLayout.GetGrid());
@@ -1709,6 +1717,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                 contentRange = contentRange || content.GetMinRange() || content.GetMaxRange();
                 if (content.GetTitle()) title = content.GetTitle();
                 if (content.GetLog()) isLog = *content.GetLog();
+                if (content.GetGrid() || content.GetOppositeTicks() || content.GetTimeFormat() || content.GetLabelAngle()) {
+                  ReportIgnored("A grid, opposite ticks, time format or label angle of the C axis", "the colour scale of a 3d histogram has none of them");
+                }
+                if (content.GetRoomAboveMax() || content.GetRoomBelowMin()) {
+                  ReportIgnored("Room above or below the C axis", "the boxes of a 3d histogram are coloured over the range of the C axis, which leaves no room");
+                }
+                if (content.GetNumDivisions() || content.GetMaxDigits()) {
+                  ReportIgnored("The divisions or max digits of the C axis", "ROOT takes them for the colour scale of a 3d histogram from its Z axis");
+                }
               }
               if (isLog) logger::warning("Log scale of the C axis in pad {} ignored: ROOT colours the boxes of a 3d histogram linearly.", padID);
               if (title) {
@@ -2070,6 +2087,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           // colour levels: the frame, whose colour scale is drawn (and from which COL drawn SAME takes its colours), takes those of the first
           // map of the pad (a 2d or 3d histogram, a 2d graph or a 2d function), the one it is made from, also fewer than ROOT's 20, so that the
           // scale shows the levels of the map; levels of later data (e.g. contour lines over a map) are their own, the frame takes them only if they are more
+          if constexpr (!is_2d<data_type>() && !is_3d<data_type>()) {
+            if (data->GetContours() || data->GetNContours()) ReportIgnored(fmt::format("The contours of {}", data->GetName()), "only 2d and 3d data has colour levels");
+          }
           if constexpr (is_2d<data_type>() || is_hist_3d<data_type>()) {
             const bool firstMap = !mapDrawn;
             mapDrawn = true;
@@ -3639,6 +3659,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     if (auto phi = get_first(pad.GetViewPhi(), padDefaults.GetViewPhi())) {
       pad_ptr->SetPhi(*phi);
     }
+    if (pad_ptr->GetView()) {
+      anyView = true;
+    } else if (pad.GetViewTheta() || pad.GetViewPhi()) {
+      ReportIgnored(fmt::format("The view of pad {}", padID), "it draws nothing in 3d");
+    }
 
     const bool hbarFrame = axisHist_ptr && IsHBarFrame(pad_ptr, axisHist_ptr);
     for (auto axisLabel : {'X', 'Y'}) {
@@ -3652,6 +3677,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
 
     padSetups.emplace_back(pad_ptr, std::move(padSetup));
   }
+  if (!anyView && (padDefaults.GetViewTheta() || padDefaults.GetViewPhi())) ReportIgnored("The view of pad 0", "no pad of the plot draws in 3d");
 
   // the setup has to be the first primitive of each pad, so that it runs before anything of the pad is painted: added once all pads are
   // painted, since every update while the later pads are made repaints the earlier ones, and each run of a setup goes through the
@@ -4732,6 +4758,10 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
     if ((kind == kind_t::polygon) ? (c.size() < 6 || c.size() % 2) : (c.size() != nExpected)) continue;
     const bool finite = std::all_of(c.begin(), c.end(), [](double_t value) { return std::isfinite(value); });
     if (!finite) continue;
+    const bool isLine = kind == kind_t::line || kind == kind_t::vertical_line || kind == kind_t::horizontal_line;
+    if (isLine && (shape->GetFillColor() || shape->GetFillStyle() || shape->GetFillAlpha())) {
+      ReportIgnored(fmt::format("The fill of shape {} ({}) of pad {}", shapeIndex, Shape::KindName(kind), padID), "a line has no area (an arrow fills its head)");
+    }
     // positions as axis values: given so, or fractions of the frame or the pad converted; a log axis cannot show values that are not positive
     auto valueX = [&](double_t x) { return (!isUser) ? FromPad(pad->GetX1() + (span[0] + x * (span[2] - span[0])) * (pad->GetX2() - pad->GetX1()), pad->GetLogx()) : ((pad->GetLogx() && x <= 0.) ? nan : x); };
     auto valueY = [&](double_t y) { return (!isUser) ? FromPad(pad->GetY1() + (span[1] + y * (span[3] - span[1])) * (pad->GetY2() - pad->GetY1()), pad->GetLogy()) : ((pad->GetLogy() && y <= 0.) ? nan : y); };
@@ -7852,6 +7882,16 @@ void PlotPainter::DropEmptyGroups(string& text)
     logger::warning("Text '{}' has an empty group {{}} and a backslash, on which ROOT crashes: drawn as '{}'.", text, result);
   }
   text = result;
+}
+
+//**************************************************************************************************
+/**
+ * Reports a setting that has no meaning where it is set, once per plot.
+ */
+//**************************************************************************************************
+void PlotPainter::ReportIgnored(const string& setting, const char* reason)
+{
+  if (mReportedIgnored.insert(setting).second) logger::warning("{} is ignored: {}.", setting, reason);
 }
 
 //**************************************************************************************************

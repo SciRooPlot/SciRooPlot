@@ -51,7 +51,6 @@ EFFECT_VALUES = {
 }
 # calls that change nothing drawn in these plots: (class, method, host or None for every host): why
 DEFAULT = "the value is the default"
-MEANINGLESS = "no meaning there (ignored without a message)"
 NO_EFFECT = {
     **{(cls, method, None): DEFAULT for cls in ("TextBox", "LegendBox", "StatsBox", "ImageBox") for method in ("SetFrameCoordinates",)},
     **{("Shape", "SetUserCoordinates", None): DEFAULT, ("Pad", "SetDefaultCandleBoxRange", None): "no candle drawn"},
@@ -71,21 +70,7 @@ NO_EFFECT = {
     ("PanelLayout", "SetColorScaleOffset", None): "no colour scale in the plot using the layout (layouts/pad_look.py)",
     ("PanelLayout", "SetColorScaleWidth", None): "no colour scale in the plot using the layout (layouts/pad_look.py)",
     ("PanelLayout", "SetCommonTitles", None): "the panels have no titles (layouts/shared_axes.py)",
-    **{("Axis", method, host): MEANINGLESS for method in ("SetColorScaleOffset", "SetColorScaleWidth") for host in ("x", "y", "pad0_x")},
-    **{("Axis", method, "c"): MEANINGLESS for method in ("SetGrid", "SetRoomAboveMax", "SetRoomBelowMin", "SetTimeFormat", "SetOppositeTicks", "SetLabelAngle")},
-    ("Axis", "SetGrid", "z"): MEANINGLESS,
-    ("Axis", "SetOppositeTicks", "z"): MEANINGLESS,
     **{("Axis", "SetNoExponent", host): "the labels of that axis need no exponent" for host in ("x", "pad0_x", "c")},
-    ("Axis", "SetNumDivisions", "c"): "ROOT reads the divisions of the colour scale of a 3d histogram from its binned z axis at every paint",
-    ("Axis", "SetMaxDigits", "c"): "ROOT reads the max digits of the colour scale of a 3d histogram from its binned z axis at every paint (with its divisions)",
-    ("Data", "SetContours", "data"): MEANINGLESS,
-    ("Ratio", "SetContours", None): MEANINGLESS,
-    ("Shape", "SetFill", "line"): MEANINGLESS,
-    ("Shape", "SetFillAlpha", "line"): MEANINGLESS,
-    ("Shape", "SetFillColor", "line"): MEANINGLESS,
-    ("Shape", "SetFillStyle", "line"): MEANINGLESS,
-    ("Pad", "SetView", None): MEANINGLESS,
-    ("Pad", "SetPosition", "pad0"): MEANINGLESS,
 }
 
 # hosts of their own: the order and spacing of columns need a legend of two columns and three rows

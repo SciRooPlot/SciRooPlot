@@ -371,6 +371,8 @@ class PlotPainter
   void ReplacePlaceholders(std::string& str, TNamed* rowData, const std::function<TNamed*(uint16_t, const std::optional<uint8_t>&)>& findData = {});
   // a text with a backslash is drawn by ROOT's TMathText, which crashes on an empty group ({}, { }): such groups are dropped, warned once per text
   void DropEmptyGroups(std::string& text);
+  // a setting that has no meaning where it is set: said once per plot (settings of pad 0 reach every pad)
+  void ReportIgnored(const std::string& setting, const char* reason);
   // 1d histograms and graphs of a flat pad that lie entirely beyond one edge of its frame (the first data decides the frame): warned
   static void WarnIfOutsideFrame(TPad* pad);
   // the outline of a fill symbol: the line of the data (as TLegend draws it), none, or thin and solid in the line colour (boxes)
@@ -389,7 +391,7 @@ class PlotPainter
   bool DrawBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, const Plot::Pad& pad, const Plot::Pad& padDefaults, TPad* pad_ptr,
                const std::string& name);
   TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, coordinates_t coordinates, TPad* pad);
-  static void DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot::Pad& padDefaults, Plot::Pad::Shape::layer_t layer, TObject* insertAfter, uint8_t padID);
+  void DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot::Pad& padDefaults, Plot::Pad::Shape::layer_t layer, TObject* insertAfter, uint8_t padID);
   bool FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY, bool& coversData);
   void FindBoxPosition(TPad* pad, double_t width, double_t height, box_placement_t placement, const std::string& boxType, double_t& lowerLeftX, double_t& lowerLeftY);
   static std::pair<double_t, double_t> SizeUnit(coordinates_t coordinates, const TVirtualPad* pad);  // the NDC of a size of 1 set for a box
@@ -431,6 +433,7 @@ class PlotPainter
   std::array<Style_t, 3> mScreenDashStyles{};
   std::set<std::pair<const TObject*, size_t>> mReportedStoredRanges;  // input axes whose stored range a projection of this plot does not apply (reported once)
   std::set<std::string> mReportedTexts;                               // texts whose empty groups were dropped (reported once)
+  std::set<std::string> mReportedIgnored;                             // settings without meaning where they are set (reported once)
   // histograms drawn as graphs (by an alias only graphs have), with the graph they are drawn as: their statistics box and placeholders refer to the histogram
   std::unordered_map<const TObject*, std::unique_ptr<TH1>> mSourceHists;
   std::vector<std::unique_ptr<TObject>> mUndrawn;  // data that is not drawn (an empty graph): deleted with the plot's temporaries
