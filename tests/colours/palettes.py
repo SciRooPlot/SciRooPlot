@@ -1,5 +1,5 @@
 """A pad paints its data with the palette set for it (SetPalette with a ROOT palette and an alpha), else with the one of pad 0, else with ROOT's
-kBird: the colours plain ROOT gives for that palette (gStyle->SetPalette(n, nullptr, alpha)), set before anything of the pad is painted and
+kBird (a ROOT palette of the pad wins over a gradient of pad 0): the colours plain ROOT gives for that palette (gStyle->SetPalette(n, nullptr, alpha)), set before anything of the pad is painted and
 restored to kBird after the canvas, so a session drawing other things afterwards is unaffected. A ColorScale() cell shows its map's scale
 in the palette the map is painted with; panels sharing one colour scale warn once when they are painted with different palettes.
 Covers: the scale cell in the palette of its map, different palettes in a shared scale warn; no warning for settings
@@ -10,6 +10,7 @@ from srptest import DATA_2D, DATA_3D, ROOT, Project, S, add_data, base_of, cases
 
 PALETTES = {"default": None, "kBird": ROOT.kBird, "kViridis": ROOT.kViridis, "kCividis": ROOT.kCividis, "kDeepSea": ROOT.kDeepSea, "kRainBow": ROOT.kRainBow, "kGreyScale": ROOT.kGreyScale, "pretty": 1}
 OTHER = ROOT.kSunset  # pad 0's palette where the pad sets its own
+OTHER_GRADIENT = [(1.0, 0.0, 0.0, 0.0), (0.0, 0.0, 1.0, 1.0)]  # pad 0's gradient where the pad sets a ROOT palette
 MAPS = tuple(k for k in DATA_2D + DATA_3D if k not in ("tf3", "tf3_cpp"))  # data drawn with colours of the palette
 
 
@@ -22,7 +23,7 @@ def plain(palette, alpha):
 p = Project("palettes", bases=("1d", "2d", "2d_2x1", "2d_2x1_gap"))
 p.inputs()
 todo = cases(
-    {"kind": list(MAPS), "palette": list(PALETTES), "where": ["pad", "pad0", "both"], "alpha": [None, 0.5]},
+    {"kind": list(MAPS), "palette": list(PALETTES), "where": ["pad", "pad0", "both", "pad0_gradient"], "alpha": [None, 0.5]},
     valid=lambda c: c["palette"] != "default" or (c["where"] == "pad" and c["alpha"] is None),
 )
 for i, case in enumerate(todo):
@@ -31,7 +32,9 @@ for i, case in enumerate(todo):
     if palette is not None:
         if case["where"] in ("pad0", "both"):
             plot[0].SetPalette(OTHER if case["where"] == "both" else palette, case["alpha"])
-        if case["where"] in ("pad", "both"):
+        if case["where"] == "pad0_gradient":
+            plot[0].SetPalette(OTHER_GRADIENT)
+        if case["where"] in ("pad", "both", "pad0_gradient"):
             plot[1].SetPalette(palette, case["alpha"])
     add_data(plot[1], case["kind"])
     p.pm.AddPlot(plot)

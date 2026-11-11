@@ -663,7 +663,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     if (pad.GetPaletteGradient().rgbEndpoints) {
       const auto& gradient = pad.GetPaletteGradient();
       padSetup += GradientPaletteCommand(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
-    } else if (padDefaults.GetPaletteGradient().rgbEndpoints) {
+    } else if (padDefaults.GetPaletteGradient().rgbEndpoints && !pad.GetPalette()) {
       const auto& gradient = padDefaults.GetPaletteGradient();
       padSetup += GradientPaletteCommand(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
     } else {
