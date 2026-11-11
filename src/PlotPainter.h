@@ -323,6 +323,8 @@ class PlotPainter
                                                  const std::optional<double_t>& userMin, const std::optional<double_t>& userMax);
   template <typename T>
   void SetUpFrame(item_state_t& state, T data_ptr, const std::string& polarGridOption);
+  template <typename T>
+  void ApplyDataStyle(item_state_t& state, T data_ptr, draw_option_t alias);
   static size_t FrameDataIndex(const std::vector<std::shared_ptr<Plot::Pad::Data>>& data, const data_buffer_t& dataBuffer);
   static TObject* Input(const Plot::Pad::Data& data, const data_buffer_t& dataBuffer);
   void AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefaults, const Plot::Pad& padSettings, uint8_t padID, const Plot::Pad::Data* refFunc, std::string& padSetup);

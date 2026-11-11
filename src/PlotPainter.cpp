@@ -1464,7 +1464,6 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   pad_state_t& padState = state.padState;
   auto& data = state.data;
   auto& padDefaults = padState.padDefaults;
-  auto& fillDefaults = padState.fillDefaults;
   auto& pad = padState.pad;
   auto& pad_ptr = padState.pad_ptr;
   auto& padSetup = padState.padSetup;
@@ -1482,7 +1481,6 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   auto& mapDrawn = padState.mapDrawn;
   auto& storedRangeZ = padState.storedRangeZ;
   auto& frameFuncRange = padState.frameFuncRange;
-  auto& usedDefaults = padState.usedDefaults;
 
   using data_type = std::decay_t<decltype(data_ptr)>;
   draw_option_t alias = optionAlias.value_or(static_cast<draw_option_t>(255));  // 255: no alias
@@ -1694,116 +1692,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       drawOption.erase(std::remove_if(drawOption.begin(), drawOption.end(), [](char c) { return c == 'Z' || c == 'z'; }), drawOption.end());
     }
 
-    // define data appearance
-    if (hasRefFunc && dataIndex == 1) {
-      // the reference function is not part of the data: it is a black solid line (unless set) and does not use up entries of the default lists
-      data_ptr->SetLineColor(data->GetLineColor().value_or(kBlack).ToIndex());
-      if (auto lineAlpha = get_first(data->GetLineAlpha(), pad.GetDefaultLineAlpha(), padDefaults.GetDefaultLineAlpha())) {
-        data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), *lineAlpha));
-      }
-      data_ptr->SetLineStyle(data->GetLineStyle().value_or(kSolid));
-      if (auto lineWidth = get_first(data->GetLineWidth(), pad.GetDefaultLineWidth(), padDefaults.GetDefaultLineWidth())) {
-        data_ptr->SetLineWidth(*lineWidth);
-      }
-    } else {
-      // the defaults of the pad apply to what the data does not set, unless the style stored with the input is kept
-      const bool keep = data->GetKeepInputStyle();
-      auto fromPad = [keep](auto value) { return (keep) ? decltype(value){} : value; };
-      // marker, line and fill colours not set for the data take the same entry of the default lists (SetColor sets all three);
-      // data that takes any of them moves the next data on to the next entry
-      bool tookColor{};
-      if (auto markerColor = get_first(data->GetMarkerColor(),
-                                       fromPad(pick(usedDefaults.color, pad.GetDefaultMarkerColors())),
-                                       fromPad(pick(usedDefaults.color, padDefaults.GetDefaultMarkerColors())))) {
-        if (!data->GetMarkerColor()) tookColor = true;
-        data_ptr->SetMarkerColor(markerColor->ToIndex());
-      }
-      if (auto markerAlpha = get_first(data->GetMarkerAlpha(),
-                                       fromPad(pad.GetDefaultMarkerAlpha()),
-                                       fromPad(padDefaults.GetDefaultMarkerAlpha()))) {
-        data_ptr->SetMarkerColor(TColor::GetColorTransparent(data_ptr->GetMarkerColor(), *markerAlpha));
-      }
-      if (auto markerStyle = get_first(data->GetMarkerStyle(),
-                                       fromPad(pick(usedDefaults.markerStyle, pad.GetDefaultMarkerStyles())),
-                                       fromPad(pick(usedDefaults.markerStyle, padDefaults.GetDefaultMarkerStyles())))) {
-        if (!data->GetMarkerStyle()) usedDefaults.markerStyle++;
-        data_ptr->SetMarkerStyle(*markerStyle);
-      }
-      if (auto markerSize = get_first(data->GetMarkerSize(),
-                                      fromPad(pad.GetDefaultMarkerSize()),
-                                      fromPad(padDefaults.GetDefaultMarkerSize()))) {
-        data_ptr->SetMarkerSize(*markerSize);
-      }
-      if constexpr (is_hist_1d<data_type>()) {
-        if (alias == boxes_nomarkers || alias == band || alias == band_smooth) data_ptr->SetMarkerSize(0.);  // E2, E5 and E6 always draw the markers
-      }
-      if (auto lineColor = get_first(data->GetLineColor(),
-                                     fromPad(pick(usedDefaults.color, pad.GetDefaultLineColors())),
-                                     fromPad(pick(usedDefaults.color, padDefaults.GetDefaultLineColors())))) {
-        if (!data->GetLineColor()) tookColor = true;
-        data_ptr->SetLineColor(lineColor->ToIndex());
-      }
-      if (auto lineAlpha = get_first(data->GetLineAlpha(),
-                                     fromPad(pad.GetDefaultLineAlpha()),
-                                     fromPad(padDefaults.GetDefaultLineAlpha()))) {
-        data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), *lineAlpha));
-      }
-      if (auto lineStyle = get_first(data->GetLineStyle(),
-                                     fromPad(pick(usedDefaults.lineStyle, pad.GetDefaultLineStyles())),
-                                     fromPad(pick(usedDefaults.lineStyle, padDefaults.GetDefaultLineStyles())))) {
-        if (!data->GetLineStyle()) usedDefaults.lineStyle++;
-        data_ptr->SetLineStyle(*lineStyle);
-      }
-      // the cells of a flat polar drawing are outlined with the line width: only a width the data sets itself outlines them (colz has no outlines)
-      if (!data->GetLineWidth() && IsFlatPolar(drawOption)) {
-        data_ptr->SetLineWidth(0);
-        data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), 0.f));  // pdf draws width 0 as a hairline
-      } else if (is_2d<data_type>() && !data->GetLineWidth() && !keep && TString(drawOption).Contains("ARR", TString::kIgnoreCase)) {
-        // ROOT outlines every arrow of ARR (fixed head size) with the line width: the wide default lines of the pad make blobs that hide a map below
-        data_ptr->SetLineWidth(1);
-      } else if (!data->GetLineWidth() && !keep && (is_3d<data_type>() || (is_2d<data_type>() && IsView3d(drawOption)))) {
-        // ROOT outlines every box, bar, surface cell and triangle of a 3d view with the line width: the wide default lines of the pad
-        // darken the view and hide the colours of small boxes, so the edges are thin unless the data sets a width (iso surfaces have no edges)
-        data_ptr->SetLineWidth(1);
-      } else if (auto lineWidth = get_first(data->GetLineWidth(),
-                                            fromPad(pad.GetDefaultLineWidth()),
-                                            fromPad(padDefaults.GetDefaultLineWidth()))) {
-        data_ptr->SetLineWidth(*lineWidth);
-      }
-      // an input without a visible fill (ROOT's default fill colour 0 with a solid style) keeps none when the style is kept and the data
-      // sets a fill colour (SetColor sets all three) but no fill style, for drawing options that draw no area (points, lines): their
-      // fill would otherwise show (as the area of a graph drawn with a line); options that fill (band, area, hist, ...) keep it
-      static const std::set<draw_option_t> fillingAliases{hist, hist_clipped, bars, hbars, area, area_smooth, band, band_smooth, boxes, boxes_nomarkers};
-      const bool keptWithoutFill = keep && !data->GetFillStyle() && data_ptr->GetFillColor() == 0 && alias != static_cast<draw_option_t>(255) && !fillingAliases.count(alias);
-      if (auto fillColor = get_first(data->GetFillColor(),
-                                     fromPad(pick(usedDefaults.color, pad.GetDefaultFillColors())),
-                                     fromPad(pick(usedDefaults.color, fillDefaults(pad, *data))))) {
-        if (!data->GetFillColor()) tookColor = true;
-        data_ptr->SetFillColor(fillColor->ToIndex());
-      }
-      if (tookColor) usedDefaults.color++;
-      if constexpr (is_func_3d<data_type>()) {
-        // ROOT paints the surface f = 0 of a 3d function with flat faces in the fill colour (whatever the fill style) and its mesh in the
-        // line colour: without a fill colour of its own, white faces with the mesh in the data's colour (as ROOT's default), not a silhouette
-        // (before the alpha, which applies to them too)
-        if (!data->GetFillColor() && !keep) data_ptr->SetFillColor(kWhite);
-      }
-      if (auto fillAlpha = get_first(data->GetFillAlpha(),
-                                     fromPad(pad.GetDefaultFillAlpha()),
-                                     fromPad(padDefaults.GetDefaultFillAlpha()))) {
-        data_ptr->SetFillColor(TColor::GetColorTransparent(data_ptr->GetFillColor(), *fillAlpha));
-      }
-      if (auto fillStyle = get_first(data->GetFillStyle(),
-                                     fromPad(pick(usedDefaults.fillStyle, pad.GetDefaultFillStyles())),
-                                     fromPad(pick(usedDefaults.fillStyle, padDefaults.GetDefaultFillStyles())))) {
-        if (!data->GetFillStyle()) usedDefaults.fillStyle++;
-        data_ptr->SetFillStyle(*fillStyle);
-      }
-      if (keptWithoutFill) data_ptr->SetFillStyle(0);
-      if constexpr (is_hist_1d<data_type>() || is_func_1d<data_type>()) {
-        if (alias == line || alias == curve) data_ptr->SetFillStyle(0);  // HIST L and HIST C would also fill the histogram, L and C the area below a function
-      }
-    }
+    ApplyDataStyle(state, data_ptr, alias);
 
     // data ranges
     double_t xmin = 0, xmax = 0, ymin = 0, ymax = 0;
@@ -2331,6 +2220,137 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   }
   ++dataIndex;
   drawOption = "SAME ";  // next data should be drawn to same pad
+}
+
+//**************************************************************************************************
+/**
+ * Defines the appearance of the data: its own settings, else the defaults of its pad and of pad 0 (the drawing option alias decides which apply).
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::ApplyDataStyle(item_state_t& state, T data_ptr, draw_option_t alias)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& padDefaults = padState.padDefaults;
+  auto& fillDefaults = padState.fillDefaults;
+  auto& pad = padState.pad;
+  auto& hasRefFunc = padState.hasRefFunc;
+  auto& drawOption = padState.drawOption;
+  auto& dataIndex = padState.dataIndex;
+  auto& usedDefaults = padState.usedDefaults;
+
+  using data_type = std::decay_t<decltype(data_ptr)>;
+
+  if (hasRefFunc && dataIndex == 1) {
+    // the reference function is not part of the data: it is a black solid line (unless set) and does not use up entries of the default lists
+    data_ptr->SetLineColor(data->GetLineColor().value_or(kBlack).ToIndex());
+    if (auto lineAlpha = get_first(data->GetLineAlpha(), pad.GetDefaultLineAlpha(), padDefaults.GetDefaultLineAlpha())) {
+      data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), *lineAlpha));
+    }
+    data_ptr->SetLineStyle(data->GetLineStyle().value_or(kSolid));
+    if (auto lineWidth = get_first(data->GetLineWidth(), pad.GetDefaultLineWidth(), padDefaults.GetDefaultLineWidth())) {
+      data_ptr->SetLineWidth(*lineWidth);
+    }
+  } else {
+    // the defaults of the pad apply to what the data does not set, unless the style stored with the input is kept
+    const bool keep = data->GetKeepInputStyle();
+    auto fromPad = [keep](auto value) { return (keep) ? decltype(value){} : value; };
+    // marker, line and fill colours not set for the data take the same entry of the default lists (SetColor sets all three);
+    // data that takes any of them moves the next data on to the next entry
+    bool tookColor{};
+    if (auto markerColor = get_first(data->GetMarkerColor(),
+                                     fromPad(pick(usedDefaults.color, pad.GetDefaultMarkerColors())),
+                                     fromPad(pick(usedDefaults.color, padDefaults.GetDefaultMarkerColors())))) {
+      if (!data->GetMarkerColor()) tookColor = true;
+      data_ptr->SetMarkerColor(markerColor->ToIndex());
+    }
+    if (auto markerAlpha = get_first(data->GetMarkerAlpha(),
+                                     fromPad(pad.GetDefaultMarkerAlpha()),
+                                     fromPad(padDefaults.GetDefaultMarkerAlpha()))) {
+      data_ptr->SetMarkerColor(TColor::GetColorTransparent(data_ptr->GetMarkerColor(), *markerAlpha));
+    }
+    if (auto markerStyle = get_first(data->GetMarkerStyle(),
+                                     fromPad(pick(usedDefaults.markerStyle, pad.GetDefaultMarkerStyles())),
+                                     fromPad(pick(usedDefaults.markerStyle, padDefaults.GetDefaultMarkerStyles())))) {
+      if (!data->GetMarkerStyle()) usedDefaults.markerStyle++;
+      data_ptr->SetMarkerStyle(*markerStyle);
+    }
+    if (auto markerSize = get_first(data->GetMarkerSize(),
+                                    fromPad(pad.GetDefaultMarkerSize()),
+                                    fromPad(padDefaults.GetDefaultMarkerSize()))) {
+      data_ptr->SetMarkerSize(*markerSize);
+    }
+    if constexpr (is_hist_1d<data_type>()) {
+      if (alias == boxes_nomarkers || alias == band || alias == band_smooth) data_ptr->SetMarkerSize(0.);  // E2, E5 and E6 always draw the markers
+    }
+    if (auto lineColor = get_first(data->GetLineColor(),
+                                   fromPad(pick(usedDefaults.color, pad.GetDefaultLineColors())),
+                                   fromPad(pick(usedDefaults.color, padDefaults.GetDefaultLineColors())))) {
+      if (!data->GetLineColor()) tookColor = true;
+      data_ptr->SetLineColor(lineColor->ToIndex());
+    }
+    if (auto lineAlpha = get_first(data->GetLineAlpha(),
+                                   fromPad(pad.GetDefaultLineAlpha()),
+                                   fromPad(padDefaults.GetDefaultLineAlpha()))) {
+      data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), *lineAlpha));
+    }
+    if (auto lineStyle = get_first(data->GetLineStyle(),
+                                   fromPad(pick(usedDefaults.lineStyle, pad.GetDefaultLineStyles())),
+                                   fromPad(pick(usedDefaults.lineStyle, padDefaults.GetDefaultLineStyles())))) {
+      if (!data->GetLineStyle()) usedDefaults.lineStyle++;
+      data_ptr->SetLineStyle(*lineStyle);
+    }
+    // the cells of a flat polar drawing are outlined with the line width: only a width the data sets itself outlines them (colz has no outlines)
+    if (!data->GetLineWidth() && IsFlatPolar(drawOption)) {
+      data_ptr->SetLineWidth(0);
+      data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), 0.f));  // pdf draws width 0 as a hairline
+    } else if (is_2d<data_type>() && !data->GetLineWidth() && !keep && TString(drawOption).Contains("ARR", TString::kIgnoreCase)) {
+      // ROOT outlines every arrow of ARR (fixed head size) with the line width: the wide default lines of the pad make blobs that hide a map below
+      data_ptr->SetLineWidth(1);
+    } else if (!data->GetLineWidth() && !keep && (is_3d<data_type>() || (is_2d<data_type>() && IsView3d(drawOption)))) {
+      // ROOT outlines every box, bar, surface cell and triangle of a 3d view with the line width: the wide default lines of the pad
+      // darken the view and hide the colours of small boxes, so the edges are thin unless the data sets a width (iso surfaces have no edges)
+      data_ptr->SetLineWidth(1);
+    } else if (auto lineWidth = get_first(data->GetLineWidth(),
+                                          fromPad(pad.GetDefaultLineWidth()),
+                                          fromPad(padDefaults.GetDefaultLineWidth()))) {
+      data_ptr->SetLineWidth(*lineWidth);
+    }
+    // an input without a visible fill (ROOT's default fill colour 0 with a solid style) keeps none when the style is kept and the data
+    // sets a fill colour (SetColor sets all three) but no fill style, for drawing options that draw no area (points, lines): their
+    // fill would otherwise show (as the area of a graph drawn with a line); options that fill (band, area, hist, ...) keep it
+    static const std::set<draw_option_t> fillingAliases{hist, hist_clipped, bars, hbars, area, area_smooth, band, band_smooth, boxes, boxes_nomarkers};
+    const bool keptWithoutFill = keep && !data->GetFillStyle() && data_ptr->GetFillColor() == 0 && alias != static_cast<draw_option_t>(255) && !fillingAliases.count(alias);
+    if (auto fillColor = get_first(data->GetFillColor(),
+                                   fromPad(pick(usedDefaults.color, pad.GetDefaultFillColors())),
+                                   fromPad(pick(usedDefaults.color, fillDefaults(pad, *data))))) {
+      if (!data->GetFillColor()) tookColor = true;
+      data_ptr->SetFillColor(fillColor->ToIndex());
+    }
+    if (tookColor) usedDefaults.color++;
+    if constexpr (is_func_3d<data_type>()) {
+      // ROOT paints the surface f = 0 of a 3d function with flat faces in the fill colour (whatever the fill style) and its mesh in the
+      // line colour: without a fill colour of its own, white faces with the mesh in the data's colour (as ROOT's default), not a silhouette
+      // (before the alpha, which applies to them too)
+      if (!data->GetFillColor() && !keep) data_ptr->SetFillColor(kWhite);
+    }
+    if (auto fillAlpha = get_first(data->GetFillAlpha(),
+                                   fromPad(pad.GetDefaultFillAlpha()),
+                                   fromPad(padDefaults.GetDefaultFillAlpha()))) {
+      data_ptr->SetFillColor(TColor::GetColorTransparent(data_ptr->GetFillColor(), *fillAlpha));
+    }
+    if (auto fillStyle = get_first(data->GetFillStyle(),
+                                   fromPad(pick(usedDefaults.fillStyle, pad.GetDefaultFillStyles())),
+                                   fromPad(pick(usedDefaults.fillStyle, padDefaults.GetDefaultFillStyles())))) {
+      if (!data->GetFillStyle()) usedDefaults.fillStyle++;
+      data_ptr->SetFillStyle(*fillStyle);
+    }
+    if (keptWithoutFill) data_ptr->SetFillStyle(0);
+    if constexpr (is_hist_1d<data_type>() || is_func_1d<data_type>()) {
+      if (alias == line || alias == curve) data_ptr->SetFillStyle(0);  // HIST L and HIST C would also fill the histogram, L and C the area below a function
+    }
+  }
 }
 
 //**************************************************************************************************
