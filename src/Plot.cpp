@@ -1524,6 +1524,10 @@ auto Plot::Pad::SetMargins(float_t top, float_t bottom, float_t left, float_t ri
   valid = CheckFraction(left, "left margin") && valid;
   valid = CheckFraction(right, "right margin") && valid;
   if (!valid) return *this;
+  if (top + bottom >= 1.f || left + right >= 1.f) {
+    logger::warning("The margins (top {}, bottom {}, left {}, right {}) leave no room for the frame: ignored.", top, bottom, left, right);
+    return *this;
+  }
   mMargins.top = top;
   mMargins.bottom = bottom;
   mMargins.left = left;

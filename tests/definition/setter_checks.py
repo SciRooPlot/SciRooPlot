@@ -6,7 +6,8 @@ not exist ...), the other parameters plain. Reference: the same call with the pl
 - the call raises (the plot is not made), or it gives exactly one message more than the plain call, either when the plot is defined
   or when it is plotted (loading the saved plot may say again what was said when it was defined): an invalid value is ignored, what was
   set before stays;
-  named: the same tree joined again, a selection of the entries (Filter) of data that is not projected;
+  named: the same tree joined again, a selection of the entries (Filter) of data that is not projected, pad margins leaving no room
+  for the frame (also one margin beside that of the base plot); margins with room are drawn as set, whatever the order of setting;
 - values that mean something in ROOT (VALID: ROOT's default palette, a digit 0 of an alignment, ticks on the other side, no reference
   function, the forms of functions) give no message;
 - a call repeated with another value replaces the first one, in either order (the saved plot equals the one with only the second call);
@@ -179,6 +180,15 @@ cases.append({**plain, "plainCase": plain, "param": "tree", "bad": "the same tre
 for given, data in (("tree", 'p[1].AddData("t", "s")'), ("ratio denominator", 'p[1].AddRatio("h", "s", "h2", "s2").Denom()')):
     plain = {"py": f'p = Plot("{{name}}", "g", "1d")\n{data}\npm.AddPlot(p)', "label": f"Data.Filter(filter) on a {given} without projection"}
     cases.append({**plain, "plainCase": plain, "param": "filter", "bad": "x > 2", "valid": False, "py": f'p = Plot("{{name}}", "g", "1d")\n{data}.Filter("x > 2")\npm.AddPlot(p)'})
+# named: margins of a pad leaving no room for the frame (top + bottom or left + right of 1 or more), set together or one of them beside
+# the margin of the base plot (said when plotted); a pair with room is accepted whatever the order of setting (top 0.9, bottom 0.05)
+for given, bad, good, valid in (
+    ("SetMargins(top, bottom, left, right)", "SetMargins(0.6, 0.6, 0.1, 0.1)", "SetMargins(0.1, 0.1, 0.1, 0.1)", False),
+    ("SetTopMargin(top) beside the bottom margin of the base plot", "SetTopMargin(0.95)", "SetTopMargin(0.1)", False),
+    ("SetMargins(top, bottom, left, right)", "SetMargins(0.9, 0.05, 0.1, 0.1)", "SetMargins(0.1, 0.1, 0.1, 0.1)", True),
+):
+    plain = {"py": f'p = Plot("{{name}}", "g", "1d")\np[1].{good}\npm.AddPlot(p)', "label": f"Pad.{given}"}
+    cases.append({**plain, "plainCase": plain, "param": "margins", "bad": bad, "valid": valid, "py": f'p = Plot("{{name}}", "g", "1d")\np[1].{bad}\npm.AddPlot(p)'})
 plains = list({id(case["plainCase"]): case["plainCase"] for case in cases}.values())
 # projections need data that can be projected: a 3d histogram for those of histograms, the trees for the requests
 REQUESTS = ("Project1D", "Project2D", "Profile1D", "Profile2D", "Scatter")
@@ -271,6 +281,10 @@ for i, case in enumerate(plains + cases):
     _, printed = S.captured(lambda: S.S.PlotManager("loaded").LoadPlots(file=single))
     case["loaded"] = [line.strip() for line in printed.splitlines() if line.strip() and "[ INFO" not in line]
 
+order = S.S.Plot("margins_order", "g", "1d")  # margins with room, which ROOT drops when set one by one in this order
+order[1].AddData("h", "s")
+order[1].SetMargins(0.9, 0.05, 0.85, 0.1)
+p.pm.AddPlot(order)
 run = p.plot()
 # lines that only follow from a message before them (the plot or data that could not be made because of it)
 CONSEQUENCES = re.compile(r"could not be created|^- missing |Projection failed for |plots? cannot be created due to")
@@ -322,4 +336,7 @@ for case in cases:
     new = {phase: new_messages(case, plain, phase) for phase in ("defined", "loaded", "made")}
     ok = case["made"] is not None and len(new["defined"]) <= 1 and len(new["loaded"] + new["made"]) <= 1 and any(new.values())
     S.check(f"{label(case)}: reported once", ok, f"new messages: {new}" if any(new.values()) else "no new message")
+pad = run.pad("margins_order", "g")
+margins = [round(m, 6) for m in (pad.GetTopMargin(), pad.GetBottomMargin(), pad.GetLeftMargin(), pad.GetRightMargin())] if pad else None
+S.check("margins with room for the frame are drawn as set, whatever the order of setting", margins == [0.9, 0.05, 0.85, 0.1], str(margins))
 S.finish()

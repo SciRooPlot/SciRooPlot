@@ -536,10 +536,26 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
 
     TPad* pad_ptr = new TPad(padName.data(), "", padPos[0], padPos[1], padPos[2], padPos[3]);
 
-    if (auto marginTop = get_first(pad.GetMarginTop(), padDefaults.GetMarginTop())) pad_ptr->SetTopMargin(*marginTop);
-    if (auto marginBottom = get_first(pad.GetMarginBottom(), padDefaults.GetMarginBottom())) pad_ptr->SetBottomMargin(*marginBottom);
-    if (auto marginLeft = get_first(pad.GetMarginLeft(), padDefaults.GetMarginLeft())) pad_ptr->SetLeftMargin(*marginLeft);
-    if (auto marginRight = get_first(pad.GetMarginRight(), padDefaults.GetMarginRight())) pad_ptr->SetRightMargin(*marginRight);
+    // TAttPad drops a margin that leaves no room for the frame with the opposite margin as it is at that moment, without a word: each pair
+    // is checked as a whole and set starting from zero, so that a valid pair does not depend on the order of setting (top 0.9, bottom 0.05)
+    const float_t marginTop = get_first_or(pad_ptr->GetTopMargin(), pad.GetMarginTop(), padDefaults.GetMarginTop());
+    const float_t marginBottom = get_first_or(pad_ptr->GetBottomMargin(), pad.GetMarginBottom(), padDefaults.GetMarginBottom());
+    const float_t marginLeft = get_first_or(pad_ptr->GetLeftMargin(), pad.GetMarginLeft(), padDefaults.GetMarginLeft());
+    const float_t marginRight = get_first_or(pad_ptr->GetRightMargin(), pad.GetMarginRight(), padDefaults.GetMarginRight());
+    if (marginTop + marginBottom < 1.f) {
+      pad_ptr->SetBottomMargin(0.);
+      pad_ptr->SetTopMargin(marginTop);
+      pad_ptr->SetBottomMargin(marginBottom);
+    } else {
+      logger::warning("The top and bottom margins of pad {} ({:g} and {:g}) leave no room for the frame: ignored.", padID, marginTop, marginBottom);
+    }
+    if (marginLeft + marginRight < 1.f) {
+      pad_ptr->SetLeftMargin(0.);
+      pad_ptr->SetRightMargin(marginRight);
+      pad_ptr->SetLeftMargin(marginLeft);
+    } else {
+      logger::warning("The left and right margins of pad {} ({:g} and {:g}) leave no room for the frame: ignored.", padID, marginLeft, marginRight);
+    }
     if (auto padFillColor = get_first(pad.GetFillColor(), padDefaults.GetFillColor())) pad_ptr->SetFillColor(padFillColor->ToIndex());
     if (auto padFillStyle = get_first(pad.GetFillStyle(), padDefaults.GetFillStyle())) pad_ptr->SetFillStyle(*padFillStyle);
     if (auto padFillAlpha = get_first(pad.GetFillAlpha(), padDefaults.GetFillAlpha())) pad_ptr->SetFillColor(TColor::GetColorTransparent(pad_ptr->GetFillColor(), *padFillAlpha));
