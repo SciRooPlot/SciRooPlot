@@ -3583,16 +3583,21 @@ auto Plot::Pad::Ratio::SelectInput(const char* call, Select select) -> decltype(
   if (mModMode != Mode::Den) select();
   if (mModMode == Mode::Den || mModMode == Mode::Both) {
     // the selection of the denominator is made by Data on the swapped in denominator, as the modifiers (FORWARD_MODIFIER)
-    auto swapDenom = [this]() {
-      std::swap(mName, mDenomName);
-      std::swap(mDataInfo, mDenomDataInfo);
-      std::swap(mProjInfo, mDenomProjInfo);
-    };
-    swapDenom();
-    auto swapBack = util::make_scope_guard(swapDenom);
+    SwapDenominator(true);
+    auto swapBack = util::make_scope_guard([this]() { SwapDenominator(true); });
     Quietly(mModMode == Mode::Both, select);  // with Both() the arguments were checked for the numerator already
   }
   return *this;
+}
+void Plot::Pad::Ratio::SwapDenominator(bool selection)
+{
+  std::swap(mName, mDenomName);
+  if (selection) {
+    std::swap(mDataInfo, mDenomDataInfo);
+    std::swap(mProjInfo, mDenomProjInfo);
+  } else {
+    std::swap(Modify(), mDenomModify);
+  }
 }
 auto Plot::Pad::Ratio::Both() -> decltype(*this)
 {

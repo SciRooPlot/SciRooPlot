@@ -1250,21 +1250,23 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& SetNpx(int32_t nx, std::optional<int32_t> ny) { return SetNpx<int32_t&, std::optional<int32_t>&>(nx, ny); }
 
   // data modifiers: act on the ratio itself (default), or on numerator and/or denominator before the division
-#define FORWARD_MODIFIER(METHOD)                                                \
-  template <typename... Args>                                                   \
-  Ratio& METHOD(Args... args)                                                   \
-  {                                                                             \
-    auto applyTo = [&](modify_t& target) {                                      \
-      std::swap(Modify(), target);                                              \
-      /* with Both() the arguments were checked for the numerator already */    \
-      const bool quiet = (&target == &mDenomModify && mModMode == Mode::Both);  \
-      Quietly(quiet, [&]() { Data::METHOD(args...); });                         \
-      std::swap(Modify(), target);                                              \
-    };                                                                          \
-    if (mModMode == Mode::Res) Data::METHOD(args...);                           \
-    if (mModMode == Mode::Num || mModMode == Mode::Both) applyTo(mNumModify);   \
-    if (mModMode == Mode::Den || mModMode == Mode::Both) applyTo(mDenomModify); \
-    return *this;                                                               \
+#define FORWARD_MODIFIER(METHOD)                                             \
+  template <typename... Args>                                                \
+  Ratio& METHOD(Args... args)                                                \
+  {                                                                          \
+    if (mModMode == Mode::Res) Data::METHOD(args...);                        \
+    if (mModMode == Mode::Num || mModMode == Mode::Both) {                   \
+      std::swap(Modify(), mNumModify);                                       \
+      Data::METHOD(args...);                                                 \
+      std::swap(Modify(), mNumModify);                                       \
+    }                                                                        \
+    if (mModMode == Mode::Den || mModMode == Mode::Both) {                   \
+      SwapDenominator(false);                                                \
+      /* with Both() the arguments were checked for the numerator already */ \
+      Quietly(mModMode == Mode::Both, [&]() { Data::METHOD(args...); });     \
+      SwapDenominator(false);                                                \
+    }                                                                        \
+    return *this;                                                            \
   }
   FORWARD_MODIFIER(Normalize)
   FORWARD_MODIFIER(NormalizeToMaximum)
@@ -1329,6 +1331,9 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   friend class Pad;
 
   boost::property_tree::ptree GetPropertyTree() const override;
+  // puts the name and the selection (or the modifiers) of the denominator in place of those of the numerator, or back: the setters
+  // of Data then act on the denominator and name it in their messages
+  void SwapDenominator(bool selection);
   const auto& GetDenomDataSource() const { return mDenomDataSource; }
   const auto& GetDenomName() const { return mDenomName; }
   const bool& GetCorrelated() const { return mCorrelated; }
