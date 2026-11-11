@@ -1275,8 +1275,8 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   }
   const bool isInteractiveMode = (mode == "show" || mode == "spread");
   const bool needsDisplay = isInteractiveMode || mode == "macro";
-  // said once for all plots (a program plotting in memory has no project directory unless it sets one)
-  if (!isInteractiveMode && mOutputDirectory.empty()) {
+  // said once for all plots (a program plotting in memory has no project directory unless it sets one); print writes nothing
+  if (!isInteractiveMode && mode != "print" && mOutputDirectory.empty()) {
     logger::error("No output directory was specified: set one with SetOutputDirectory before writing plots in mode '{}'.", mode);
     return false;
   }

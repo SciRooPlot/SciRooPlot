@@ -6,7 +6,8 @@ leaves the data source as it was, and the caller's lists and files are left unch
 A second AddDataSource with the same name adds to the data source (an object of a name already there replaces it with a warning), with
 replace only the new inputs are left; objects and files can be mixed in one data source. A nameless object is skipped with a warning.
 Trees in lists, from memory or read from a file, are copied with all their entries. Two PlotManagers of one project keep the objects of
-both. The objects reach the plot program through the project (UserData.root); GeneratePlots in the defining process draws the same.
+both. The objects reach the plot program through the project (UserData.root); GeneratePlots in the defining process draws the same
+(without an output directory one error for every mode that writes files; print, which writes none, shows the definitions).
 Covers: lists, directories and files handed over; trees in lists copied; same-name folders merged; the replace warning also across
 calls; the caller's lists and files unchanged, two PlotManagers of one project keep both in-memory sources.
 """
@@ -268,6 +269,7 @@ for name, data, source in (("a", "named", "nameless"), ("b", "h", "twice")):
     plot = S.Plot(name, "g", "1d")
     plot[1].AddData(data, source)
     pm.AddPlot(plot)
+print("PRINTED", pm.GeneratePlots("print"))  # no output directory needed
 pm.GeneratePlots("file")  # no output directory yet: said once for all plots
 pm.SetOutputDirectory({p.path("defining")!r})
 pm.GeneratePlots("file")
@@ -283,6 +285,7 @@ check("a nameless object is skipped with a warning", "Cannot add nameless object
 check("an object beside a nameless one is added", drawnHere.get("a") == "2.0", out.tail())
 check("a second object of the same name replaces the first, with a warning", drawnHere.get("b") == "4.0" and "Data source twice receives a second object named h" in out.text, out.tail())
 check("GeneratePlots without an output directory: one error for all plots, naming SetOutputDirectory", out.text.count("No output directory was specified") == 1 and "SetOutputDirectory" in out.text, out.tail())
+check("GeneratePlots print without an output directory shows the definitions", "PRINTED True" in out.stdout and "Settings of plot" in out.text, out.tail())
 check("a sub-list named like an object beside it: one warning in SciRooPlot's words, no ROOT error", "the list clash/x cannot be stored beside the object of the same name" in out.text and "mkdir" not in out.text and "Could not create folder" not in out.text, out.tail())
 check("the replace warning names the path in the data source", "Data source lists receives a second object named l/x" in out.text, out.tail())
 userData = os.path.join(os.environ["SCIROOPLOT_CONFIG_PATH"], "defining", "UserData.root")
