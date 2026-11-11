@@ -2687,6 +2687,14 @@ optional<Plot::Pad::LegendEntry> Plot::Pad::Data::GetLegendEntryIfSet() const
 }
 auto Plot::Pad::Data::SetDrawOption(const string& drawOption) -> decltype(*this)
 {
+  // the name of an alias given as raw option (SetDrawOption("col_clamped") for SetDrawOption(col_clamped)) goes to ROOT as it is: said,
+  // unless the name is also an option ROOT knows (hist, colz, lego, ...)
+  static const std::set<string> rootOptions{"box", "candle", "col", "colz", "cont", "hist", "iso", "lego", "surf", "text", "violin"};
+  const size_t first = drawOption.find_first_not_of(" \t");
+  const string name = (first == string::npos) ? "" : drawOption.substr(first, drawOption.find_last_not_of(" \t") - first + 1);
+  if (draw_option_from_name(name) && !rootOptions.count(name)) {
+    logger::warning("Drawing option '{}' of {} is the name of an alias, but is passed to ROOT as it is: write SetDrawOption({}) for the alias.", name, mName, name);
+  }
   mDrawOption = drawOption;
   mDrawOptionAlias = {};
   return *this;

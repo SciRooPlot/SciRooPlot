@@ -15,7 +15,7 @@ Covers: SAME, RX/RY, A of graphs, polar grid letters, arrow width, AXIS/AXIG.
 
 import re
 
-from srptest import DATA_KINDS, Project, S, add_data, base_of, cases, check, data_name, data_objects, describe, drawn_type, finish, no_scale, option
+from srptest import DATA_KINDS, Project, S, add_data, base_of, captured, cases, check, data_name, data_objects, describe, drawn_type, finish, no_scale, option
 
 RAW = {  # raw ROOT options without an alias, by what the data is drawn as
     "hist1d": ["", "E", "E0", "E1", "E2", "E3", "E4", "E5", "E6", "HIST", "L", "C", "P", "P0", "B", "BAR", "HBAR", "LF2", "HIST F", "HIST P", "E P", "E2 P", "*H", "HIST LP", "HIST E", "HIST E1", "HIST E2", "HIST E3", "TEXT", "X0 E"],
@@ -97,10 +97,18 @@ for i, case in enumerate(arrows):
 TEXTS = {"inserted": ("TEXT", 45, "TEXT45", 0), "kept": ("TEXT30", 45, "TEXT30", 0), "clamped": ("TEXT", 120, "TEXT90", 1), "no_text": ("HIST", 45, "HIST", 1)}
 for name, (opt, angle, *_) in TEXTS.items():
     add_plot(f"text_{name}", "hist", opt, False, lambda data, angle=angle: data.SetTextAngle(angle))
-# the name of an alias given as raw option: passed as it is, warned where ROOT reads it as something else than the alias
-ALIAS_NAMES = {"col_clamped": ("hist2d", 1), "points": ("hist", 1), "line": ("hist", 1), "text": ("hist", 0), "lego": ("hist2d", 0), "cont": ("hist2d", 0)}
-for name, (kind, _) in ALIAS_NAMES.items():
-    add_plot(f"alias_name_{name}", kind, name, False)
+# the name of an alias given as raw option: passed as it is, warned when it is set unless ROOT knows the word as an option too
+ALIAS_NAMES = {
+    "col_clamped": ("hist2d", 1),
+    "points": ("hist", 1),
+    "line": ("hist", 1),
+    "text": ("hist", 0),
+    "lego": ("hist2d", 0),
+    "cont": ("hist2d", 0),
+    "hist": ("hist2d", 0),
+    "colz": ("hist", 0),
+}
+aliasSaid = {name: captured(lambda name=name, kind=kind: add_plot(f"alias_name_{name}", kind, name, False))[1] for name, (kind, _) in ALIAS_NAMES.items()}
 run = p.plot("raw")
 
 
@@ -171,14 +179,14 @@ for name, (opt, angle, want, _) in TEXTS.items():
 expect_warnings("hist", "text angle", sum(n for *_, n in TEXTS.values()))
 for name, (kind, n) in ALIAS_NAMES.items():
     drawn = run.drawn(f"alias_name_{name}", "raw")
-    said = run.warnings(f"Drawing option '{name}' of")
+    said = [line for line in aliasSaid[name].splitlines() if f"Drawing option '{name}' of" in line]
     check(f"raw option '{name}' of a {kind}: passed as it is, {'warned as name of an alias' if n else 'no warning'}", all(opt.lower() == name for _, opt in drawn) and len(said) == n, f"drawn with {[o for _, o in drawn]}; {' | '.join(said)}")
 for (kind, text), n in sorted(counted.items()):
     found = warnings_of(kind, text)
     if n or found:
         check(f"{n} warnings '{text}' for {kind}", len(found) == n, f"{len(found)}: {' | '.join(found[:2])}")
 # col_clamped as raw option: ROOT makes a 3d frame of it, into which the map is not drawn
-known = [text for _, text in counted] + ["text angle", "is the name of an alias", "is drawn flat (col_clamped)"]
+known = [text for _, text in counted] + ["text angle", "is drawn flat (col_clamped)"]
 others = [w for w in run.warnings() if not any(t in w for t in known)]
 check("no other warnings", not others, " | ".join(others[:4]))
 check("no errors", not run.errors(), " | ".join(run.errors()[:4]))
