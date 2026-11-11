@@ -337,9 +337,14 @@ INVALID_SETTERS = {  # setters refusing a value when called
     "a span of 0 columns": (lambda: S.Panel().Span(0), "at least one column"),
     "a negative space": (lambda: S.Panel().SpacingAbove(-1.0), "zero or positive"),
     "ColorScale(0)": (lambda: S.ColorScale(0), "counted from 1"),
-    "a panel size of 0": (lambda: S.PanelLayout().SetPanelSize(0.0), "must be positive"),
-    "a negative margin": (lambda: S.PanelLayout().SetMargins(-1.0, 0.0, 0.0, 0.0), "zero or positive"),
-    "an infinite tick length": (lambda: S.PanelLayout().SetTickLength(float("inf")), "must be finite"),
+}
+# lengths of the whole layout refusing a value: each warned about when set and ignored, the value set before stays (as for plots)
+INVALID_LENGTHS = {
+    "SetPanelSize": [(0.0,), (-1.0,), (float("nan"),)],
+    "SetMargins": [(-1.0, float("inf"), -2.0, float("nan"))],
+    "SetTextSize": [(0.0,), (-1.0,), (float("inf"),)],
+    "SetTickLength": [(float("inf"),), (float("nan"),)],
+    "SetLineWidth": [(-1.0,), (float("nan"),)],
 }
 
 # ---------------------------------------------------------------------------------------------
@@ -394,6 +399,17 @@ plot = S.Plot("shaped_ignored", chunks.add("shaped_ignored"), "shaped_ignored")
 fill(plot, base_rows("1d_wide_ratio_pull", SHAPE), DEFAULT)
 p.pm.AddPlot(plot)
 plots["shaped_ignored"] = ("base plot 1d_wide_ratio_pull with shapes that are not positive and finite", base_rows("1d_wide_ratio_pull", SHAPE), DEFAULT)
+sizes = S.PanelLayout()
+for setter, calls in INVALID_LENGTHS.items():
+    for args in calls:
+        getattr(sizes, setter)(*args)
+base = S.PlotManager.MakeBasePlot("1d", sizes)
+base.SetName("lengths_ignored")
+p.pm.AddBasePlot(base)
+plot = S.Plot("lengths_ignored", chunks.add("lengths_ignored"), "lengths_ignored")
+fill(plot, base_rows("1d", SHAPE), DEFAULT)
+p.pm.AddPlot(plot)
+plots["lengths_ignored"] = ("base plot 1d with layout lengths that are not valid", base_rows("1d", SHAPE), DEFAULT)
 layouts = [(f"layout {describe(case)}", generated_rows(case), generated_lengths(case)) for case in generated]
 layouts += [(f"layout of {what}", rows, EXPLICIT_LENGTHS.get(what, DEFAULT)) for what, rows in EXPLICIT.items()]
 for i, (what, rows, lengths) in enumerate(layouts):
@@ -423,6 +439,11 @@ shapes = python("import SciRooPlot as S\nshape = S.BasePlotShape()\nfor value in
 for setter in ("SetAspectRatio", "SetRatioHeight", "SetPullHeight"):
     warned = [line for line in shapes.warnings() if f"BasePlotShape::{setter}(" in line and "ignoring it" in line]
     check(f"BasePlotShape::{setter} with 0, a negative, NaN or infinite value warns and keeps its value", len(warned) == 4 and shapes.rc == 0, shapes.tail())
+code = "".join(f"sizes.{setter}({', '.join(f'float({str(a)!r})' for a in args)})\n" for setter, calls in INVALID_LENGTHS.items() for args in calls)
+lengths = python("import SciRooPlot as S\nsizes = S.PanelLayout()\n" + code)
+for setter, calls in INVALID_LENGTHS.items():
+    warned = [line for line in lengths.warnings() if f"PanelLayout::{setter}" in line and line.rstrip().endswith("ignored.")]
+    check(f"PanelLayout::{setter} with an invalid length warns and keeps its value", len(warned) == sum(map(len, calls)) and lengths.rc == 0, lengths.tail())
 refused = python("import SciRooPlot as S\n" + "".join(f"S.PlotManager.MakeBasePlot({name!r})\n" for name in REFUSED))
 for name in REFUSED:
     lines = [line for line in refused.errors() if f"base plot {name}:" in line or f"Base plot {name} " in line]

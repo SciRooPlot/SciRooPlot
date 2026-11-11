@@ -139,12 +139,12 @@ class PanelLayout
   friend class Plot;
   struct Grid;  // the arrangement read into a grid (PanelLayout.cpp)
   void ApplyTo(Plot& plot) const;
-  Grid ReadGrid() const;                                                                // the cells, their pads and the gaps between them
-  void ApplyGeometry(Plot& plot, Grid& grid) const;                                     // canvas size, pad positions and the lengths in every pad
-  void ApplyLook(Plot& plot, const Grid& grid) const;                                   // the look of the shipped plots on pad 0
-  void ApplySharing(Plot& plot, const Grid& grid) const;                                // shared axes and common titles of touching panels
-  static double_t CheckedLength(const char* setter, double_t pixel, bool zeroAllowed);  // throws for negative (or zero) lengths
-  static double_t CheckedFinite(const char* setter, double_t pixel);                    // throws for NaN and infinity (negative is fine)
+  Grid ReadGrid() const;                                                          // the cells, their pads and the gaps between them
+  void ApplyGeometry(Plot& plot, Grid& grid) const;                               // canvas size, pad positions and the lengths in every pad
+  void ApplyLook(Plot& plot, const Grid& grid) const;                             // the look of the shipped plots on pad 0
+  void ApplySharing(Plot& plot, const Grid& grid) const;                          // shared axes and common titles of touching panels
+  static bool ValidLength(const char* setter, double_t pixel, bool zeroAllowed);  // false (reported) for negative (or zero) lengths
+  static bool ValidOffset(const char* setter, double_t pixel);                    // false (reported) for NaN and infinity (negative is fine)
 
   std::vector<std::vector<Panel>> mRows;
   double_t mPanelSize{638.};

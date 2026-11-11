@@ -30,9 +30,11 @@
 #include <cstdint>
 #include <limits>
 #include <map>
+#include <string>
 #include <utility>
 #include <vector>
 
+using std::string;
 using std::vector;
 
 namespace SciRooPlot
@@ -63,13 +65,15 @@ Panel& Panel::Span(uint8_t columns, uint8_t rows)
 
 Panel& Panel::SpacingAbove(double_t pixel)
 {
-  mSpacingAbove = PanelLayout::CheckedLength("Panel::SpacingAbove", pixel, true);
+  if (!(pixel >= 0.) || !std::isfinite(pixel)) logger::throw_invalid_argument("Panel::SpacingAbove: the length must be zero or positive (got {}).", pixel);
+  mSpacingAbove = pixel;
   return *this;
 }
 
 Panel& Panel::SpacingLeft(double_t pixel)
 {
-  mSpacingLeft = PanelLayout::CheckedLength("Panel::SpacingLeft", pixel, true);
+  if (!(pixel >= 0.) || !std::isfinite(pixel)) logger::throw_invalid_argument("Panel::SpacingLeft: the length must be zero or positive (got {}).", pixel);
+  mSpacingLeft = pixel;
   return *this;
 }
 
@@ -133,111 +137,112 @@ PanelLayout::PanelLayout(const PanelLayout& sizes, vector<vector<Panel>> rows) :
   mRows = std::move(rows);
 }
 
-double_t PanelLayout::CheckedLength(const char* setter, double_t pixel, bool zeroAllowed)
+// a length that is not a finite number, negative or (where not allowed) zero is reported and ignored: the value set before stays
+bool PanelLayout::ValidLength(const char* setter, double_t pixel, bool zeroAllowed)
 {
-  if (!std::isfinite(pixel) || pixel < 0. || (!zeroAllowed && pixel == 0.)) {
-    logger::throw_invalid_argument("{}: the length must be {} (got {}).", setter, zeroAllowed ? "zero or positive" : "positive", pixel);
-  }
-  return pixel;
+  const string what = fmt::format("length of {}", setter);
+  if (!Plot::CheckNotNegative(pixel, what)) return false;
+  if (zeroAllowed || pixel > 0.) return true;
+  logger::warning("The {} ({}) is not positive: ignored.", what, Plot::Shown(pixel));
+  return false;
 }
 
 // offsets and tick lengths may be negative (outward ticks, labels inside)
-double_t PanelLayout::CheckedFinite(const char* setter, double_t pixel)
+bool PanelLayout::ValidOffset(const char* setter, double_t pixel)
 {
-  if (!std::isfinite(pixel)) logger::throw_invalid_argument("{}: the length must be finite (got {}).", setter, pixel);
-  return pixel;
+  return Plot::CheckFinite(pixel, fmt::format("length of {}", setter));
 }
 
 PanelLayout& PanelLayout::SetPanelSize(double_t pixel)
 {
-  mPanelSize = CheckedLength("PanelLayout::SetPanelSize", pixel, false);
+  if (ValidLength("PanelLayout::SetPanelSize", pixel, false)) mPanelSize = pixel;
   return *this;
 }
 
 PanelLayout& PanelLayout::SetMargins(double_t top, double_t bottom, double_t left, double_t right)
 {
-  mMarginTop = CheckedLength("PanelLayout::SetMargins", top, true);
-  mMarginBottom = CheckedLength("PanelLayout::SetMargins", bottom, true);
-  mMarginLeft = CheckedLength("PanelLayout::SetMargins", left, true);
-  mMarginRight = CheckedLength("PanelLayout::SetMargins", right, true);
+  if (ValidLength("PanelLayout::SetMargins", top, true)) mMarginTop = top;
+  if (ValidLength("PanelLayout::SetMargins", bottom, true)) mMarginBottom = bottom;
+  if (ValidLength("PanelLayout::SetMargins", left, true)) mMarginLeft = left;
+  if (ValidLength("PanelLayout::SetMargins", right, true)) mMarginRight = right;
   return *this;
 }
 
 PanelLayout& PanelLayout::SetColorScaleMargin(double_t pixel)
 {
-  mColorScaleMargin = CheckedLength("PanelLayout::SetColorScaleMargin", pixel, true);
+  if (ValidLength("PanelLayout::SetColorScaleMargin", pixel, true)) mColorScaleMargin = pixel;
   return *this;
 }
 
 PanelLayout& PanelLayout::SetColorScaleOffset(double_t pixel)
 {
-  mColorScaleOffset = CheckedFinite("PanelLayout::SetColorScaleOffset", pixel);
+  if (ValidOffset("PanelLayout::SetColorScaleOffset", pixel)) mColorScaleOffset = pixel;
   return *this;
 }
 
 PanelLayout& PanelLayout::SetColorScaleWidth(double_t pixel)
 {
-  mColorScaleWidth = CheckedLength("PanelLayout::SetColorScaleWidth", pixel, true);
+  if (ValidLength("PanelLayout::SetColorScaleWidth", pixel, true)) mColorScaleWidth = pixel;
   return *this;
 }
 
 PanelLayout& PanelLayout::SetPanelSpacing(double_t pixel)
 {
-  mPanelSpacing = CheckedLength("PanelLayout::SetPanelSpacing", pixel, true);
+  if (ValidLength("PanelLayout::SetPanelSpacing", pixel, true)) mPanelSpacing = pixel;
   return *this;
 }
 
 PanelLayout& PanelLayout::SetTextSize(double_t pixel)
 {
-  mTextSize = CheckedLength("PanelLayout::SetTextSize", pixel, false);
+  if (ValidLength("PanelLayout::SetTextSize", pixel, false)) mTextSize = pixel;
   return *this;
 }
 
 PanelLayout& PanelLayout::SetTitleSize(double_t pixel)
 {
-  mTitleSize = CheckedLength("PanelLayout::SetTitleSize", pixel, false);
+  if (ValidLength("PanelLayout::SetTitleSize", pixel, false)) mTitleSize = pixel;
   return *this;
 }
 
 PanelLayout& PanelLayout::SetTickLength(double_t pixel)
 {
-  mTickLength = CheckedFinite("PanelLayout::SetTickLength", pixel);
+  if (ValidOffset("PanelLayout::SetTickLength", pixel)) mTickLength = pixel;
   return *this;
 }
 
 PanelLayout& PanelLayout::SetLabelOffset(double_t pixel)
 {
-  mLabelOffset = CheckedFinite("PanelLayout::SetLabelOffset", pixel);
+  if (ValidOffset("PanelLayout::SetLabelOffset", pixel)) mLabelOffset = pixel;
   return *this;
 }
 
 PanelLayout& PanelLayout::SetXTitleOffset(double_t pixel)
 {
-  mXTitleOffset = CheckedFinite("PanelLayout::SetXTitleOffset", pixel);
+  if (ValidOffset("PanelLayout::SetXTitleOffset", pixel)) mXTitleOffset = pixel;
   return *this;
 }
 
 PanelLayout& PanelLayout::SetYTitleOffset(double_t pixel)
 {
-  mYTitleOffset = CheckedFinite("PanelLayout::SetYTitleOffset", pixel);
+  if (ValidOffset("PanelLayout::SetYTitleOffset", pixel)) mYTitleOffset = pixel;
   return *this;
 }
 
 PanelLayout& PanelLayout::SetZTitleOffset(double_t pixel)
 {
-  mZTitleOffset = CheckedFinite("PanelLayout::SetZTitleOffset", pixel);
+  if (ValidOffset("PanelLayout::SetZTitleOffset", pixel)) mZTitleOffset = pixel;
   return *this;
 }
 
 PanelLayout& PanelLayout::SetLineWidth(float_t width)
 {
-  mLineWidth = static_cast<float_t>(CheckedLength("PanelLayout::SetLineWidth", width, true));
+  if (ValidLength("PanelLayout::SetLineWidth", width, true)) mLineWidth = Plot::RoundWidth(width, "line width of PanelLayout::SetLineWidth");
   return *this;
 }
 
 PanelLayout& PanelLayout::SetMarkerSize(float_t size)
 {
-  mMarkerSize = static_cast<float_t>(CheckedLength("PanelLayout::SetMarkerSize", size, true));
+  if (ValidLength("PanelLayout::SetMarkerSize", size, true)) mMarkerSize = size;
   return *this;
 }
 
