@@ -2,7 +2,8 @@
 TPolyLine in their layer: behind the data (right after the frame), after the data (the default) or on top of the boxes. They are not data:
 they leave the frame, the numbering, the default colours and the legend of the data as they are. Lines and regions over a whole axis span
 the final frame, also a log one; regions and polygons are cut at the frame; a shape without its default look gets ROOT's line in black,
-regions and polygons a translucent fill, ellipses no fill, arrows a head in the colour of their line; set styles are drawn as set.
+regions and polygons a translucent fill, ellipses no fill, arrows a head in the colour of their line; set styles are drawn as set (a
+polygon with a set line gets its outline as a second TPolyLine right after its fill).
 Cases: every kind × every layer × a histogram, a graph, a map and a log axis giving the frame × the default or a set look, and the named
 cases (lines at the limits of a log axis, positions a log axis cannot show, shapes of a base plot and of pad 0, arrow heads, arcs).
 Reference: the primitives of the pad and the same plot without the shape.
@@ -155,10 +156,15 @@ for i, case in enumerate(todo):
     found = shapes_of(prims, list(plain.GetListOfPrimitives()))
     cls = KINDS[kind]
     drawn = [prims[k] for k in found]
-    check(f"{what}: drawn as one {cls}", [o.ClassName() for o in drawn] == [cls], f"{[o.ClassName() for o in drawn]}")
-    if len(drawn) != 1:
+    outlined = kind == "polygon" and case["look"] == "set"  # a polygon with a line set: its fill, right after it its outline
+    check(f"{what}: drawn as {'a filled and an open' if outlined else 'one'} {cls}", [o.ClassName() for o in drawn] == [cls] * (1 + outlined), f"{[o.ClassName() for o in drawn]}")
+    if len(drawn) != 1 + outlined:
         continue
     shape, where = drawn[0], found[0]
+    outline = drawn[-1]
+    if outlined:
+        points = lambda o: [(o.GetX()[k], o.GetY()[k]) for k in range(o.GetN())]  # noqa: E731
+        check(f"{what}: the outline right after the fill, on its points", found[1] == where + 1 and points(outline) == points(shape) and shape.GetOption() == "f" and outline.GetOption() == "", f"{found} {shape.GetOption()!r} {outline.GetOption()!r}")
     names = [o.GetName() for o in prims]
     frameHist = names.index("axis_hist_pad_1") if "axis_hist_pad_1" in names else -1
     data = [k for k, n in enumerate(names) if n[:1].isdigit()]
@@ -193,10 +199,10 @@ for i, case in enumerate(todo):
         check(f"{what}: cut at the frame and closed", max(xs) <= x2 + 1e-9 and any(close(x, x2, 1e-6) for x in xs) and xs[0] == xs[-1], f"{xs} frame up to {x2}")
     # the look
     if case["look"] == "set":
-        line = (shape.GetLineStyle(), shape.GetLineWidth(), shape.GetLineColor()) == (ROOT.kDashed, 3, ROOT.kRed + 1)
+        line = (outline.GetLineStyle(), outline.GetLineWidth(), outline.GetLineColor()) == (ROOT.kDashed, 3, ROOT.kRed + 1)
         filled = kind in ("region", "region_x", "region_y", "polygon", "ellipse")
         fill = not filled or (shape.GetFillStyle(), shape.GetFillColor()) == (3004, ROOT.kBlue + 1)
-        check(f"{what}: drawn with the line and fill set", line and fill, f"line {(shape.GetLineStyle(), shape.GetLineWidth(), shape.GetLineColor())}" + (f" fill {(shape.GetFillStyle(), shape.GetFillColor())}" if filled else ""))
+        check(f"{what}: drawn with the line and fill set", line and fill, f"line {(outline.GetLineStyle(), outline.GetLineWidth(), outline.GetLineColor())}" + (f" fill {(shape.GetFillStyle(), shape.GetFillColor())}" if filled else ""))
     elif kind in ("region", "region_x", "region_y", "polygon"):
         alpha = ROOT.gROOT.GetColor(shape.GetFillColor()).GetAlpha()
         check(f"{what}: a translucent fill", shape.GetFillStyle() == 1001 and alpha < 0.5, f"style {shape.GetFillStyle()} alpha {alpha}")
