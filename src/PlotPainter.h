@@ -304,6 +304,15 @@ class PlotPainter
   struct item_state_t;  // and those for the data item drawn
   template <typename T>
   void DrawItem(item_state_t& state, T data_ptr, std::optional<draw_option_t> optionAlias);
+  template <typename... Args>
+  void Warn(item_state_t& state, Args&&... args);
+  template <typename ObjT>
+  void DropStoredFunctions(item_state_t& state, ObjT* ptr, const char* reason);
+  template <typename PtrT>
+  void ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad::Data& mods);
+  template <typename ObjT>
+  void RemoveInvalid(item_state_t& state, ObjT* ptr, const std::string& name);
+  bool PrepareOperand(item_state_t& state, data_ptr_t& operand, const Plot::Pad::Data::modify_t& operandModify, const std::string& name);
   static size_t FrameDataIndex(const std::vector<std::shared_ptr<Plot::Pad::Data>>& data, const data_buffer_t& dataBuffer);
   static TObject* Input(const Plot::Pad::Data& data, const data_buffer_t& dataBuffer);
   void AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefaults, const Plot::Pad& padSettings, uint8_t padID, const Plot::Pad::Data* refFunc, std::string& padSetup);
