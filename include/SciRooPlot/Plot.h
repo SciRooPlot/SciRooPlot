@@ -185,8 +185,8 @@ inline std::optional<box_placement_t> box_placement_from_name(const std::string&
 }
 
 // coordinate system of the position of a box or a shape: fractions of the pad (0 to 1), fractions of the frame ((0, 0) lower left,
-// (1, 1) upper right corner, beyond them outside of the frame; a 3d view: the pad within its margins, an empty layout cell: the whole
-// pad) or axis values; for all boxes or shapes of a pad (Pad::SetDefaultBoxCoordinates, SetDefaultShapeCoordinates)
+// (1, 1) upper right corner, beyond them outside of the frame; a 3d view: the pad within its margins, an empty layout cell and a pad
+// with a polar graph: the whole pad) or axis values; for all boxes or shapes of a pad (Pad::SetDefaultBoxCoordinates, SetDefaultShapeCoordinates)
 #define COORDINATE_SYSTEMS       \
   COORDINATES(pad_coordinates)   \
   COORDINATES(frame_coordinates) \
