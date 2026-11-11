@@ -2270,6 +2270,14 @@ class Chunks:
     def warnings(self, text=""):
         return [line for run in self.runs.values() for line in run.warnings(text)]
 
+    @contextlib.contextmanager
+    def held(self, colours=True):
+        """Run.held for the runs of all groups"""
+        with contextlib.ExitStack() as stack:
+            for run in self.runs.values():
+                stack.enter_context(run.held(colours))
+            yield
+
     def __getattr__(self, method):
         """the readers of a Run (canvas, pad, objects, frame, frame_hist, ...) by plot name, without the group: run.canvas(name)"""
         if method.startswith("_"):

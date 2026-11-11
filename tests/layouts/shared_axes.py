@@ -193,23 +193,27 @@ def own_scale(name, padID):
     return bool(frame and frame.GetListOfFunctions().FindObject("palette"))
 
 
+def compare_pair(prefix, i, c, axis):
+    what = describe(c)
+    alone = [axis_range(f"{prefix}{i}_False", pad, axis) for pad in (1, 2)]
+    shared = [axis_range(f"{prefix}{i}_True", pad, axis) for pad in (1, 2)]
+    if None in alone + shared:
+        check(f"plots made: {what}", False, " | ".join(line for line in run.errors() if f"{prefix}{i}_" in line)[:300])
+        return
+    want = union(*alone)
+    check(f"both pads show the union of their own {axis} ranges: {what}", same(shared[0], want) and same(shared[1], want), f"{shared}, alone {alone}")
+    if prefix == "z" and c["group"] == "cell":
+        cell = run.pad(f"{prefix}{i}_True", 3)
+        scale = cell.GetPrimitive("color_scale_pad_3") if cell else None
+        check(f"the colour-scale cell shows the union: {what}", scale and same((scale.GetMinimum(), scale.GetMaximum()), want), f"{(scale.GetMinimum(), scale.GetMaximum()) if scale else 'no scale'}, expected {want}")
+        check(f"the cell draws the scale of a flat map (no 3D view): {what}", scale and scale.GetDimension() == 2 and not cell.GetView(), f"dimension {scale.GetDimension()}, view {bool(cell.GetView())}" if scale else "no scale")
+        check(f"the panels draw no colour scale of their own: {what}", not any(own_scale(f"{prefix}{i}_True", pad) for pad in (1, 2)), str([own_scale(f"{prefix}{i}_True", pad) for pad in (1, 2)]))
+
+
 for prefix, todo, axisOf in (("p", pairs, lambda c: c["axis"]), ("z", zpairs, lambda c: "Z")):
     for i, c in enumerate(todo):
-        what = describe(c)
-        axis = axisOf(c)
-        alone = [axis_range(f"{prefix}{i}_False", pad, axis) for pad in (1, 2)]
-        shared = [axis_range(f"{prefix}{i}_True", pad, axis) for pad in (1, 2)]
-        if None in alone + shared:
-            check(f"plots made: {what}", False, " | ".join(line for line in run.errors() if f"{prefix}{i}_" in line)[:300])
-            continue
-        want = union(*alone)
-        check(f"both pads show the union of their own {axis} ranges: {what}", same(shared[0], want) and same(shared[1], want), f"{shared}, alone {alone}")
-        if prefix == "z" and c["group"] == "cell":
-            cell = run.pad(f"{prefix}{i}_True", 3)
-            scale = cell.GetPrimitive("color_scale_pad_3") if cell else None
-            check(f"the colour-scale cell shows the union: {what}", scale and same((scale.GetMinimum(), scale.GetMaximum()), want), f"{(scale.GetMinimum(), scale.GetMaximum()) if scale else 'no scale'}, expected {want}")
-            check(f"the cell draws the scale of a flat map (no 3D view): {what}", scale and scale.GetDimension() == 2 and not cell.GetView(), f"dimension {scale.GetDimension()}, view {bool(cell.GetView())}" if scale else "no scale")
-            check(f"the panels draw no colour scale of their own: {what}", not any(own_scale(f"{prefix}{i}_True", pad) for pad in (1, 2)), str([own_scale(f"{prefix}{i}_True", pad) for pad in (1, 2)]))
+        with run.held(colours=False):  # thousands of canvases: each pair frees those it read
+            compare_pair(prefix, i, c, axisOf(c))
 # a log colour axis does not reach a 3d histogram of the group (ROOT colours its boxes linearly): said once
 linear = run.warnings("whose boxes ROOT colours linearly")
 for i, c in enumerate(zpairs):
