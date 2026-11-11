@@ -8,6 +8,7 @@ not exist ...), the other parameters plain. Reference: the same call with the pl
   set before stays;
   named: the same tree joined again, a selection of the entries (Filter) of data that is not projected, pad margins leaving no room
   for the frame (also one margin beside that of the base plot); margins with room are drawn as set, whatever the order of setting;
+  the messages give the value as written (a float not widened to double);
 - values that mean something in ROOT (VALID: ROOT's default palette, a digit 0 of an alignment, ticks on the other side, no reference
   function, the forms of functions) give no message;
 - a call repeated with another value replaces the first one, in either order (the saved plot equals the one with only the second call);
@@ -336,6 +337,8 @@ for case in cases:
     new = {phase: new_messages(case, plain, phase) for phase in ("defined", "loaded", "made")}
     ok = case["made"] is not None and len(new["defined"]) <= 1 and len(new["loaded"] + new["made"]) <= 1 and any(new.values())
     S.check(f"{label(case)}: reported once", ok, f"new messages: {new}" if any(new.values()) else "no new message")
+widened = [line for case in cases for phase in ("defined", "loaded", "made") for line in case.get(phase) or [] if re.search(r"\d\.\d{12,}", line)]
+S.check("values in the messages as given (a float not widened to double: 1.2, not 1.2000000476837158)", not widened, " | ".join(widened[:3]))
 pad = run.pad("margins_order", "g")
 margins = [round(m, 6) for m in (pad.GetTopMargin(), pad.GetBottomMargin(), pad.GetLeftMargin(), pad.GetRightMargin())] if pad else None
 S.check("margins with room for the frame are drawn as set, whatever the order of setting", margins == [0.9, 0.05, 0.85, 0.1], str(margins))

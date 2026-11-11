@@ -460,6 +460,7 @@ class Plot : public FillSetters<Plot>
   static float_t RoundWidth(float_t width, const char* what);
   // a value that cannot mean anything is reported where it is set and ignored, so that what was set before stays (false: ignored)
   static bool CheckAlpha(float_t alpha);
+  static std::string Shown(double value);  // for messages: a float_t as it was given
   static bool CheckFinite(double value, const std::string& what);
   static bool CheckNotNegative(double value, const std::string& what);
   static bool CheckFraction(double value, const std::string& what);  // 0 to 1

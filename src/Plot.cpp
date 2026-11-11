@@ -196,23 +196,29 @@ bool Plot::CheckAlpha(float_t alpha)
   logger::warning("Alpha {} is outside of 0 (transparent) to 1 (opaque): ignored.", alpha);
   return false;
 }
+string Plot::Shown(double value)
+{
+  // a float_t widened to double (1.2f becomes 1.2000000476837158) is written as the float that was given
+  const auto given = static_cast<float_t>(value);
+  return (static_cast<double>(given) == value) ? fmt::format("{}", given) : fmt::format("{}", value);
+}
 bool Plot::CheckFinite(double value, const string& what)
 {
   if (std::isfinite(value)) return true;
-  logger::warning("The {} ({}) is not a finite number: ignored.", what, value);
+  logger::warning("The {} ({}) is not a finite number: ignored.", what, Shown(value));
   return false;
 }
 bool Plot::CheckNotNegative(double value, const string& what)
 {
   if (!CheckFinite(value, what)) return false;
   if (value >= 0.) return true;
-  logger::warning("The {} ({}) is negative: ignored.", what, value);
+  logger::warning("The {} ({}) is negative: ignored.", what, Shown(value));
   return false;
 }
 bool Plot::CheckFraction(double value, const string& what)
 {
   if (value >= 0. && value <= 1.) return true;
-  logger::warning("The {} ({}) is outside of 0 to 1: ignored.", what, value);
+  logger::warning("The {} ({}) is outside of 0 to 1: ignored.", what, Shown(value));
   return false;
 }
 bool Plot::CheckCount(int64_t count, const string& what)
