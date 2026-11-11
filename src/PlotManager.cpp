@@ -1987,15 +1987,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   // the personal scale settings only change the number of pixels of plots on screen and of bitmap files, vector files do not depend on them
   const bool isBitmapMode = (mode == "png") || (mode == "jpg") || isGifMode;
   PlotPainter painter(isInteractiveMode ? Config::Get().ScreenScale() : (isBitmapMode ? Config::Get().BitmapScale() : 1.), isInteractiveMode);
-  // an exception while painting (thrown by ROOT for data it cannot paint) loses only this plot, not the rest of the run
-  auto paint = [&](Plot& toPaint) -> std::unique_ptr<TCanvas> {
-    try {
-      return painter.GeneratePlot(toPaint, mDataBuffer);
-    } catch (const std::exception& e) {
-      logger::error("Plot {} could not be painted: {}.", fullPlot.GetName(), e.what());
-      return nullptr;
-    }
-  };
   gROOT->SetBatch(!isInteractiveMode && !isMacroMode);
   shared_ptr<TCanvas> canvas;
   auto sharedAxes = fullPlot.GetSharedAxes();
@@ -2018,165 +2009,9 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   const auto& allPads = fullPlot.GetPads();
   const bool hidesLabels = std::any_of(allPads.begin(), allPads.end(), [](const auto& pad) { return !pad.second.GetHiddenNextTo().empty(); });
   if (sharedAxes.empty() && !hidesLabels) {
-    canvas.reset(paint(fullPlot).release());
-  } else {
-    // the colour axis shared by a z group is z, for a 3d histogram its contents (C): its range is shared, a log scale and time format are not
-    // (ROOT colours the boxes linearly)
-    set<uint8_t> contentPads;
-    if (sharedAxes.count('Z')) {
-      for (const auto& [padID, pad] : fullPlot.GetPads()) {
-        if (padID != 0 && PlotPainter::IsContentScale(pad, mDataBuffer)) contentPads.insert(padID);
-      }
-    }
-    auto axisOf = [&](char axisLabel, uint8_t padID) { return (axisLabel == 'Z' && contentPads.count(padID)) ? 'C' : axisLabel; };
-    // pads sharing an axis: a log scale, time format or range set in one of them (else in pad 0) holds for all of them
-    map<char, vector<vector<uint8_t>>> groups;
-    for (const auto& [axisLabel, axisGroups] : sharedAxes) {
-      for (const auto& group : axisGroups) {
-        groups[axisLabel].push_back(group.pads);
-        // contents: the setting of a z group holds for the contents of its 3d histograms too (their range, not a log scale or time format)
-        auto common = [&, axisLabel = axisLabel](const char* what, auto get, auto set, bool contents) {
-          optional<std::decay_t<decltype(*get(std::declval<const Plot::Pad::Axis&>()))>> value;
-          uint8_t valuePad{};  // the first pad of the group setting it, whose value is used
-          for (uint8_t padID : group.pads) {
-            if (!contents && axisOf(axisLabel, padID) == 'C') continue;
-            const auto& axes = fullPlot[padID].GetAxes();
-            auto axis = axes.find(axisOf(axisLabel, padID));
-            if (axis == axes.end() || !get(axis->second)) continue;
-            if (!value) {
-              value = get(axis->second);
-              valuePad = padID;
-            } else if (*value != *get(axis->second)) {
-              logger::warning("Plot {}: the pads sharing the {} axis with pad {} set different {}: the one of pad {} is used.", fullPlot.GetName(), axisLabel, padID, what, valuePad);
-            }
-          }
-          if (!value) return;
-          for (uint8_t padID : group.pads) {
-            if (contents || axisOf(axisLabel, padID) != 'C') set(fullPlot[padID][axisOf(axisLabel, padID)], *value);
-          }
-        };
-        common("log scales", [](const Plot::Pad::Axis& axis) { return axis.GetLog(); }, [](Plot::Pad::Axis& axis, bool isLog) { axis.SetLog(isLog); }, false);
-        common("time formats", [](const Plot::Pad::Axis& axis) { return axis.GetTimeFormat(); }, [](Plot::Pad::Axis& axis, const string& format) { axis.SetTimeFormat(format); }, false);
-        common("minima", [](const Plot::Pad::Axis& axis) { return axis.GetMinRange(); }, [](Plot::Pad::Axis& axis, double_t min) { axis.SetMinRange(min); }, true);
-        common("maxima", [](const Plot::Pad::Axis& axis) { return axis.GetMaxRange(); }, [](Plot::Pad::Axis& axis, double_t max) { axis.SetMaxRange(max); }, true);
-        if (axisLabel == 'Z') {
-          auto isLog = [&](uint8_t padID) {
-            const auto& axes = fullPlot[padID].GetAxes();
-            return !contentPads.count(padID) && axes.count('Z') && axes.at('Z').GetLog().value_or(false);
-          };
-          auto content = std::find_if(group.pads.begin(), group.pads.end(), [&](uint8_t padID) { return contentPads.count(padID) > 0; });
-          if (content != group.pads.end() && std::any_of(group.pads.begin(), group.pads.end(), isLog)) {
-            logger::warning("Plot {}: pad {} draws a 3d histogram, whose boxes ROOT colours linearly: they do not follow the log scale of its z group.", fullPlot.GetName(), *content);
-          }
-          // one colour scale for the group, but each pad is painted with its own palette: the scale fits only some of them
-          const auto& pads = fullPlot.GetPads();
-          auto ownPalette = [](const Plot::Pad& p) { return p.GetPalette() || p.GetPaletteGradient().rgbEndpoints; };
-          // the palette the painter makes of the settings: a gradient (255 colours unless given) or a ROOT palette (kBird unless given), alpha 1 unless given
-          auto palette = [](const Plot::Pad& p) {
-            const auto& gradient = p.GetPaletteGradient();
-            const bool isGradient = gradient.rgbEndpoints.has_value();
-            return std::make_tuple((isGradient) ? 0 : p.GetPalette().value_or(kBird), gradient.rgbEndpoints, gradient.alpha.value_or(1.f), (isGradient) ? gradient.nColors.value_or(255) : 0);
-          };
-          const Plot::Pad* first{nullptr};
-          uint8_t firstPad{};
-          for (uint8_t padID : group.pads) {
-            auto pad = pads.find(padID);
-            if (pad == pads.end()) continue;
-            const Plot::Pad* used = &pad->second;  // the palette a pad is painted with: its own, else the one of pad 0
-            const bool own = ownPalette(*used);
-            if (!own && pads.count(0)) used = &pads.at(0);
-            if (!first) {
-              first = used;
-              firstPad = padID;
-            } else if (palette(*first) != palette(*used)) {
-              // named: the pad that sets its own palette (the first one painted differently from the others may take pad 0's)
-              logger::warning("Plot {}: pad {} sets another palette than the pads it shares one colour scale with; separate the panels with a gap for own scales.", fullPlot.GetName(), (own) ? padID : firstPad);
-              break;
-            }
-          }
-        }
-      }
-    }
-    painter.SetSharedAxes(groups);
-    // the automatic ranges: the union of the ranges the pads get on their own (with their room), known after a first paint;
-    // the plot is painted again only if a pad got another range than the union
-    Plot firstPlot = fullPlot;  // painting changes the plot (e.g. the legend rows of the data)
-    std::unique_ptr<TCanvas> firstCanvas = paint(firstPlot);
-    if (!firstCanvas) return false;
-    const auto ranges = painter.GetFrameRanges();
-    set<std::pair<uint8_t, char>> commonRanges;
-    bool paintAgain{};
-    for (const auto& [axisLabel, axisGroups] : sharedAxes) {
-      for (const auto& group : axisGroups) {
-        vector<uint8_t> members;
-        double_t min = std::numeric_limits<double_t>::infinity();
-        double_t max = -min;
-        for (uint8_t padID : group.pads) {
-          auto range = ranges.find({padID, axisLabel});
-          if (range == ranges.end()) {
-            if (!group.fromLayout && fullPlot.GetPads().count(padID)) {
-              auto& pad = fullPlot.GetPads().at(padID);
-              const bool drawsNothing = pad.GetData().empty() && !pad.GetFrame() && !pad.GetRefFunc();
-              logger::warning("Plot {}: pad {} is left out of the pads sharing the {} axis: {}.", fullPlot.GetName(), padID, axisLabel,
-                              (drawsNothing) ? "it draws nothing" : ((axisLabel == 'Z') ? "it draws no 2d histogram, graph or function and no 3d histogram (or a polar drawing)" : "it has no flat axis frame (a 3d view or a polar drawing)"));
-            }
-            continue;
-          }
-          members.push_back(padID);
-          min = std::min(min, range->second.first);
-          max = std::max(max, range->second.second);
-        }
-        if (members.size() < 2) continue;
-        for (uint8_t padID : members) {
-          const auto& [padMin, padMax] = ranges.at({padID, axisLabel});
-          if (!TMath::AreEqualRel(padMin, min, 1e-9) || !TMath::AreEqualRel(padMax, max, 1e-9)) paintAgain = true;
-          const char padAxis = (axisLabel == 'Z' && painter.GetContentScales().count(padID)) ? 'C' : axisLabel;
-          Plot::Pad::Axis& axis = fullPlot[padID][padAxis];
-          const auto& defaults = fullPlot[0].GetAxes();
-          const bool defaultMin = defaults.count(padAxis) && defaults.at(padAxis).GetMinRange();
-          const bool defaultMax = defaults.count(padAxis) && defaults.at(padAxis).GetMaxRange();
-          if (!axis.GetMinRange() && !defaultMin) axis.SetMinRange(min);
-          if (!axis.GetMaxRange() && !defaultMax) axis.SetMaxRange(max);
-          commonRanges.insert({padID, padAxis});
-        }
-      }
-    }
-    // a 3D view or polar drawing shows the labels and title the layout hides (painted again); a flat panel beside one keeps them hidden,
-    // though the axis is not shared: it has no room for them
-    const auto flatPads = painter.GetFlatPads();
-    auto isFlat = [&](uint8_t padID) { return flatPads.count(padID) > 0; };
-    for (const auto& [padID, pad] : allPads) {
-      for (const auto& [axisLabel, touching] : pad.GetHiddenNextTo()) {
-        if (!isFlat(padID)) {
-          paintAgain = true;
-          continue;
-        }
-        // (a touching panel that draws nothing has no frame either)
-        auto drawsView = [&](uint8_t other) {
-          auto found = allPads.find(other);
-          return !isFlat(other) && found != allPads.end() && (!found->second.GetData().empty() || found->second.GetFrame());
-        };
-        auto unshared = std::find_if(touching.begin(), touching.end(), drawsView);
-        const auto axis = pad.GetAxes().find(axisLabel);
-        const bool ownLabels = axis != pad.GetAxes().end() && axis->second.GetLabelSize();
-        if (unshared != touching.end() && !ownLabels) {
-          logger::warning("Plot {}: the {} labels and title of pad {} are hidden beside pad {}, which shares no axis with it (a 3D view or a polar drawing); separate them with a Gap() to show them.",
-                          fullPlot.GetName(), static_cast<char>(std::tolower(axisLabel)), padID, *unshared);
-        }
-      }
-    }
-    if (paintAgain) painter.SetFlatPads(flatPads);
-    if (!paintAgain) {
-      canvas.reset(firstCanvas.release());
-    } else {
-      // the messages of the first paint are not repeated
-      firstCanvas.reset();
-      painter.SetSharedAxes(groups, commonRanges);
-      auto quiet = ignore_root_messages_below(kError);
-      logger::muted() = true;
-      auto unmute = make_scope_guard([]() { logger::muted() = false; });
-      canvas.reset(paint(fullPlot).release());
-    }
+    canvas.reset(Paint(painter, fullPlot).release());
+  } else if (!ApplySharedAxes(painter, fullPlot, sharedAxes, allPads, canvas)) {
+    return false;
   }
   if (!canvas) return false;
   // ROOT writes images into PDF files only from version 6.42 on: before, they are missing there. Said once per run (a logo is usually
@@ -2502,6 +2337,190 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   }
   if (isMacroMode) RepairMacro(fullName);
   logCreated();
+  return true;
+}
+
+//**************************************************************************************************
+/**
+ * Paints the plot; an exception while painting (thrown by ROOT for data it cannot paint) loses only this plot, not the rest of the run.
+ */
+//**************************************************************************************************
+std::unique_ptr<TCanvas> PlotManager::Paint(PlotPainter& painter, Plot& toPaint)
+{
+  try {
+    return painter.GeneratePlot(toPaint, mDataBuffer);
+  } catch (const std::exception& e) {
+    logger::error("Plot {} could not be painted: {}.", toPaint.GetName(), e.what());
+    return nullptr;
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Paints a plot with shared axes, or with labels a layout hides towards touching panels: a first paint gives the ranges the pads get
+ * on their own, the plot is painted again with the common ones if a pad got another range (false: the first paint failed).
+ */
+//**************************************************************************************************
+bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map<char, vector<Plot::shared_group_t>>& sharedAxes, const std::map<uint8_t, Plot::Pad>& allPads,
+                                  shared_ptr<TCanvas>& canvas)
+{
+  // the colour axis shared by a z group is z, for a 3d histogram its contents (C): its range is shared, a log scale and time format are not
+  // (ROOT colours the boxes linearly)
+  set<uint8_t> contentPads;
+  if (sharedAxes.count('Z')) {
+    for (const auto& [padID, pad] : fullPlot.GetPads()) {
+      if (padID != 0 && PlotPainter::IsContentScale(pad, mDataBuffer)) contentPads.insert(padID);
+    }
+  }
+  auto axisOf = [&](char axisLabel, uint8_t padID) { return (axisLabel == 'Z' && contentPads.count(padID)) ? 'C' : axisLabel; };
+  // pads sharing an axis: a log scale, time format or range set in one of them (else in pad 0) holds for all of them
+  map<char, vector<vector<uint8_t>>> groups;
+  for (const auto& [axisLabel, axisGroups] : sharedAxes) {
+    for (const auto& group : axisGroups) {
+      groups[axisLabel].push_back(group.pads);
+      // contents: the setting of a z group holds for the contents of its 3d histograms too (their range, not a log scale or time format)
+      auto common = [&, axisLabel = axisLabel](const char* what, auto get, auto set, bool contents) {
+        optional<std::decay_t<decltype(*get(std::declval<const Plot::Pad::Axis&>()))>> value;
+        uint8_t valuePad{};  // the first pad of the group setting it, whose value is used
+        for (uint8_t padID : group.pads) {
+          if (!contents && axisOf(axisLabel, padID) == 'C') continue;
+          const auto& axes = fullPlot[padID].GetAxes();
+          auto axis = axes.find(axisOf(axisLabel, padID));
+          if (axis == axes.end() || !get(axis->second)) continue;
+          if (!value) {
+            value = get(axis->second);
+            valuePad = padID;
+          } else if (*value != *get(axis->second)) {
+            logger::warning("Plot {}: the pads sharing the {} axis with pad {} set different {}: the one of pad {} is used.", fullPlot.GetName(), axisLabel, padID, what, valuePad);
+          }
+        }
+        if (!value) return;
+        for (uint8_t padID : group.pads) {
+          if (contents || axisOf(axisLabel, padID) != 'C') set(fullPlot[padID][axisOf(axisLabel, padID)], *value);
+        }
+      };
+      common("log scales", [](const Plot::Pad::Axis& axis) { return axis.GetLog(); }, [](Plot::Pad::Axis& axis, bool isLog) { axis.SetLog(isLog); }, false);
+      common("time formats", [](const Plot::Pad::Axis& axis) { return axis.GetTimeFormat(); }, [](Plot::Pad::Axis& axis, const string& format) { axis.SetTimeFormat(format); }, false);
+      common("minima", [](const Plot::Pad::Axis& axis) { return axis.GetMinRange(); }, [](Plot::Pad::Axis& axis, double_t min) { axis.SetMinRange(min); }, true);
+      common("maxima", [](const Plot::Pad::Axis& axis) { return axis.GetMaxRange(); }, [](Plot::Pad::Axis& axis, double_t max) { axis.SetMaxRange(max); }, true);
+      if (axisLabel == 'Z') {
+        auto isLog = [&](uint8_t padID) {
+          const auto& axes = fullPlot[padID].GetAxes();
+          return !contentPads.count(padID) && axes.count('Z') && axes.at('Z').GetLog().value_or(false);
+        };
+        auto content = std::find_if(group.pads.begin(), group.pads.end(), [&](uint8_t padID) { return contentPads.count(padID) > 0; });
+        if (content != group.pads.end() && std::any_of(group.pads.begin(), group.pads.end(), isLog)) {
+          logger::warning("Plot {}: pad {} draws a 3d histogram, whose boxes ROOT colours linearly: they do not follow the log scale of its z group.", fullPlot.GetName(), *content);
+        }
+        // one colour scale for the group, but each pad is painted with its own palette: the scale fits only some of them
+        const auto& pads = fullPlot.GetPads();
+        auto ownPalette = [](const Plot::Pad& p) { return p.GetPalette() || p.GetPaletteGradient().rgbEndpoints; };
+        // the palette the painter makes of the settings: a gradient (255 colours unless given) or a ROOT palette (kBird unless given), alpha 1 unless given
+        auto palette = [](const Plot::Pad& p) {
+          const auto& gradient = p.GetPaletteGradient();
+          const bool isGradient = gradient.rgbEndpoints.has_value();
+          return std::make_tuple((isGradient) ? 0 : p.GetPalette().value_or(kBird), gradient.rgbEndpoints, gradient.alpha.value_or(1.f), (isGradient) ? gradient.nColors.value_or(255) : 0);
+        };
+        const Plot::Pad* first{nullptr};
+        uint8_t firstPad{};
+        for (uint8_t padID : group.pads) {
+          auto pad = pads.find(padID);
+          if (pad == pads.end()) continue;
+          const Plot::Pad* used = &pad->second;  // the palette a pad is painted with: its own, else the one of pad 0
+          const bool own = ownPalette(*used);
+          if (!own && pads.count(0)) used = &pads.at(0);
+          if (!first) {
+            first = used;
+            firstPad = padID;
+          } else if (palette(*first) != palette(*used)) {
+            // named: the pad that sets its own palette (the first one painted differently from the others may take pad 0's)
+            logger::warning("Plot {}: pad {} sets another palette than the pads it shares one colour scale with; separate the panels with a gap for own scales.", fullPlot.GetName(), (own) ? padID : firstPad);
+            break;
+          }
+        }
+      }
+    }
+  }
+  painter.SetSharedAxes(groups);
+  // the automatic ranges: the union of the ranges the pads get on their own (with their room), known after a first paint;
+  // the plot is painted again only if a pad got another range than the union
+  Plot firstPlot = fullPlot;  // painting changes the plot (e.g. the legend rows of the data)
+  std::unique_ptr<TCanvas> firstCanvas = Paint(painter, firstPlot);
+  if (!firstCanvas) return false;
+  const auto ranges = painter.GetFrameRanges();
+  set<std::pair<uint8_t, char>> commonRanges;
+  bool paintAgain{};
+  for (const auto& [axisLabel, axisGroups] : sharedAxes) {
+    for (const auto& group : axisGroups) {
+      vector<uint8_t> members;
+      double_t min = std::numeric_limits<double_t>::infinity();
+      double_t max = -min;
+      for (uint8_t padID : group.pads) {
+        auto range = ranges.find({padID, axisLabel});
+        if (range == ranges.end()) {
+          if (!group.fromLayout && fullPlot.GetPads().count(padID)) {
+            auto& pad = fullPlot.GetPads().at(padID);
+            const bool drawsNothing = pad.GetData().empty() && !pad.GetFrame() && !pad.GetRefFunc();
+            logger::warning("Plot {}: pad {} is left out of the pads sharing the {} axis: {}.", fullPlot.GetName(), padID, axisLabel,
+                            (drawsNothing) ? "it draws nothing" : ((axisLabel == 'Z') ? "it draws no 2d histogram, graph or function and no 3d histogram (or a polar drawing)" : "it has no flat axis frame (a 3d view or a polar drawing)"));
+          }
+          continue;
+        }
+        members.push_back(padID);
+        min = std::min(min, range->second.first);
+        max = std::max(max, range->second.second);
+      }
+      if (members.size() < 2) continue;
+      for (uint8_t padID : members) {
+        const auto& [padMin, padMax] = ranges.at({padID, axisLabel});
+        if (!TMath::AreEqualRel(padMin, min, 1e-9) || !TMath::AreEqualRel(padMax, max, 1e-9)) paintAgain = true;
+        const char padAxis = (axisLabel == 'Z' && painter.GetContentScales().count(padID)) ? 'C' : axisLabel;
+        Plot::Pad::Axis& axis = fullPlot[padID][padAxis];
+        const auto& defaults = fullPlot[0].GetAxes();
+        const bool defaultMin = defaults.count(padAxis) && defaults.at(padAxis).GetMinRange();
+        const bool defaultMax = defaults.count(padAxis) && defaults.at(padAxis).GetMaxRange();
+        if (!axis.GetMinRange() && !defaultMin) axis.SetMinRange(min);
+        if (!axis.GetMaxRange() && !defaultMax) axis.SetMaxRange(max);
+        commonRanges.insert({padID, padAxis});
+      }
+    }
+  }
+  // a 3D view or polar drawing shows the labels and title the layout hides (painted again); a flat panel beside one keeps them hidden,
+  // though the axis is not shared: it has no room for them
+  const auto flatPads = painter.GetFlatPads();
+  auto isFlat = [&](uint8_t padID) { return flatPads.count(padID) > 0; };
+  for (const auto& [padID, pad] : allPads) {
+    for (const auto& [axisLabel, touching] : pad.GetHiddenNextTo()) {
+      if (!isFlat(padID)) {
+        paintAgain = true;
+        continue;
+      }
+      // (a touching panel that draws nothing has no frame either)
+      auto drawsView = [&](uint8_t other) {
+        auto found = allPads.find(other);
+        return !isFlat(other) && found != allPads.end() && (!found->second.GetData().empty() || found->second.GetFrame());
+      };
+      auto unshared = std::find_if(touching.begin(), touching.end(), drawsView);
+      const auto axis = pad.GetAxes().find(axisLabel);
+      const bool ownLabels = axis != pad.GetAxes().end() && axis->second.GetLabelSize();
+      if (unshared != touching.end() && !ownLabels) {
+        logger::warning("Plot {}: the {} labels and title of pad {} are hidden beside pad {}, which shares no axis with it (a 3D view or a polar drawing); separate them with a Gap() to show them.",
+                        fullPlot.GetName(), static_cast<char>(std::tolower(axisLabel)), padID, *unshared);
+      }
+    }
+  }
+  if (paintAgain) painter.SetFlatPads(flatPads);
+  if (!paintAgain) {
+    canvas.reset(firstCanvas.release());
+  } else {
+    // the messages of the first paint are not repeated
+    firstCanvas.reset();
+    painter.SetSharedAxes(groups, commonRanges);
+    auto quiet = ignore_root_messages_below(kError);
+    logger::muted() = true;
+    auto unmute = make_scope_guard([]() { logger::muted() = false; });
+    canvas.reset(Paint(painter, fullPlot).release());
+  }
   return true;
 }
 
