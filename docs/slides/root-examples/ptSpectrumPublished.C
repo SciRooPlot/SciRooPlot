@@ -43,26 +43,32 @@ void ptSpectrumPublished(const char* dataDir = "ExampleData", const char* output
   canvas.SetLogy();
   canvas.SetTicks(1, 1);
 
-  for (auto axis : {data->GetXaxis(), data->GetYaxis()}) {
+  // the frame takes every published point; the measurement is drawn where it has the statistics
+  TH1* frame = canvas.DrawFrame(0.1, 1e-5, 20., 15.);
+  frame->GetXaxis()->SetTitle(data->GetXaxis()->GetTitle());
+  frame->GetYaxis()->SetTitle(data->GetYaxis()->GetTitle());
+  for (auto axis : {frame->GetXaxis(), frame->GetYaxis()}) {
     axis->SetLabelFont(43);
     axis->SetLabelSize(31);
     axis->SetTitleFont(43);
     axis->SetTitleSize(39);
     axis->SetTickLength(0.03);
   }
-  data->GetXaxis()->SetNoExponent();
-  data->GetXaxis()->SetTitleOffset(1.2);
-  data->GetYaxis()->SetTitleOffset(1.45);
+  frame->GetXaxis()->SetNoExponent();
+  frame->GetXaxis()->SetTitleOffset(1.2);
+  frame->GetYaxis()->SetTitleOffset(1.45);
+  data->GetXaxis()->SetRangeUser(0.15, 10.);
   data->SetMarkerStyle(kFullCircle);
   data->SetMarkerColor(kBlack);
   data->SetLineColor(kBlack);
   data->SetLineWidth(4);
   published.SetMarkerStyle(kOpenSquare);
   published.SetMarkerSize(1.6);
-  published.SetMarkerColor(kAzure + 2);
-  published.SetLineColor(kAzure + 2);
+  const int blue = TColor::GetColor("#3a78c2");
+  published.SetMarkerColor(blue);
+  published.SetLineColor(blue);
   published.SetLineWidth(4);
-  data->Draw("E X0");
+  data->Draw("E X0 SAME");
   published.Draw("P Z SAME");
 
   TLegend legend(0.19, 0.19, 0.6, 0.29);

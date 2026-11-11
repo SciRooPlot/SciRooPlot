@@ -194,11 +194,11 @@ def DefineSpectraPlots(pm: PlotManager):
 
     # table columns become a graph; any C++ expression of the columns can be used -----------------
     plot = Plot("ptSpectrumPublished", "spectra", "1d")
-    plot[1].AddData(measured("ptSpec"), "this analysis")
+    plot[1].AddData(measured("ptSpec"), "this analysis").SetRangeX(0.15, 10.0)  # where this analysis has the statistics
     plot[1].AddData("ptSpec_published", "published", "published (stat. #oplus syst.)").Scatter("pt", "value", "pt_err", "sqrt(stat*stat + syst*syst)").SetColor("#3a78c2").SetMarkerStyle(kOpenSquare).SetMarkerSize(1.6)
     plot[1].AddLegend()
-    plot[1]['X'].SetLog().SetRange(0.15, 10.0)
-    plot[1]['Y'].SetLog()
+    plot[1]['X'].SetLog().SetRange(0.1, 20.0)  # room for every published point
+    plot[1]['Y'].SetLog().SetRange(1e-5, 15.0)
     pm.AddPlot(plot)
 
     plot = Plot("multiplicity", "spectra", "1d")
