@@ -19,6 +19,7 @@ CONTENTS = {
     "plain": ["plain text of some length"],
     "latex": ["#sqrt{#it{s}} = 13.6 TeV, #frac{1}{2} #it{p}_{T}^{2}"],
     "unicode": ["ünïcødé → ±∞ µ"],
+    "mathtext": ["\\sqrt{s} = 13\\ \\mathrm{TeV}"],  # a backslash: drawn by TMathText
     "rows": ["first row", "a second, longer row", "third"],
 }
 CANVASES = {"wide": (1000, 600), "square": (600, 600), "tall": (600, 1000)}

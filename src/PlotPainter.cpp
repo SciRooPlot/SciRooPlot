@@ -5063,8 +5063,11 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         columnWidth = width;
       }
       if (nColumns > 1) {
+        // with the size the legend is painted with (ApplyScale): a text in TMathText syntax does not keep its proportion to others across sizes
         auto& layoutWidth = layoutWidthPerColumn[columnOf(lineID)];
-        layoutWidth = std::max(layoutWidth, textLine.GetXsize());
+        TLatex painted{textLine};
+        if (lineTextFont % 10 == 3) painted.SetTextSize(lineTextSize * mScale);
+        layoutWidth = std::max(layoutWidth, painted.GetXsize());
       }
       ++lineID;
     }
