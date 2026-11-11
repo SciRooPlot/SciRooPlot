@@ -397,7 +397,7 @@ const vector<color_t>& PlotPainter::DefaultColors()
 
 //**************************************************************************************************
 /**
- * The locals of GeneratePlot for one pad that the steps drawing its data share: references to them (they live in GeneratePlot),
+ * The locals of GeneratePlot for one pad that the steps drawing its data and finishing it share: references to them (they live in GeneratePlot),
  * bound to their names at the start of each step.
  */
 //**************************************************************************************************
@@ -410,9 +410,11 @@ struct PlotPainter::pad_state_t {
   const fill_defaults_t& fillDefaults;
   const data_buffer_t& dataBuffer;
   bool& fail;
+  bool& anyView;
   Plot::Pad& pad;
   const uint8_t padID;
   TPad*& pad_ptr;
+  vector<shared_ptr<Plot::Pad::Data>>& drawData;
   string& padSetup;
   optional<int16_t>& textFont;
   optional<float_t>& textSize;
@@ -758,7 +760,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     // the range a function giving the frame is sampled over for it (x and y): it is drawn with the same samples
     optional<array<double_t, 4>> frameFuncRange;
     pad_state_t::used_defaults_t usedDefaults{};  // entries of the pad's default lists taken so far
-    pad_state_t padState{padDefaults, fillDefaults, dataBuffer, fail, pad, padID, pad_ptr, padSetup, textFont, textSize, textColor, textAlpha, activeTextFormat, hasRefFunc, frameSource, axisHist_ptr, polarFrame, polargram, polarAxisHist, padProjection, contentFrame, statsBoxes, clippedSteps, drawOption, dataIndex, mapDrawn, storedRangeZ, frameFuncRange, usedDefaults};
+    pad_state_t padState{padDefaults, fillDefaults, dataBuffer, fail, anyView, pad, padID, pad_ptr, drawData, padSetup, textFont, textSize, textColor, textAlpha, activeTextFormat, hasRefFunc, frameSource, axisHist_ptr, polarFrame, polargram, polarAxisHist, padProjection, contentFrame, statsBoxes, clippedSteps, drawOption, dataIndex, mapDrawn, storedRangeZ, frameFuncRange, usedDefaults};
     for (const auto& data : drawData) {
       if (fail) break;
       // data 0 is the copy of the first data that gives the frame: ROOT's messages about it come again with the data itself
@@ -918,418 +920,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     if (fail) {
       return nullptr;
     }
-    const bool flatFrame = axisHist_ptr && !pad_ptr->GetView() && !polarFrame && !polargram;
-    if (flatFrame) AddAxisRoom(pad_ptr, axisHist_ptr, padDefaults, pad, padID, (hasRefFunc) ? drawData[1].get() : nullptr, padSetup);
-    if (mScalesInCells.count(padID)) {
-      // the colour scale of the pad is shown by a ColorScale() cell: the drawing options lose their Z (ROOT then removes the scale it made)
-      static const std::regex withScale("(COL|BOX[0-9]?|CONT[0-9]?|LEGO[0-9]?|SURF[0-9]?|TRI[0-9]?)Z", std::regex::icase);
-      for (TObjLink* link = pad_ptr->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
-        link->SetOption(std::regex_replace(string(link->GetOption()), withScale, "$1").data());
-      }
-    }
-    // the placement of the boxes below relies on the painted data (painting creates e.g. the palette of a colour plot):
-    // the pad is updated once for all data, since every update repaints everything drawn so far
-    pad_ptr->Update();
-    // the clipped steps are ROOT's steps cut at the frame, which is known now: HIST goes down to the base line of the steps at the outer edges
-    // and fills down to it (0, or the lower frame edge if that is above 0 or on a log axis); HIST ][ (hist_open) also leaves out the bins at
-    // the ends that lie on the base line, with the step down to them: bins with the content of the base and, if the base is the lower frame
-    // edge, all bins below it (TGraphPainter::PaintGrapHist). The steps (two points per bin, for hist_clipped between the two points of the
-    // outer edges) and the outline of their fill follow
-    if (!clippedSteps.empty()) {
-      const bool logX = pad_ptr->GetLogx();
-      const bool logY = pad_ptr->GetLogy();
-      const double_t bottom = (logY) ? std::pow(10., pad_ptr->GetUymin()) : pad_ptr->GetUymin();
-      const double_t top = (logY) ? std::pow(10., pad_ptr->GetUymax()) : pad_ptr->GetUymax();
-      const double_t base = (logY) ? bottom : std::clamp(0., bottom, top);
-      // left of the frame: steps without any bin in the range of the frame are drawn there (ROOT refuses a graph without points)
-      const double_t outside = (logX) ? std::pow(10., 2. * pad_ptr->GetUxmin() - pad_ptr->GetUxmax()) : 2. * pad_ptr->GetUxmin() - pad_ptr->GetUxmax();
-      auto onBase = [&](double_t y) { return y == base || (y < base && base == bottom); };
-      for (auto [steps, open] : clippedSteps) {
-        vector<double_t> x(steps->GetX(), steps->GetX() + steps->GetN());
-        vector<double_t> y(steps->GetY(), steps->GetY() + steps->GetN());
-        if (open) {
-          size_t first = 0;
-          size_t last = x.size();  // points [first, last) are kept, whole bins
-          while (first < last && onBase(y[first]))
-            first += 2;
-          while (last > first && onBase(y[last - 1]))
-            last -= 2;
-          if (first < last) {  // as ROOT: steps all on the base line are drawn whole, along it
-            x = vector<double_t>(x.begin() + first, x.begin() + last);
-            y = vector<double_t>(y.begin() + first, y.begin() + last);
-          }
-        } else if (!y.empty()) {
-          y.front() = y.back() = base;
-        }
-        auto setPoints = [&](TGraph* graph, bool closed) {
-          graph->Set(0);
-          if (x.empty()) {
-            for (int32_t i = 0; i < 3; ++i)
-              graph->SetPoint(i, outside, base);
-            return;
-          }
-          if (closed) graph->SetPoint(0, x.front(), base);
-          for (size_t i = 0; i < x.size(); ++i)
-            graph->SetPoint(graph->GetN(), x[i], y[i]);
-          if (closed) graph->SetPoint(graph->GetN(), x.back(), base);
-        };
-        setPoints(steps, false);
-        // the fill: the outline of the steps closed at the base line (those of hist_clipped are already)
-        if (auto* fill = dynamic_cast<TGraph*>(pad_ptr->GetListOfPrimitives()->FindObject((string("fill_") + steps->GetName()).data()))) {
-          setPoints(fill, open);
-        }
-      }
-    }
-    // z titles with offset 0 next to their labels: the z axis of a 3D view and the colour scales (the range of the frame is final now)
-    if (axisHist_ptr && axisHist_ptr->GetDimension() == 3) {
-      // the binned z axis has a title of its own; the colour scale shows the contents (the C axis). ROOT makes the scale of a 3d histogram
-      // once, with the look of the z axis at that time: it is made again with the look of the scale (the texts of the pad and the defaults
-      // of a layout, then the settings of C; nothing of Z) and its title placed by the content labels, then the z axis gets its own look back
-      // (the scale keeps its copy)
-      TAxis* zAxis = axisHist_ptr->GetZaxis();
-      PlaceZTitle(pad_ptr, zAxis, {{zAxis->GetBinLowEdge(zAxis->GetFirst()), zAxis->GetBinUpEdge(zAxis->GetLast()), false}});
-      TList* functions = axisHist_ptr->GetListOfFunctions();
-      if (TObject* palette = functions->FindObject("palette")) {
-        TAttAxis zLook;
-        zAxis->TAttAxis::Copy(zLook);
-        // the bits of the look are kept apart from TAttAxis: they are given back with it
-        constexpr std::array lookBits{TAxis::kCenterTitle, TAxis::kCenterLabels, TAxis::kNoExponent, TAxis::kTickPlus, TAxis::kTickMinus};
-        std::array<bool, lookBits.size()> zBits{};
-        for (size_t i = 0; i < lookBits.size(); ++i)
-          zBits[i] = zAxis->TestBit(lookBits[i]);
-        zAxis->ResetAttAxis("Z");  // ROOT's look of a z axis (gStyle), the title next to the labels
-        zAxis->SetTitleOffset(0.f);
-        if (textFont) {
-          zAxis->SetTitleFont(*textFont);
-          zAxis->SetLabelFont(*textFont);
-        }
-        if (textColor) {
-          zAxis->SetTitleColor(textColor->ToIndex());
-          zAxis->SetLabelColor(textColor->ToIndex());
-        }
-        if (textSize) zAxis->SetLabelSize(*textSize);
-        if (auto titleSize = LayoutValue(pad, padDefaults, "title_size")) zAxis->SetTitleSize(*titleSize);
-        if (auto titleOffset = LayoutValue(pad, padDefaults, "title_offset_z")) zAxis->SetTitleOffset(*titleOffset);
-        bool ownTitleOffset = zAxis->GetTitleOffset() != 0.f;  // a fixed distance from the layout
-        optional<float_t> titleAlpha, labelAlpha, axisAlpha;
-        for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
-          const auto& content = *contentSettings;
-          if (content.GetTitleFont()) zAxis->SetTitleFont(*content.GetTitleFont());
-          if (content.GetTitleSize()) zAxis->SetTitleSize(*content.GetTitleSize());
-          if (content.GetTitleColor()) zAxis->SetTitleColor(content.GetTitleColor()->ToIndex());
-          if (content.GetTitleOffset()) zAxis->SetTitleOffset(*content.GetTitleOffset());
-          ownTitleOffset = ownTitleOffset || content.GetTitleOffset();
-          if (content.GetTitleCenter()) zAxis->CenterTitle(*content.GetTitleCenter());
-          if (content.GetLabelFont()) zAxis->SetLabelFont(*content.GetLabelFont());
-          if (content.GetLabelSize()) zAxis->SetLabelSize(*content.GetLabelSize());
-          if (content.GetLabelColor()) zAxis->SetLabelColor(content.GetLabelColor()->ToIndex());
-          if (content.GetLabelOffset()) zAxis->SetLabelOffset(*content.GetLabelOffset());
-          if (content.GetLabelCenter()) zAxis->CenterLabels(*content.GetLabelCenter());
-          if (content.GetAxisColor()) zAxis->SetAxisColor(content.GetAxisColor()->ToIndex());
-          if (content.GetTickLength()) zAxis->SetTickLength(*content.GetTickLength());
-          if (content.GetTickOrientation()) zAxis->SetTicks((*content.GetTickOrientation()).data());
-          if (content.GetNumDivisions()) zAxis->SetNdivisions(*content.GetNumDivisions());
-          if (content.GetMaxDigits()) zAxis->SetMaxDigits(*content.GetMaxDigits());
-          if (content.GetNoExponent()) zAxis->SetNoExponent(*content.GetNoExponent());
-          if (content.GetTitleAlpha()) titleAlpha = content.GetTitleAlpha();
-          if (content.GetLabelAlpha()) labelAlpha = content.GetLabelAlpha();
-          if (content.GetAxisAlpha()) axisAlpha = content.GetAxisAlpha();
-        }
-        if (titleAlpha) zAxis->SetTitleColor(TColor::GetColorTransparent(zAxis->GetTitleColor(), *titleAlpha));
-        if (labelAlpha) zAxis->SetLabelColor(TColor::GetColorTransparent(zAxis->GetLabelColor(), *labelAlpha));
-        if (axisAlpha) zAxis->SetAxisColor(TColor::GetColorTransparent(zAxis->GetAxisColor(), *axisAlpha));
-        if (!ownTitleOffset) {
-          // TPaletteAxis reads the divisions (with the max digits, which decide the power of ten taken out of the labels) from the z axis at
-          // every paint, i.e. those given back below: the labels are measured with them
-          TAttAxis made;
-          zAxis->TAttAxis::Copy(made);
-          const Int_t painted = zLook.GetNdivisions();
-          zAxis->SetNdivisions(std::abs(painted) % 1000000, painted > 0);
-          if (std::abs(painted) / 1000000 > 0) zAxis->SetMaxDigits(std::abs(painted) / 1000000);
-          PlaceZTitle(pad_ptr, zAxis, {{axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), false}});
-          const float_t offset = zAxis->GetTitleOffset();
-          made.Copy(*zAxis);
-          zAxis->SetTitleOffset(offset);
-        }
-        functions->Remove(palette);
-        delete palette;
-        pad_ptr->Modified();
-        pad_ptr->Update();
-        zLook.Copy(*zAxis);
-        for (size_t i = 0; i < lookBits.size(); ++i)
-          zAxis->SetBit(lookBits[i], zBits[i]);
-        pad_ptr->Modified();
-      }
-    } else if (axisHist_ptr && axisHist_ptr->GetDimension() == 2) {
-      const vector<label_range_t> ranges{{axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), static_cast<bool>(pad_ptr->GetLogz())}};
-      if (IsViewFrame(pad_ptr, axisHist_ptr)) PlaceZTitle(pad_ptr, axisHist_ptr->GetZaxis(), ranges);
-      for (TObject* primitive : *pad_ptr->GetListOfPrimitives()) {
-        auto* hist = dynamic_cast<TH1*>(primitive);
-        if (hist && hist->GetDimension() == 2 && hist->GetListOfFunctions()->FindObject("palette")) PlaceZTitle(pad_ptr, hist->GetZaxis(), ranges);
-      }
-      pad_ptr->Modified();
-    }
-    if (flatFrame) {
-      // the ranges as drawn, for the axes shared with other pads (pad coordinates of a log axis are decades)
-      mFrameRanges[{padID, 'X'}] = {FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx()), FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx())};
-      mFrameRanges[{padID, 'Y'}] = {FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()), FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy())};
-      mFrameHists[padID] = axisHist_ptr;
-    }
-    // the colour axis of a 2d frame is z, its range the minimum and maximum, also in a 3D view (x and y of a view are projected, not shared);
-    // the colour axis of a 3d histogram is its contents (C), kept under Z for the z groups (a 3d function has no colour scale)
-    if (axisHist_ptr && (axisHist_ptr->GetDimension() == 2 || contentFrame) && !polarFrame && !polargram) {
-      mFrameRanges[{padID, 'Z'}] = {axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum()};
-      mScaleHists[padID] = axisHist_ptr;
-      if (contentFrame) mContentScales.insert(padID);
-    }
-
-    // the colour scale ROOT made while painting starts 0.005 of the pad width right of the frame and is 0.045 wide: other values
-    // (Axis::SetColorScaleOffset/SetColorScaleWidth, which the base plots set from pixels) move it before the boxes are placed
-    optional<float_t> scaleOffset;
-    optional<float_t> scaleWidth;
-    // (the scale of a 3d histogram shows its contents: it is set on the C axis; the defaults of a layout are kept apart from the axes)
-    const bool th3Frame = axisHist_ptr && axisHist_ptr->GetDimension() == 3;
-    const char scaleAxis = th3Frame ? 'C' : 'Z';
-    for (const auto* axis : AxisSettings(pad, padDefaults, scaleAxis)) {
-      if (axis->GetColorScaleOffset()) scaleOffset = axis->GetColorScaleOffset();
-      if (axis->GetColorScaleWidth()) scaleWidth = axis->GetColorScaleWidth();
-    }
-    if (!scaleOffset) scaleOffset = LayoutValue(pad, padDefaults, "color_scale_offset");
-    if (!scaleWidth) scaleWidth = LayoutValue(pad, padDefaults, "color_scale_width");
-    if (scaleOffset || scaleWidth) {
-      for (TObject* primitive : *pad_ptr->GetListOfPrimitives()) {
-        auto* hist = dynamic_cast<TH1*>(primitive);
-        TObject* found = (hist) ? hist->GetListOfFunctions()->FindObject("palette") : nullptr;
-        // the colour scale of a 3D view of 2d data stays where ROOT put it; a map projection paints in a view too, but its scale sits beside a
-        // flat frame, and so does the scale of a 3d histogram (its contents)
-        if (!found || !found->InheritsFrom("TPaletteAxis") || (pad_ptr->GetView() && padProjection.empty() && !th3Frame)) continue;
-        auto* palette = static_cast<TPave*>(found);  // TPaletteAxis lives in libHistPainter, which is not linked: its TPave part is enough
-        const double_t x1 = 1. - pad_ptr->GetRightMargin() + scaleOffset.value_or(0.005f);
-        palette->SetX1NDC(x1);
-        palette->SetX2NDC(x1 + scaleWidth.value_or(0.045f));
-        palette->ConvertNDCtoPad();
-      }
-    }
-
-    const bool redrawAxes = get_first_or(false, pad.GetRedrawAxes(), padDefaults.GetRedrawAxes());
-    if (polarFrame) {
-      // the radial axis of a flat polar drawing: below the disc, from the centre to the right edge (the radius is measured from the centre),
-      // with the attributes and the title of the y axis
-      TAxis* yAxis = axisHist_ptr->GetYaxis();
-      const bool logRadius = pad_ptr->GetLogy();
-      // half of ROOT's divisions of an axis spanning the frame, unless the user set them: the radius runs over half of it
-      optional<int16_t> divisions;
-      for (const auto* axis : AxisSettings(pad, padDefaults, 'Y')) {
-        if (axis->GetNumDivisions()) divisions = axis->GetNumDivisions();
-      }
-      auto* radial = new TGaxis(0.5 * (pad_ptr->GetUxmin() + pad_ptr->GetUxmax()), pad_ptr->GetUymin(), pad_ptr->GetUxmax(), pad_ptr->GetUymin(),
-                                FromPad(pad_ptr->GetUymin(), logRadius), FromPad(pad_ptr->GetUymax(), logRadius), divisions.value_or(505), (logRadius) ? "G" : "");
-      radial->ImportAxisAttributes(yAxis);
-      // the title font is the text font of the TGaxis, which ImportAxisAttributes leaves at its default (its text size is unused: set
-      // to the title size, so that font and size agree)
-      radial->SetTitleFont(yAxis->GetTitleFont());
-      radial->SetTitleSize(yAxis->GetTitleSize());
-      radial->SetTextSize(yAxis->GetTitleSize());
-      radial->SetName("radial_axis");
-      radial->SetBit(kCanDelete);
-      radial->Draw();
-    } else if (redrawAxes && axisHist_ptr && !pad_ptr->GetView() && !polargram && padProjection.empty()) {  // a map projection has no frame box (ROOT removes it)
-      // re-draw frame
-      TLine line;
-      pad_ptr->GetFrame()->TAttLine::Copy(line);  // only the line attributes: TFrame::Copy would write a whole TWbox into the TLine
-      double_t lm = pad_ptr->GetLeftMargin();
-      double_t rm = 1. - pad_ptr->GetRightMargin();
-      double_t tm = 1. - pad_ptr->GetTopMargin();
-      double_t bm = pad_ptr->GetBottomMargin();
-      line.DrawLineNDC(rm, bm, rm, tm);
-      line.DrawLineNDC(lm, bm, lm, tm);
-      line.DrawLineNDC(lm, tm, rm, tm);
-      line.DrawLineNDC(lm, bm, rm, bm);
-      // re-draw axes; for a frame with colour scale with a copy without it, since ROOT removes the colour scale of a histogram painted
-      // without Z (THistPainter::PaintTable) and makes a new one at the default position with the next paint
-      TObject* palette = axisHist_ptr->GetListOfFunctions()->FindObject("palette");
-      // a frame drawn with HBAR shows its x axis vertically, but ROOT repaints it horizontally (THistPainter::PaintAxis swaps the axes only for
-      // alphanumeric labels): the copy gets the look of the axis drawn at each place
-      const bool swapAxes = IsHBarFrame(pad_ptr, axisHist_ptr) && !axisHist_ptr->GetXaxis()->GetLabels() && !axisHist_ptr->GetYaxis()->GetLabels();
-      TH1* axes = axisHist_ptr;
-      if (palette || swapAxes) {
-        axes = static_cast<TH1*>(axisHist_ptr->Clone());
-        axes->SetDirectory(nullptr);
-        axes->SetBit(kCanDelete);
-      }
-      if (palette) delete axes->GetListOfFunctions()->Remove(axes->GetListOfFunctions()->FindObject("palette"));
-      if (swapAxes) {
-        for (auto [from, to] : {std::pair{axisHist_ptr->GetYaxis(), axes->GetXaxis()}, std::pair{axisHist_ptr->GetXaxis(), axes->GetYaxis()}}) {
-          from->TAttAxis::Copy(*to);
-          for (const auto bit : {TAxis::kCenterTitle, TAxis::kRotateTitle, TAxis::kCenterLabels, TAxis::kNoExponent, TAxis::kTickPlus, TAxis::kTickMinus, TAxis::kMoreLogLabels}) {
-            to->SetBit(bit, from->TestBit(bit));
-          }
-          to->SetDecimals(from->GetDecimals());
-          to->SetTimeDisplay(from->GetTimeDisplay());
-          to->SetTimeFormat(from->GetTimeFormat());
-          to->SetTitle(from->GetTitle());
-        }
-      }
-      axes->Draw("SAME AXIS");
-    }
-
-    // shapes need the final frame: behind the data right after the frame histogram, the others after the data (and before the boxes, which avoid them)
-    const bool canDrawShapes = axisHist_ptr && !pad_ptr->GetView() && !polargram;
-    if (!pad.GetShapes().empty() && !canDrawShapes) {
-      logger::warning("The shapes of pad {} are not drawn: they need a cartesian axis frame (no 3d view, no polar graphs).", padID);
-    } else if (!pad.GetShapes().empty()) {
-      DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::behind_data, axisHist_ptr, padID);
-      DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::after_data, nullptr, padID);
-    }
-
-    // legends, texts and images: the ones with a given position before the statistics boxes, the automatically placed ones after them,
-    // so that every automatic placement knows the boxes already there
-    auto placeBoxes = [&](bool fixedPositions) {
-      uint8_t legendIndex{};
-      for (const auto& box : pad.GetLegendBoxes()) {
-        ++legendIndex;
-        if (box->IsAutoPlacement() == fixedPositions || box->HasForeignRows()) continue;  // a legend with rows of other pads comes once all are drawn
-        box->MergeLegendEntries(static_cast<uint16_t>(pad.GetData().size()));             // put the rows added by the user between those of the data
-        if (!DrawBox(box, pad, padDefaults, pad_ptr, "LegendBox_" + std::to_string(legendIndex))) {
-          logger::warning("Legend {} was not added since it is empty.", legendIndex);
-        }
-      }
-      uint8_t textIndex{};
-      for (const auto& box : pad.GetTextBoxes()) {
-        ++textIndex;
-        if (box->IsAutoPlacement() == fixedPositions || box->RefersToOtherPads()) continue;  // a text naming data of other pads comes once all are drawn
-        if (!DrawBox(box, pad, padDefaults, pad_ptr, "TextBox_" + std::to_string(textIndex))) {
-          logger::warning("Text {} was not added since it is empty.", textIndex);
-        }
-      }
-      uint8_t imageIndex{};
-      for (const auto& box : pad.GetImageBoxes()) {
-        ++imageIndex;
-        if (box->IsAutoPlacement() == fixedPositions) continue;
-        DrawImage(*box, get_first_or(frame_coordinates, box->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates()), pad_ptr, "ImageBox_" + std::to_string(imageIndex));
-      }
-    };
-    placeBoxes(true);
-
-    // statistics boxes, placed after the boxes with a given position and before the automatically placed ones
-    for (auto& [stats, statsBox] : statsBoxes) {
-      const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad_ptr);
-      auto textWidth = [&, textFont = stats->GetTextFont(), textSize = stats->GetTextSize()](const TString& text) {
-        TLatex latex(0, 0, text.Data());
-        latex.SetTextFont(textFont);
-        latex.SetTextSize(textSize);
-        return static_cast<double_t>(std::get<0>(GetTextDimensions(latex, pad_ptr)));
-      };
-      // TPaveStats::Paint writes the title centered, "label = value" in two columns (the value right-aligned, '-' as #minus)
-      // and the under- and overflows of 2D histograms ("a | b | c") in three
-      double_t titleWidth{};
-      double_t labelWidth{};
-      double_t valueWidth{};
-      double_t cellWidth{};
-      bool isTitle = (stats->GetOptStat() % 10 != 0);
-      for (auto* line : *stats->GetListOfLines()) {
-        const TString text = line->GetTitle();
-        if (isTitle) {
-          titleWidth = textWidth(text);
-          isTitle = false;
-        } else if (const Ssiz_t pos = text.First('='); pos != kNPOS) {
-          TString value = text(pos + 1, text.Length());
-          value = value.Strip(TString::kBoth);
-          value.ReplaceAll("-", "#minus");
-          labelWidth = std::max(labelWidth, textWidth(text(0, pos)));
-          valueWidth = std::max(valueWidth, textWidth(value));
-        } else {
-          unique_ptr<TObjArray> cells(text.Tokenize("|"));
-          for (auto* cell : *cells) {
-            cellWidth = std::max(cellWidth, textWidth(cell->GetName()));
-          }
-        }
-      }
-      const double_t lineHeightPixel = TextHeightPixel(stats->GetTextFont(), stats->GetTextSize(), pad_ptr);
-      const double_t lineSpacing = statsBox->GetLineSpacing().value_or(0.3);  // as for legends and texts
-      const double_t contentWidthPixel = std::max({labelWidth + lineHeightPixel + valueWidth, titleWidth, 3. * cellWidth});
-      // the margin of TPaveStats is a fraction of the box width, the one set for a box is in NDC (as for legends and texts)
-      double_t widthNDC = (statsBox->GetMargin()) ? contentWidthPixel / padWidthPixel + 2. * *statsBox->GetMargin() : contentWidthPixel / (1. - 2. * stats->GetMargin()) / padWidthPixel;
-      double_t heightNDC = (1. + lineSpacing) * lineHeightPixel * stats->GetListOfLines()->GetSize() / padHeightPixel;
-      const coordinates_t coordinates = get_first_or(frame_coordinates, statsBox->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
-      const auto [unitX, unitY] = SizeUnit(coordinates, pad_ptr);
-      if (statsBox->GetWidth()) widthNDC = *statsBox->GetWidth() * unitX;
-      if (statsBox->GetHeight()) heightNDC = *statsBox->GetHeight() * unitY;
-      if (statsBox->GetMargin()) stats->SetMargin(*statsBox->GetMargin() / widthNDC);
-
-      // the border is drawn centered on the edges of the box, so half of it sticks out on each side
-      const double_t borderX = mScale * stats->GetLineWidth() / padWidthPixel;
-      const double_t borderY = mScale * stats->GetLineWidth() / padHeightPixel;
-      const auto [upperLeftX, upperLeftY] = PlaceBox(*statsBox, coordinates, pad_ptr, widthNDC, heightNDC, borderX, borderY, "statistics box");
-      if (!statsBox->IsAutoPlacement()) WarnIfBeyondPad("statistics box", upperLeftX, upperLeftY, widthNDC, heightNDC);
-      stats->SetX1NDC(upperLeftX);
-      stats->SetY1NDC(upperLeftY - heightNDC);
-      stats->SetX2NDC(upperLeftX + widthNDC);
-      stats->SetY2NDC(upperLeftY);
-      pad_ptr->cd();
-      stats->SetUniqueID(coordinates);  // a double-click in show mode reports the position as given
-      stats.release()->Draw();
-    }
-
-    placeBoxes(false);
-    if (canDrawShapes) DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::on_top, nullptr, padID);
-
-    // viewing angles of 3D drawings: the pad's own, else those of pad 0
-    if (auto theta = get_first(pad.GetViewTheta(), padDefaults.GetViewTheta())) {
-      pad_ptr->SetTheta(*theta);
-    }
-    if (auto phi = get_first(pad.GetViewPhi(), padDefaults.GetViewPhi())) {
-      pad_ptr->SetPhi(*phi);
-    }
-    if (pad_ptr->GetView()) {
-      anyView = true;
-    } else if (pad.GetViewTheta() || pad.GetViewPhi()) {
-      ReportIgnored(fmt::format("The view of pad {}", padID), "it draws nothing in 3d");
-    }
-
-    const bool hbarFrame = axisHist_ptr && IsHBarFrame(pad_ptr, axisHist_ptr);
-    for (auto axisLabel : {'X', 'Y'}) {
-      bool hide{};
-      for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
-        if (axis->GetHideClippedLabels()) hide = *axis->GetHideClippedLabels();
-      }
-      if (hide && axisHist_ptr && !polarFrame && !polargram) HideClippedLabels(pad_ptr, ((axisLabel == 'X') != hbarFrame) ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis(), axisLabel);
-    }
-    // the numbers of a linear x axis without exponent (the shipped look: no factor at the axis end, where a touching panel or a colour
-    // scale would be) run into each other for wide or offset ranges: said, with the remedy
-    if (axisHist_ptr && !polarFrame && !polargram && !pad_ptr->GetView() && !pad_ptr->GetLogx()) {
-      TAxis* xAxis = (hbarFrame) ? axisHist_ptr->GetYaxis() : axisHist_ptr->GetXaxis();
-      if (xAxis->GetNoExponent() && !xAxis->GetLabels() && xAxis->GetLabelSize() > 0.f) {
-        const vector<double_t> values = LabelValues(pad_ptr, xAxis, 'X');
-        const double_t pixelsPerUnit = PadSizePixel(pad_ptr).first * (1. - pad_ptr->GetLeftMargin() - pad_ptr->GetRightMargin()) / (pad_ptr->GetUxmax() - pad_ptr->GetUxmin());
-        // the labels drawn (HideClippedLabels hides some with size 0, by value or by number), each pair of neighbours by their own widths
-        const auto isHidden = [&](size_t index) {
-          if (!xAxis->GetModifiedLabels()) return false;
-          for (auto* change : TRangeDynCast<TAxisModLab>(xAxis->GetModifiedLabels())) {
-            if (!change || change->GetSize() != 0.) continue;
-            const int32_t number = change->GetLabNum();
-            if (number != 0 && static_cast<int64_t>(index) == ((number > 0) ? number - 1 : static_cast<int64_t>(values.size()) + number)) return true;
-            if (number == 0 && std::abs(change->GetLabValue() - values[index]) < 1e-9 * (std::abs(values[index]) + 1.)) return true;
-          }
-          return false;
-        };
-        bool overlap{};
-        double_t previousValue{}, previousWidth{-1.};
-        for (size_t index = 0; index < values.size() && !overlap; ++index) {
-          if (isHidden(index)) continue;
-          const double_t width = MaxLabelWidth(pad_ptr, xAxis, {values[index]}, false);
-          if (previousWidth >= 0. && 0.5 * (width + previousWidth) > (values[index] - previousValue) * pixelsPerUnit) overlap = true;
-          previousValue = values[index];
-          previousWidth = width;
-        }
-        if (overlap) {
-          if (mReportedIgnored.insert("overlapping x labels").second) {
-            logger::warning("The labels of the X axis in pad {} run into each other: fewer divisions (SetNumDivisions), or SetNoExponent(false) for ROOT's power of ten (with room for it at the end of the axis, e.g. a right margin).", padID);
-          }
-        }
-      }
-    }
-    if (axisHist_ptr && !polarFrame && !polargram && !hbarFrame && !pad_ptr->GetView()) WarnIfOutsideFrame(pad_ptr);
+    FinishPad(padState);
 
     padSetups.emplace_back(pad_ptr, std::move(padSetup));
   }
@@ -1451,6 +1042,446 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   canvas_ptr->Modified();
   canvas_ptr->Update();
   return canvas_ptr;
+}
+
+//**************************************************************************************************
+/**
+ * Finishes the pad once its data are drawn: room beside the axes, colour scales and z titles, shapes, boxes and statistics boxes, view angles, labels clipped at the edge.
+ */
+//**************************************************************************************************
+void PlotPainter::FinishPad(pad_state_t& padState)
+{
+  auto& padDefaults = padState.padDefaults;
+  auto& anyView = padState.anyView;
+  auto& pad = padState.pad;
+  auto& padID = padState.padID;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& drawData = padState.drawData;
+  auto& padSetup = padState.padSetup;
+  auto& textFont = padState.textFont;
+  auto& textSize = padState.textSize;
+  auto& textColor = padState.textColor;
+  auto& hasRefFunc = padState.hasRefFunc;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& polarFrame = padState.polarFrame;
+  auto& polargram = padState.polargram;
+  auto& padProjection = padState.padProjection;
+  auto& contentFrame = padState.contentFrame;
+  auto& statsBoxes = padState.statsBoxes;
+  auto& clippedSteps = padState.clippedSteps;
+
+  const bool flatFrame = axisHist_ptr && !pad_ptr->GetView() && !polarFrame && !polargram;
+  if (flatFrame) AddAxisRoom(pad_ptr, axisHist_ptr, padDefaults, pad, padID, (hasRefFunc) ? drawData[1].get() : nullptr, padSetup);
+  if (mScalesInCells.count(padID)) {
+    // the colour scale of the pad is shown by a ColorScale() cell: the drawing options lose their Z (ROOT then removes the scale it made)
+    static const std::regex withScale("(COL|BOX[0-9]?|CONT[0-9]?|LEGO[0-9]?|SURF[0-9]?|TRI[0-9]?)Z", std::regex::icase);
+    for (TObjLink* link = pad_ptr->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+      link->SetOption(std::regex_replace(string(link->GetOption()), withScale, "$1").data());
+    }
+  }
+  // the placement of the boxes below relies on the painted data (painting creates e.g. the palette of a colour plot):
+  // the pad is updated once for all data, since every update repaints everything drawn so far
+  pad_ptr->Update();
+  // the clipped steps are ROOT's steps cut at the frame, which is known now: HIST goes down to the base line of the steps at the outer edges
+  // and fills down to it (0, or the lower frame edge if that is above 0 or on a log axis); HIST ][ (hist_open) also leaves out the bins at
+  // the ends that lie on the base line, with the step down to them: bins with the content of the base and, if the base is the lower frame
+  // edge, all bins below it (TGraphPainter::PaintGrapHist). The steps (two points per bin, for hist_clipped between the two points of the
+  // outer edges) and the outline of their fill follow
+  if (!clippedSteps.empty()) {
+    const bool logX = pad_ptr->GetLogx();
+    const bool logY = pad_ptr->GetLogy();
+    const double_t bottom = (logY) ? std::pow(10., pad_ptr->GetUymin()) : pad_ptr->GetUymin();
+    const double_t top = (logY) ? std::pow(10., pad_ptr->GetUymax()) : pad_ptr->GetUymax();
+    const double_t base = (logY) ? bottom : std::clamp(0., bottom, top);
+    // left of the frame: steps without any bin in the range of the frame are drawn there (ROOT refuses a graph without points)
+    const double_t outside = (logX) ? std::pow(10., 2. * pad_ptr->GetUxmin() - pad_ptr->GetUxmax()) : 2. * pad_ptr->GetUxmin() - pad_ptr->GetUxmax();
+    auto onBase = [&](double_t y) { return y == base || (y < base && base == bottom); };
+    for (auto [steps, open] : clippedSteps) {
+      vector<double_t> x(steps->GetX(), steps->GetX() + steps->GetN());
+      vector<double_t> y(steps->GetY(), steps->GetY() + steps->GetN());
+      if (open) {
+        size_t first = 0;
+        size_t last = x.size();  // points [first, last) are kept, whole bins
+        while (first < last && onBase(y[first]))
+          first += 2;
+        while (last > first && onBase(y[last - 1]))
+          last -= 2;
+        if (first < last) {  // as ROOT: steps all on the base line are drawn whole, along it
+          x = vector<double_t>(x.begin() + first, x.begin() + last);
+          y = vector<double_t>(y.begin() + first, y.begin() + last);
+        }
+      } else if (!y.empty()) {
+        y.front() = y.back() = base;
+      }
+      auto setPoints = [&](TGraph* graph, bool closed) {
+        graph->Set(0);
+        if (x.empty()) {
+          for (int32_t i = 0; i < 3; ++i)
+            graph->SetPoint(i, outside, base);
+          return;
+        }
+        if (closed) graph->SetPoint(0, x.front(), base);
+        for (size_t i = 0; i < x.size(); ++i)
+          graph->SetPoint(graph->GetN(), x[i], y[i]);
+        if (closed) graph->SetPoint(graph->GetN(), x.back(), base);
+      };
+      setPoints(steps, false);
+      // the fill: the outline of the steps closed at the base line (those of hist_clipped are already)
+      if (auto* fill = dynamic_cast<TGraph*>(pad_ptr->GetListOfPrimitives()->FindObject((string("fill_") + steps->GetName()).data()))) {
+        setPoints(fill, open);
+      }
+    }
+  }
+  // z titles with offset 0 next to their labels: the z axis of a 3D view and the colour scales (the range of the frame is final now)
+  if (axisHist_ptr && axisHist_ptr->GetDimension() == 3) {
+    // the binned z axis has a title of its own; the colour scale shows the contents (the C axis). ROOT makes the scale of a 3d histogram
+    // once, with the look of the z axis at that time: it is made again with the look of the scale (the texts of the pad and the defaults
+    // of a layout, then the settings of C; nothing of Z) and its title placed by the content labels, then the z axis gets its own look back
+    // (the scale keeps its copy)
+    TAxis* zAxis = axisHist_ptr->GetZaxis();
+    PlaceZTitle(pad_ptr, zAxis, {{zAxis->GetBinLowEdge(zAxis->GetFirst()), zAxis->GetBinUpEdge(zAxis->GetLast()), false}});
+    TList* functions = axisHist_ptr->GetListOfFunctions();
+    if (TObject* palette = functions->FindObject("palette")) {
+      TAttAxis zLook;
+      zAxis->TAttAxis::Copy(zLook);
+      // the bits of the look are kept apart from TAttAxis: they are given back with it
+      constexpr std::array lookBits{TAxis::kCenterTitle, TAxis::kCenterLabels, TAxis::kNoExponent, TAxis::kTickPlus, TAxis::kTickMinus};
+      std::array<bool, lookBits.size()> zBits{};
+      for (size_t i = 0; i < lookBits.size(); ++i)
+        zBits[i] = zAxis->TestBit(lookBits[i]);
+      zAxis->ResetAttAxis("Z");  // ROOT's look of a z axis (gStyle), the title next to the labels
+      zAxis->SetTitleOffset(0.f);
+      if (textFont) {
+        zAxis->SetTitleFont(*textFont);
+        zAxis->SetLabelFont(*textFont);
+      }
+      if (textColor) {
+        zAxis->SetTitleColor(textColor->ToIndex());
+        zAxis->SetLabelColor(textColor->ToIndex());
+      }
+      if (textSize) zAxis->SetLabelSize(*textSize);
+      if (auto titleSize = LayoutValue(pad, padDefaults, "title_size")) zAxis->SetTitleSize(*titleSize);
+      if (auto titleOffset = LayoutValue(pad, padDefaults, "title_offset_z")) zAxis->SetTitleOffset(*titleOffset);
+      bool ownTitleOffset = zAxis->GetTitleOffset() != 0.f;  // a fixed distance from the layout
+      optional<float_t> titleAlpha, labelAlpha, axisAlpha;
+      for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
+        const auto& content = *contentSettings;
+        if (content.GetTitleFont()) zAxis->SetTitleFont(*content.GetTitleFont());
+        if (content.GetTitleSize()) zAxis->SetTitleSize(*content.GetTitleSize());
+        if (content.GetTitleColor()) zAxis->SetTitleColor(content.GetTitleColor()->ToIndex());
+        if (content.GetTitleOffset()) zAxis->SetTitleOffset(*content.GetTitleOffset());
+        ownTitleOffset = ownTitleOffset || content.GetTitleOffset();
+        if (content.GetTitleCenter()) zAxis->CenterTitle(*content.GetTitleCenter());
+        if (content.GetLabelFont()) zAxis->SetLabelFont(*content.GetLabelFont());
+        if (content.GetLabelSize()) zAxis->SetLabelSize(*content.GetLabelSize());
+        if (content.GetLabelColor()) zAxis->SetLabelColor(content.GetLabelColor()->ToIndex());
+        if (content.GetLabelOffset()) zAxis->SetLabelOffset(*content.GetLabelOffset());
+        if (content.GetLabelCenter()) zAxis->CenterLabels(*content.GetLabelCenter());
+        if (content.GetAxisColor()) zAxis->SetAxisColor(content.GetAxisColor()->ToIndex());
+        if (content.GetTickLength()) zAxis->SetTickLength(*content.GetTickLength());
+        if (content.GetTickOrientation()) zAxis->SetTicks((*content.GetTickOrientation()).data());
+        if (content.GetNumDivisions()) zAxis->SetNdivisions(*content.GetNumDivisions());
+        if (content.GetMaxDigits()) zAxis->SetMaxDigits(*content.GetMaxDigits());
+        if (content.GetNoExponent()) zAxis->SetNoExponent(*content.GetNoExponent());
+        if (content.GetTitleAlpha()) titleAlpha = content.GetTitleAlpha();
+        if (content.GetLabelAlpha()) labelAlpha = content.GetLabelAlpha();
+        if (content.GetAxisAlpha()) axisAlpha = content.GetAxisAlpha();
+      }
+      if (titleAlpha) zAxis->SetTitleColor(TColor::GetColorTransparent(zAxis->GetTitleColor(), *titleAlpha));
+      if (labelAlpha) zAxis->SetLabelColor(TColor::GetColorTransparent(zAxis->GetLabelColor(), *labelAlpha));
+      if (axisAlpha) zAxis->SetAxisColor(TColor::GetColorTransparent(zAxis->GetAxisColor(), *axisAlpha));
+      if (!ownTitleOffset) {
+        // TPaletteAxis reads the divisions (with the max digits, which decide the power of ten taken out of the labels) from the z axis at
+        // every paint, i.e. those given back below: the labels are measured with them
+        TAttAxis made;
+        zAxis->TAttAxis::Copy(made);
+        const Int_t painted = zLook.GetNdivisions();
+        zAxis->SetNdivisions(std::abs(painted) % 1000000, painted > 0);
+        if (std::abs(painted) / 1000000 > 0) zAxis->SetMaxDigits(std::abs(painted) / 1000000);
+        PlaceZTitle(pad_ptr, zAxis, {{axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), false}});
+        const float_t offset = zAxis->GetTitleOffset();
+        made.Copy(*zAxis);
+        zAxis->SetTitleOffset(offset);
+      }
+      functions->Remove(palette);
+      delete palette;
+      pad_ptr->Modified();
+      pad_ptr->Update();
+      zLook.Copy(*zAxis);
+      for (size_t i = 0; i < lookBits.size(); ++i)
+        zAxis->SetBit(lookBits[i], zBits[i]);
+      pad_ptr->Modified();
+    }
+  } else if (axisHist_ptr && axisHist_ptr->GetDimension() == 2) {
+    const vector<label_range_t> ranges{{axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), static_cast<bool>(pad_ptr->GetLogz())}};
+    if (IsViewFrame(pad_ptr, axisHist_ptr)) PlaceZTitle(pad_ptr, axisHist_ptr->GetZaxis(), ranges);
+    for (TObject* primitive : *pad_ptr->GetListOfPrimitives()) {
+      auto* hist = dynamic_cast<TH1*>(primitive);
+      if (hist && hist->GetDimension() == 2 && hist->GetListOfFunctions()->FindObject("palette")) PlaceZTitle(pad_ptr, hist->GetZaxis(), ranges);
+    }
+    pad_ptr->Modified();
+  }
+  if (flatFrame) {
+    // the ranges as drawn, for the axes shared with other pads (pad coordinates of a log axis are decades)
+    mFrameRanges[{padID, 'X'}] = {FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx()), FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx())};
+    mFrameRanges[{padID, 'Y'}] = {FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()), FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy())};
+    mFrameHists[padID] = axisHist_ptr;
+  }
+  // the colour axis of a 2d frame is z, its range the minimum and maximum, also in a 3D view (x and y of a view are projected, not shared);
+  // the colour axis of a 3d histogram is its contents (C), kept under Z for the z groups (a 3d function has no colour scale)
+  if (axisHist_ptr && (axisHist_ptr->GetDimension() == 2 || contentFrame) && !polarFrame && !polargram) {
+    mFrameRanges[{padID, 'Z'}] = {axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum()};
+    mScaleHists[padID] = axisHist_ptr;
+    if (contentFrame) mContentScales.insert(padID);
+  }
+
+  // the colour scale ROOT made while painting starts 0.005 of the pad width right of the frame and is 0.045 wide: other values
+  // (Axis::SetColorScaleOffset/SetColorScaleWidth, which the base plots set from pixels) move it before the boxes are placed
+  optional<float_t> scaleOffset;
+  optional<float_t> scaleWidth;
+  // (the scale of a 3d histogram shows its contents: it is set on the C axis; the defaults of a layout are kept apart from the axes)
+  const bool th3Frame = axisHist_ptr && axisHist_ptr->GetDimension() == 3;
+  const char scaleAxis = th3Frame ? 'C' : 'Z';
+  for (const auto* axis : AxisSettings(pad, padDefaults, scaleAxis)) {
+    if (axis->GetColorScaleOffset()) scaleOffset = axis->GetColorScaleOffset();
+    if (axis->GetColorScaleWidth()) scaleWidth = axis->GetColorScaleWidth();
+  }
+  if (!scaleOffset) scaleOffset = LayoutValue(pad, padDefaults, "color_scale_offset");
+  if (!scaleWidth) scaleWidth = LayoutValue(pad, padDefaults, "color_scale_width");
+  if (scaleOffset || scaleWidth) {
+    for (TObject* primitive : *pad_ptr->GetListOfPrimitives()) {
+      auto* hist = dynamic_cast<TH1*>(primitive);
+      TObject* found = (hist) ? hist->GetListOfFunctions()->FindObject("palette") : nullptr;
+      // the colour scale of a 3D view of 2d data stays where ROOT put it; a map projection paints in a view too, but its scale sits beside a
+      // flat frame, and so does the scale of a 3d histogram (its contents)
+      if (!found || !found->InheritsFrom("TPaletteAxis") || (pad_ptr->GetView() && padProjection.empty() && !th3Frame)) continue;
+      auto* palette = static_cast<TPave*>(found);  // TPaletteAxis lives in libHistPainter, which is not linked: its TPave part is enough
+      const double_t x1 = 1. - pad_ptr->GetRightMargin() + scaleOffset.value_or(0.005f);
+      palette->SetX1NDC(x1);
+      palette->SetX2NDC(x1 + scaleWidth.value_or(0.045f));
+      palette->ConvertNDCtoPad();
+    }
+  }
+
+  const bool redrawAxes = get_first_or(false, pad.GetRedrawAxes(), padDefaults.GetRedrawAxes());
+  if (polarFrame) {
+    // the radial axis of a flat polar drawing: below the disc, from the centre to the right edge (the radius is measured from the centre),
+    // with the attributes and the title of the y axis
+    TAxis* yAxis = axisHist_ptr->GetYaxis();
+    const bool logRadius = pad_ptr->GetLogy();
+    // half of ROOT's divisions of an axis spanning the frame, unless the user set them: the radius runs over half of it
+    optional<int16_t> divisions;
+    for (const auto* axis : AxisSettings(pad, padDefaults, 'Y')) {
+      if (axis->GetNumDivisions()) divisions = axis->GetNumDivisions();
+    }
+    auto* radial = new TGaxis(0.5 * (pad_ptr->GetUxmin() + pad_ptr->GetUxmax()), pad_ptr->GetUymin(), pad_ptr->GetUxmax(), pad_ptr->GetUymin(),
+                              FromPad(pad_ptr->GetUymin(), logRadius), FromPad(pad_ptr->GetUymax(), logRadius), divisions.value_or(505), (logRadius) ? "G" : "");
+    radial->ImportAxisAttributes(yAxis);
+    // the title font is the text font of the TGaxis, which ImportAxisAttributes leaves at its default (its text size is unused: set
+    // to the title size, so that font and size agree)
+    radial->SetTitleFont(yAxis->GetTitleFont());
+    radial->SetTitleSize(yAxis->GetTitleSize());
+    radial->SetTextSize(yAxis->GetTitleSize());
+    radial->SetName("radial_axis");
+    radial->SetBit(kCanDelete);
+    radial->Draw();
+  } else if (redrawAxes && axisHist_ptr && !pad_ptr->GetView() && !polargram && padProjection.empty()) {  // a map projection has no frame box (ROOT removes it)
+    // re-draw frame
+    TLine line;
+    pad_ptr->GetFrame()->TAttLine::Copy(line);  // only the line attributes: TFrame::Copy would write a whole TWbox into the TLine
+    double_t lm = pad_ptr->GetLeftMargin();
+    double_t rm = 1. - pad_ptr->GetRightMargin();
+    double_t tm = 1. - pad_ptr->GetTopMargin();
+    double_t bm = pad_ptr->GetBottomMargin();
+    line.DrawLineNDC(rm, bm, rm, tm);
+    line.DrawLineNDC(lm, bm, lm, tm);
+    line.DrawLineNDC(lm, tm, rm, tm);
+    line.DrawLineNDC(lm, bm, rm, bm);
+    // re-draw axes; for a frame with colour scale with a copy without it, since ROOT removes the colour scale of a histogram painted
+    // without Z (THistPainter::PaintTable) and makes a new one at the default position with the next paint
+    TObject* palette = axisHist_ptr->GetListOfFunctions()->FindObject("palette");
+    // a frame drawn with HBAR shows its x axis vertically, but ROOT repaints it horizontally (THistPainter::PaintAxis swaps the axes only for
+    // alphanumeric labels): the copy gets the look of the axis drawn at each place
+    const bool swapAxes = IsHBarFrame(pad_ptr, axisHist_ptr) && !axisHist_ptr->GetXaxis()->GetLabels() && !axisHist_ptr->GetYaxis()->GetLabels();
+    TH1* axes = axisHist_ptr;
+    if (palette || swapAxes) {
+      axes = static_cast<TH1*>(axisHist_ptr->Clone());
+      axes->SetDirectory(nullptr);
+      axes->SetBit(kCanDelete);
+    }
+    if (palette) delete axes->GetListOfFunctions()->Remove(axes->GetListOfFunctions()->FindObject("palette"));
+    if (swapAxes) {
+      for (auto [from, to] : {std::pair{axisHist_ptr->GetYaxis(), axes->GetXaxis()}, std::pair{axisHist_ptr->GetXaxis(), axes->GetYaxis()}}) {
+        from->TAttAxis::Copy(*to);
+        for (const auto bit : {TAxis::kCenterTitle, TAxis::kRotateTitle, TAxis::kCenterLabels, TAxis::kNoExponent, TAxis::kTickPlus, TAxis::kTickMinus, TAxis::kMoreLogLabels}) {
+          to->SetBit(bit, from->TestBit(bit));
+        }
+        to->SetDecimals(from->GetDecimals());
+        to->SetTimeDisplay(from->GetTimeDisplay());
+        to->SetTimeFormat(from->GetTimeFormat());
+        to->SetTitle(from->GetTitle());
+      }
+    }
+    axes->Draw("SAME AXIS");
+  }
+
+  // shapes need the final frame: behind the data right after the frame histogram, the others after the data (and before the boxes, which avoid them)
+  const bool canDrawShapes = axisHist_ptr && !pad_ptr->GetView() && !polargram;
+  if (!pad.GetShapes().empty() && !canDrawShapes) {
+    logger::warning("The shapes of pad {} are not drawn: they need a cartesian axis frame (no 3d view, no polar graphs).", padID);
+  } else if (!pad.GetShapes().empty()) {
+    DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::behind_data, axisHist_ptr, padID);
+    DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::after_data, nullptr, padID);
+  }
+
+  // legends, texts and images: the ones with a given position before the statistics boxes, the automatically placed ones after them,
+  // so that every automatic placement knows the boxes already there
+  auto placeBoxes = [&](bool fixedPositions) {
+    uint8_t legendIndex{};
+    for (const auto& box : pad.GetLegendBoxes()) {
+      ++legendIndex;
+      if (box->IsAutoPlacement() == fixedPositions || box->HasForeignRows()) continue;  // a legend with rows of other pads comes once all are drawn
+      box->MergeLegendEntries(static_cast<uint16_t>(pad.GetData().size()));             // put the rows added by the user between those of the data
+      if (!DrawBox(box, pad, padDefaults, pad_ptr, "LegendBox_" + std::to_string(legendIndex))) {
+        logger::warning("Legend {} was not added since it is empty.", legendIndex);
+      }
+    }
+    uint8_t textIndex{};
+    for (const auto& box : pad.GetTextBoxes()) {
+      ++textIndex;
+      if (box->IsAutoPlacement() == fixedPositions || box->RefersToOtherPads()) continue;  // a text naming data of other pads comes once all are drawn
+      if (!DrawBox(box, pad, padDefaults, pad_ptr, "TextBox_" + std::to_string(textIndex))) {
+        logger::warning("Text {} was not added since it is empty.", textIndex);
+      }
+    }
+    uint8_t imageIndex{};
+    for (const auto& box : pad.GetImageBoxes()) {
+      ++imageIndex;
+      if (box->IsAutoPlacement() == fixedPositions) continue;
+      DrawImage(*box, get_first_or(frame_coordinates, box->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates()), pad_ptr, "ImageBox_" + std::to_string(imageIndex));
+    }
+  };
+  placeBoxes(true);
+
+  // statistics boxes, placed after the boxes with a given position and before the automatically placed ones
+  for (auto& [stats, statsBox] : statsBoxes) {
+    const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad_ptr);
+    auto textWidth = [&, textFont = stats->GetTextFont(), textSize = stats->GetTextSize()](const TString& text) {
+      TLatex latex(0, 0, text.Data());
+      latex.SetTextFont(textFont);
+      latex.SetTextSize(textSize);
+      return static_cast<double_t>(std::get<0>(GetTextDimensions(latex, pad_ptr)));
+    };
+    // TPaveStats::Paint writes the title centered, "label = value" in two columns (the value right-aligned, '-' as #minus)
+    // and the under- and overflows of 2D histograms ("a | b | c") in three
+    double_t titleWidth{};
+    double_t labelWidth{};
+    double_t valueWidth{};
+    double_t cellWidth{};
+    bool isTitle = (stats->GetOptStat() % 10 != 0);
+    for (auto* line : *stats->GetListOfLines()) {
+      const TString text = line->GetTitle();
+      if (isTitle) {
+        titleWidth = textWidth(text);
+        isTitle = false;
+      } else if (const Ssiz_t pos = text.First('='); pos != kNPOS) {
+        TString value = text(pos + 1, text.Length());
+        value = value.Strip(TString::kBoth);
+        value.ReplaceAll("-", "#minus");
+        labelWidth = std::max(labelWidth, textWidth(text(0, pos)));
+        valueWidth = std::max(valueWidth, textWidth(value));
+      } else {
+        unique_ptr<TObjArray> cells(text.Tokenize("|"));
+        for (auto* cell : *cells) {
+          cellWidth = std::max(cellWidth, textWidth(cell->GetName()));
+        }
+      }
+    }
+    const double_t lineHeightPixel = TextHeightPixel(stats->GetTextFont(), stats->GetTextSize(), pad_ptr);
+    const double_t lineSpacing = statsBox->GetLineSpacing().value_or(0.3);  // as for legends and texts
+    const double_t contentWidthPixel = std::max({labelWidth + lineHeightPixel + valueWidth, titleWidth, 3. * cellWidth});
+    // the margin of TPaveStats is a fraction of the box width, the one set for a box is in NDC (as for legends and texts)
+    double_t widthNDC = (statsBox->GetMargin()) ? contentWidthPixel / padWidthPixel + 2. * *statsBox->GetMargin() : contentWidthPixel / (1. - 2. * stats->GetMargin()) / padWidthPixel;
+    double_t heightNDC = (1. + lineSpacing) * lineHeightPixel * stats->GetListOfLines()->GetSize() / padHeightPixel;
+    const coordinates_t coordinates = get_first_or(frame_coordinates, statsBox->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
+    const auto [unitX, unitY] = SizeUnit(coordinates, pad_ptr);
+    if (statsBox->GetWidth()) widthNDC = *statsBox->GetWidth() * unitX;
+    if (statsBox->GetHeight()) heightNDC = *statsBox->GetHeight() * unitY;
+    if (statsBox->GetMargin()) stats->SetMargin(*statsBox->GetMargin() / widthNDC);
+
+    // the border is drawn centered on the edges of the box, so half of it sticks out on each side
+    const double_t borderX = mScale * stats->GetLineWidth() / padWidthPixel;
+    const double_t borderY = mScale * stats->GetLineWidth() / padHeightPixel;
+    const auto [upperLeftX, upperLeftY] = PlaceBox(*statsBox, coordinates, pad_ptr, widthNDC, heightNDC, borderX, borderY, "statistics box");
+    if (!statsBox->IsAutoPlacement()) WarnIfBeyondPad("statistics box", upperLeftX, upperLeftY, widthNDC, heightNDC);
+    stats->SetX1NDC(upperLeftX);
+    stats->SetY1NDC(upperLeftY - heightNDC);
+    stats->SetX2NDC(upperLeftX + widthNDC);
+    stats->SetY2NDC(upperLeftY);
+    pad_ptr->cd();
+    stats->SetUniqueID(coordinates);  // a double-click in show mode reports the position as given
+    stats.release()->Draw();
+  }
+
+  placeBoxes(false);
+  if (canDrawShapes) DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::on_top, nullptr, padID);
+
+  // viewing angles of 3D drawings: the pad's own, else those of pad 0
+  if (auto theta = get_first(pad.GetViewTheta(), padDefaults.GetViewTheta())) {
+    pad_ptr->SetTheta(*theta);
+  }
+  if (auto phi = get_first(pad.GetViewPhi(), padDefaults.GetViewPhi())) {
+    pad_ptr->SetPhi(*phi);
+  }
+  if (pad_ptr->GetView()) {
+    anyView = true;
+  } else if (pad.GetViewTheta() || pad.GetViewPhi()) {
+    ReportIgnored(fmt::format("The view of pad {}", padID), "it draws nothing in 3d");
+  }
+
+  const bool hbarFrame = axisHist_ptr && IsHBarFrame(pad_ptr, axisHist_ptr);
+  for (auto axisLabel : {'X', 'Y'}) {
+    bool hide{};
+    for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
+      if (axis->GetHideClippedLabels()) hide = *axis->GetHideClippedLabels();
+    }
+    if (hide && axisHist_ptr && !polarFrame && !polargram) HideClippedLabels(pad_ptr, ((axisLabel == 'X') != hbarFrame) ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis(), axisLabel);
+  }
+  // the numbers of a linear x axis without exponent (the shipped look: no factor at the axis end, where a touching panel or a colour
+  // scale would be) run into each other for wide or offset ranges: said, with the remedy
+  if (axisHist_ptr && !polarFrame && !polargram && !pad_ptr->GetView() && !pad_ptr->GetLogx()) {
+    TAxis* xAxis = (hbarFrame) ? axisHist_ptr->GetYaxis() : axisHist_ptr->GetXaxis();
+    if (xAxis->GetNoExponent() && !xAxis->GetLabels() && xAxis->GetLabelSize() > 0.f) {
+      const vector<double_t> values = LabelValues(pad_ptr, xAxis, 'X');
+      const double_t pixelsPerUnit = PadSizePixel(pad_ptr).first * (1. - pad_ptr->GetLeftMargin() - pad_ptr->GetRightMargin()) / (pad_ptr->GetUxmax() - pad_ptr->GetUxmin());
+      // the labels drawn (HideClippedLabels hides some with size 0, by value or by number), each pair of neighbours by their own widths
+      const auto isHidden = [&](size_t index) {
+        if (!xAxis->GetModifiedLabels()) return false;
+        for (auto* change : TRangeDynCast<TAxisModLab>(xAxis->GetModifiedLabels())) {
+          if (!change || change->GetSize() != 0.) continue;
+          const int32_t number = change->GetLabNum();
+          if (number != 0 && static_cast<int64_t>(index) == ((number > 0) ? number - 1 : static_cast<int64_t>(values.size()) + number)) return true;
+          if (number == 0 && std::abs(change->GetLabValue() - values[index]) < 1e-9 * (std::abs(values[index]) + 1.)) return true;
+        }
+        return false;
+      };
+      bool overlap{};
+      double_t previousValue{}, previousWidth{-1.};
+      for (size_t index = 0; index < values.size() && !overlap; ++index) {
+        if (isHidden(index)) continue;
+        const double_t width = MaxLabelWidth(pad_ptr, xAxis, {values[index]}, false);
+        if (previousWidth >= 0. && 0.5 * (width + previousWidth) > (values[index] - previousValue) * pixelsPerUnit) overlap = true;
+        previousValue = values[index];
+        previousWidth = width;
+      }
+      if (overlap) {
+        if (mReportedIgnored.insert("overlapping x labels").second) {
+          logger::warning("The labels of the X axis in pad {} run into each other: fewer divisions (SetNumDivisions), or SetNoExponent(false) for ROOT's power of ten (with room for it at the end of the axis, e.g. a right margin).", padID);
+        }
+      }
+    }
+  }
+  if (axisHist_ptr && !polarFrame && !polargram && !hbarFrame && !pad_ptr->GetView()) WarnIfOutsideFrame(pad_ptr);
 }
 
 //**************************************************************************************************
