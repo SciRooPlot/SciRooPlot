@@ -371,6 +371,8 @@ class PlotPainter
   void ReplacePlaceholders(std::string& str, TNamed* rowData, const std::function<TNamed*(uint16_t, const std::optional<uint8_t>&)>& findData = {});
   // a text with a backslash is drawn by ROOT's TMathText, which crashes on an empty group ({}, { }): such groups are dropped, warned once per text
   void DropEmptyGroups(std::string& text);
+  // 1d histograms and graphs of a flat pad that lie entirely beyond one edge of its frame (the first data decides the frame): warned
+  static void WarnIfOutsideFrame(TPad* pad);
   // the outline of a fill symbol: the line of the data (as TLegend draws it), none, or thin and solid in the line colour (boxes)
   enum class Outline { line,
                        none,

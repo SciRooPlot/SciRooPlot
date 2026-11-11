@@ -3650,6 +3650,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       }
       if (hide && axisHist_ptr && !polarFrame && !polargram) HideClippedLabels(pad_ptr, ((axisLabel == 'X') != hbarFrame) ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis(), axisLabel);
     }
+    if (axisHist_ptr && !polarFrame && !polargram && !hbarFrame && !pad_ptr->GetView()) WarnIfOutsideFrame(pad_ptr);
 
     padSetups.emplace_back(pad_ptr, std::move(padSetup));
   }
@@ -7853,6 +7854,70 @@ void PlotPainter::DropEmptyGroups(string& text)
     logger::warning("Text '{}' has an empty group {{}} and a backslash, on which ROOT crashes: drawn as '{}'.", text, result);
   }
   text = result;
+}
+
+//**************************************************************************************************
+/**
+ * Warns about 1d histograms and graphs that lie entirely beyond one edge of the frame of a flat pad (called once the pad is updated,
+ * so that its ranges are final): every bin or point with its error bars, a filled histogram down to zero. Data beyond two edges is
+ * not warned about, since its lines may cross the frame. One pass over the bins or points of each item.
+ */
+//**************************************************************************************************
+void PlotPainter::WarnIfOutsideFrame(TPad* pad)
+{
+  const auto user = [](double_t value, bool isLog) { return (isLog) ? std::pow(10., value) : value; };
+  const double_t xMin = user(pad->GetUxmin(), pad->GetLogx());
+  const double_t xMax = user(pad->GetUxmax(), pad->GetLogx());
+  const double_t yMin = user(pad->GetUymin(), pad->GetLogy());
+  const double_t yMax = user(pad->GetUymax(), pad->GetLogy());
+  for (TObject* obj : *pad->GetListOfPrimitives()) {
+    // the data of the pad: named <number>:<name>
+    const string name = obj->GetName();
+    const size_t colon = name.find(':');
+    const bool isData = colon != string::npos && colon != 0 && std::all_of(name.begin(), name.begin() + colon, [](char c) { return std::isdigit(static_cast<unsigned char>(c)); });
+    if (!isData) continue;
+    bool left{}, right{}, below{}, above{}, inside{};
+    const auto add = [&](double_t x1, double_t x2, double_t y1, double_t y2) {
+      if (x2 < xMin) {
+        left = true;
+      } else if (x1 > xMax) {
+        right = true;
+      } else if (y2 < yMin) {
+        below = true;
+      } else if (y1 > yMax) {
+        above = true;
+      } else {
+        inside = true;
+      }
+    };
+    if (auto* hist = dynamic_cast<TH1*>(obj); hist && hist->GetDimension() == 1) {
+      const bool filled = hist->GetFillStyle() != 0;
+      for (int32_t bin = 1; bin <= hist->GetNbinsX() && !inside; ++bin) {
+        const double_t content = hist->GetBinContent(bin);
+        if (!std::isfinite(content)) continue;
+        double_t low = content - hist->GetBinErrorLow(bin);
+        double_t high = content + hist->GetBinErrorUp(bin);
+        if (filled) {
+          low = std::min(low, 0.);
+          high = std::max(high, 0.);
+        }
+        add(hist->GetXaxis()->GetBinLowEdge(bin), hist->GetXaxis()->GetBinUpEdge(bin), low, high);
+      }
+    } else if (auto* graph = dynamic_cast<TGraph*>(obj); graph && graph->GetFillStyle() == 0) {
+      for (int32_t i = 0; i < graph->GetN() && !inside; ++i) {
+        const double_t x = graph->GetPointX(i);
+        const double_t y = graph->GetPointY(i);
+        add(x - std::max(graph->GetErrorXlow(i), 0.), x + std::max(graph->GetErrorXhigh(i), 0.), y - std::max(graph->GetErrorYlow(i), 0.), y + std::max(graph->GetErrorYhigh(i), 0.));
+      }
+    } else {
+      continue;
+    }
+    if (inside || (left + right + below + above) != 1) continue;
+    const char* where = (left) ? "left of" : (right) ? "right of"
+                                           : (below) ? "below"
+                                                     : "above";
+    logger::warning("Data {} lies entirely {} the frame of its pad (the first data, or the data set with SetDefinesFrame, decides the frame): nothing of it is visible.", name.substr(colon + 1), where);
+  }
 }
 
 //**************************************************************************************************

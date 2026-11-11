@@ -288,11 +288,13 @@ for case in plains + cases:
 
 
 def new_messages(case, plain, phase):
-    """the messages of a phase that the plain call does not give (the plot named as in the plain one)"""
-    left = [line.replace(plain["name"], "{name}") for line in plain[phase] or []]
+    """the messages of a phase that the plain call does not give (the plot named as in the plain one; points named by their values lying
+    outside the frame in both)"""
+    outside = re.compile(r"Data .+ lies entirely ")
+    left = [outside.sub("Data {data} lies entirely ", line.replace(plain["name"], "{name}")) for line in plain[phase] or []]
     new = []
     for line in case[phase] or []:
-        line = line.replace(case["name"], "{name}")
+        line = outside.sub("Data {data} lies entirely ", line.replace(case["name"], "{name}"))
         if line in left:
             left.remove(line)
         else:

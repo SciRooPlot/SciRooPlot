@@ -1,5 +1,6 @@
 """The frame of a pad comes from one source: the first data drawn, the data marked SetDefinesFrame() (wherever it is in the pad), or an
-input given to Pad::SetFrame (not drawn, not numbered: the data keeps its numbers); the other data of the pad does not widen it. A graph
+input given to Pad::SetFrame (not drawn, not numbered: the data keeps its numbers); the other data of the pad does not widen it: data
+lying entirely beyond one edge of the frame is warned about (not data whose line or fill reaches into the frame). A graph
 without points gives no frame: the next data does (also when it is marked), and a pad of only such graphs is still made. A pad without
 data takes its frame from the ranges of its axes, and a pad missing one of them is warned about by name.
 The frame input takes nothing from the data: no number, no colour, no legend row; its bin labels label the frame. It wins over data
@@ -40,7 +41,11 @@ for b in range(1, 6):
 for b, label in enumerate("ABCD", 1):
     labels.GetXaxis().SetBinLabel(b, label)
     four.SetBinContent(b, b)
-p.source("other", {"wide": wide, "wide2": wide2, "empty": empty, "hist": hist, "narrow": narrow, "labels": labels, "four": four})
+crossing = ROOT.TGraph(2)  # from below the frame of hist to above it: its line crosses the frame
+crossing.SetPoint(0, 3.0, -100.0)
+crossing.SetPoint(1, 6.0, 100.0)
+crossing.SetName("crossing")
+p.source("other", {"wide": wide, "wide2": wide2, "empty": empty, "hist": hist, "narrow": narrow, "labels": labels, "four": four, "crossing": crossing})
 
 for kind in KINDS:
     plot = S.Plot(f"alone_{kind}", "frames", base_of(kind))
@@ -75,6 +80,11 @@ NAMED = {  # name: (data of pad 1, frame expected: that of the plot alone_hist o
     "frame_only": lambda pad: pad.SetFrame("narrow", "other"),
     "set_colours_legend": lambda pad: (pad.SetFrame("narrow", "other"), pad.AddData("hist", "other", "hist"), pad.AddData("wide", "other", "wide"), pad.AddLegend()),
     "colours_legend": lambda pad: (pad.AddData("hist", "other", "hist"), pad.AddData("wide", "other", "wide"), pad.AddLegend()),
+    # data beyond one edge of the frame the first data gives is warned about, data reaching into it or crossing it not
+    "outside_above": lambda pad: (pad.AddData("hist", "other"), pad.AddData("narrow", "other")),
+    "inside": lambda pad: (pad.AddData("hist", "other"), pad.AddData("four", "other")),
+    "line_crossing": lambda pad: (pad.AddData("hist", "other"), pad.AddData("crossing", "other").SetDrawOption("L")),
+    "filled_above": lambda pad: (pad.AddData("hist", "other"), pad.AddData("narrow", "other").SetDrawOption(S.hist).SetFill(1001, ROOT.kBlue)),
 }
 for name, setup in NAMED.items():
     plot = S.Plot(name, "named", "1d")
@@ -166,6 +176,9 @@ same_frame("pad0_frame", "alone_hist_other")
 check("a frame input in pad 0: warned when the plot is added", "added to pad 0 are not drawn" in pad0Said, pad0Said)
 same_frame("base_frame", "alone_hist_other")
 check("a frame input in a base plot: warned when it is added", "has data or a frame in pad 1, which is ignored" in baseSaid, baseSaid)
+for name, data, n in (("outside_above", "narrow", 1), ("inside", "four", 0), ("line_crossing", "crossing", 0), ("filled_above", "narrow", 0)):
+    said = [m for m in run.messages(name, "named") if "lies entirely" in m]
+    check(f"{name}: {'warned once that ' + data + ' is outside the frame' if n else 'no warning about data outside the frame'}", len(said) == n and all(f"Data {data}:other lies entirely above" in m for m in said), " | ".join(said))
 for name, result in refused.items():
     check(f"a frame of {name} is refused", isinstance(result, ValueError), f"{result!r}")
 finish()
