@@ -77,6 +77,7 @@ NO_EFFECT = {
     ("Axis", "SetOppositeTicks", "z"): MEANINGLESS,
     **{("Axis", "SetNoExponent", host): "the labels of that axis need no exponent" for host in ("x", "pad0_x", "c")},
     ("Axis", "SetNumDivisions", "c"): "ROOT reads the divisions of the colour scale of a 3d histogram from its binned z axis at every paint",
+    ("Axis", "SetMaxDigits", "c"): "ROOT reads the max digits of the colour scale of a 3d histogram from its binned z axis at every paint (with its divisions)",
     ("Data", "SetContours", "data"): MEANINGLESS,
     ("Ratio", "SetContours", None): MEANINGLESS,
     ("Shape", "SetFill", "line"): MEANINGLESS,

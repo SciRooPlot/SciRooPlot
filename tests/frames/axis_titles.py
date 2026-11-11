@@ -16,7 +16,10 @@ from srptest import DATA_KINDS, ROOT, WORK, Project, S, add_data, cases, check, 
 
 KINDS = tuple(k for k, (dim, cls, props) in DATA_KINDS.items() if dim == 2 and not cls.startswith("TF") or dim == 3 and "binned" in props)
 LABELS = {"short": None, "long": (0.0012345, 123.456), "exponent": (0.0, 123456.0), "small": (0.00012, 0.00016)}  # ranges of the value axis
-todo = cases({"kind": list(KINDS), "labels": list(LABELS), "where": ["pad", "cell"]})
+todo = cases(
+    {"kind": list(KINDS), "labels": list(LABELS), "where": ["pad", "cell"]},
+    named=[{"kind": "hist3d", "labels": "exponent", "where": "pad", "why": "the scale of a 3d histogram takes the power of ten out with the max digits of its z axis"}],
+)
 
 p = Project("axis_titles", bases=("2d", "1d_1x2"))
 p.inputs()

@@ -3409,7 +3409,17 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         if (labelAlpha) zAxis->SetLabelColor(TColor::GetColorTransparent(zAxis->GetLabelColor(), *labelAlpha));
         if (axisAlpha) zAxis->SetAxisColor(TColor::GetColorTransparent(zAxis->GetAxisColor(), *axisAlpha));
         if (!ownTitleOffset) {
+          // TPaletteAxis reads the divisions (with the max digits, which decide the power of ten taken out of the labels) from the z axis at
+          // every paint, i.e. those given back below: the labels are measured with them
+          TAttAxis made;
+          zAxis->TAttAxis::Copy(made);
+          const Int_t painted = zLook.GetNdivisions();
+          zAxis->SetNdivisions(std::abs(painted) % 1000000, painted > 0);
+          if (std::abs(painted) / 1000000 > 0) zAxis->SetMaxDigits(std::abs(painted) / 1000000);
           PlaceZTitle(pad_ptr, zAxis, {{axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), false}});
+          const float_t offset = zAxis->GetTitleOffset();
+          made.Copy(*zAxis);
+          zAxis->SetTitleOffset(offset);
         }
         functions->Remove(palette);
         delete palette;
