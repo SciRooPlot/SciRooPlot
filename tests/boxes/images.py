@@ -4,7 +4,7 @@ image the plot is saved as. A relative path is taken from where the plot is defi
 missing file, an image beyond its pad and an image in pad 0 are warned about and left out, the plot is made. The image is in every file
 format that can hold one (svg, eps, png); a pdf holds none before ROOT 6.42, which is said once per run.
 Cases: png and jpg pictures wide and tall × the size set by width, height, both or neither × pad and frame coordinates × a wide and a
-tall canvas, and the named cases.
+tall canvas (the sizes that reach beyond the pad: warned and left out), and the named cases.
 Reference: the size of the image box against the size of the picture in pixels, and the picture's colour in the png of the plot.
 Covers: images placed and sized, and the named cases.
 """
@@ -83,8 +83,8 @@ for i, case in enumerate(todo):
     what = describe(case)
     padObj = info.pad(f"i{i}", "images")
     box = padObj.GetPrimitive("ImageBox_1") if padObj else None
-    if not box:
-        check(f"{what}: the image is drawn", False, " | ".join(info.messages(f"i{i}", "images")))
+    if not padObj:
+        check(f"{what}: the plot is made", False, " | ".join(info.errors()[:2]))
         continue
     canvas = padObj.GetCanvas()
     W, H = canvas.GetWw(), canvas.GetWh()
@@ -102,6 +102,17 @@ for i, case in enumerate(todo):
         widthPixel = heightPixel * w / h
     if heightPixel is None:
         heightPixel = widthPixel * h / w
+    # the box in the coordinates of the pad: beyond the pad it is left out with a warning
+    lm, rm, bm, tm = padObj.GetLeftMargin(), padObj.GetRightMargin(), padObj.GetBottomMargin(), padObj.GetTopMargin()
+    x, y = (lm + POSITION[0] * (1.0 - lm - rm), bm + POSITION[1] * (1.0 - bm - tm)) if case["system"] == "frame" else POSITION
+    fits = x + widthPixel / (padObj.GetAbsWNDC() * W) <= 1.0 + 1e-3 and y - heightPixel / (padObj.GetAbsHNDC() * H) >= -1e-3
+    if not fits:
+        said = any("does not fit into its pad" in m for m in info.messages(f"i{i}", "images"))
+        check(f"{what}: beyond its pad: warned and left out", said and not box, " | ".join(info.messages(f"i{i}", "images")))
+        continue
+    if not box:
+        check(f"{what}: the image is drawn", False, " | ".join(info.messages(f"i{i}", "images")))
+        continue
     foundW, foundH = box.GetAbsWNDC() * W, box.GetAbsHNDC() * H
     check(f"{what}: the image is {widthPixel:.0f} x {heightPixel:.0f} pixels", abs(foundW - widthPixel) <= 1.5 and abs(foundH - heightPixel) <= 1.5, f"{foundW:.1f} x {foundH:.1f}")
     img = pngs[i]
