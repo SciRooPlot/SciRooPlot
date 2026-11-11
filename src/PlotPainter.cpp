@@ -3343,6 +3343,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       if (TObject* palette = functions->FindObject("palette")) {
         TAttAxis zLook;
         zAxis->TAttAxis::Copy(zLook);
+        // the bits of the look are kept apart from TAttAxis: they are given back with it
+        constexpr std::array lookBits{TAxis::kCenterTitle, TAxis::kCenterLabels, TAxis::kNoExponent, TAxis::kTickPlus, TAxis::kTickMinus};
+        std::array<bool, lookBits.size()> zBits{};
+        for (size_t i = 0; i < lookBits.size(); ++i)
+          zBits[i] = zAxis->TestBit(lookBits[i]);
         zAxis->ResetAttAxis("Z");  // ROOT's look of a z axis (gStyle), the title next to the labels
         zAxis->SetTitleOffset(0.f);
         if (textFont) {
@@ -3357,6 +3362,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         if (auto titleSize = LayoutValue(pad, padDefaults, "title_size")) zAxis->SetTitleSize(*titleSize);
         if (auto titleOffset = LayoutValue(pad, padDefaults, "title_offset_z")) zAxis->SetTitleOffset(*titleOffset);
         bool ownTitleOffset = zAxis->GetTitleOffset() != 0.f;  // a fixed distance from the layout
+        optional<float_t> titleAlpha, labelAlpha, axisAlpha;
         for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
           const auto& content = *contentSettings;
           if (content.GetTitleFont()) zAxis->SetTitleFont(*content.GetTitleFont());
@@ -3364,11 +3370,25 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           if (content.GetTitleColor()) zAxis->SetTitleColor(content.GetTitleColor()->ToIndex());
           if (content.GetTitleOffset()) zAxis->SetTitleOffset(*content.GetTitleOffset());
           ownTitleOffset = ownTitleOffset || content.GetTitleOffset();
+          if (content.GetTitleCenter()) zAxis->CenterTitle(*content.GetTitleCenter());
           if (content.GetLabelFont()) zAxis->SetLabelFont(*content.GetLabelFont());
           if (content.GetLabelSize()) zAxis->SetLabelSize(*content.GetLabelSize());
           if (content.GetLabelColor()) zAxis->SetLabelColor(content.GetLabelColor()->ToIndex());
           if (content.GetLabelOffset()) zAxis->SetLabelOffset(*content.GetLabelOffset());
+          if (content.GetLabelCenter()) zAxis->CenterLabels(*content.GetLabelCenter());
+          if (content.GetAxisColor()) zAxis->SetAxisColor(content.GetAxisColor()->ToIndex());
+          if (content.GetTickLength()) zAxis->SetTickLength(*content.GetTickLength());
+          if (content.GetTickOrientation()) zAxis->SetTicks((*content.GetTickOrientation()).data());
+          if (content.GetNumDivisions()) zAxis->SetNdivisions(*content.GetNumDivisions());
+          if (content.GetMaxDigits()) zAxis->SetMaxDigits(*content.GetMaxDigits());
+          if (content.GetNoExponent()) zAxis->SetNoExponent(*content.GetNoExponent());
+          if (content.GetTitleAlpha()) titleAlpha = content.GetTitleAlpha();
+          if (content.GetLabelAlpha()) labelAlpha = content.GetLabelAlpha();
+          if (content.GetAxisAlpha()) axisAlpha = content.GetAxisAlpha();
         }
+        if (titleAlpha) zAxis->SetTitleColor(TColor::GetColorTransparent(zAxis->GetTitleColor(), *titleAlpha));
+        if (labelAlpha) zAxis->SetLabelColor(TColor::GetColorTransparent(zAxis->GetLabelColor(), *labelAlpha));
+        if (axisAlpha) zAxis->SetAxisColor(TColor::GetColorTransparent(zAxis->GetAxisColor(), *axisAlpha));
         if (!ownTitleOffset) {
           PlaceZTitle(pad_ptr, zAxis, {{axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), false}});
         }
@@ -3377,6 +3397,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         pad_ptr->Modified();
         pad_ptr->Update();
         zLook.Copy(*zAxis);
+        for (size_t i = 0; i < lookBits.size(); ++i)
+          zAxis->SetBit(lookBits[i], zBits[i]);
         pad_ptr->Modified();
       }
     } else if (axisHist_ptr && axisHist_ptr->GetDimension() == 2) {
