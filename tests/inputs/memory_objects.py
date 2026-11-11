@@ -263,6 +263,7 @@ for name, data, source in (("a", "named", "nameless"), ("b", "h", "twice")):
     plot = S.Plot(name, "g", "1d")
     plot[1].AddData(data, source)
     pm.AddPlot(plot)
+pm.GeneratePlots("file")  # no output directory yet: said once for all plots
 pm.SetOutputDirectory({p.path("defining")!r})
 pm.GeneratePlots("file")
 f = ROOT.TFile.Open({p.path("defining", "Plots.root")!r})
@@ -276,6 +277,7 @@ drawnHere = dict(re.findall(r"^DRAWN (\w) (\S+)$", out.stdout, re.M))
 check("a nameless object is skipped with a warning", "Cannot add nameless object of type TH1D to data source nameless" in out.text, out.tail())
 check("an object beside a nameless one is added", drawnHere.get("a") == "2.0", out.tail())
 check("a second object of the same name replaces the first, with a warning", drawnHere.get("b") == "4.0" and "Data source twice receives a second object named h" in out.text, out.tail())
+check("GeneratePlots without an output directory: one error for all plots, naming SetOutputDirectory", out.text.count("No output directory was specified") == 1 and "SetOutputDirectory" in out.text, out.tail())
 check("the replace warning names the path in the data source", "Data source lists receives a second object named l/x" in out.text, out.tail())
 userData = os.path.join(os.environ["SCIROOPLOT_CONFIG_PATH"], "defining", "UserData.root")
 stored = ROOT.TFile.Open(userData) if os.path.exists(userData) else None

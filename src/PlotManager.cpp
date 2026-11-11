@@ -323,7 +323,7 @@ bool PlotManager::SaveDataToRootFile() const
 bool PlotManager::CreateOutputDirectory() const
 {
   if (mOutputDirectory.empty()) {
-    logger::error("No output directory was specified.");
+    logger::error("No output directory was specified: set one with SetOutputDirectory.");
     return false;
   }
   std::filesystem::path outputDir = std::filesystem::path(mOutputDirectory).lexically_normal();
@@ -1270,6 +1270,11 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   }
   const bool isInteractiveMode = (mode == "show" || mode == "spread");
   const bool needsDisplay = isInteractiveMode || mode == "macro";
+  // said once for all plots (a program plotting in memory has no project directory unless it sets one)
+  if (!isInteractiveMode && mOutputDirectory.empty()) {
+    logger::error("No output directory was specified: set one with SetOutputDirectory before writing plots in mode '{}'.", mode);
+    return false;
+  }
   // plotting uses multi-threading, the classic canvas and fewer ROOT messages; the settings of the calling program are restored afterwards
   const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
   const bool wasWebDisplay = gROOT->IsWebDisplay();
