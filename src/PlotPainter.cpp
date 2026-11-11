@@ -7243,13 +7243,11 @@ bool PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialError
 }
 bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, bool verbose)
 {
-  if (verbose) {
-    bool empty = true;
-    for (int32_t bin = 0; empty && bin < denominator->GetNcells(); ++bin) {
-      empty = !denominator->GetBinContent(bin);
-    }
-    if (empty) logger::warning("{} is empty: the ratio {} has no values.", denominator->GetName(), numerator->GetName());
+  bool empty{verbose};  // said once: the division by a graph below would also say that the denominator is zero everywhere
+  for (int32_t bin = 0; empty && bin < denominator->GetNcells(); ++bin) {
+    empty = !denominator->GetBinContent(bin);
   }
+  if (empty) logger::warning("{} is empty: the ratio {} has no values.", denominator->GetName(), numerator->GetName());
   // edges are compared with the tolerance of ROOT's own consistency check in TH1::Divide (TH1::CheckBinLimits)
   auto sameAxisBinning = [](TAxis* a, TAxis* b) -> bool {
     if (a->GetNbins() != b->GetNbins()) return false;
@@ -7318,7 +7316,7 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, 
   if (numerator->GetDimension() == 1 && denominator->GetDimension() == 1) {
     TGraphErrors denominatorGraph(denominator);
     denominatorGraph.SetName(denominator->GetName());  // used in messages
-    return Divide(numerator, &denominatorGraph, binomialErrors, verbose, denominator);
+    return Divide(numerator, &denominatorGraph, binomialErrors, verbose && !empty, denominator);
   }
   logger::error("Cannot divide {} by {}: their binnings differ (interpolated division of {}d histograms is not supported).", numerator->GetName(), denominator->GetName(), numerator->GetDimension());
   return false;
