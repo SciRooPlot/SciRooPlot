@@ -387,6 +387,8 @@ class PlotPainter
   static std::vector<double_t> LabelValues(const TAxis* axis, double_t padMin, double_t padMax, bool isLog, double_t divisionScale = 1.);
   double_t MaxLabelWidth(TPad* pad, const TAxis* axis, char axisLabel);
   double_t MaxLabelWidth(TPad* pad, const TAxis* axis, const std::vector<double_t>& values, bool isLog);
+  double_t LabelWidth(TPad* pad, const TAxis* axis, const std::string& text);
+  static std::vector<std::string> LabelTexts(const TAxis* axis, const std::vector<double_t>& values, bool isLog);
   using label_range_t = std::tuple<double_t, double_t, bool>;  // minimum, maximum, log
   bool PlaceZTitle(TPad* pad, TAxis* zAxis, const std::vector<label_range_t>& ranges);
   static std::optional<float_t> LayoutValue(const Plot::Pad& pad, const Plot::Pad& padDefaults, const std::string& key);

@@ -7780,19 +7780,16 @@ void PlotPainter::HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel)
   const double_t labelSizePixel = (axis->GetLabelFont() % 10 == 3) ? axis->GetLabelSize() * mScale : axis->GetLabelSize() * std::min(padWidthPixel, padHeightPixel);
   const double_t padLow = isX ? pad->XtoAbsPixel(pad->GetX1()) : pad->YtoAbsPixel(pad->GetY2());  // pixel rows grow downwards
   const double_t padHigh = isX ? pad->XtoAbsPixel(pad->GetX2()) : pad->YtoAbsPixel(pad->GetY1());
+  // the labels of an x axis are measured as TGaxis writes them (exponent taken out, decades as 10^{n})
+  const vector<string> labelTexts = isX ? LabelTexts(axis, labelValues, isLog) : vector<string>{};
   int32_t labelNumber{};  // TGaxis numbers the labels it draws from the low end
-  for (double_t value : labelValues) {
+  for (size_t index = 0; index < labelValues.size(); ++index) {
+    const double_t value = labelValues[index];
     if (value < wmin - 1e-9 * (wmax - wmin) || value > wmax + 1e-9 * (wmax - wmin)) continue;
     ++labelNumber;
     const double_t padCoord = isLog ? TMath::Log10(value) : value;
     const double_t tickPixel = isX ? pad->XtoAbsPixel(padCoord) : pad->YtoAbsPixel(padCoord);
-    double_t halfExtent = 0.5 * labelSizePixel;
-    if (isX) {
-      TLatex label(0, 0, fmt::format("{:g}", value).data());
-      label.SetTextFont(axis->GetLabelFont());
-      label.SetTextSize(axis->GetLabelSize());
-      halfExtent = 0.5 * std::get<0>(GetTextDimensions(label, pad));
-    }
+    const double_t halfExtent = 0.5 * (isX ? LabelWidth(pad, axis, labelTexts[index]) : labelSizePixel);
     if (tickPixel - halfExtent < padLow || tickPixel + halfExtent > padHigh) {
       // a linear axis is addressed by label number: TGaxis matches a value against the label as drawn, i.e. after taking out
       // the exponent of the axis (500 is drawn as 0.5 next to x10^3); the decades of a log axis are drawn as they are
@@ -7885,13 +7882,41 @@ double_t PlotPainter::MaxLabelWidth(TPad* pad, const TAxis* axis, char axisLabel
 
 //**************************************************************************************************
 /**
- * Width in pixels of the widest of the labels at the given values (as TGaxis writes them, see above).
+ * Width in pixels of the widest of the labels at the given values (as TGaxis writes them, see LabelTexts).
  */
 //**************************************************************************************************
 double_t PlotPainter::MaxLabelWidth(TPad* pad, const TAxis* axis, const vector<double_t>& values, bool isLog)
 {
   if (axis->GetLabelSize() <= 0.f) return 0.;
   pad->cd();  // texts are measured in the current pad
+  double_t width{};
+  for (const string& text : LabelTexts(axis, values, isLog)) {
+    width = std::max(width, LabelWidth(pad, axis, text));
+  }
+  return width;
+}
+
+//**************************************************************************************************
+/**
+ * Width in pixels of a label text of an axis.
+ */
+//**************************************************************************************************
+double_t PlotPainter::LabelWidth(TPad* pad, const TAxis* axis, const string& text)
+{
+  TLatex label(0, 0, text.data());
+  label.SetTextFont(axis->GetLabelFont());
+  label.SetTextSize(axis->GetLabelSize());
+  return static_cast<double_t>(std::get<0>(GetTextDimensions(label, pad)));
+}
+
+//**************************************************************************************************
+/**
+ * The texts of the labels at the given values as TGaxis writes them in the usual cases: decades of a log axis as 1, 10 and
+ * 10^{n}, values beyond the maximum number of digits with the common power of ten taken out, a minus sign as #minus.
+ */
+//**************************************************************************************************
+vector<string> PlotPainter::LabelTexts(const TAxis* axis, const vector<double_t>& values, bool isLog)
+{
   double_t largest{};
   for (double_t value : values) {
     largest = std::max(largest, std::abs(value));
@@ -7929,7 +7954,8 @@ double_t PlotPainter::MaxLabelWidth(TPad* pad, const TAxis* axis, const vector<d
     }
   }
   const double_t factor = TMath::Power(10., exponent);
-  double_t width{};
+  vector<string> texts;
+  texts.reserve(values.size());
   for (double_t value : values) {
     string text;
     if (isLog) {
@@ -7939,12 +7965,9 @@ double_t PlotPainter::MaxLabelWidth(TPad* pad, const TAxis* axis, const vector<d
       const double_t shown = value / factor;
       text = fmt::format("{:g}", (std::abs(shown) < 1e-9 * largest / factor) ? 0. : shown);
     }
-    TLatex label(0, 0, TString(text).ReplaceAll("-", "#minus").Data());  // as TGaxis writes a minus sign
-    label.SetTextFont(axis->GetLabelFont());
-    label.SetTextSize(axis->GetLabelSize());
-    width = std::max(width, static_cast<double_t>(std::get<0>(GetTextDimensions(label, pad))));
+    texts.emplace_back(TString(text).ReplaceAll("-", "#minus").Data());  // as TGaxis writes a minus sign
   }
-  return width;
+  return texts;
 }
 
 //**************************************************************************************************
