@@ -7519,7 +7519,8 @@ vector<double_t> PlotPainter::LabelValues(const TAxis* axis, double_t padMin, do
   }
   if (!(binWidth > 0.)) return labelValues;
   for (int32_t i = 0; i <= nBins; ++i) {
-    labelValues.push_back(binLow + i * binWidth);
+    const double_t value = binLow + i * binWidth;
+    labelValues.push_back((std::abs(value) < 1e-9 * binWidth) ? 0. : value);  // TGaxis writes 0 where the steps miss it by rounding (-1 + 5 * 0.2)
   }
   return labelValues;
 }
