@@ -249,34 +249,65 @@ PanelLayout& PanelLayout::SetCommonTitles(bool common)
 
 //**************************************************************************************************
 /**
- * Computes the canvas size and the pads of the plot from the arrangement and the lengths of the layout.
- *
- * The lengths of the layout are pixels of the canvas, while ROOT defines most of them relative to the
- * pad (see TAttText::Modify and TGaxis::PaintAxis): text sizes as fractions of the smaller pad side,
- * tick lengths as fractions of the axis length drawn perpendicular to it (i.e. in pixels scaled by the
- * pad aspect ratio), label and title offsets as fractions of the pad size perpendicular to the axis
- * (title offsets additionally in units of 1.6 x title size). All of these are converted per pad from its
- * size in pixels, such that they have the same length in every panel (also the distance and the width of the colour
- * scale, fractions of the pad width in ROOT). Line widths and marker sizes are
- * pixels in ROOT already and taken over as they are. All edges are rounded to whole pixels before any
- * fraction is computed, so that neighbouring panels line up exactly.
+ * The arrangement of the layout read into a grid, and the space between its columns and rows.
  */
 //**************************************************************************************************
-void PanelLayout::ApplyTo(Plot& plot) const
-{
-  // read the arrangement into a grid: every listed cell (one pad) covers a block of grid positions, starting at the first
-  // position of its row that no cell spanning down from a row above covers; rows containing only gaps separate grid rows
+struct PanelLayout::Grid {
   struct Cell {
     const Panel* panel;
     size_t row;  // first row and column of its block
     size_t col;
   };
-  vector<Cell> cells;             // in reading order: cell i is pad padOf[i] (see below)
+  // space between neighbouring columns and rows: the part belonging to the first pad, the part belonging to the second one,
+  // and whether the two panels share the axis between them
+  struct Separation {
+    double_t first{};
+    double_t second{};
+    bool shared{};
+  };
+  vector<Cell> cells;             // in reading order: cell i is pad padOf[i]
   vector<vector<int32_t>> owner;  // [row][column]: the cell covering the position (-1: free)
   vector<int8_t> gapAfterColumn;  // gap between column c and c + 1: 1 or 0, -1 while only spanned over
   vector<bool> gapAfterRow;       // gap between row r and r + 1
+  vector<uint8_t> padOf;          // the pad numbers of the cells in reading order (0: a hole, no pad)
   size_t nRows = 0;
   size_t nCols = 0;
+  // filled by ApplyGeometry
+  vector<bool> colOwnScale;  // a column whose panels have a colour scale
+  vector<bool> colScale;     // a column of ColorScale() cells
+  vector<Separation> colSep;
+  vector<Separation> rowSep;
+};
+
+//**************************************************************************************************
+/**
+ * Arranges the pads of the plot as the layout gives them and applies the look of the shipped plots.
+ */
+//**************************************************************************************************
+void PanelLayout::ApplyTo(Plot& plot) const
+{
+  Grid grid = ReadGrid();
+  ApplyGeometry(plot, grid);
+  ApplyLook(plot, grid);
+  ApplySharing(plot, grid);
+}
+
+//**************************************************************************************************
+/**
+ * Reads the arrangement into a grid and numbers the pads.
+ */
+//**************************************************************************************************
+PanelLayout::Grid PanelLayout::ReadGrid() const
+{
+  // read the arrangement into a grid: every listed cell (one pad) covers a block of grid positions, starting at the first
+  // position of its row that no cell spanning down from a row above covers; rows containing only gaps separate grid rows
+  Grid grid;
+  auto& cells = grid.cells;
+  auto& owner = grid.owner;
+  auto& gapAfterColumn = grid.gapAfterColumn;
+  auto& gapAfterRow = grid.gapAfterRow;
+  auto& nRows = grid.nRows;
+  auto& nCols = grid.nCols;
   bool pendingRowGap = false;
   for (size_t r = 0; r < mRows.size(); ++r) {
     const auto& row = mRows[r];
@@ -342,7 +373,8 @@ void PanelLayout::ApplyTo(Plot& plot) const
   if (pendingRowGap) logger::throw_invalid_argument("Layout: the last row must contain panels.");
   if (owner.size() > nRows) logger::throw_invalid_argument("Layout: a cell spans below the last row.");
   // the pad numbers of the cells in reading order (0: a hole, no pad)
-  vector<uint8_t> padOf(cells.size(), 0);
+  auto& padOf = grid.padOf;
+  padOf.assign(cells.size(), 0);
   size_t nPads = 0;
   for (size_t i = 0; i < cells.size(); ++i) {
     if (cells[i].panel->mHole) continue;
@@ -351,13 +383,42 @@ void PanelLayout::ApplyTo(Plot& plot) const
     }
     padOf[i] = static_cast<uint8_t>(nPads);
   }
+  return grid;
+}
 
+//**************************************************************************************************
+/**
+ * Computes the canvas size and the pads of the plot from the arrangement and the lengths of the layout.
+ *
+ * The lengths of the layout are pixels of the canvas, while ROOT defines most of them relative to the
+ * pad (see TAttText::Modify and TGaxis::PaintAxis): text sizes as fractions of the smaller pad side,
+ * tick lengths as fractions of the axis length drawn perpendicular to it (i.e. in pixels scaled by the
+ * pad aspect ratio), label and title offsets as fractions of the pad size perpendicular to the axis
+ * (title offsets additionally in units of 1.6 x title size). All of these are converted per pad from its
+ * size in pixels, such that they have the same length in every panel (also the distance and the width of the colour
+ * scale, fractions of the pad width in ROOT). Line widths and marker sizes are
+ * pixels in ROOT already and taken over as they are. All edges are rounded to whole pixels before any
+ * fraction is computed, so that neighbouring panels line up exactly.
+ */
+//**************************************************************************************************
+void PanelLayout::ApplyGeometry(Plot& plot, Grid& grid) const
+{
+  using Separation = Grid::Separation;
+  const auto& cells = grid.cells;
+  const auto& owner = grid.owner;
+  const auto& padOf = grid.padOf;
+  const auto& gapAfterColumn = grid.gapAfterColumn;
+  const auto& gapAfterRow = grid.gapAfterRow;
+  const size_t nRows = grid.nRows;
+  const size_t nCols = grid.nCols;
   // sizes of the columns and rows in pixels, from the cells that cover a single one (and whether a column has a colour scale,
   // of its panels or as ColorScale() cells: these have the width of the room of a colour scale)
   vector<double_t> colWidth(nCols, 0.);
   vector<double_t> rowHeight(nRows, 0.);
-  vector<bool> colOwnScale(nCols, false);
-  vector<bool> colScale(nCols, false);
+  auto& colOwnScale = grid.colOwnScale;
+  auto& colScale = grid.colScale;
+  colOwnScale.assign(nCols, false);
+  colScale.assign(nCols, false);
   for (const auto& [cell, r, c] : cells) {
     if (cell->mScaleCell) {
       if (cell->mColumns > 1) logger::throw_invalid_argument("Layout: a ColorScale() cell spans one column (row {}, column {}).", r + 1, c + 1);
@@ -399,15 +460,10 @@ void PanelLayout::ApplyTo(Plot& plot) const
     if (rowHeight[r] == 0.) logger::throw_invalid_argument("Layout: row {} has no height: it holds only empty cells without size or cells spanning further rows.", r + 1);
   }
 
-  // space between neighbouring columns and rows: the part belonging to the first pad, the part belonging to the second one,
-  // and whether the two panels share the axis between them
-  struct Separation {
-    double_t first{};
-    double_t second{};
-    bool shared{};
-  };
-  vector<Separation> colSep(nCols > 1 ? nCols - 1 : 0);
-  vector<Separation> rowSep(nRows > 1 ? nRows - 1 : 0);
+  auto& colSep = grid.colSep;
+  auto& rowSep = grid.rowSep;
+  colSep.resize(nCols > 1 ? nCols - 1 : 0);
+  rowSep.resize(nRows > 1 ? nRows - 1 : 0);
   // the space between touching panels at each boundary: the one the cells along it give (Panel::SpacingLeft, SpacingAbove), else SetPanelSpacing
   vector<double_t> colSpacing(colSep.size(), -1.);
   vector<double_t> rowSpacing(rowSep.size(), -1.);
@@ -619,7 +675,17 @@ void PanelLayout::ApplyTo(Plot& plot) const
   }
   plot[0].SetDefaultLineWidth(mLineWidth);
   plot[0].SetDefaultMarkerSize(mMarkerSize);
+}
 
+//**************************************************************************************************
+/**
+ * Applies the look of the shipped plots to the defaults of the plot (pad 0).
+ */
+//**************************************************************************************************
+void PanelLayout::ApplyLook(Plot& plot, const Grid& grid) const
+{
+  const auto& colOwnScale = grid.colOwnScale;
+  const auto& colScale = grid.colScale;
   // the look of the shipped plots (a plot changes any of it with the ordinary setters): fonts, markers and axis conventions
   // (the colours of the data are those of every plot, PlotPainter::DefaultColors)
   plot.SetTransparent();
@@ -636,7 +702,22 @@ void PanelLayout::ApplyTo(Plot& plot) const
   plot[0]['Z'].SetMaxDigits(3);
   // the axes are drawn again on top of the data in layouts with colour scales (2d maps would cover the ticks)
   if (std::find(colOwnScale.begin(), colOwnScale.end(), true) != colOwnScale.end() || std::find(colScale.begin(), colScale.end(), true) != colScale.end()) plot[0].SetRedrawAxes();
+}
 
+//**************************************************************************************************
+/**
+ * Shares the axes of touching panels and groups the panels showing a common title.
+ */
+//**************************************************************************************************
+void PanelLayout::ApplySharing(Plot& plot, const Grid& grid) const
+{
+  const auto& cells = grid.cells;
+  const auto& owner = grid.owner;
+  const auto& padOf = grid.padOf;
+  const auto& colSep = grid.colSep;
+  const auto& rowSep = grid.rowSep;
+  const size_t nRows = grid.nRows;
+  const size_t nCols = grid.nCols;
   // touching panels share their axes: x within a column (panels touching above or below), y within a row (touching left or right);
   // and the outer title of a row (x) or column (y) of touching panels is drawn once: groups of the panels showing that title
   // (the x title of a panel without a touching panel below, the y title of one without a touching panel on its left)
