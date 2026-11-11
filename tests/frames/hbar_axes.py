@@ -15,7 +15,10 @@ from srptest import DATA_1D, DATA_KINDS, ROOT, Project, S, add_data, cases, chec
 KINDS = tuple(k for k in DATA_1D if "binned" in DATA_KINDS[k][2] and DATA_KINDS[k][1] != "TEfficiency")  # a TEfficiency is drawn as a graph
 SETTINGS = ("none", "x_range", "y_range", "room", "log", "looks")
 OPTIONS = {"hbars": S.hbars, "raw_HBAR": "HBAR"}  # the alias and ROOT's option as it is
-todo = cases({"kind": list(KINDS), "option": list(OPTIONS), "setting": list(SETTINGS)})
+todo = cases(
+    {"kind": list(KINDS), "option": list(OPTIONS), "setting": list(SETTINGS)},
+    named=[{"kind": "hist_var", "option": "hbars", "setting": "y_range", "why": "a range between the variable bins ends at their edges"}],
+)
 
 p = Project("hbar_axes")
 p.inputs()
@@ -76,7 +79,14 @@ for i, case in enumerate(todo):
     vertical = (frame.GetXaxis().GetBinLowEdge(frame.GetXaxis().GetFirst()), frame.GetXaxis().GetBinUpEdge(frame.GetXaxis().GetLast()))
     check(f"{what}: the bins on the vertical axis", close(f["Y"][0], vertical[0], 1e-9) and close(f["Y"][1], vertical[1], 1e-9), f"pad y {f['Y']}, bins {vertical}")
     if setting == "y_range":
-        check(f"{what}: the y range on the bins (vertical)", close(f["Y"][0], 3.0, 1e-9) and close(f["Y"][1], 7.0, 1e-9), f"{f['Y']}")
+        # the frame ends at the bin edges enclosing the range (variable bins: 2.7 and 7.5), as for every binned axis
+        axis = drawn[0].GetXaxis()
+        low, high = 3.0, 7.0
+        if not close(axis.GetBinLowEdge(axis.FindFixBin(low)), low, 1e-6):
+            low = axis.GetBinLowEdge(axis.FindFixBin(low))
+        if not close(axis.GetBinLowEdge(axis.FindFixBin(high)), high, 1e-6):
+            high = axis.GetBinUpEdge(axis.FindFixBin(high))
+        check(f"{what}: the y range on the bins (vertical), at the bin edges enclosing it", close(f["Y"][0], low, 1e-9) and close(f["Y"][1], high, 1e-9), f"{f['Y']}, expected ({low}, {high})")
     if setting == "x_range":
         check(f"{what}: the x range on the contents (horizontal)", close(f["X"][0], 0.5, 1e-9) and close(f["X"][1], 20.0, 1e-9), f"{f['X']}")
     shown = [c for lo, hi, c in bins if lo >= f["Y"][0] - 1e-9 and hi <= f["Y"][1] + 1e-9]
