@@ -63,6 +63,9 @@ def plot(name, setup, base="1d"):
 
 picture = f"{WORK}/wide_png.png"
 plot("missing", lambda pl: pl[1].AddImage(0.3, 0.8, f"{WORK}/nope.png"))
+with open(f"{WORK}/text.png", "w") as textFile:
+    textFile.write("not an image\n")
+plot("no_image", lambda pl: pl[1].AddImage(0.3, 0.8, f"{WORK}/text.png"))
 plot("beyond_pad", lambda pl: pl[1].AddImage(0.9, 0.8, picture).SetPadCoordinates().SetWidth(0.3))
 plot("pad0", lambda pl: pl[0].AddImage(0.3, 0.8, picture))
 base = S.PlotManager.MakeBasePlot("1d")
@@ -129,6 +132,11 @@ special = p.plot("special")
 messages = lambda name: special.messages(name, "special")  # noqa: E731
 image = lambda name: special.pad(name, "special").GetPrimitive("ImageBox_1") if special.pad(name, "special") else None  # noqa: E731
 check("a missing file: warned, the plot made without it", special.canvas("missing", "special") and not image("missing") and any("nope.png does not exist" in m for m in messages("missing")), " | ".join(messages("missing")))
+check(
+    "a file that is no image: warned as such (not as a ROOT without images), the plot made without it",
+    special.canvas("no_image", "special") and not image("no_image") and any("text.png could not be read: it is not an image ROOT can read" in m for m in messages("no_image")),
+    " | ".join(messages("no_image")),
+)
 check("an image beyond its pad: warned, the plot made without it", special.canvas("beyond_pad", "special") and not image("beyond_pad") and any("does not fit into its pad" in m for m in messages("beyond_pad")), " | ".join(messages("beyond_pad")))
 check("an image in pad 0: warned", any("pad0" in m and "images added to pad 0" in m for m in special.warnings()), " | ".join(special.warnings()))
 check("an image of a base plot is drawn in its plots", bool(image("from_base")))

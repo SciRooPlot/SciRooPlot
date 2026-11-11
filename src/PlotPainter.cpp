@@ -5389,7 +5389,13 @@ void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, coordinates_t coordi
   TImage* image = TImage::Open(path->data());
   if (!image || !image->IsValid()) {
     delete image;
-    logger::warning("Image {} could not be read (ROOT needs to be built with asimage for images).", *path);
+    // without asimage ROOT has no image class at all
+    std::unique_ptr<TImage> any(TImage::Create());
+    if (any) {
+      logger::warning("Image {} could not be read: it is not an image ROOT can read (png, jpg, gif, bmp, xpm, tiff, …).", *path);
+    } else {
+      logger::warning("Image {} could not be read (ROOT needs to be built with asimage for images).", *path);
+    }
     return;
   }
   const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad);
