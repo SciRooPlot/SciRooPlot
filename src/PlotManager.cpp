@@ -1287,6 +1287,14 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   if (!wasMTEnabled) ROOT::EnableImplicitMT();
   gROOT->SetWebDisplay("off");
   auto quiet = ignore_root_messages_below(kWarning);
+  // ROOT's "Something strange: num. of critical sectors not equal 2" for the empty lego plot that draws the frame of every 3d view, in
+  // spherical coordinates over a narrow range (ROOT bug 66): the picture is the same as without it
+  static ErrorHandlerFunc_t outerHandler = nullptr;
+  outerHandler = SetErrorHandler([](Int_t level, Bool_t abort, const char* location, const char* msg) {
+    if (TString(location) == "TView3D::FindThetaSectors") return;
+    outerHandler(level, abort, location, msg);
+  });
+  auto sectorsGuard = make_scope_guard([]() { SetErrorHandler(outerHandler); });
   // the files opened and closed while plotting would leave gDirectory at gROOT: objects the caller makes afterwards
   // would no longer go into the file it had open
   TDirectory::TContext keepCurrentDirectory;

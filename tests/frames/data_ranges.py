@@ -59,7 +59,10 @@ for i, case in enumerate(todo):
     p.pm.AddPlot(plot)
 VIEWS = {"surf_col": S.surf_col, "surf_col_polar": S.surf_col_polar, "lego_polar": S.lego_polar, "cyl": "SURF1 CYL", "sph": "SURF1 SPH", "psr": "LEGO1 PSR"}
 VIEW_RANGES = {"none": None, "x": ("X", 3.0, 7.0), "y": ("Y", 2.0, 6.0), "logx": ("logx",)}
-viewCases = cases({"kind": [k for k in DATA_2D if DATA_KINDS[k][1] == "TF2"], "view": list(VIEWS), "range": list(VIEW_RANGES)})
+viewCases = cases(
+    {"kind": [k for k in DATA_2D if DATA_KINDS[k][1] == "TF2"], "view": list(VIEWS), "range": list(VIEW_RANGES)},
+    named=[{"kind": "function2d", "view": "sph", "range": "x", "why": "a spherical view over a narrow x range paints without ROOT errors"}],
+)
 for i, case in enumerate(viewCases):
     plot = S.Plot(f"v{i}", "views", "2d")
     add_data(plot[1], case["kind"]).SetDrawOption(VIEWS[case["view"]])
