@@ -24,6 +24,8 @@ cases = [case for case in cases if case["cpp"] is not None]
 BRACED = [
     ('Project([2], [(0, 10, 50)])', "Project({2}, {{0, 10, 50}})"),
     ('Profile([2], [(0, 10, 50)])', "Profile({2}, {{0, 10, 50}})"),
+    ('Profile(3, [0, 1], [(2, 10, 50)])', "Profile(3, {0, 1}, {{2, 10, 50}})"),
+    ('Profile(1, [0])', "Profile(1, {0})"),
     ('Project([2])', "Project({2})"),
     ('Project([2, 0], [(1, 20, 80), (3, 10, 40)])', "Project({2, 0}, {{1, 20, 80}, {3, 10, 40}})"),
     ('Project([0], [(2, 1., 5.)], True)', "Project({0}, {{2, 1., 5.}}, true)"),

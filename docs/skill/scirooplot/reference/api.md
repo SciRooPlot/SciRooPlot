@@ -242,6 +242,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {})` — for 2d histos
 - `Data& ProjectY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {})` — for 2d histos
 - `Data& Profile(const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {})` — for 2d & 3d histos
+- `Data& Profile(uint8_t averagedAxis, const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {})` — mean of averagedAxis along dims
 - `Data& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {})` — for 2d histos
 - `Data& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {})` — for 2d histos
 - `Data& Project(const std::vector<data_dim_t>& dataDims, std::optional<std::string> weight = {})`
@@ -277,6 +278,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Ratio& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {})`
 - `Ratio& ProjectY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {})`
 - `Ratio& Profile(const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {})`
+- `Ratio& Profile(uint8_t averagedAxis, const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {})`
 - `Ratio& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {})`
 - `Ratio& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {})`
 - `Ratio& Project(const std::vector<data_dim_t>& dataDims, std::optional<std::string> weight = {})`

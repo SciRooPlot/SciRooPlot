@@ -726,6 +726,9 @@ class Data:
     def Profile(self, dims: typing.Sequence[int], ranges: typing.Sequence[tuple[int, float, float]] = [], isUserCoord: bool | None = None) -> Data:
         ...
     @typing.overload
+    def Profile(self, averagedAxis: int, dims: typing.Sequence[int], ranges: typing.Sequence[tuple[int, float, float]] = [], isUserCoord: bool | None = None) -> Data:
+        ...
+    @typing.overload
     def Profile(self, dataDims: typing.Sequence[str | tuple], profile: str, weight: str | None = None) -> Data:
         ...
     def Profile1D(self, x: str | tuple, profile: str, weight: str | None = None) -> Data:
@@ -927,6 +930,9 @@ class Ratio(Data):
         ...
     @typing.overload
     def Profile(self, dims: typing.Sequence[int], ranges: typing.Sequence[tuple[int, float, float]] = [], isUserCoord: bool | None = None) -> Ratio:
+        ...
+    @typing.overload
+    def Profile(self, averagedAxis: int, dims: typing.Sequence[int], ranges: typing.Sequence[tuple[int, float, float]] = [], isUserCoord: bool | None = None) -> Ratio:
         ...
     @typing.overload
     def Profile(self, dataDims: typing.Sequence[str | tuple], profile: str, weight: str | None = None) -> Ratio:

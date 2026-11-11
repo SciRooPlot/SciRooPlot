@@ -1685,9 +1685,9 @@
           plot[1].AddData("my2DHist", "input")
                  .ProfileX();
 
-          // Profile keeping axis 2; axis 0 to bins [10, 50]
+          // Profile: mean of axis 3 along axis 2; axis 0 to bins [10, 50]
           plot[1].AddData("myNDHist", "input")
-                 .Profile({2}, {{0, 10, 50}});
+                 .Profile(3, {2}, {{0, 10, 50}});
           ```
         ],
         [
@@ -1707,9 +1707,9 @@
           # Profile of a 2D histogram: <Y> as a function of X
           plot[1].AddData("my2DHist", "input").ProfileX()
 
-          # Profile keeping axis 2; axis 0 to bins [10, 50]
+          # Profile: mean of axis 3 along axis 2; axis 0 to bins [10, 50]
           plot[1].AddData("myNDHist", "input") \
-                 .Profile([2], [[0, 10, 50]])
+                 .Profile(3, [2], [[0, 10, 50]])
           ```
         ],
       )
@@ -2189,7 +2189,7 @@
       #api-section("Projections & profiles", (
         [`Project(dims, ranges = {}, isUserCoord = {})`], [Generic N-dimensional projection.],
         [`ProjectX(...)` / `ProjectY(...)`], [Standard projection of a 2D histogram.],
-        [`Profile(dims, ranges = {}, isUserCoord = {})`], [Generic multi-dimensional profile.],
+        [`Profile([averagedAxis,] dims, ranges = {}, isUserCoord = {})`], [Generic multi-dimensional profile.],
         [`ProfileX(...)` / `ProfileY(...)`], [Standard profile of a 2D histogram.],
       ), text-size: 11.5pt)
     ],

@@ -6357,9 +6357,32 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     logger::error("Cannot project {} onto the same dimension twice.", obj->GetName());
     return nullopt;
   }
+  // the axis a profile averages: the named one, or else the only axis besides the kept ones (TH2 and TH3 profile it themselves below)
+  std::optional<uint8_t> averagedAxis = projInfo.averagedAxis;
+  const bool isInputProfile = obj->InheritsFrom(TProfile2D::Class()) || obj->InheritsFrom(TProfile3D::Class());
+  if (isProfile && averagedAxis && isInputProfile) {
+    logger::error("Cannot average axis {} of {}: it is a profile already, the mean of its values is taken.", *averagedAxis, obj->GetName());
+    return nullopt;
+  }
+  if (isProfile && averagedAxis && *averagedAxis >= nDims) {
+    logger::error("Cannot average axis {} of {}: it only has {}.", *averagedAxis, obj->GetName(), plural(nDims, "dimension"));
+    return nullopt;
+  }
+  const bool isTHn = obj->InheritsFrom(THnBase::Class());
+  if (isProfile && !averagedAxis && isTHn) {
+    const int32_t nLeft = nDims - static_cast<int32_t>(projInfo.dims.size());
+    if (nLeft != 1) {
+      logger::error((nLeft == 0) ? "Cannot profile {} along all of its axes: none is left to average." : "Cannot profile {}: {} axes besides the kept ones are left, name the one to average with Profile(averagedAxis, dims).",
+                    obj->GetName(), nLeft);
+      return nullopt;
+    }
+    for (uint8_t axis = 0; !averagedAxis; ++axis) {
+      if (std::find(projInfo.dims.begin(), projInfo.dims.end(), axis) == projInfo.dims.end()) averagedAxis = axis;
+    }
+  }
   // the ranges of the projection are set on the input itself (read once for all plots): its own ranges are restored afterwards
   vector<TAxis*> axes;
-  if (obj->InheritsFrom(THnBase::Class())) {
+  if (isTHn) {
     auto* histPtr = static_cast<THnBase*>(obj);
     for (int32_t i = 0; i < histPtr->GetNdimensions(); ++i)
       axes.push_back(histPtr->GetAxis(i));
@@ -6422,7 +6445,43 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     return true;
   };
 
-  if (obj->InheritsFrom(THnBase::Class()) && !isProfile) {
+  // a profile ROOT cannot make directly (none of a THn, none of a TH3 onto one axis): the projection onto the kept axes and the averaged one
+  // (last, without its range), profiled as a TH2 or TH3 with the range of the averaged axis, so flows and ranges are those of TH2 and TH3
+  if (isProfile && averagedAxis && (isTHn || (obj->InheritsFrom(TH3::Class()) && projInfo.dims.size() == 1))) {
+    vector<std::tuple<uint8_t, double_t, double_t>> averagedRanges;
+    for (const auto& rangeTuple : projInfo.ranges) {
+      const uint8_t rangeDim = std::get<0>(rangeTuple);
+      if (rangeDim >= nDims) {
+        logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
+        return nullopt;
+      }
+      if (rangeDim == *averagedAxis) {
+        averagedRanges.push_back(rangeTuple);
+      } else if (!setRange(axes[rangeDim], std::get<1>(rangeTuple), std::get<2>(rangeTuple))) {
+        return nullopt;
+      }
+    }
+    std::unique_ptr<TH1> projected;
+    if (isTHn) {
+      auto* histPtr = static_cast<THnBase*>(obj);
+      if (projInfo.dims.size() == 1) {
+        projected.reset(histPtr->Projection(*averagedAxis, projInfo.dims[0]));  // ROOT's order: y first
+      } else {
+        projected.reset(histPtr->Projection(projInfo.dims[0], projInfo.dims[1], *averagedAxis));
+      }
+    } else {
+      projected.reset(static_cast<TH3*>(obj)->Project3D((GetAxisStr(*averagedAxis) + GetAxisStr(projInfo.dims[0])).data()));
+    }
+    projected->SetDirectory(nullptr);
+    TAxis* averaged = GetAxis(projected.get(), static_cast<int16_t>(projInfo.dims.size()));
+    for (const auto& rangeTuple : averagedRanges) {
+      if (!setRange(averaged, std::get<1>(rangeTuple), std::get<2>(rangeTuple))) return nullopt;
+    }
+    if (projInfo.dims.size() == 1) return static_cast<TH2*>(projected.get())->ProfileX("_px");
+    return static_cast<TH3*>(projected.get())->Project3DProfile("yx");
+  }
+
+  if (isTHn && !isProfile) {
     THnBase* histPtr = static_cast<THnBase*>(obj);
     for (const auto& rangeTuple : projInfo.ranges) {
       int32_t rangeDim = std::get<0>(rangeTuple);
@@ -6465,7 +6524,7 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       }
     } else if (projInfo.dims.size() == 1) {
       if (isProfile) {  // Project3D would give the counts; the mean of which of the other two axes is not defined
-        logger::error("Cannot profile 3d histogram {} onto one axis: give two axes (the profile is the mean of the third).", obj->GetName());
+        logger::error("Cannot profile 3d histogram {} onto one axis without the axis to average: name it with Profile(averagedAxis, dims), or give two axes (the mean of the third).", obj->GetName());
         return nullopt;
       }
       return histPtr->Project3D(GetAxisStr(projInfo.dims[0]).data());

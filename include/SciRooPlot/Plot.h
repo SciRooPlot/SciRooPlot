@@ -927,12 +927,14 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   virtual Data& ProjectX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});  // for 2d histos
   virtual Data& ProjectY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});  // for 2d histos
 
-  virtual Data& Profile(const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});  // for 2d & 3d histos
-  virtual Data& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});                                                                   // for 2d histos
-  virtual Data& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});                                                                   // for 2d histos
+  virtual Data& Profile(const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});                        // for 2d & 3d histos
+  virtual Data& Profile(uint8_t averagedAxis, const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});  // mean of averagedAxis along dims
+  virtual Data& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {});                                                                                         // for 2d histos
+  virtual Data& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {});                                                                                         // for 2d histos
   // (for braced lists of axes like Project({2}, {{0, 10, 50}}), which would otherwise be ambiguous with the tree overloads)
   Data& Project(std::initializer_list<uint8_t> dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});
   Data& Profile(std::initializer_list<uint8_t> dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});
+  Data& Profile(uint8_t averagedAxis, std::initializer_list<uint8_t> dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});
 
   struct data_dim_t {
     data_dim_t() = default;
@@ -1067,6 +1069,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
     std::vector<std::tuple<uint8_t, double_t, double_t>> ranges;  // range restrictions on other dimensions
     std::optional<bool> isUserCoord{};                            // whether ranges are specified in user coordinates or as bins
     std::optional<bool> isProfile{};                              // whether this should be a profile instead of a projection
+    std::optional<uint8_t> averagedAxis{};                        // the axis a profile averages (none: the only axis besides dims)
     std::string GetNameSuffix() const;
   };
 
@@ -1290,10 +1293,12 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& ProjectY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {}) override;
 
   Ratio& Profile(const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {}) override;
+  Ratio& Profile(uint8_t averagedAxis, const std::vector<uint8_t>& dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {}) override;
   Ratio& ProfileX(double_t startY = 0, double_t endY = -1, std::optional<bool> isUserCoord = {}) override;
   Ratio& ProfileY(double_t startX = 0, double_t endX = -1, std::optional<bool> isUserCoord = {}) override;
   Ratio& Project(std::initializer_list<uint8_t> dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});
   Ratio& Profile(std::initializer_list<uint8_t> dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});
+  Ratio& Profile(uint8_t averagedAxis, std::initializer_list<uint8_t> dims, const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges = {}, std::optional<bool> isUserCoord = {});
 
   Ratio& Project(const std::vector<data_dim_t>& dataDims, std::optional<std::string> weight = {}) override;
   Ratio& Project(std::initializer_list<data_dim_t> dataDims, std::optional<std::string> weight = {});

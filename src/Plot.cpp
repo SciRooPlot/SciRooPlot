@@ -2461,15 +2461,17 @@ void Plot::Pad::Data::ReadProjInfo(const ptree& tree, optional<proj_info_t>& pro
   optional<vector<tuple<uint8_t, double_t, double_t>>> ranges;
   optional<bool> isUserCoord;
   optional<bool> isProfile;
+  optional<uint8_t> averagedAxis;
   read_from_tree(tree, dims, prefix + "dims");
   read_from_tree(tree, ranges, prefix + "ranges");
   read_from_tree(tree, isUserCoord, prefix + "is_user_coordinates");
   read_from_tree(tree, isProfile, prefix + "is_profile");
+  read_from_tree(tree, averagedAxis, prefix + "averaged_axis");
   if (!dims) return;
   if (!ranges) {
     logger::throw_invalid_argument("{}dims is set but {}ranges is missing.", prefix, prefix);
   }
-  projInfo = {*dims, *ranges, isUserCoord, isProfile};
+  projInfo = {*dims, *ranges, isUserCoord, isProfile, averagedAxis};
 }
 void Plot::Pad::Data::PutProjInfo(ptree& tree, const optional<proj_info_t>& projInfo, const string& prefix)
 {
@@ -2478,6 +2480,7 @@ void Plot::Pad::Data::PutProjInfo(ptree& tree, const optional<proj_info_t>& proj
   put_in_tree(tree, optional<vector<tuple<uint8_t, double_t, double_t>>>{projInfo->ranges}, prefix + "ranges");
   put_in_tree(tree, projInfo->isUserCoord, prefix + "is_user_coordinates");
   put_in_tree(tree, projInfo->isProfile, prefix + "is_profile");
+  put_in_tree(tree, projInfo->averagedAxis, prefix + "averaged_axis");
 }
 
 //**************************************************************************************************
@@ -3001,6 +3004,13 @@ auto Plot::Pad::Data::Profile(const vector<uint8_t>& dims, const vector<tuple<ui
   mProjInfo = {dims, FiniteRanges(ranges), isUserCoord, true};
   return *this;
 }
+auto Plot::Pad::Data::Profile(uint8_t averagedAxis, const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
+{
+  if (dims.empty()) logger::throw_invalid_argument("Profile needs at least one axis to profile along.");
+  if (std::find(dims.begin(), dims.end(), averagedAxis) != dims.end()) logger::throw_invalid_argument("Profile cannot average axis {}, which it profiles along.", static_cast<int>(averagedAxis));
+  mProjInfo = {dims, FiniteRanges(ranges), isUserCoord, true, averagedAxis};
+  return *this;
+}
 vector<tuple<uint8_t, double_t, double_t>> Plot::Pad::Data::FiniteRanges(const vector<tuple<uint8_t, double_t, double_t>>& ranges)
 {
   vector<tuple<uint8_t, double_t, double_t>> finite;
@@ -3030,6 +3040,10 @@ auto Plot::Pad::Data::Project(std::initializer_list<uint8_t> dims, const vector<
 auto Plot::Pad::Data::Profile(std::initializer_list<uint8_t> dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   return Profile(vector<uint8_t>(dims), ranges, isUserCoord);
+}
+auto Plot::Pad::Data::Profile(uint8_t averagedAxis, std::initializer_list<uint8_t> dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
+{
+  return Profile(averagedAxis, vector<uint8_t>(dims), ranges, isUserCoord);
 }
 void Plot::Pad::Data::data_info_t::set(const data_info_t& other)
 {
@@ -3246,6 +3260,7 @@ string Plot::Pad::Data::proj_info_t::GetNameSuffix() const
     nameSuffix += number_to_string(dim);
   }
   nameSuffix += "}";
+  if (averagedAxis) nameSuffix += "_Mean{" + number_to_string(*averagedAxis) + "}";
   if (!ranges.empty()) {
     nameSuffix += "_Range";
     for (const auto& range : ranges) {
@@ -3586,6 +3601,10 @@ auto Plot::Pad::Ratio::Profile(const vector<uint8_t>& dims, const vector<tuple<u
 {
   return SelectInput("Profile", [&]() { Data::Profile(dims, ranges, isUserCoord); });
 }
+auto Plot::Pad::Ratio::Profile(uint8_t averagedAxis, const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
+{
+  return SelectInput("Profile", [&]() { Data::Profile(averagedAxis, dims, ranges, isUserCoord); });
+}
 auto Plot::Pad::Ratio::ProfileX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
   return SelectInput("ProfileX", [&]() { Data::ProfileX(startY, endY, isUserCoord); });
@@ -3601,6 +3620,10 @@ auto Plot::Pad::Ratio::Project(std::initializer_list<uint8_t> dims, const vector
 auto Plot::Pad::Ratio::Profile(std::initializer_list<uint8_t> dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   return Profile(vector<uint8_t>(dims), ranges, isUserCoord);
+}
+auto Plot::Pad::Ratio::Profile(uint8_t averagedAxis, std::initializer_list<uint8_t> dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
+{
+  return Profile(averagedAxis, vector<uint8_t>(dims), ranges, isUserCoord);
 }
 auto Plot::Pad::Ratio::Project(std::initializer_list<data_dim_t> dataDims, optional<string> weight) -> decltype(*this)
 {
