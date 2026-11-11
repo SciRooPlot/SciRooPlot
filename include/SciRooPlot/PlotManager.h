@@ -140,6 +140,8 @@ class PlotManager
                        std::shared_ptr<TCanvas>& canvas);
   static void LogCreated(const Plot& plot);
   bool BrowseInteractively(const Plot& fullPlot, const std::string& mode, std::shared_ptr<TCanvas>& canvas);
+  bool WriteOutput(const Plot& plot, const Plot& fullPlot, const std::string& mode, std::shared_ptr<TCanvas>& canvas, bool isMacroMode, bool isGifMode,
+                   bool silenceNoPdfImages);
   static void KeepOnClose(TCanvas* canvas);
   static bool IsClosed(const TCanvas* canvas);
   void ShowAt(TCanvas* canvas, int32_t topX, int32_t topY) const;

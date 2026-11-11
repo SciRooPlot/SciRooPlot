@@ -2036,6 +2036,147 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   // if interactive mode is specified, open window instead of saving the plot
   if (isInteractiveMode) return BrowseInteractively(fullPlot, mode, canvas);
 
+  return WriteOutput(plot, fullPlot, mode, canvas, isMacroMode, isGifMode, silenceNoPdfImages);
+}
+
+//**************************************************************************************************
+/**
+ * Logs that the plot was made.
+ */
+//**************************************************************************************************
+void PlotManager::LogCreated(const Plot& plot)
+{
+  logger::log("Created plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), plot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot.GetGroup(), logger::end_color());
+}
+
+//**************************************************************************************************
+/**
+ * Shows the plot in a window instead of saving it: in mode spread next to the others, in mode show in the browsing window, where
+ * the keys move to other plots until the window is closed.
+ */
+//**************************************************************************************************
+bool PlotManager::BrowseInteractively(const Plot& fullPlot, const string& mode, shared_ptr<TCanvas>& canvas)
+{
+  LogCreated(fullPlot);
+  if (mode == "spread") {
+    OpenWindow(canvas);
+    gSystem->ProcessEvents();  // draws the window, and the windows already open react while the next plot is made
+    if (const char terminalKey = TerminalKey(); terminalKey == 'q' || terminalKey == 'x') {
+      CloseOpenWindows();
+      mExitInteractiveBrowsing = true;  // no further plots
+    }
+    return true;
+  }
+  KeepOnClose(canvas.get());
+  // the plot is shown in the browsing window (where the previous plot was), which keeps it until browsing moves on
+  size_t current = mBrowseIndex;
+  // made before when browsing comes back to it past a plot that failed: replaced by the new one
+  shared_ptr<TCanvas> previous = mBrowseCanvases[current];
+  mBrowseCanvases[current] = canvas;
+  if (mBrowsePosition) {
+    ShowAt(canvas.get(), mBrowsePosition->first, mBrowsePosition->second);
+  } else {
+    canvas->Show();
+  }
+  if (previous) {
+    Hide(previous.get());
+    previous.reset();
+  }
+  if (mShownIndex && *mShownIndex != current && mBrowseCanvases[*mShownIndex]) Hide(mBrowseCanvases[*mShownIndex].get());
+  mShownIndex = current;
+  // the plots under the one shown, as on a stack: detaching the plot uncovers the one shown before it
+  auto putOnTop = [this](size_t index) {
+    mBrowseHistory.erase(std::remove(mBrowseHistory.begin(), mBrowseHistory.end(), index), mBrowseHistory.end());
+    mBrowseHistory.push_back(index);
+  };
+  putOnTop(current);
+  ShowDetached();
+  bool boxClicked = false;
+  // an event stays the canvas' current one until the next: the one a canvas has when it is shown again is old (e.g. the key that left it)
+  auto oldEvent = CanvasEvent(canvas.get());
+  // browsing moves on to plot target, at mBrowsePosition: shown at once if it was made already, otherwise GeneratePlots makes it (returns true)
+  auto browseTo = [&](size_t target) {
+    mBrowseIndex = target;
+    if (!mBrowseCanvases[target]) return true;
+    if (mShownIndex) Hide(canvas.get());
+    current = target;
+    canvas = mBrowseCanvases[current];
+    ShowAt(canvas.get(), mBrowsePosition->first, mBrowsePosition->second);
+    mShownIndex = current;
+    putOnTop(current);
+    oldEvent = CanvasEvent(canvas.get());
+    ShowDetached();
+    return false;
+  };
+  while (!gSystem->ProcessEvents() && gROOT->GetSelectedPad()) {
+    bool closeAll = false;
+    HandleOpenWindows(closeAll);
+    const char terminalKey = TerminalKey();
+    const bool newEvent = (CanvasEvent(canvas.get()) != oldEvent);
+    const char windowKey = (newEvent && canvas->GetEvent() == kKeyPress) ? static_cast<char>(canvas->GetEventX()) : 0;
+    const char key = (terminalKey) ? terminalKey : windowKey;
+    if (closeAll || key == 'x' || terminalKey == 'q') {
+      CloseOpenWindows();
+      mExitInteractiveBrowsing = true;
+      break;
+    }
+    if (IsClosed(canvas.get()) || windowKey == 'q') {
+      mExitInteractiveBrowsing = true;
+      break;
+    }
+    bool isClick = newEvent && canvas->GetEvent() == kButton1Double;
+    bool isValidKey = (key == 'a' || key == 's');
+    bool isDetachKey = (key == 'd');
+    if (isDetachKey && *NextBrowseIndex(current, true) == current) {
+      oldEvent = CanvasEvent(canvas.get());  // the last plot left to browse stays in the browsing window
+    } else if (isDetachKey) {
+      // the plot moves into a window of its own, one step right and down from the browsing window, and is in front;
+      // the browsing window shows the plot shown before it (the next one if there was none). Window managers put the window mapped last in front:
+      // the plot is hidden and shown in its window only after the browsing window shows the other plot (ShowDetached)
+      const int32_t browseX = canvas->GetWindowTopX();
+      const int32_t browseY = canvas->GetWindowTopY();
+      Hide(canvas.get());
+      mDetached = {canvas, {browseX, browseY}};
+      mBrowsePosition = std::make_pair(browseX, browseY);
+      const string uniqueName = canvas->GetTitle();  // <name>:<group>
+      const size_t separator = uniqueName.rfind(':');
+      logger::log("Detached plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), uniqueName.substr(0, separator), logger::end_color(), logger::begin_color(logger::Color::Yellow), uniqueName.substr(separator + 1), logger::end_color());
+      mBrowseSkip[current] = true;  // no longer browsed
+      mBrowseCanvases[current] = nullptr;
+      mShownIndex.reset();
+      mBrowseHistory.pop_back();
+      mBrowseForward = true;
+      if (browseTo((mBrowseHistory.empty()) ? *NextBrowseIndex(current, true) : mBrowseHistory.back())) break;
+    } else if (auto report = (isClick) ? PositionReport(canvas->GetSelected(), canvas->GetSelectedPad()) : nullopt) {
+      if (!boxClicked) logger::info("{}", *report);
+      boxClicked = true;
+    } else if (isClick || isValidKey) {
+      // browsing goes round: after the last plot comes the first one, before the first one the last one (plots in between are not made)
+      mBrowseForward = (isValidKey) ? (key == 's') : ((double_t)canvas->GetEventX() / (double_t)canvas->GetWw() > 0.5);
+      auto target = NextBrowseIndex(current, mBrowseForward);
+      if (target && *target != current) {
+        mBrowsePosition = std::make_pair(canvas->GetWindowTopX(), canvas->GetWindowTopY());
+        if (browseTo(*target)) break;
+      } else {
+        oldEvent = CanvasEvent(canvas.get());  // a single plot: nothing to change to
+      }
+    } else {
+      boxClicked = false;
+    }
+    gSystem->Sleep(20);
+  }
+  return true;
+}
+
+//**************************************************************************************************
+/**
+ * Writes the plot to its file in the output directory, or a frame of the gif being made (mode file keeps the canvas for the ROOT file
+ * written at the end of the run, mode data writes no file per plot).
+ */
+//**************************************************************************************************
+bool PlotManager::WriteOutput(const Plot& plot, const Plot& fullPlot, const string& mode, shared_ptr<TCanvas>& canvas, bool isMacroMode, bool isGifMode,
+                              bool silenceNoPdfImages)
+{
   if (!CreateOutputDirectory()) return false;
 
   // a histogram drawn more than once in a pad (the axis histogram for the axes and again for the grid) is one object with several
@@ -2223,135 +2364,6 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   }
   if (isMacroMode) RepairMacro(fullName);
   LogCreated(fullPlot);
-  return true;
-}
-
-//**************************************************************************************************
-/**
- * Logs that the plot was made.
- */
-//**************************************************************************************************
-void PlotManager::LogCreated(const Plot& plot)
-{
-  logger::log("Created plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), plot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot.GetGroup(), logger::end_color());
-}
-
-//**************************************************************************************************
-/**
- * Shows the plot in a window instead of saving it: in mode spread next to the others, in mode show in the browsing window, where
- * the keys move to other plots until the window is closed.
- */
-//**************************************************************************************************
-bool PlotManager::BrowseInteractively(const Plot& fullPlot, const string& mode, shared_ptr<TCanvas>& canvas)
-{
-  LogCreated(fullPlot);
-  if (mode == "spread") {
-    OpenWindow(canvas);
-    gSystem->ProcessEvents();  // draws the window, and the windows already open react while the next plot is made
-    if (const char terminalKey = TerminalKey(); terminalKey == 'q' || terminalKey == 'x') {
-      CloseOpenWindows();
-      mExitInteractiveBrowsing = true;  // no further plots
-    }
-    return true;
-  }
-  KeepOnClose(canvas.get());
-  // the plot is shown in the browsing window (where the previous plot was), which keeps it until browsing moves on
-  size_t current = mBrowseIndex;
-  // made before when browsing comes back to it past a plot that failed: replaced by the new one
-  shared_ptr<TCanvas> previous = mBrowseCanvases[current];
-  mBrowseCanvases[current] = canvas;
-  if (mBrowsePosition) {
-    ShowAt(canvas.get(), mBrowsePosition->first, mBrowsePosition->second);
-  } else {
-    canvas->Show();
-  }
-  if (previous) {
-    Hide(previous.get());
-    previous.reset();
-  }
-  if (mShownIndex && *mShownIndex != current && mBrowseCanvases[*mShownIndex]) Hide(mBrowseCanvases[*mShownIndex].get());
-  mShownIndex = current;
-  // the plots under the one shown, as on a stack: detaching the plot uncovers the one shown before it
-  auto putOnTop = [this](size_t index) {
-    mBrowseHistory.erase(std::remove(mBrowseHistory.begin(), mBrowseHistory.end(), index), mBrowseHistory.end());
-    mBrowseHistory.push_back(index);
-  };
-  putOnTop(current);
-  ShowDetached();
-  bool boxClicked = false;
-  // an event stays the canvas' current one until the next: the one a canvas has when it is shown again is old (e.g. the key that left it)
-  auto oldEvent = CanvasEvent(canvas.get());
-  // browsing moves on to plot target, at mBrowsePosition: shown at once if it was made already, otherwise GeneratePlots makes it (returns true)
-  auto browseTo = [&](size_t target) {
-    mBrowseIndex = target;
-    if (!mBrowseCanvases[target]) return true;
-    if (mShownIndex) Hide(canvas.get());
-    current = target;
-    canvas = mBrowseCanvases[current];
-    ShowAt(canvas.get(), mBrowsePosition->first, mBrowsePosition->second);
-    mShownIndex = current;
-    putOnTop(current);
-    oldEvent = CanvasEvent(canvas.get());
-    ShowDetached();
-    return false;
-  };
-  while (!gSystem->ProcessEvents() && gROOT->GetSelectedPad()) {
-    bool closeAll = false;
-    HandleOpenWindows(closeAll);
-    const char terminalKey = TerminalKey();
-    const bool newEvent = (CanvasEvent(canvas.get()) != oldEvent);
-    const char windowKey = (newEvent && canvas->GetEvent() == kKeyPress) ? static_cast<char>(canvas->GetEventX()) : 0;
-    const char key = (terminalKey) ? terminalKey : windowKey;
-    if (closeAll || key == 'x' || terminalKey == 'q') {
-      CloseOpenWindows();
-      mExitInteractiveBrowsing = true;
-      break;
-    }
-    if (IsClosed(canvas.get()) || windowKey == 'q') {
-      mExitInteractiveBrowsing = true;
-      break;
-    }
-    bool isClick = newEvent && canvas->GetEvent() == kButton1Double;
-    bool isValidKey = (key == 'a' || key == 's');
-    bool isDetachKey = (key == 'd');
-    if (isDetachKey && *NextBrowseIndex(current, true) == current) {
-      oldEvent = CanvasEvent(canvas.get());  // the last plot left to browse stays in the browsing window
-    } else if (isDetachKey) {
-      // the plot moves into a window of its own, one step right and down from the browsing window, and is in front;
-      // the browsing window shows the plot shown before it (the next one if there was none). Window managers put the window mapped last in front:
-      // the plot is hidden and shown in its window only after the browsing window shows the other plot (ShowDetached)
-      const int32_t browseX = canvas->GetWindowTopX();
-      const int32_t browseY = canvas->GetWindowTopY();
-      Hide(canvas.get());
-      mDetached = {canvas, {browseX, browseY}};
-      mBrowsePosition = std::make_pair(browseX, browseY);
-      const string uniqueName = canvas->GetTitle();  // <name>:<group>
-      const size_t separator = uniqueName.rfind(':');
-      logger::log("Detached plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), uniqueName.substr(0, separator), logger::end_color(), logger::begin_color(logger::Color::Yellow), uniqueName.substr(separator + 1), logger::end_color());
-      mBrowseSkip[current] = true;  // no longer browsed
-      mBrowseCanvases[current] = nullptr;
-      mShownIndex.reset();
-      mBrowseHistory.pop_back();
-      mBrowseForward = true;
-      if (browseTo((mBrowseHistory.empty()) ? *NextBrowseIndex(current, true) : mBrowseHistory.back())) break;
-    } else if (auto report = (isClick) ? PositionReport(canvas->GetSelected(), canvas->GetSelectedPad()) : nullopt) {
-      if (!boxClicked) logger::info("{}", *report);
-      boxClicked = true;
-    } else if (isClick || isValidKey) {
-      // browsing goes round: after the last plot comes the first one, before the first one the last one (plots in between are not made)
-      mBrowseForward = (isValidKey) ? (key == 's') : ((double_t)canvas->GetEventX() / (double_t)canvas->GetWw() > 0.5);
-      auto target = NextBrowseIndex(current, mBrowseForward);
-      if (target && *target != current) {
-        mBrowsePosition = std::make_pair(canvas->GetWindowTopX(), canvas->GetWindowTopY());
-        if (browseTo(*target)) break;
-      } else {
-        oldEvent = CanvasEvent(canvas.get());  // a single plot: nothing to change to
-      }
-    } else {
-      boxClicked = false;
-    }
-    gSystem->Sleep(20);
-  }
   return true;
 }
 
