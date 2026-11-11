@@ -633,11 +633,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
 
     // a colour gradient gets one colour per data item that will actually take a colour from the defaults: the marker, line and fill
     // lists share one index (a data item taking any of the three moves it on), so all three are as long as the number of such items
-    // (sized each by its own count, a shorter list would wrap around and give the marker and line of one item different shades)
-    const int32_t nTakingColors = static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [](const auto& data) {
-      return !data->GetKeepInputStyle() && (!data->GetMarkerColor() || !data->GetLineColor() || !data->GetFillColor());
+    // (sized each by its own count, a shorter list would wrap around and give the marker and line of one item different shades);
+    // the rule is that of ApplyDataStyle: marker and line colours always have a default list, fill colours only a list or gradient of
+    // the pad or pad 0, or the default colours where SciRooPlot sets the fill style (fillDefaults)
+    const bool hasFillList = pad.GetDefaultFillColors() || pad.GetDefaultFillColorsGradient().rgbEndpoints || padDefaults.GetDefaultFillColorsGradient().rgbEndpoints;
+    const int32_t nTakingColors = static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [&](const auto& data) {
+      const bool takesFill = !data->GetFillColor() && (hasFillList || fillDefaults(pad, *data));
+      return !data->GetKeepInputStyle() && (!data->GetMarkerColor() || !data->GetLineColor() || takesFill);
     }));
-    const int32_t nMarkerColors = nTakingColors, nLineColors = nTakingColors, nFillColors = nTakingColors;
     // a gradient is generated only if a data item takes colours from it, or if its number of colours is given explicitly
     // a gradient of pad 0 is turned into colours of this pad: written into pad 0, it would be replaced by the colours sized for the first pad
     auto applyGradient = [](const auto& gradient, int32_t nTaking, auto&& setColors) {
@@ -646,19 +649,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       setColors(vector<color_t>(indices.begin(), indices.end()));
     };
     if (pad.GetDefaultMarkerColorsGradient().rgbEndpoints) {
-      applyGradient(pad.GetDefaultMarkerColorsGradient(), nMarkerColors, [&](const auto& colors) { pad.SetDefaultMarkerColors(colors); });
+      applyGradient(pad.GetDefaultMarkerColorsGradient(), nTakingColors, [&](const auto& colors) { pad.SetDefaultMarkerColors(colors); });
     } else if (padDefaults.GetDefaultMarkerColorsGradient().rgbEndpoints && !pad.GetDefaultMarkerColors()) {
-      applyGradient(padDefaults.GetDefaultMarkerColorsGradient(), nMarkerColors, [&](const auto& colors) { pad.SetDefaultMarkerColors(colors); });
+      applyGradient(padDefaults.GetDefaultMarkerColorsGradient(), nTakingColors, [&](const auto& colors) { pad.SetDefaultMarkerColors(colors); });
     }
     if (pad.GetDefaultLineColorsGradient().rgbEndpoints) {
-      applyGradient(pad.GetDefaultLineColorsGradient(), nLineColors, [&](const auto& colors) { pad.SetDefaultLineColors(colors); });
+      applyGradient(pad.GetDefaultLineColorsGradient(), nTakingColors, [&](const auto& colors) { pad.SetDefaultLineColors(colors); });
     } else if (padDefaults.GetDefaultLineColorsGradient().rgbEndpoints && !pad.GetDefaultLineColors()) {
-      applyGradient(padDefaults.GetDefaultLineColorsGradient(), nLineColors, [&](const auto& colors) { pad.SetDefaultLineColors(colors); });
+      applyGradient(padDefaults.GetDefaultLineColorsGradient(), nTakingColors, [&](const auto& colors) { pad.SetDefaultLineColors(colors); });
     }
     if (pad.GetDefaultFillColorsGradient().rgbEndpoints) {
-      applyGradient(pad.GetDefaultFillColorsGradient(), nFillColors, [&](const auto& colors) { pad.SetDefaultFillColors(colors); });
+      applyGradient(pad.GetDefaultFillColorsGradient(), nTakingColors, [&](const auto& colors) { pad.SetDefaultFillColors(colors); });
     } else if (padDefaults.GetDefaultFillColorsGradient().rgbEndpoints && !pad.GetDefaultFillColors()) {
-      applyGradient(padDefaults.GetDefaultFillColorsGradient(), nFillColors, [&](const auto& colors) { pad.SetDefaultFillColors(colors); });
+      applyGradient(padDefaults.GetDefaultFillColorsGradient(), nTakingColors, [&](const auto& colors) { pad.SetDefaultFillColors(colors); });
     }
     if (pad.GetPaletteGradient().rgbEndpoints) {
       const auto& gradient = pad.GetPaletteGradient();
