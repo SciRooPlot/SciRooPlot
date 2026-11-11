@@ -1882,15 +1882,16 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
     }
     // ROOT maps the colours of 2d data drawn on top with the range of the frame, which also draws the colour axis:
-    // without a z range set by the user, that range covers all 2d data of the pad (not only the data the frame is made of)
+    // at each end without a z range set by the user, that range covers all 2d data of the pad (not only the data the frame is made of)
     if constexpr (is_hist_2d<data_type>() || is_graph_2d<data_type>() || is_func_2d<data_type>()) {
-      bool hasUserRangeZ = false;
+      const optional<double_t> userMinZ = MinRange(pad, padDefaults, 'Z');
+      optional<double_t> userMaxZ;
       for (const auto* axis : AxisSettings(pad, padDefaults, 'Z')) {
-        if (axis->GetMinRange() || axis->GetMaxRange()) hasUserRangeZ = true;
+        if (axis->GetMaxRange()) userMaxZ = axis->GetMaxRange();
       }
       bool isEmpty{};
       if constexpr (is_graph_2d<data_type>()) isEmpty = data_ptr->GetN() == 0;  // not drawn (and ROOT reads its first point)
-      if (!hasUserRangeZ && !isEmpty && axisHist_ptr->GetDimension() == 2 && !pad_ptr->GetView()) {
+      if (!(userMinZ && userMaxZ) && !isEmpty && axisHist_ptr->GetDimension() == 2 && !pad_ptr->GetView()) {
         double_t minimum{}, maximum{};
         if constexpr (is_hist_2d<data_type>()) {
           minimum = data_ptr->GetMinimum();
@@ -1903,8 +1904,8 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
           minimum = data_ptr->GetZmin();
           maximum = data_ptr->GetZmax();
         }
-        if (!storedRangeZ.second && maximum > axisHist_ptr->GetMaximum()) axisHist_ptr->SetMaximum(maximum);
-        if (!storedRangeZ.first && !pad_ptr->GetLogz() && minimum < axisHist_ptr->GetMinimum()) axisHist_ptr->SetMinimum(minimum);
+        if (!userMaxZ && !storedRangeZ.second && maximum > axisHist_ptr->GetMaximum()) axisHist_ptr->SetMaximum(maximum);
+        if (!userMinZ && !storedRangeZ.first && !pad_ptr->GetLogz() && minimum < axisHist_ptr->GetMinimum()) axisHist_ptr->SetMinimum(minimum);
       }
     }
     if constexpr (is_graph_2d<data_type>()) {

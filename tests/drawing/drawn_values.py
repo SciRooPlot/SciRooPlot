@@ -7,7 +7,8 @@
 - points_text writes the value of every point that is drawn and of no other: the bins and points inside the frame and the ranges of the
   data, polar graphs at their points on the polar grid;
 - the colours of the 2d data of a flat pad span the values of all of it: the colour axis covers the range each data item has alone (for
-  2d graphs with errors the range of their values, which ROOT's frame of such a graph widens by the errors).
+  2d graphs with errors the range of their values, which ROOT's frame of such a graph widens by the errors), at each end the user did not
+  set (Z SetMinRange or SetMaxRange alone).
 Covers: converted histograms losing their statistics box and placeholders, points_text writing values of points outside the frame and
 ranges, and a single value at the wrong place for polar graphs, 2d functions drawn after other data cut at the colour axis of the frame.
 """
@@ -94,12 +95,23 @@ for i, case in enumerate(clipped):
 
 # the colour axis of the 2d data of a pad: a pair of kinds (the second shifted to negative values) and each of them alone
 FLAT_2D = tuple(k for k, (dim, _, _) in DATA_KINDS.items() if dim == 2)
-pairs = cases({"first": list(FLAT_2D), "second": list(FLAT_2D)}, valid=lambda c: has_variant(c["second"], "negative"), always=lambda c: c["first"] == "hist2d")
+USER_Z = {"none": (None, None), "min": (-1e6, None), "max": (None, 1e6)}  # one end of Z set by the user: the other spans all data
+pairs = cases(
+    {"first": list(FLAT_2D), "second": list(FLAT_2D), "user": list(USER_Z)},
+    valid=lambda c: has_variant(c["second"], "negative"),
+    always=lambda c: c["first"] == "hist2d" and c["user"] == "none",
+    named=({"first": "hist2d", "second": "hist2d", "user": "max", "why": "the minimum spans all data when only the maximum is set"},),
+)
 for i, case in enumerate(pairs):
     for suffix, items in (("", ((case["first"], "normal"), (case["second"], "negative"))), ("_first", ((case["first"], "normal"),)), ("_second", ((case["second"], "negative"),))):
         plot = S.Plot(f"z{i}{suffix}", "colours", "2d")
         for kind, variant in items:
             add_data(plot[1], kind, source_of(variant), variant)
+        userMin, userMax = USER_Z[case["user"]]
+        if suffix == "" and userMin is not None:
+            plot[1]["Z"].SetMinRange(userMin)
+        if suffix == "" and userMax is not None:
+            plot[1]["Z"].SetMaxRange(userMax)
         p.pm.AddPlot(plot)
 run = p.plot()
 
@@ -235,7 +247,8 @@ for i, case in enumerate(pairs):
     if DATA_KINDS[case["second"]][1] == "TGraph2DErrors":  # its values, not the z errors ROOT's frame of it covers
         graph = run.drawn(f"z{i}_second", "colours")[0][0]
         second = (graph.GetZmin(), graph.GetZmax())
-    want = (min(first[0], second[0]), max(first[1], second[1]))
+    userMin, userMax = USER_Z[case["user"]]
+    want = (min(first[0], second[0]) if userMin is None else userMin, max(first[1], second[1]) if userMax is None else userMax)
     check(f"the colour axis covers the values of all 2d data: {what}", close(both[0], want[0], 1e-9) and close(both[1], want[1], 1e-9), f"{both}, expected {want}")
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
 finish()
