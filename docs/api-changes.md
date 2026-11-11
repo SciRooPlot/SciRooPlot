@@ -122,6 +122,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `srp add <project> <folder>` and `srp set <project> program <folder>` accepted a folder as program (`plot` then warned that the program does not exist) | Refused with an error, nothing stored (a program file that does not exist yet stays allowed) | CLI | Give the program file. |
 | `SCIROOPLOT_CONFIG_PATH` with a `~` the shell did not expand (`SCIROOPLOT_CONFIG_PATH='~/cfg'`) was refused ("must not be relative"), the tab completion did not find its projects | A leading `~` is the home folder, as in program and output paths | CLI | Nothing. |
 | Mode `print` (`plot <group> <name> print`, `GeneratePlots("print")`) without an output directory was refused ("No output directory was specified") | Prints the definitions: it writes no files | CLI | Nothing. |
+| `srp open` and `srp colorwheel` without a graphical display printed ROOT's display errors and never ended; `srp open` without a file or with a missing one showed ROOT's errors | An error says that a display is needed, or that the file is missing or no ROOT file, and srp ends | CLI | Nothing. |
 
 ## 3.3.3 → 4.0.0
 

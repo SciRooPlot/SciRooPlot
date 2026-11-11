@@ -67,6 +67,7 @@ using std::vector;
 using namespace SciRooPlot;
 namespace po = boost::program_options;
 bool PrintRootFileContents(const string& inputPath);
+std::unique_ptr<TApplication> OpenWindowApplication(const string& command);
 
 int main(int argc, char* argv[])
 {
@@ -212,22 +213,42 @@ int main(int argc, char* argv[])
     row("<mode>", "one of the plot modes");
     row("<level>", "debug | log | info | warning | error | silent");
   } else if (command == "open") {
-    string fileName = project;
-    gROOT->SetBatch(false);
+    const string& fileName = project;
+    if (fileName.empty()) {
+      logger::error("Specify a file: srp open <file>.");
+      return 1;
+    }
+    std::error_code existsError;
+    if (!std::filesystem::exists(fileName, existsError)) {
+      logger::error("Could not find file {}.", fileName);
+      return 1;
+    }
+    TFile* file{};
+    {
+      auto quiet = util::ignore_root_messages_below(kFatal);  // a file that is not a ROOT file is reported below
+      file = TFile::Open(fileName.data());
+    }
+    if (!file || file->IsZombie()) {
+      logger::error("Cannot read {}: srp open shows ROOT files.", fileName);
+      return 1;
+    }
     gROOT->SetWebDisplay("off");  // the classic browser, as the plots are shown in classic canvases (closing it ends the program)
-    TApplication app("SciRooPlot", nullptr, nullptr);
-    TFile* file = TFile::Open(fileName.data());
-    if (!file || file->IsZombie()) return 1;
+    auto app = OpenWindowApplication("open");
+    if (!app) return 1;
     TBrowser* browser = new TBrowser("TBrowser", file, "SciRooPlot", 1200, 1000);
     if (auto* rb = dynamic_cast<TRootBrowser*>(browser->GetBrowserImp())) {
       rb->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
     }
-    app.Run();
+    app->Run();
   } else if (command == "colorwheel") {
     const string fileName = project;  // optional: save the wheel instead of showing it
-    gROOT->SetBatch(!fileName.empty());
-    std::optional<TApplication> app;
-    if (fileName.empty()) app.emplace("SciRooPlot", nullptr, nullptr);
+    std::unique_ptr<TApplication> app;
+    if (fileName.empty()) {
+      app = OpenWindowApplication("colorwheel");
+      if (!app) return 1;
+    } else {
+      gROOT->SetBatch(true);
+    }
     auto* canvas = new TCanvas("colorwheel", "ROOT colour wheel", 800, 800);
     auto* wheel = new TColorWheel();
     wheel->SetCanvas(canvas);
@@ -629,4 +650,21 @@ bool PrintRootFileContents(const string& inputPath)
     };
   loopData(root, startPath);
   return true;
+}
+
+// the application for a command that opens a window, or null (reported) without a graphical display: ROOT then falls back to batch
+// mode after its own errors, and the application would run forever without a window to close
+std::unique_ptr<TApplication> OpenWindowApplication(const string& command)
+{
+  gROOT->SetBatch(false);
+  std::unique_ptr<TApplication> app;
+  {
+    auto quiet = util::ignore_root_messages_below(kFatal);
+    app = std::make_unique<TApplication>("SciRooPlot", nullptr, nullptr);
+  }
+  if (gROOT->IsBatch()) {
+    logger::error("srp {} needs a graphical display (is DISPLAY set?).", command);
+    return nullptr;
+  }
+  return app;
 }
