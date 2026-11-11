@@ -822,6 +822,157 @@ def drawn_diff(ref, obs, rel=1e-9):
     return graph_diff(ref, obs, rel)
 
 
+ATT_GETTERS = (("Line", ("Color", "Style", "Width")), ("Fill", ("Color", "Style")), ("Marker", ("Color", "Style", "Size")), ("Text", ("Color", "Font", "Size", "Align", "Angle")))
+AXIS_GETTERS = (
+    "GetTitle",
+    "GetTitleColor",
+    "GetTitleFont",
+    "GetTitleSize",
+    "GetTitleOffset",
+    "GetLabelColor",
+    "GetLabelFont",
+    "GetLabelSize",
+    "GetLabelOffset",
+    "GetTickLength",
+    "GetNdivisions",
+    "GetAxisColor",
+    "GetCenterTitle",
+    "GetCenterLabels",
+    "GetNoExponent",
+    "GetMoreLogLabels",
+    "GetDecimals",
+    "GetTimeDisplay",
+    "GetTimeFormat",
+    "GetTicks",
+    "GetMaxDigits",
+)
+PAD_GETTERS = (
+    "GetLeftMargin",
+    "GetRightMargin",
+    "GetBottomMargin",
+    "GetTopMargin",
+    "GetGridx",
+    "GetGridy",
+    "GetTickx",
+    "GetTicky",
+    "GetBorderMode",
+    "GetBorderSize",
+    "GetFrameFillColor",
+    "GetFrameFillStyle",
+    "GetFrameLineColor",
+    "GetFrameLineStyle",
+    "GetFrameLineWidth",
+    "GetFrameBorderMode",
+    "GetFrameBorderSize",
+    "GetXlowNDC",
+    "GetYlowNDC",
+    "GetWNDC",
+    "GetHNDC",
+    "HasFixedAspectRatio",
+)
+PALETTE_AXIS_GETTERS = ("GetTitle", "GetOption", "GetNdiv", "GetTickSize", "GetLabelColor", "GetLabelFont", "GetLabelSize", "GetLabelOffset", "GetTitleOffset", "GetTitleSize", "GetWmin", "GetWmax")
+SHAPE_GETTERS = ("GetX1", "GetY1", "GetX2", "GetY2", "GetR1", "GetR2", "GetPhimin", "GetPhimax", "GetTheta", "GetArrowSize", "GetAngle", "GetOption")
+
+
+def fingerprint(run, name, group):
+    """What is drawn in a plot: every primitive of every pad with its values and attributes (colours as rgb and alpha), the axes of
+    histograms, the look of pads, legends, texts and shapes, the ranges of the pads and their palettes; the name of the plot is replaced by
+    {name}, so that two plots can be compared. None if the plot was not made."""
+    canvas = run.canvas(name, group)
+    if not canvas:
+        return None
+    found = [{"depth": 0, "class": "TCanvas", "name": "", "size": (canvas.GetWw(), canvas.GetWh()), "pad": (rgba(canvas.GetFillColor()), canvas.GetFillStyle(), round(canvas.GetAspectRatio(), 9))}]
+
+    def value(v):
+        if isinstance(v, float):
+            return round(v, 9)
+        return str(v).replace(name, "{name}") if not isinstance(v, (int, bool)) else v
+
+    def attributes(obj, item, prefix=""):
+        for part, getters in ATT_GETTERS:
+            if obj.InheritsFrom(f"TAtt{part}"):
+                for getter in getters:
+                    v = getattr(obj, f"Get{part}{getter}")()
+                    item[prefix + part + getter] = rgba(v) if getter == "Color" else round(float(v), 9)
+
+    def walk(pad, depth):
+        link = pad.GetListOfPrimitives().FirstLink()
+        while link:
+            obj = link.GetObject()
+            item = {"depth": depth, "class": obj.ClassName(), "name": value(obj.GetName()), "option": value(link.GetOption())}
+            attributes(obj, item)
+            if obj.InheritsFrom("TPave"):
+                item["box"] = tuple(round(getattr(obj, f"Get{c}NDC")(), 9) for c in ("X1", "Y1", "X2", "Y2"))
+                item["border"] = (obj.GetBorderSize(), obj.GetShadowColor(), value(obj.GetOption()))
+            if obj.InheritsFrom("TLegend"):
+                item["legend"] = (obj.GetNColumns(), round(obj.GetMargin(), 9), round(obj.GetColumnSeparation(), 9), round(obj.GetEntrySeparation(), 9))
+                item["lines"] = []
+                for entry in obj.GetListOfPrimitives():
+                    row = {"label": value(entry.GetLabel()), "option": entry.GetOption(), "symbol": entry.GetObject().ClassName() if entry.GetObject() else ""}
+                    attributes(entry, row)
+                    item["lines"].append(row)
+            elif obj.InheritsFrom("TPaveText"):
+                item["lines"] = []
+                for line in obj.GetListOfLines() or []:
+                    row = {"text": value(line.GetTitle())}
+                    attributes(line, row)
+                    item["lines"].append(row)
+            if obj.InheritsFrom("TH1"):
+                for axis in "XYZ":
+                    a = getattr(obj, f"Get{axis}axis")()
+                    item[f"axis{axis}"] = tuple(rgba(getattr(a, getter)()) if "Color" in getter else value(getattr(a, getter)()) for getter in AXIS_GETTERS if hasattr(a, getter)) + (round(a.GetXmin(), 9), round(a.GetXmax(), 9))
+                item["contents"] = (round(obj.GetMinimum(), 9), round(obj.GetMaximum(), 9), tuple(round(obj.GetContourLevel(i), 9) for i in range(obj.GetContour())))
+                item["functions"] = []
+                for function in obj.GetListOfFunctions():
+                    part = {"class": function.ClassName()}
+                    attributes(function, part)
+                    if function.InheritsFrom("TPave"):
+                        part["box"] = tuple(round(getattr(function, f"Get{c}NDC")(), 9) for c in ("X1", "Y1", "X2", "Y2"))
+                    if function.InheritsFrom("TPaveStats"):
+                        part["opt"] = (function.GetOptStat(), function.GetOptFit(), value(function.GetStatFormat()))
+                    if function.InheritsFrom("TPaletteAxis"):
+                        a = function.GetAxis()  # a TGaxis: its title is its text, its axis line its line
+                        attributes(a, part, "axis")
+                        part["axis"] = tuple(rgba(getattr(a, getter)()) if "Color" in getter else value(getattr(a, getter)()) for getter in PALETTE_AXIS_GETTERS)
+                    item["functions"].append(part)
+            if obj.InheritsFrom("TH1") or obj.InheritsFrom("TGraph") or obj.InheritsFrom("TGraph2D") or obj.InheritsFrom("TF1"):
+                item["object"] = obj
+            if obj.InheritsFrom("TLine") or obj.InheritsFrom("TBox") or obj.InheritsFrom("TEllipse") or obj.InheritsFrom("TPolyLine"):
+                item["shape"] = tuple(value(getattr(obj, getter)()) for getter in SHAPE_GETTERS if hasattr(obj, getter))
+                if obj.InheritsFrom("TPolyLine"):
+                    item["points"] = tuple(round(v, 9) for i in range(obj.GetN()) for v in (obj.GetX()[i], obj.GetY()[i]))
+            if obj.InheritsFrom("TExec"):
+                item["code"] = re.sub(r"\b\d{3,}\b", "#", value(obj.GetTitle()))  # colour indices depend on the colours defined before
+            found.append(item)
+            if obj.InheritsFrom("TPad"):
+                item["ranges"] = tuple(round(v, 9) for v in (obj.GetUxmin(), obj.GetUxmax(), obj.GetUymin(), obj.GetUymax())) + (obj.GetLogx(), obj.GetLogy(), obj.GetLogz())
+                item["pad"] = tuple(rgba(getattr(obj, getter)()) if "Color" in getter else value(getattr(obj, getter)()) for getter in PAD_GETTERS)
+                match = re.match(r"Pad_(\d+)$", obj.GetName())
+                if match:
+                    item["palette"] = run.palette(name, group, int(match.group(1)))
+                walk(obj, depth + 1)
+            link = link.Next()
+
+    walk(canvas, 1)
+    return found
+
+
+def fingerprint_diff(a, b):
+    """what differs between two fingerprints ("" if nothing)"""
+    if a is None or b is None:
+        return "not made" if (a is None) != (b is None) else ""
+    if [(x["class"], x["name"]) for x in a] != [(x["class"], x["name"]) for x in b]:
+        return f"primitives {[(x['class'], x['name']) for x in a]} vs {[(x['class'], x['name']) for x in b]}"[:400]
+    for x, y in zip(a, b):
+        keys = (set(x) | set(y)) - {"object"}
+        diff = {k: (x.get(k), y.get(k)) for k in keys if x.get(k) != y.get(k)}
+        if diff:
+            return f"{x['class']} {x['name']}: {diff}"[:400]
+        if "object" in x and drawn_diff(x["object"], y["object"]):
+            return f"{x['class']} {x['name']}: {drawn_diff(x['object'], y['object'])}"
+    return ""
+
+
 def graph_values(graph):
     """the points of a 1d or 2d graph as lists of values by name (x, y, z and the errors it has; per error dimension of a TGraphMultiErrors)"""
     n = graph.GetN()

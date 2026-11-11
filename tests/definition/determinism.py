@@ -72,71 +72,17 @@ for seed in ("1", "2"):
     S.check(f"the definition run in a process of its own (hash seed {seed}) saves the same file", result.rc == 0 and saved == reference, result.tail() if result.rc else "the files differ")
 
 
-def fingerprint(run, name):
-    """what is drawn in a plot: every primitive of every pad with its values and attributes (colours as rgb and alpha), the ranges of the
-    pads, their palettes; None if the plot was not made"""
-    canvas = run.canvas(name, "g")
-    if not canvas:
-        return None
-    found = []
-
-    def walk(pad, depth):
-        link = pad.GetListOfPrimitives().FirstLink()
-        while link:
-            obj = link.GetObject()
-            item = {"depth": depth, "class": obj.ClassName(), "name": obj.GetName(), "option": str(link.GetOption())}
-            for part, getters in (("Line", ("Color", "Style", "Width")), ("Fill", ("Color", "Style")), ("Marker", ("Color", "Style", "Size")), ("Text", ("Color", "Font", "Size", "Align", "Angle"))):
-                if obj.InheritsFrom(f"TAtt{part}"):
-                    for getter in getters:
-                        value = getattr(obj, f"Get{part}{getter}")()
-                        item[part + getter] = S.rgba(value) if getter == "Color" else round(float(value), 9)
-            if obj.InheritsFrom("TPave"):
-                item["box"] = tuple(round(getattr(obj, f"Get{c}NDC")(), 9) for c in ("X1", "Y1", "X2", "Y2"))
-                item["lines"] = [(e.GetLabel(), e.GetOption()) for e in obj.GetListOfPrimitives()] if obj.InheritsFrom("TLegend") else [line.GetTitle() for line in obj.GetListOfLines() or []]
-            if obj.InheritsFrom("TH1") or obj.InheritsFrom("TGraph") or obj.InheritsFrom("TGraph2D") or obj.InheritsFrom("TF1"):
-                item["object"] = obj
-            if obj.InheritsFrom("TExec"):
-                item["code"] = re.sub(r"\b\d{3,}\b", "#", obj.GetTitle())  # colour indices depend on the colours defined before
-            found.append(item)
-            if obj.InheritsFrom("TPad"):
-                item["ranges"] = tuple(round(v, 9) for v in (obj.GetUxmin(), obj.GetUxmax(), obj.GetUymin(), obj.GetUymax())) + (obj.GetLogx(), obj.GetLogy(), obj.GetLogz())
-                match = re.match(r"Pad_(\d+)$", obj.GetName())
-                if match:
-                    item["palette"] = run.palette(name, "g", int(match.group(1)))
-                walk(obj, depth + 1)
-            link = link.Next()
-
-    walk(canvas, 0)
-    return found
-
-
-def differences(a, b):
-    """what differs between two fingerprints"""
-    if a is None or b is None:
-        return "not made" if (a is None) != (b is None) else ""
-    if [(x["class"], x["name"]) for x in a] != [(x["class"], x["name"]) for x in b]:
-        return f"primitives {[(x['class'], x['name']) for x in a]} vs {[(x['class'], x['name']) for x in b]}"[:400]
-    for x, y in zip(a, b):
-        keys = (set(x) | set(y)) - {"object"}
-        diff = {k: (x.get(k), y.get(k)) for k in keys if x.get(k) != y.get(k)}
-        if diff:
-            return f"{x['class']} {x['name']}: {diff}"[:400]
-        if "object" in x and S.drawn_diff(x["object"], y["object"]):
-            return f"{x['class']} {x['name']}: {S.drawn_diff(x['object'], y['object'])}"
-    return ""
-
-
 first = p.plot("g")
 S.check("the plots are made without errors", not first.errors(), " | ".join(first.errors()[:3]))
-reference = {name: fingerprint(first, name) for name in names}
+reference = {name: S.fingerprint(first, name, "g") for name in names}
 S.check("every plot is made", all(reference.values()), str([n for n, f in reference.items() if not f]))
 again = p.plot("g")
 for name in names:
-    S.check(f"plot {name} is drawn the same by a second run", not differences(reference[name], fingerprint(again, name)), differences(reference[name], fingerprint(again, name)))
+    S.check(f"plot {name} is drawn the same by a second run", not S.fingerprint_diff(reference[name], S.fingerprint(again, name, "g")), S.fingerprint_diff(reference[name], S.fingerprint(again, name, "g")))
 for half, pattern in (("odd", r"p\d\d[13579]"), ("even", r"p\d\d[02468]")):
     run = p.plot("g", pattern)
     for name in names:
         if re.fullmatch(pattern, name):
-            diff = differences(reference[name], fingerprint(run, name))
+            diff = S.fingerprint_diff(reference[name], S.fingerprint(run, name, "g"))
             S.check(f"plot {name} drawn among the {half} plots only is drawn as among all", not diff, diff)
 S.finish()
