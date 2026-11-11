@@ -300,6 +300,10 @@ class PlotPainter
   const std::map<std::pair<uint8_t, char>, std::pair<double_t, double_t>>& GetFrameRanges() const { return mFrameRanges; }
 
  private:
+  struct pad_state_t;   // the locals of GeneratePlot for one pad (PlotPainter.cpp)
+  struct item_state_t;  // and those for the data item drawn
+  template <typename T>
+  void DrawItem(item_state_t& state, T data_ptr, std::optional<draw_option_t> optionAlias);
   static size_t FrameDataIndex(const std::vector<std::shared_ptr<Plot::Pad::Data>>& data, const data_buffer_t& dataBuffer);
   static TObject* Input(const Plot::Pad::Data& data, const data_buffer_t& dataBuffer);
   void AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefaults, const Plot::Pad& padSettings, uint8_t padID, const Plot::Pad::Data* refFunc, std::string& padSetup);
