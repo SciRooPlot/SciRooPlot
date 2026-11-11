@@ -37,6 +37,10 @@ INVALID = {
     "SetSize.height": [-0.2, NAN],
     "ImageBox.SetWidth.width": [-0.2, NAN],
     "ImageBox.SetHeight.height": [-0.2, NAN],
+    "Plot.SetDimensions.width": [0, -5, 100000],  # a canvas side: 1 to 32767 pixels
+    "Plot.SetDimensions.height": [0, 100000],
+    "Plot.SetWidth.width": [0, 100000],
+    "Plot.SetHeight.height": [0, 100000],
     "Axis.SetColorScaleWidth.width": [-0.02, NAN],
     "margin": [-0.1, NAN],
     "lineSpacing": [-1.0, NAN],

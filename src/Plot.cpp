@@ -221,6 +221,14 @@ bool Plot::CheckCount(int64_t count, const string& what)
   logger::warning("The {} ({}) is not a positive number: ignored.", what, count);
   return false;
 }
+bool Plot::CheckPixels(int64_t size, const string& what)
+{
+  // X11 (and ROOT's bitmaps after it) cannot make a window or image side beyond 32767 pixels: painting such a canvas crashes
+  if (!CheckCount(size, what)) return false;
+  if (size <= 32767) return true;
+  logger::warning("The {} ({}) is larger than 32767 pixels, the largest side of a canvas: ignored.", what, size);
+  return false;
+}
 bool Plot::CheckFont(int16_t font)
 {
   if (font / 10 >= 1 && font / 10 <= 15 && font % 10 <= 3) return true;
@@ -900,19 +908,21 @@ auto Plot::SetBasePlot(const string& basePlot) -> decltype(*this)
 
 auto Plot::SetDimensions(int32_t width, int32_t height, bool fixAspectRatio) -> decltype(*this)
 {
-  mPlotDimensions = {width, height, fixAspectRatio};
+  SetWidth(width);
+  SetHeight(height);
+  mPlotDimensions.fixAspectRatio = fixAspectRatio;
   return *this;
 }
 
 auto Plot::SetWidth(int32_t width) -> decltype(*this)
 {
-  mPlotDimensions.width = width;
+  if (CheckPixels(width, "width of plot " + mName)) mPlotDimensions.width = width;
   return *this;
 }
 
 auto Plot::SetHeight(int32_t height) -> decltype(*this)
 {
-  mPlotDimensions.height = height;
+  if (CheckPixels(height, "height of plot " + mName)) mPlotDimensions.height = height;
   return *this;
 }
 
