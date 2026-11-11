@@ -3083,7 +3083,7 @@ void Plot::Pad::Data::data_info_t::set(const data_info_t& other)
   for (size_t i = 0; i < nBinned; ++i) {
     const auto& dim = other.dataDims[i];
     if (dim.nBins < 0 || (dim.nBins == 0 && dim.edges.size() <= 2)) {
-      logger::throw_invalid_argument("Number of bins for {} must be positive (or give the bin edges).", dim.var);
+      logger::throw_invalid_argument("Number of bins for {} must be positive (or give at least two different bin edges).", dim.var);
     }
   }
   dataDims = other.dataDims;

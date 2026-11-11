@@ -946,7 +946,8 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
     {
     }
     data_dim_t(const std::string& _var, int32_t _nBins = 100, const std::vector<double_t>& _range = {0, 0}) : var(_var), edges(_range), nBins(_nBins) {}  // NOLINT(runtime/explicit)
-    data_dim_t(const std::string& _var, const std::vector<double_t>& _edges) : var(_var), edges(_edges) {}
+    // two different edges are one bin (as (var, 1, {low, high})): nBins 0 marks bin edges, which need at least three
+    data_dim_t(const std::string& _var, const std::vector<double_t>& _edges) : var(_var), edges(_edges), nBins((_edges.size() == 2 && _edges[0] != _edges[1]) ? 1 : 0) {}
     std::string var{};
     std::vector<double_t> edges{};
     int32_t nBins{0};
