@@ -2,7 +2,8 @@
 configuration folder exactly as it was: for an existing project, the selected one (@current), an unknown one, @current with none selected,
 names that are no project names (.., a b, a/b) and an empty name; and for every command while projects.info cannot be read (the reason
 is given once, the file is never written over); a folder is refused as program, and a ~
-the shell did not expand in SCIROOPLOT_CONFIG_PATH is the home folder. Removing, renaming and resetting change only what SciRooPlot wrote: program files stay, folders holding other files are
+the shell did not expand in SCIROOPLOT_CONFIG_PATH is the home folder; with a relative or empty one a program stores and saves nothing
+(an error naming the config path), not even into the current directory. Removing, renaming and resetting change only what SciRooPlot wrote: program files stay, folders holding other files are
 kept or refused; clean forgets the projects whose code is gone (the folder of the program, for a C++ project also the sources above its
 build folder). Registering is safe against srp commands and programs running at the same time, and in-memory data moves with a renamed
 project.
@@ -154,6 +155,27 @@ check("srp add with a variable in the path stores it as written, expanded by get
 home = config_folder("home")
 out = run(SRP, "add", "T", program("T"), env={"HOME": home, "SCIROOPLOT_CONFIG_PATH": "~/tilde_config"})
 check("SCIROOPLOT_CONFIG_PATH='~/cfg' is a folder in the home folder", out.rc == 0 and os.path.isfile(os.path.join(home, "tilde_config", "projects.info")), out.tail())
+
+# a configuration path that cannot be used: a program saves nothing, also not into its current directory
+SAVING = """
+import ROOT
+from SciRooPlot import *
+for project in ("R", ""):
+    pm = PlotManager(project)
+    h = ROOT.TH1D(f"h{project}", "", 4, 0.0, 4.0)
+    pm.AddDataSource("mem", h)
+    p = Plot("a", "g")
+    p[1].AddData(f"h{project}", "mem")
+    pm.AddPlot(p)
+    if project:
+        pm.SaveProject()
+"""
+for given in ("relative_config", ""):
+    cwd = config_folder(f"cwd_{given or 'empty'}")
+    out = python(SAVING, cwd=cwd, env={"SCIROOPLOT_CONFIG_PATH": given})
+    what = f"SCIROOPLOT_CONFIG_PATH={given!r}"
+    check(f"{what}: nothing written into the current directory", not os.listdir(cwd), str(os.listdir(cwd)))
+    check(f"{what}: in-memory data and SaveProject refused naming the config path", sum("No valid config path; cannot store the objects of data source mem" in e for e in out.errors()) == 2 and any("No valid config path; cannot save project R" in e for e in out.errors()), out.tail())
 
 # removing, renaming, resetting: only SciRooPlot's files
 config = setup()

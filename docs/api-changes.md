@@ -107,6 +107,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | The coordinate system of boxes and shapes was saved as `is_user_coordinates` (`plots.info`) | It is saved as `coordinate_system` (`pad_coordinates`, `frame_coordinates` or `user_coordinates`) | file format | Re-run the plotting programs. |
 | A layout saved the hiding of the labels and titles between touching panels as label and title size 0 of their axes (`plots.info`) | It is saved as `hidden_next_to` of the pad: the touching panels, by axis | file format | Re-run the plotting programs: plots saved before keep their labels hidden everywhere. |
 | A key of a saved definition (`plots.info`) that is not read (misspelt, a part under a key without its number such as `FRAME_x`, an unknown name under `layout_values`) was ignored silently | Loading warns once per plot, naming every such key | behaviour | Re-run the plotting program, or correct the keys named. |
+| A program with a relative or empty `SCIROOPLOT_CONFIG_PATH` (refused by `srp`) wrote `plots.info`, `dataSources.info`, `tabcomp.csv` and `UserData.root` into `<project>/` of its current directory | `AddDataSource` with objects and `SaveProject` are refused with an error naming the config path, nothing is written | behaviour | Set `SCIROOPLOT_CONFIG_PATH` to an absolute path. |
 
 ### Command line
 

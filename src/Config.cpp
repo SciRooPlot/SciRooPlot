@@ -699,21 +699,22 @@ bool Config::Select(const string& projectName)
   return true;
 }
 
+// empty without a project or without a valid config path (nothing is written into the current directory instead)
 std::filesystem::path Config::ProjectPath(const string& projectName) const
 {
-  if (projectName.empty()) return projectName;
+  if (projectName.empty() || mPath.empty()) return {};
   return mPath / projectName;
 }
 
 std::string Config::PlotsFile(const string& projectName) const
 {
-  if (projectName.empty()) return projectName;
+  if (projectName.empty() || mPath.empty()) return {};
   return mPath / projectName / "plots.info";
 }
 
 std::string Config::DataSourcesFile(const string& projectName) const
 {
-  if (projectName.empty()) return projectName;
+  if (projectName.empty() || mPath.empty()) return {};
   return mPath / projectName / "dataSources.info";
 }
 

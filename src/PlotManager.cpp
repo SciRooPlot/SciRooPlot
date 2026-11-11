@@ -148,7 +148,7 @@ using util::str_starts_with;
  */
 //**************************************************************************************************
 PlotManager::PlotManager(const string& projectName)
-  : mProjectName(projectName), mUserDataFile(((mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName)) / (mProjectName.empty() ? "UserData_" + std::to_string(gSystem->GetPid()) + "_" + std::to_string(reinterpret_cast<std::uintptr_t>(this)) + ".root" : string{"UserData.root"}))
+  : mProjectName(projectName), mUserDataFile((Config::Get().Path().empty()) ? string{} : (((mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName)) / (mProjectName.empty() ? "UserData_" + std::to_string(gSystem->GetPid()) + "_" + std::to_string(reinterpret_cast<std::uintptr_t>(this)) + ".root" : string{"UserData.root"})).string())
 {
   // the name is a folder of the config path, as for srp add
   if (auto illegal = find_illegal_name_char(projectName)) logger::throw_invalid_argument("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
@@ -434,6 +434,10 @@ void PlotManager::AddDataSource(const string& dataSource, const string& input, b
 void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>& inputs, bool replace)
 {
   if (!IsValidDataSourceName(dataSource)) return;
+  if (mUserDataFile.empty()) {
+    logger::error("No valid config path; cannot store the objects of data source {}.", dataSource);
+    return;
+  }
   // started fresh once per process: a second PlotManager of the same project keeps the data the first one stored
   static std::set<string> startedFiles;
   string mode = (mUserDataFileInitialized || startedFiles.count(mUserDataFile)) ? "UPDATE" : "RECREATE";
@@ -4061,6 +4065,10 @@ void PlotManager::SaveProject() const
 {
   if (mProjectName.empty()) {
     logger::error("Pass name of project to plot manager to save the project.");
+    return;
+  }
+  if (Config::Get().Path().empty()) {
+    logger::error("No valid config path; cannot save project {}.", mProjectName);
     return;
   }
   namespace fs = std::filesystem;
