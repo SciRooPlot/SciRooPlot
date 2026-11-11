@@ -65,6 +65,7 @@ using std::vector;
 using namespace SciRooPlot;
 namespace po = boost::program_options;
 bool PrintRootFileContents(const string& inputPath);
+int RunCommand(const string& command, const string& project, const string& property, const string& setting);
 std::unique_ptr<TApplication> OpenWindowApplication(const string& command);
 
 int main(int argc, char* argv[])
@@ -132,7 +133,20 @@ int main(int argc, char* argv[])
     logger::error("Exception of unknown type, exiting.");
     return 1;
   }
+  // the commands too: an unreadable or looping config folder makes the file system calls throw
+  try {
+    return RunCommand(command, project, property, setting);
+  } catch (std::exception& e) {
+    logger::error(R"(Exception "{}", exiting.)", e.what());
+    return 1;
+  } catch (...) {
+    logger::error("Exception of unknown type, exiting.");
+    return 1;
+  }
+}
 
+int RunCommand(const string& command, const string& project, const string& property, const string& setting)
+{
   // help, info, projects and settings: headings, then names and their explanations in two columns
   bool firstHeading = true;
   auto heading = [&firstHeading](const string& title) {
