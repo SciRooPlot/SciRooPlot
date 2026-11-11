@@ -15,7 +15,7 @@ import os
 import shutil
 import subprocess
 
-from srptest import SRP, cases, check, config_files, config_folder, describe, finish, python, run
+from srptest import PLOT, SRP, cases, check, config_files, config_folder, describe, finish, python, run
 
 PROGRAMS = config_folder("programs")
 counter = [0]
@@ -138,6 +138,15 @@ for args, reason in (
 ):
     out = run(SRP, *args, config=config)
     check(f"srp {' '.join(args)}: one error naming {reason}, nothing stored", out.rc == 1 and len(out.errors()) == 1 and reason in out.errors()[0] and config_files(config) == before, out.tail())
+# a program that does not exist yet (written after adding the project): stored, with one warning now rather than at every plot;
+# plot before it ever ran says that no plots are saved yet
+for args in (("add", "N", "/nonexistent/def.py"), ("set", "N", "program", "/nonexistent/other.py")):
+    out = run(SRP, *args, config=config)
+    check(f"srp {' '.join(args)}: stored, one warning that the program does not exist", out.rc == 0 and not out.errors() and sum("does not exist (yet)" in w for w in out.warnings()) == 1 and get(config, "N", "program") == args[-1], out.tail())
+out = run(PLOT, "g", "n", "png", config=config)
+check("plot of a project that never saved plots: says so", any("No plots are saved for project N yet" in e for e in out.errors()), out.tail())
+run(SRP, "remove", "N", config=config)
+before = config_files(config)
 out = run(SRP, "add", "C", program("C"), "${HOME}/out", config=config)
 check("srp add with a variable in the path stores it as written, expanded by get", out.rc == 0 and get(config, "C", "outdir") == os.path.join(os.environ["HOME"], "out") and "${HOME}/out" in open(os.path.join(config, "projects.info")).read(), out.tail())
 

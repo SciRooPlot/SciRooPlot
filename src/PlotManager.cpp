@@ -1162,9 +1162,14 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
   if (!matches) return false;
 
   ptree fileTree;
+  const string plotsFile = expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName)).value_or("");
+  if (std::error_code ec; !file && !std::filesystem::exists(plotsFile, ec)) {
+    logger::error("No plots are saved for project {} yet: run its program first (it saves them with SaveProject).", mProjectName);
+    return false;
+  }
   try {
     using boost::property_tree::read_info;
-    read_info(expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName)).value_or(""), fileTree);
+    read_info(plotsFile, fileTree);
   } catch (const std::exception& e) {
     logger::error("Cannot open plots file: {}.", e.what());
     return false;

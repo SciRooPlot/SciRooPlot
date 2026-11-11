@@ -748,6 +748,8 @@ bool Config::CheckProgram(const string& program)
     logger::error("The program {} is a folder: give the program file.", program);
     return false;
   }
+  // may be written afterwards: stored, but said now rather than at every plot
+  if (!std::filesystem::exists(*expand_path(program), ec)) logger::warning("The program {} does not exist (yet): plot runs it to define the plots.", program);
   return true;
 }
 
