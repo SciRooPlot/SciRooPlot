@@ -2675,6 +2675,10 @@ auto Plot::Pad::Data::SetLegendLabel(const string& legendLabel) -> decltype(*thi
 }
 auto Plot::Pad::Data::SetLegend(uint8_t legendID) -> decltype(*this)
 {
+  if (legendID == 0) {
+    logger::warning("SetLegend: legends are numbered from 1, 0 is ignored.");
+    return *this;
+  }
   mLegend.id = legendID;
   return *this;
 }
