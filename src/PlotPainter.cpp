@@ -952,15 +952,18 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
 
         // first data is only used to define the axes
         if (dataIndex == 0) {
-          // a function that defines the frame has no frame to span: it is drawn over its own range (a formula from the plot definition
-          // has ROOT's default range 0 to 1), narrowed or widened by the range the user gave with SetRangeX / SetRangeY
+          // a function that defines the frame has no frame to span: it is drawn over its own range, narrowed or widened by the range the
+          // user gave with SetRangeX / SetRangeY; a formula from the plot definition has no range of its own (only ROOT's default 0 to 1):
+          // it spans the range of the pad axis where it has none of its own
           if constexpr (is_func_1d<data_type>() || is_func_2d<data_type>()) {
             auto [rangeMinX, rangeMaxX] = funcRange('x', data_ptr->GetXmin(), data_ptr->GetXmax(), data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
             // the frame is the function sampled over its range: a pad range inside it is sampled alone, so the frame ends exactly there
             // (not at the edges of the sampled bins) and the automatic y range (1d) or colour scale (2d) is that of the visible part;
-            // a pad range beyond the function widens the frame later, as for any data. On a log axis a function crossing zero is sampled
-            // from the first of its sample edges above zero, where the frame starts (see below): the drawn function is sampled there as well
-            auto padRange = [&](char padLabel, double_t& min, double_t& max, int32_t nSamples) {
+            // a pad range beyond the function widens the frame later, as for any data (a formula without a range of its own spans it).
+            // On a log axis a function crossing zero is sampled from the first of its sample edges above zero, where the frame starts
+            // (see below): the drawn function is sampled there as well
+            const bool isFormula = (data->GetDataSource() == kUserFunctions);
+            auto padRange = [&](char padLabel, double_t& min, double_t& max, int32_t nSamples, const optional<double_t>& dataMin, const optional<double_t>& dataMax) {
               const optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
               optional<double_t> userMax;
               bool log{};
@@ -968,8 +971,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                 if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
                 if (axis->GetLog()) log = *axis->GetLog();
               }
-              const double_t newMin = (userMin && *userMin > min && *userMin < max) ? *userMin : min;
-              const double_t newMax = (userMax && *userMax < max && *userMax > min) ? *userMax : max;
+              const double_t newMin = (userMin && ((isFormula && !dataMin) || (*userMin > min && *userMin < max))) ? *userMin : min;
+              const double_t newMax = (userMax && ((isFormula && !dataMax) || (*userMax < max && *userMax > min))) ? *userMax : max;
               if (newMin < newMax) std::tie(min, max) = std::make_pair(newMin, newMax);
               if (log && min <= 0. && max > 0. && nSamples > 0) {
                 const double_t width = (max - min) / nSamples;  // the bin edges of TAxis
@@ -979,10 +982,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                 min += edge * width;
               }
             };
-            padRange('X', rangeMinX, rangeMaxX, data_ptr->GetNpx());
+            padRange('X', rangeMinX, rangeMaxX, data_ptr->GetNpx(), data->GetMinRangeX(), data->GetMaxRangeX());
             if constexpr (is_func_2d<data_type>()) {
               auto [rangeMinY, rangeMaxY] = funcRange('y', data_ptr->GetYmin(), data_ptr->GetYmax(), data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
-              padRange('Y', rangeMinY, rangeMaxY, data_ptr->GetNpy());
+              padRange('Y', rangeMinY, rangeMaxY, data_ptr->GetNpy(), data->GetMinRangeY(), data->GetMaxRangeY());
               data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
               frameFuncRange = {rangeMinX, rangeMaxX, rangeMinY, rangeMaxY};
             } else {
