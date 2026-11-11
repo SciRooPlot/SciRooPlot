@@ -315,6 +315,12 @@ class PlotPainter
   bool PrepareOperand(item_state_t& state, data_ptr_t& operand, const Plot::Pad::Data::modify_t& operandModify, const std::string& name);
   template <typename T>
   void ProcessData(item_state_t& state, T&& data_ptr);
+  static void Paints3dGraph(const std::string& option, bool& triangles, bool& points);
+  static bool IsFlatPolar(const std::string& option);
+  static bool IsColorBoxes3d(const std::string& option);
+  static bool IsView3d(const std::string& option);
+  static std::pair<double_t, double_t> FuncRange(const item_state_t& state, char axisLabel, double_t frameMin, double_t frameMax, double_t funcMin, double_t funcMax,
+                                                 const std::optional<double_t>& userMin, const std::optional<double_t>& userMax);
   static size_t FrameDataIndex(const std::vector<std::shared_ptr<Plot::Pad::Data>>& data, const data_buffer_t& dataBuffer);
   static TObject* Input(const Plot::Pad::Data& data, const data_buffer_t& dataBuffer);
   void AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefaults, const Plot::Pad& padSettings, uint8_t padID, const Plot::Pad::Data* refFunc, std::string& padSetup);

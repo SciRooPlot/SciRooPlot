@@ -1463,7 +1463,6 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
 {
   pad_state_t& padState = state.padState;
   auto& data = state.data;
-  auto& isSampledFunc = state.isSampledFunc;
   auto& padDefaults = padState.padDefaults;
   auto& fillDefaults = padState.fillDefaults;
   auto& pad = padState.pad;
@@ -1496,34 +1495,6 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   if constexpr (is_graph_2d<data_type>() || is_func_2d<data_type>()) {
     if (!data->GetDrawOption() && !optionAlias) drawOption += "COLZ";  // without an option coloured like 2d histograms
   }
-  // the options of 2d graphs that paint the Delaunay triangles (TRI...) or the points (P except POL, SPH and PSR, LINE, ERR) in 3d,
-  // as TGraph2D::Paint decides it
-  auto paints3dGraph = [](const string& option, bool& triangles, bool& points) {
-    TString lower(option);
-    lower.ToLower();
-    triangles = lower.Contains("tri");
-    points = (lower.Contains("p") && !lower.Contains("pol") && !lower.Contains("sph") && !lower.Contains("psr")) || lower.Contains("line") || lower.Contains("err");
-  };
-  // a flat polar drawing (COL with POL, see THistPainter::PaintColorLevels): x is the angle, y the radius of a disc filling the frame,
-  // each cell a TCrown outlined with the line attributes of the data
-  auto isFlatPolar = [](const string& option) {
-    TString upper(option);
-    upper.ToUpper();
-    return upper.Contains("POL") && upper.Contains("COL") && !upper.Contains("LEGO") && !upper.Contains("SURF");
-  };
-  // the colour boxes of a 3d histogram (BOX2, which COL stands for, see THistPainter::PaintH3): every face turned to the viewer
-  // is outlined with the line attributes of the data
-  auto isColorBoxes3d = [](const string& option) {
-    TString upper(option);
-    upper.ToUpper();
-    return upper.Contains("BOX2") || upper.Contains("COL");
-  };
-  // the 3d views of 2d data (THistPainter::PaintLego, PaintSurface, TGraph2DPainter::PaintTriangles)
-  auto isView3d = [](const string& option) {
-    TString upper(option);
-    upper.ToUpper();
-    return upper.Contains("LEGO") || upper.Contains("SURF") || upper.Contains("TRI");
-  };
   if (optionAlias) {
     const std::map<draw_option_t, string>* options{};
     const char* typeName{};
@@ -1687,32 +1658,13 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     }
   }
 
-  // a function from an input is drawn where it is defined (its range, within the frame), one given as formula in the plot definition spans the frame;
-  // a user range overrides both, except beyond the range of a sampled function
-  auto funcRange = [&](char axisLabel, double_t frameMin, double_t frameMax, double_t funcMin, double_t funcMax, const optional<double_t>& userMin, const optional<double_t>& userMax) {
-    double_t min = frameMin;
-    double_t max = frameMax;
-    if (data->GetDataSource() != kUserFunctions && funcMin < frameMax && funcMax > frameMin) {
-      min = std::max(min, funcMin);
-      max = std::min(max, funcMax);
-    }
-    if (userMin) min = *userMin;
-    if (userMax) max = *userMax;
-    if (isSampledFunc && (min < funcMin || max > funcMax)) {
-      if (userMin || userMax) logger::warning("Function {} has no values outside of [{:g}, {:g}] in {}: it is stored as values sampled over this range.", data->GetName(), funcMin, funcMax, axisLabel);
-      min = std::max(min, funcMin);
-      max = std::min(max, funcMax);
-    }
-    return std::make_pair(min, max);
-  };
-
   // first data is only used to define the axes
   if (dataIndex == 0) {
     // a function that defines the frame has no frame to span: it is drawn over its own range, narrowed or widened by the range the
     // user gave with SetRangeX / SetRangeY; a formula from the plot definition has no range of its own (only ROOT's default 0 to 1):
     // it spans the range of the pad axis where it has none of its own
     if constexpr (is_func_1d<data_type>() || is_func_2d<data_type>()) {
-      auto [rangeMinX, rangeMaxX] = funcRange('x', data_ptr->GetXmin(), data_ptr->GetXmax(), data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
+      auto [rangeMinX, rangeMaxX] = FuncRange(state, 'x', data_ptr->GetXmin(), data_ptr->GetXmax(), data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
       // the frame is the function sampled over its range: a pad range inside it is sampled alone, so the frame ends exactly there
       // (not at the edges of the sampled bins) and the automatic y range (1d) or colour scale (2d) is that of the visible part;
       // a pad range beyond the function widens the frame later, as for any data (a formula without a range of its own spans it).
@@ -1740,7 +1692,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       };
       padRange('X', rangeMinX, rangeMaxX, data_ptr->GetNpx(), data->GetMinRangeX(), data->GetMaxRangeX());
       if constexpr (is_func_2d<data_type>()) {
-        auto [rangeMinY, rangeMaxY] = funcRange('y', data_ptr->GetYmin(), data_ptr->GetYmax(), data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
+        auto [rangeMinY, rangeMaxY] = FuncRange(state, 'y', data_ptr->GetYmin(), data_ptr->GetYmax(), data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
         padRange('Y', rangeMinY, rangeMaxY, data_ptr->GetNpy(), data->GetMinRangeY(), data->GetMaxRangeY());
         data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
         frameFuncRange = {rangeMinX, rangeMaxX, rangeMinY, rangeMaxY};
@@ -1794,7 +1746,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         }
       }
     }
-    if constexpr (is_2d<data_type>()) polarFrame = isFlatPolar(drawOption);
+    if constexpr (is_2d<data_type>()) polarFrame = IsFlatPolar(drawOption);
     if (polarFrame) {
       // the disc is round only in a square frame: the margins of the longer side grow, both by the same amount
       const auto [padWidth, padHeight] = PadSizePixel(pad_ptr);
@@ -1837,7 +1789,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     if constexpr (is_hist_3d<data_type>()) {
       // the colour boxes of a TH3 fill the pad behind the 3d box with the frame fill colour (TView3D::PadRange), but in the colour
       // last used for the colour scale when that colour is not 0 (walls in the colour of the palette maximum)
-      if (isColorBoxes3d(drawOption)) pad_ptr->SetFrameFillColor(0);
+      if (IsColorBoxes3d(drawOption)) pad_ptr->SetFrameFillColor(0);
     }
     if (!polargram) {
       data_ptr->Draw(drawOption.data());
@@ -1920,7 +1872,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       // (ROOT crashes on TRI and draws P as a flat map): the frame is drawn as an empty lego plot (the same box and axes),
       // with the colour axis if the option asks for one
       bool triangles{}, points{};
-      paints3dGraph(drawOption, triangles, points);
+      Paints3dGraph(drawOption, triangles, points);
       if (triangles || points) drawOption = (TString(drawOption).Contains("z", TString::kIgnoreCase)) ? "LEGOZ" : "LEGO";
     }
     if constexpr (is_func_3d<data_type>()) {
@@ -2529,10 +2481,10 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     // (its box over the frame) and a flat drawing in a 3d frame not at all or at the wrong place; likewise a map projection needs a
     // frame of the same projection (flat data in a projected frame, or a map in an unprojected one, is painted in other coordinates)
     if constexpr (is_2d<data_type>() || is_3d<data_type>()) {
-      bool drawn3d = is_3d<data_type>() || isView3d(drawOption);
+      bool drawn3d = is_3d<data_type>() || IsView3d(drawOption);
       if constexpr (is_graph_2d<data_type>()) {
         bool triangles{}, points{};
-        paints3dGraph(drawOption, triangles, points);
+        Paints3dGraph(drawOption, triangles, points);
         drawn3d |= triangles || points;
       }
       if (drawn3d != (pad_ptr->GetView() != nullptr)) {
@@ -2624,13 +2576,13 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         data_ptr->SetLineStyle(*lineStyle);
       }
       // the cells of a flat polar drawing are outlined with the line width: only a width the data sets itself outlines them (colz has no outlines)
-      if (!data->GetLineWidth() && isFlatPolar(drawOption)) {
+      if (!data->GetLineWidth() && IsFlatPolar(drawOption)) {
         data_ptr->SetLineWidth(0);
         data_ptr->SetLineColor(TColor::GetColorTransparent(data_ptr->GetLineColor(), 0.f));  // pdf draws width 0 as a hairline
       } else if (is_2d<data_type>() && !data->GetLineWidth() && !keep && TString(drawOption).Contains("ARR", TString::kIgnoreCase)) {
         // ROOT outlines every arrow of ARR (fixed head size) with the line width: the wide default lines of the pad make blobs that hide a map below
         data_ptr->SetLineWidth(1);
-      } else if (!data->GetLineWidth() && !keep && (is_3d<data_type>() || (is_2d<data_type>() && isView3d(drawOption)))) {
+      } else if (!data->GetLineWidth() && !keep && (is_3d<data_type>() || (is_2d<data_type>() && IsView3d(drawOption)))) {
         // ROOT outlines every box, bar, surface cell and triangle of a 3d view with the line width: the wide default lines of the pad
         // darken the view and hide the colours of small boxes, so the edges are thin unless the data sets a width (iso surfaces have no edges)
         data_ptr->SetLineWidth(1);
@@ -2721,12 +2673,12 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
     }
     if constexpr (is_func_2d<data_type>()) {
-      auto [rangeMinX, rangeMaxX] = funcRange('x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
-      auto [rangeMinY, rangeMaxY] = funcRange('y', ymin, ymax, data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
+      auto [rangeMinX, rangeMaxX] = FuncRange(state, 'x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
+      auto [rangeMinY, rangeMaxY] = FuncRange(state, 'y', ymin, ymax, data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
       if (frameFuncRange && data.get() == frameSource) std::tie(rangeMinX, rangeMaxX, rangeMinY, rangeMaxY) = std::tuple_cat(*frameFuncRange);
       data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
     } else if constexpr (is_func_1d<data_type>()) {
-      auto [rangeMin, rangeMax] = funcRange('x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
+      auto [rangeMin, rangeMax] = FuncRange(state, 'x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
       if (frameFuncRange && data.get() == frameSource) std::tie(rangeMin, rangeMax) = std::make_pair((*frameFuncRange)[0], (*frameFuncRange)[1]);
       data_ptr->SetRange(rangeMin, rangeMax);
     } else if constexpr (is_graph_1d<data_type>()) {
@@ -3027,7 +2979,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       // the points are painted from an empty histogram of the graph, unless it already has one: then its contents (interpolated e.g.
       // by SetMinimum above) are painted as well, as colours behind PCOL: the contents are cleared
       bool triangles{}, points{};
-      paints3dGraph(drawOption, triangles, points);
+      Paints3dGraph(drawOption, triangles, points);
       if (points && !triangles) data_ptr->GetHistogram()->Reset("ICE");  // not its functions: they hold the triangulation
       // painted as triangles or points, a 2d graph fills the pad behind the 3d box with the frame fill colour (TView3D::PadRange), also
       // drawn after other data: everything painted before it would be covered
@@ -3200,6 +3152,86 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   }
   ++dataIndex;
   drawOption = "SAME ";  // next data should be drawn to same pad
+}
+
+//**************************************************************************************************
+/**
+ * The options of 2d graphs that paint the Delaunay triangles (TRI...) or the points (P except POL, SPH and PSR, LINE, ERR) in 3d,
+ * as TGraph2D::Paint decides it.
+ */
+//**************************************************************************************************
+void PlotPainter::Paints3dGraph(const string& option, bool& triangles, bool& points)
+{
+  TString lower(option);
+  lower.ToLower();
+  triangles = lower.Contains("tri");
+  points = (lower.Contains("p") && !lower.Contains("pol") && !lower.Contains("sph") && !lower.Contains("psr")) || lower.Contains("line") || lower.Contains("err");
+}
+
+//**************************************************************************************************
+/**
+ * A flat polar drawing (COL with POL, see THistPainter::PaintColorLevels): x is the angle, y the radius of a disc filling the frame,
+ * each cell a TCrown outlined with the line attributes of the data.
+ */
+//**************************************************************************************************
+bool PlotPainter::IsFlatPolar(const string& option)
+{
+  TString upper(option);
+  upper.ToUpper();
+  return upper.Contains("POL") && upper.Contains("COL") && !upper.Contains("LEGO") && !upper.Contains("SURF");
+}
+
+//**************************************************************************************************
+/**
+ * The colour boxes of a 3d histogram (BOX2, which COL stands for, see THistPainter::PaintH3): every face turned to the viewer
+ * is outlined with the line attributes of the data.
+ */
+//**************************************************************************************************
+bool PlotPainter::IsColorBoxes3d(const string& option)
+{
+  TString upper(option);
+  upper.ToUpper();
+  return upper.Contains("BOX2") || upper.Contains("COL");
+}
+
+//**************************************************************************************************
+/**
+ * The 3d views of 2d data (THistPainter::PaintLego, PaintSurface, TGraph2DPainter::PaintTriangles).
+ */
+//**************************************************************************************************
+bool PlotPainter::IsView3d(const string& option)
+{
+  TString upper(option);
+  upper.ToUpper();
+  return upper.Contains("LEGO") || upper.Contains("SURF") || upper.Contains("TRI");
+}
+
+//**************************************************************************************************
+/**
+ * A function from an input is drawn where it is defined (its range, within the frame), one given as formula in the plot definition spans the frame;
+ * a user range overrides both, except beyond the range of a sampled function.
+ */
+//**************************************************************************************************
+std::pair<double_t, double_t> PlotPainter::FuncRange(const item_state_t& state, char axisLabel, double_t frameMin, double_t frameMax, double_t funcMin, double_t funcMax,
+                                                     const optional<double_t>& userMin, const optional<double_t>& userMax)
+{
+  const auto& data = state.data;
+  const bool isSampledFunc = state.isSampledFunc;
+
+  double_t min = frameMin;
+  double_t max = frameMax;
+  if (data->GetDataSource() != kUserFunctions && funcMin < frameMax && funcMax > frameMin) {
+    min = std::max(min, funcMin);
+    max = std::min(max, funcMax);
+  }
+  if (userMin) min = *userMin;
+  if (userMax) max = *userMax;
+  if (isSampledFunc && (min < funcMin || max > funcMax)) {
+    if (userMin || userMax) logger::warning("Function {} has no values outside of [{:g}, {:g}] in {}: it is stored as values sampled over this range.", data->GetName(), funcMin, funcMax, axisLabel);
+    min = std::max(min, funcMin);
+    max = std::min(max, funcMax);
+  }
+  return std::make_pair(min, max);
 }
 
 //**************************************************************************************************
