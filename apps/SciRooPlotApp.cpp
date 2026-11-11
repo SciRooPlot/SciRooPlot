@@ -28,10 +28,7 @@
 #include <TColorWheel.h>
 #include <TDataType.h>
 #include <TFile.h>
-#include <TFolder.h>
-#include <THStack.h>
 #include <TKey.h>
-#include <TMultiGraph.h>
 #include <TROOT.h>
 #include <TRootBrowser.h>
 #include <TRootCanvas.h>
@@ -58,6 +55,7 @@
 
 #include "Config.h"
 #include "Validation.h"
+#include "util/RootContainers.h"
 #include "util/ScopeGuard.h"
 
 using boost::property_tree::ptree;
@@ -542,19 +540,8 @@ bool PrintRootFileContents(const string& inputPath)
     return false;
   }
 
-  // what SciRooPlot looks into: directories, folders, lists, stacks (their histograms) and multigraphs (their graphs)
-  auto isContainer = [](TObject* object) {
-    return object->InheritsFrom(TDirectory::Class()) || object->InheritsFrom(TFolder::Class()) || object->InheritsFrom(TCollection::Class()) ||
-           object->InheritsFrom(THStack::Class()) || object->InheritsFrom(TMultiGraph::Class());
-  };
-  auto itemsOf = [](TObject* object) -> TCollection* {
-    if (auto* folder = dynamic_cast<TFolder*>(object)) return folder->GetListOfFolders();
-    if (auto* stack = dynamic_cast<THStack*>(object)) return stack->GetHists();
-    if (auto* multiGraph = dynamic_cast<TMultiGraph*>(object)) return multiGraph->GetListOfGraphs();
-    return dynamic_cast<TCollection*>(object);
-  };
-
-  auto findObject = [&itemsOf](TObject* root, const string& path) -> TObject* {
+  // a path goes down as the reader does: the latest cycle of a directory name, the value of a map under its key
+  auto findObject = [](TObject* root, const string& path) -> TObject* {
     TObject* current = root;
     size_t pos = 0;
     while (current && pos < path.size()) {
@@ -563,8 +550,13 @@ bool PrintRootFileContents(const string& inputPath)
 
       if (current->InheritsFrom(TDirectory::Class())) {
         current = static_cast<TDirectory*>(current)->Get(part.data());
-      } else if (TCollection* items = itemsOf(current)) {
-        current = items->FindObject(part.data());
+      } else if (util::is_container(current->IsA())) {
+        TObject* found{};
+        util::for_each_item(current, [&](const string& name, TObject* item) {
+          if (name == part) found = item;
+          return found != nullptr;
+        });
+        current = found;
       } else {
         return nullptr;
       }
@@ -596,8 +588,7 @@ bool PrintRootFileContents(const string& inputPath)
 
   std::function<void(TObject*, const string&)> loopData =
     [&](TObject* object, const string& path) {
-      TCollection* itemList = (object->InheritsFrom(TDirectory::Class())) ? static_cast<TDirectory*>(object)->GetListOfKeys() : itemsOf(object);
-      if (!itemList) {
+      if (!util::is_container(object->IsA())) {
         // listed by the name under which it is stored, which is the one to access it with (the object's own name can differ)
         const auto slashPos = path.rfind('/');
         if (slashPos != string::npos) logger::print("{}/", path.substr(0, slashPos));
@@ -612,36 +603,42 @@ bool PrintRootFileContents(const string& inputPath)
       };
       // the objects of this level first, then the containers: listed after a container, they would look as if inside it
       vector<std::tuple<TObject*, string, bool>> containers;
-      TIter next(itemList);
-      TObject* obj = nullptr;
-      while ((obj = next())) {
-        string name = obj->GetName();
-        bool ownsObj = false;
-        if (obj->IsA() == TKey::Class()) {
-          auto* key = static_cast<TKey*>(obj);
-          name = key->GetName();
-          // a key of a class that is no TObject (an RNTuple, a std::vector) cannot be read as one
-          const TClass* keyClass = TClass::GetClass(key->GetClassName());
-          if (keyClass && !keyClass->IsTObject()) {
-            printPath();
-            logger::print("- [{}] {}", key->GetClassName(), name);
-            continue;
-          }
-          obj = key->ReadObj();
-          if (!obj) {
-            logger::warning("Skipping key {} of type {}; the class is not available.", name, key->GetClassName());
-            continue;
-          }
-          ownsObj = true;
-        }
-        if (isContainer(obj)) {
+      auto listItem = [&](TObject* obj, const string& name, bool ownsObj) {
+        if (util::is_container(obj->IsA())) {
           containers.emplace_back(obj, name, ownsObj);
-          continue;
+          return;
         }
         printPath();
         logger::print("- [{}] {}", obj->ClassName(), name);
         printBranches(obj);
         if (ownsObj) delete obj;
+      };
+      if (auto* directory = dynamic_cast<TDirectory*>(object)) {
+        // the latest cycle of a name (listed first), as the reader takes it: one for data, one for a directory, list or folder
+        std::set<std::tuple<string, bool>> listed;
+        for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {
+          if (!key) continue;
+          const string name = key->GetName();
+          const TClass* keyClass = TClass::GetClass(key->GetClassName());
+          if (!listed.emplace(name, util::is_container(keyClass)).second) continue;
+          // a key of a class that is no TObject (an RNTuple, a std::vector) cannot be read as one
+          if (keyClass && !keyClass->IsTObject()) {
+            printPath();
+            logger::print("- [{}] {}", key->GetClassName(), name);
+            continue;
+          }
+          TObject* obj = key->ReadObj();
+          if (!obj) {
+            logger::warning("Skipping key {} of type {}; the class is not available.", name, key->GetClassName());
+            continue;
+          }
+          listItem(obj, name, true);
+        }
+      } else {
+        util::for_each_item(object, [&](const string& name, TObject* item) {
+          listItem(item, name, false);
+          return false;
+        });
       }
       for (auto& [container, name, ownsContainer] : containers) {
         loopData(container, path.empty() ? name : path + "/" + name);

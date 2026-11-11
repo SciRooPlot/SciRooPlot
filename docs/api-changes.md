@@ -123,6 +123,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `SCIROOPLOT_CONFIG_PATH` with a `~` the shell did not expand (`SCIROOPLOT_CONFIG_PATH='~/cfg'`) was refused ("must not be relative"), the tab completion did not find its projects | A leading `~` is the home folder, as in program and output paths | CLI | Nothing. |
 | Mode `print` (`plot <group> <name> print`, `GeneratePlots("print")`) without an output directory was refused ("No output directory was specified") | Prints the definitions: it writes no files | CLI | Nothing. |
 | `srp open` and `srp colorwheel` without a graphical display printed ROOT's display errors and never ended; `srp open` without a file or with a missing one showed ROOT's errors | An error says that a display is needed, or that the file is missing or no ROOT file, and srp ends | CLI | Nothing. |
+| `srp print` listed every cycle of a name (`h;1` and `h;2` as two `h`) and a map value as its key (`[TObjString] key1`) | It lists what the plots read: the latest cycle of a name, the value of a map under its key | CLI | Nothing. |
 
 ## 3.3.3 → 4.0.0
 

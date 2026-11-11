@@ -212,6 +212,7 @@ add_library(SciRooPlot SHARED
   src/util/Paths.h
   src/util/PropertyTree.h
   src/util/Regex.h
+  src/util/RootContainers.h
   src/util/ScopeGuard.h
   src/util/TypeTraits.h
   src/util/Optional.h

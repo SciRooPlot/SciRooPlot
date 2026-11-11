@@ -114,6 +114,7 @@
 #include "Validation.h"
 #include "util/Paths.h"
 #include "util/Regex.h"
+#include "util/RootContainers.h"
 #include "util/ScopeGuard.h"
 #include "util/Strings.h"
 
@@ -132,7 +133,9 @@ namespace SciRooPlot
 {
 using util::disable_implicit_mt;
 using util::expand_path;
+using util::for_each_item;
 using util::ignore_root_messages_below;
+using util::is_container;
 using util::make_scope_guard;
 using util::plural;
 using util::RegexMatcher;
@@ -3032,17 +3035,6 @@ void PlotManager::ClearCanvasRegistry()
 
 //**************************************************************************************************
 /**
- * Directories, folders and collections (lists, arrays, maps, ...) are searched for data; everything else is data.
- */
-//**************************************************************************************************
-bool PlotManager::IsContainer(const TClass* cl)
-{
-  return cl && (cl->InheritsFrom(TDirectory::Class()) || cl->InheritsFrom(TFolder::Class()) || cl->InheritsFrom(TCollection::Class()) ||
-                cl->InheritsFrom(THStack::Class()) || cl->InheritsFrom(TMultiGraph::Class()));
-}
-
-//**************************************************************************************************
-/**
  * Class of the object behind a key, if it can be read (objects of an emulated class without dictionary cannot be read as TObject).
  */
 //**************************************************************************************************
@@ -3072,9 +3064,9 @@ bool PlotManager::KeyInherits(TKey* key, const TClass* base)
 TKey* PlotManager::FindContainerKey(TDirectory* directory, const string& name)
 {
   TKey* latest = directory->FindKey(name.data());
-  if (!latest || IsContainer(ReadableClass(latest))) return latest;
+  if (!latest || is_container(ReadableClass(latest))) return latest;
   for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {  // the cycles of a name are listed from the latest
-    if (key && name == key->GetName() && IsContainer(ReadableClass(key))) return key;
+    if (key && name == key->GetName() && is_container(ReadableClass(key))) return key;
   }
   return latest;
 }
@@ -3089,27 +3081,6 @@ TDirectory* PlotManager::OpenDirectory(TDirectory* directory, TKey* key)
 {
   const bool isLatest = (directory->FindKey(key->GetName()) == key);
   return directory->GetDirectory(isLatest ? key->GetName() : fmt::format("{};{}", key->GetName(), key->GetCycle()).data());
-}
-
-//**************************************************************************************************
-/**
- * Call func(name, item) for the items of an in-memory folder or collection (values of maps under the name of their key) until it returns true.
- */
-//**************************************************************************************************
-void PlotManager::ForEachItem(TObject* container, const std::function<bool(const string&, TObject*)>& func)
-{
-  // the histograms of a stack and the graphs of a multigraph are its items, as the contents of a list
-  TCollection* items = dynamic_cast<TCollection*>(container);
-  if (auto* folder = dynamic_cast<TFolder*>(container)) items = folder->GetListOfFolders();
-  if (auto* stack = dynamic_cast<THStack*>(container)) items = stack->GetHists();
-  if (auto* multiGraph = dynamic_cast<TMultiGraph*>(container)) items = multiGraph->GetListOfGraphs();
-  if (!items) return;
-  for (TObject* item : *items) {
-    if (!item) continue;
-    const string name = item->GetName();
-    if (auto* pair = dynamic_cast<TPair*>(item)) item = pair->Value();  // iterating a map gives its key-value pairs (named by the key)
-    if (item && func(name, item)) return;
-  }
 }
 
 //**************************************************************************************************
@@ -3230,7 +3201,7 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
         if (!traverse && !dataNames.count(name)) continue;
         TClass* keyClass = ReadableClass(key);
         if (traverse) {
-          if (!IsContainer(keyClass)) continue;
+          if (!is_container(keyClass)) continue;
           if (!visited.insert(name).second) {
             if (keyClass->InheritsFrom(TDirectory::Class())) WarnHiddenDirectory(directory, name);
             continue;
@@ -3246,7 +3217,7 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
           }
           continue;
         }
-        if (IsContainer(keyClass)) continue;
+        if (is_container(keyClass)) continue;
         // an RNTuple is no TObject: it has no readable class, but RDataFrame reads it like a tree
         const bool isRNTuple = !keyClass && std::string_view(key->GetClassName()) == "ROOT::RNTuple";
         if (!keyClass && !isRNTuple) {
@@ -3269,12 +3240,12 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
         }
       }
     }
-  } else if (IsContainer(folder->IsA())) {
+  } else if (is_container(folder->IsA())) {
     for (bool traverse : {false, true}) {
-      ForEachItem(folder, [&](const string& name, TObject* obj) {
-        if (traverse && IsContainer(obj->IsA())) {
+      for_each_item(folder, [&](const string& name, TObject* obj) {
+        if (traverse && is_container(obj->IsA())) {
           ReadData(obj, dataNames, prefix, suffix, dataSource, readCache);
-        } else if (!traverse && dataNames.count(name) && !IsContainer(obj->IsA())) {
+        } else if (!traverse && dataNames.count(name) && !is_container(obj->IsA())) {
           store(obj, name, false);
         }
         return dataNames.empty();
@@ -3568,7 +3539,7 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, const vector<string>& su
         logger::warning("Cannot look into {} in {}: objects of class {} cannot be read (no dictionary loaded or not a TObject).", subDir, directory->GetPath(), key->GetClassName());
       } else if (keyClass && keyClass->InheritsFrom(TDirectory::Class())) {
         subFolder = OpenDirectory(directory, key);
-      } else if (IsContainer(keyClass)) {
+      } else if (is_container(keyClass)) {
         WarnHiddenDirectory(directory, subDir);
         auto& container = readCache[key];
         if (!container) container.reset(key->ReadObj());
@@ -3576,15 +3547,15 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, const vector<string>& su
       }
     } else {
       // a container of this name (there could also be data of the same name)
-      ForEachItem(folder, [&](const string& name, TObject* item) {
-        if (name == subDir && IsContainer(item->IsA())) subFolder = item;
+      for_each_item(folder, [&](const string& name, TObject* item) {
+        if (name == subDir && is_container(item->IsA())) subFolder = item;
         return subFolder != nullptr;
       });
     }
     if (!subFolder) return nullptr;
     folder = subFolder;
   }
-  return (folder && IsContainer(folder->IsA())) ? folder : nullptr;
+  return (folder && is_container(folder->IsA())) ? folder : nullptr;
 }
 
 //**************************************************************************************************
