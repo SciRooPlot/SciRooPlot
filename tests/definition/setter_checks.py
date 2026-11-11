@@ -13,7 +13,8 @@ not exist ...), the other parameters plain. Reference: the same call with the pl
   function, the forms of functions) give no message;
 - a call repeated with another value replaces the first one, in either order (the saved plot equals the one with only the second call);
   a call that adds something (Filter, Define, Join, AddSymbolOf, ApplyLayout) keeps the first one; named cases of calls replacing each
-  other (Entries, a drawing option and an alias, SetDefinesFrame(False), SetTransparent after a fill colour).
+  other (Entries, a drawing option and an alias, contour levels and their number, also from a layout, SetDefinesFrame(False),
+  SetTransparent after a fill colour).
 Style numbers (markers, lines, fills) are not checked: ROOT draws an unknown style in its default style.
 """
 
@@ -222,6 +223,9 @@ REPLACING = [
     ("Denom().Entries(n) after Denom().Entries(min, max)", 'p[1].AddRatio("t", "s", "t2", "s2").Both().Project1D("x").Denom().Entries(20, 40).Entries(10)', 'p[1].AddRatio("t", "s", "t2", "s2").Both().Project1D("x").Denom().Entries(10)'),
     ("a drawing option after an alias", 'p[1].AddData("h", "s").SetDrawOption(points_line).SetDrawOption("hist e")', 'p[1].AddData("h", "s").SetDrawOption("hist e")'),
     ("an alias after a drawing option", 'p[1].AddData("h", "s").SetDrawOption("hist e").SetDrawOption(points_line)', 'p[1].AddData("h", "s").SetDrawOption(points_line)'),
+    ("a number of contour levels after levels", 'p[1].AddData("h", "s").SetContours([0.0, 5.0, 10.0]).SetContours(30)', 'p[1].AddData("h", "s").SetContours(30)'),
+    ("contour levels after a number of them", 'p[1].AddData("h", "s").SetContours(30).SetContours([0.0, 5.0, 10.0])', 'p[1].AddData("h", "s").SetContours([0.0, 5.0, 10.0])'),
+    ("a layout's number of contour levels after levels", 'p[1].AddData("h", "s").SetContours([0.0, 5.0, 10.0]).ApplyLayout(Data("h", "s").SetContours(30))', 'p[1].AddData("h", "s").SetContours(30)'),
     ("SetDefinesFrame(False) after SetDefinesFrame()", 'p[1].AddData("h", "s").SetDefinesFrame().SetDefinesFrame(False)', 'p[1].AddData("h", "s")'),
     ("SetDefinesFrame(False) on a ratio", 'p[1].AddRatio("h", "s", "h2", "s2").SetDefinesFrame().SetDefinesFrame(False)', 'p[1].AddRatio("h", "s", "h2", "s2")'),
     ("SetTransparent of a plot keeps its fill colour", "p.SetFillColor(632).SetTransparent()", "p.SetFillColor(632).SetFillStyle(0)"),

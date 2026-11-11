@@ -2655,8 +2655,10 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   mMarker.Update(dataLayout.mMarker);
   mLine.Update(dataLayout.mLine);
   mFill.Update(dataLayout.mFill);
-  if (dataLayout.mContours) mContours = dataLayout.mContours;
-  if (dataLayout.mNContours) mNContours = dataLayout.mNContours;
+  if (dataLayout.mContours || dataLayout.mNContours) {  // levels and their number are one setting: the layout's replaces both
+    mContours = dataLayout.mContours;
+    mNContours = dataLayout.mNContours;
+  }
   if (dataLayout.mNpx) mNpx = dataLayout.mNpx;
   if (dataLayout.mNpy) mNpy = dataLayout.mNpy;
   return *this;
@@ -2867,11 +2869,14 @@ auto Plot::Pad::Data::SetContours(const vector<double>& contours) -> decltype(*t
     return *this;
   }
   mContours = contours;
+  mNContours.reset();  // levels and their number are one setting
   return *this;
 }
 auto Plot::Pad::Data::SetContours(int32_t nContours) -> decltype(*this)
 {
-  if (CheckCount(nContours, "number of contour levels of " + GetName())) mNContours = nContours;
+  if (!CheckCount(nContours, "number of contour levels of " + GetName())) return *this;
+  mNContours = nContours;
+  mContours.reset();  // levels and their number are one setting
   return *this;
 }
 auto Plot::Pad::Data::SetNpx(int32_t nx, optional<int32_t> ny) -> decltype(*this)
