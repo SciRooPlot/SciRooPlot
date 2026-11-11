@@ -1575,229 +1575,240 @@ bool PlotManager::FillBuffer()
     sourceGroups[dataSource.substr(0, dataSource.find(':'))].push_back(dataSource);
   }
   for (const auto& [baseSource, dataSources] : sourceGroups) {
-    map<string, unordered_map<string, set<string>>> requiredData;  // data source -> subdir -> names
-    for (const auto& dataSource : dataSources) {
-      for (auto& [dataName, dataPtr] : mDataBuffer[dataSource]) {
-        if (IsBuffered(dataSource, dataName)) continue;
+    success &= ReadSourceGroup(baseSource, dataSources);
+  }
+  return success;
+}
 
-        // generate user-defined functions on-the-fly
-        if (dataSource == kUserFunctions) {
-          // a function is given as formula ("[0] * sin(x)") or as C++ lambda ("[](double* x, double* p) { return std::sin(x[0]); }"):
-          // a lambda has no parameters that could be set, its dimension is that of the variables it uses (x[0], x[1], x[2])
-          static const std::regex lambdaStart(R"(^\s*\[[^\]]*\]\s*\()");
-          const bool isLambda = std::regex_search(dataName, lambdaStart);
-          int32_t dim{};
-          if (isLambda) {
-            static const std::regex signature(R"(^\s*\[\s*\]\s*\(\s*(?:const\s+)?(?:double|Double_t)\s*\*\s*(\w+)\s*,\s*(?:const\s+)?(?:double|Double_t)\s*\*\s*(\w*)\s*\))");
-            std::smatch names;
-            if (!std::regex_search(dataName, names, signature)) {
-              logger::error("Function '{}' needs the form [](double* x, double* p) {{ ... }}.", dataName);
-              continue;
-            }
-            const string body = names.suffix();
-            const string var = names[1];
-            const std::regex variableUse("\\b" + var + "\\b(\\s*\\[\\s*([0-9]+)\\s*\\])?");
-            bool isIndexed = true;
-            dim = 1;
-            for (auto use = std::sregex_iterator(body.begin(), body.end(), variableUse); use != std::sregex_iterator(); ++use) {
-              isIndexed = isIndexed && (*use)[2].matched;
-              if ((*use)[2].matched) dim = std::max(dim, std::stoi((*use)[2]) + 1);
-            }
-            if (!isIndexed || dim > 3) {
-              logger::error("Function '{}' has to use its variables as {}[0], {}[1] or {}[2].", dataName, var, var, var);
-              continue;
-            }
-            if (const string par = names[2]; !par.empty() && std::regex_search(body, std::regex("\\b" + par + "\\b"))) {
-              logger::error("Function '{}' uses parameters, which cannot be set: write their values into the function.", dataName);
-              continue;
-            }
-          }
-          bool isValid{};
-          int32_t nParameters{};
-          {
-            auto quiet = ignore_root_messages_below(kFatal);
-            if (isLambda) {
-              isValid = TFormula("tmp", dataName.data(), dim, 0, false).IsValid();
-            } else {
-              TFormula formula("tmp", dataName.data(), false);
-              isValid = formula.IsValid();
-              dim = formula.GetNdim();
-              nParameters = formula.GetNpar();
-            }
-          }
-          if (!isValid) {
-            logger::error("'{}' is not a valid function expression.", dataName);
+//**************************************************************************************************
+/**
+ * Reads the data requested from a data source and from its folders (dataSource:some/folder) in one pass over its inputs; false if
+ * some was not found.
+ */
+//**************************************************************************************************
+bool PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>& dataSources)
+{
+  map<string, unordered_map<string, set<string>>> requiredData;  // data source -> subdir -> names
+  for (const auto& dataSource : dataSources) {
+    for (auto& [dataName, dataPtr] : mDataBuffer[dataSource]) {
+      if (IsBuffered(dataSource, dataName)) continue;
+
+      // generate user-defined functions on-the-fly
+      if (dataSource == kUserFunctions) {
+        // a function is given as formula ("[0] * sin(x)") or as C++ lambda ("[](double* x, double* p) { return std::sin(x[0]); }"):
+        // a lambda has no parameters that could be set, its dimension is that of the variables it uses (x[0], x[1], x[2])
+        static const std::regex lambdaStart(R"(^\s*\[[^\]]*\]\s*\()");
+        const bool isLambda = std::regex_search(dataName, lambdaStart);
+        int32_t dim{};
+        if (isLambda) {
+          static const std::regex signature(R"(^\s*\[\s*\]\s*\(\s*(?:const\s+)?(?:double|Double_t)\s*\*\s*(\w+)\s*,\s*(?:const\s+)?(?:double|Double_t)\s*\*\s*(\w*)\s*\))");
+          std::smatch names;
+          if (!std::regex_search(dataName, names, signature)) {
+            logger::error("Function '{}' needs the form [](double* x, double* p) {{ ... }}.", dataName);
             continue;
           }
-          // parameters ([0], [a], or those of predefined functions like gaus and pol2) cannot be set and would all be 0
-          if (nParameters > 0) {
+          const string body = names.suffix();
+          const string var = names[1];
+          const std::regex variableUse("\\b" + var + "\\b(\\s*\\[\\s*([0-9]+)\\s*\\])?");
+          bool isIndexed = true;
+          dim = 1;
+          for (auto use = std::sregex_iterator(body.begin(), body.end(), variableUse); use != std::sregex_iterator(); ++use) {
+            isIndexed = isIndexed && (*use)[2].matched;
+            if ((*use)[2].matched) dim = std::max(dim, std::stoi((*use)[2]) + 1);
+          }
+          if (!isIndexed || dim > 3) {
+            logger::error("Function '{}' has to use its variables as {}[0], {}[1] or {}[2].", dataName, var, var, var);
+            continue;
+          }
+          if (const string par = names[2]; !par.empty() && std::regex_search(body, std::regex("\\b" + par + "\\b"))) {
             logger::error("Function '{}' uses parameters, which cannot be set: write their values into the function.", dataName);
             continue;
           }
-          // the lambda constructors of ROOT take the number of parameters and dimensions
-          constexpr int32_t nPar = 0;
-          if (dim <= 1) {
-            auto* func = (isLambda) ? new TF1(dataName.data(), dataName.data(), 0., 1., nPar, 1) : new TF1(dataName.data(), dataName.data());
-            func->SetNpx(1000);  // drawn across the whole frame, where ROOT's default of 100 points looks angular
-            dataPtr.reset(func);
-          } else if (dim == 2) {
-            dataPtr.reset((isLambda) ? new TF2(dataName.data(), dataName.data(), 0., 1., 0., 1., nPar, 2) : new TF2(dataName.data(), dataName.data()));
-          } else if (dim == 3) {
-            dataPtr.reset((isLambda) ? new TF3(dataName.data(), dataName.data(), 0., 1., 0., 1., 0., 1., nPar, 3) : new TF3(dataName.data(), dataName.data()));
+        }
+        bool isValid{};
+        int32_t nParameters{};
+        {
+          auto quiet = ignore_root_messages_below(kFatal);
+          if (isLambda) {
+            isValid = TFormula("tmp", dataName.data(), dim, 0, false).IsValid();
           } else {
-            logger::error("Cannot create function {}.", dataName);
+            TFormula formula("tmp", dataName.data(), false);
+            isValid = formula.IsValid();
+            dim = formula.GetNdim();
+            nParameters = formula.GetNpar();
           }
+        }
+        if (!isValid) {
+          logger::error("'{}' is not a valid function expression.", dataName);
           continue;
-        } else if (dataSource == kUserGraphs) {
-          auto strs = split_string(dataName, ';');
-          if (strs.size() == 2) {
-            auto xStrs = split_string(strs[0], ',');
-            auto yStrs = split_string(strs[1], ',');
-            if (!xStrs.size() || xStrs.size() != yStrs.size()) {
-              logger::error("Incompatible number of points.");
-            } else {
-              vector<double_t> x;
-              vector<double_t> y;
-              try {  // independent of the locale, and subnormal values (1e-310) are numbers, not an error as for std::stod
-                for (size_t i = 0; i < xStrs.size(); ++i) {
-                  x.push_back(util::string_to_type<double_t>(xStrs[i]));
-                  y.push_back(util::string_to_type<double_t>(yStrs[i]));
-                }
-                dataPtr.reset(new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data()));
-                static_cast<TGraph*>(dataPtr.get())->SetName(dataName.data());
-              } catch (const std::invalid_argument& e) {
-                logger::error("Cannot read the points {}: {}", dataName, e.what());
+        }
+        // parameters ([0], [a], or those of predefined functions like gaus and pol2) cannot be set and would all be 0
+        if (nParameters > 0) {
+          logger::error("Function '{}' uses parameters, which cannot be set: write their values into the function.", dataName);
+          continue;
+        }
+        // the lambda constructors of ROOT take the number of parameters and dimensions
+        constexpr int32_t nPar = 0;
+        if (dim <= 1) {
+          auto* func = (isLambda) ? new TF1(dataName.data(), dataName.data(), 0., 1., nPar, 1) : new TF1(dataName.data(), dataName.data());
+          func->SetNpx(1000);  // drawn across the whole frame, where ROOT's default of 100 points looks angular
+          dataPtr.reset(func);
+        } else if (dim == 2) {
+          dataPtr.reset((isLambda) ? new TF2(dataName.data(), dataName.data(), 0., 1., 0., 1., nPar, 2) : new TF2(dataName.data(), dataName.data()));
+        } else if (dim == 3) {
+          dataPtr.reset((isLambda) ? new TF3(dataName.data(), dataName.data(), 0., 1., 0., 1., 0., 1., nPar, 3) : new TF3(dataName.data(), dataName.data()));
+        } else {
+          logger::error("Cannot create function {}.", dataName);
+        }
+        continue;
+      } else if (dataSource == kUserGraphs) {
+        auto strs = split_string(dataName, ';');
+        if (strs.size() == 2) {
+          auto xStrs = split_string(strs[0], ',');
+          auto yStrs = split_string(strs[1], ',');
+          if (!xStrs.size() || xStrs.size() != yStrs.size()) {
+            logger::error("Incompatible number of points.");
+          } else {
+            vector<double_t> x;
+            vector<double_t> y;
+            try {  // independent of the locale, and subnormal values (1e-310) are numbers, not an error as for std::stod
+              for (size_t i = 0; i < xStrs.size(); ++i) {
+                x.push_back(util::string_to_type<double_t>(xStrs[i]));
+                y.push_back(util::string_to_type<double_t>(yStrs[i]));
               }
+              dataPtr.reset(new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data()));
+              static_cast<TGraph*>(dataPtr.get())->SetName(dataName.data());
+            } catch (const std::invalid_argument& e) {
+              logger::error("Cannot read the points {}: {}", dataName, e.what());
             }
           }
-          continue;
         }
-
-        auto [path, name] = split_path(dataName);
-        requiredData[dataSource][std::move(path)].insert(std::move(name));
+        continue;
       }
+
+      auto [path, name] = split_path(dataName);
+      requiredData[dataSource][std::move(path)].insert(std::move(name));
     }
-    auto allFound = [&]() { return std::all_of(requiredData.begin(), requiredData.end(), [](const auto& entry) { return entry.second.empty(); }); };
-
-    if (allFound()) continue;  // nothing left to read, e.g. read by a previous GeneratePlots call
-
-    // open all input files belonging to the data source and extract the data
-    mTreeInputs.clear();
-    // consecutive inputs in the same file (e.g. its expanded folders) share one open file: the cache of the lists and folders
-    // read from it is cleared before the file is closed
-    struct open_file_t {
-      std::unique_ptr<TFile> file;
-      string name;
-      read_cache_t readCache;
-      void Close()
-      {
-        readCache.clear();
-        file.reset();
-        name.clear();
-      }
-      ~open_file_t() { Close(); }
-    } openFile;
-    for (const auto& inputRaw : mExpandedInputs[baseSource]) {
-      if (allFound()) break;
-      string input = expand_path(inputRaw).value_or("");
-      if (str_ends_with(input, mTableFileEndings)) {
-        // tables have no folders: only part of the data source itself, and only read if requested
-        // (a directory source also contains tables nobody asked for, or text files that are no tables at all)
-        if (auto it = requiredData.find(baseSource); it != requiredData.end()) {
-          if (auto wantedIt = it->second.find(""); wantedIt != it->second.end()) {
-            set<string>& wantedNames = wantedIt->second;
-            const string name = std::filesystem::path(input).stem().string();
-            if (wantedNames.erase(name)) {
-              ReadTableData(input, name, baseSource);
-              if (wantedNames.empty()) it->second.erase(wantedIt);
-            }
-          }
-        }
-      }
-      // check if only a sub-folder in input file should be searched
-      auto fileNamePath = SplitInputPath(input);
-      string& fileName = fileNamePath[0];
-      if (!str_ends_with(fileName, ".root")) continue;
-
-      if (fileName != openFile.name) {
-        openFile.Close();
-        std::error_code existsError;
-        if (!std::filesystem::exists(fileName, existsError)) {
-          logger::warning("Input file {} not found{} (data source {}).", fileName, existsError ? " (" + existsError.message() + ")" : "", baseSource);
-          continue;
-        }
-        openFile.file = std::make_unique<TFile>(fileName.data(), "READ");
-        if (openFile.file->IsZombie()) {
-          logger::warning("Cannot open input file {} (data source {}).", fileName, baseSource);
-          openFile.file.reset();
-          continue;
-        }
-        openFile.name = fileName;
-      }
-      TFile& inputFile = *openFile.file;
-      read_cache_t& readCache = openFile.readCache;
-
-      for (auto& [dataSource, required] : requiredData) {
-        if (required.empty()) continue;
-        // where to search in this input: the folder of the input, for a restricted data source its folder within it
-        const string inputFolder = (fileNamePath.size() > 1) ? fileNamePath[1] : "";
-        const auto subFolderPos = dataSource.find(':');
-        const bool isRestricted = (subFolderPos != string::npos);
-        vector<string> folderPaths{inputFolder};
-        if (isRestricted) {
-          const string subFolder = dataSource.substr(subFolderPos + 1);
-          const string folderPath = (inputFolder.empty()) ? subFolder : inputFolder + "/" + subFolder;
-          folderPaths = (folderPath.find_first_of("*?[") != string::npos) ? MatchFolders(&inputFile, folderPath) : vector<string>{folderPath};
-        }
-        for (const auto& folderPath : folderPaths) {
-          mIsFolderInput = !folderPath.empty();
-          TObject* folder = &inputFile;
-
-          // find top level entry point for this input file
-          if (!folderPath.empty()) {
-            folder = FindSubDirectory(folder, split_string(folderPath, '/'), readCache);
-            if (!folder) {
-              // inputs that do not contain the folder of a restricted data source (dataSource:some/folder) are simply not part of it
-              if (isRestricted) continue;
-              logger::error("Subdirectory {} not found in file {}.", folderPath, fileName);
-              continue;
-            }
-          }
-
-          vector<string> emptySubDirs;
-          for (auto& [pathStr, names] : required) {
-            if (TObject* subfolder = FindSubDirectory(folder, split_string(pathStr, '/'), readCache)) {
-              // recursively traverse the file and look for input files
-              string prefix = (pathStr.empty()) ? "" : pathStr + "/";
-              string suffix = ":" + dataSource;
-              ReadData(subfolder, names, prefix, suffix, dataSource, readCache);
-            }
-            if (names.empty()) emptySubDirs.push_back(pathStr);
-          }
-
-          for (const auto& pathStr : emptySubDirs) {
-            required.erase(pathStr);
-          }
-          // trees can also be in further inputs: keep looking for them
-          for (const auto& [treeName, treeInputs] : mTreeInputs[dataSource]) {
-            auto [path, name] = split_path(treeName);
-            required[path].insert(std::move(name));
-          }
-        }
-      }
-    }
-    ChainTrees(requiredData);
-    mTreeInputs.clear();
-    for (const auto& [dataSource, required] : requiredData) {
-      for (const auto& [path, names] : required) {
-        for (const auto& name : names) {
-          mNotFoundData[dataSource].insert((path.empty()) ? name : path + "/" + name);
-        }
-      }
-    }
-    success &= allFound();
   }
-  return success;
+  auto allFound = [&]() { return std::all_of(requiredData.begin(), requiredData.end(), [](const auto& entry) { return entry.second.empty(); }); };
+
+  if (allFound()) return true;  // nothing left to read, e.g. read by a previous GeneratePlots call
+
+  // open all input files belonging to the data source and extract the data
+  mTreeInputs.clear();
+  // consecutive inputs in the same file (e.g. its expanded folders) share one open file: the cache of the lists and folders
+  // read from it is cleared before the file is closed
+  struct open_file_t {
+    std::unique_ptr<TFile> file;
+    string name;
+    read_cache_t readCache;
+    void Close()
+    {
+      readCache.clear();
+      file.reset();
+      name.clear();
+    }
+    ~open_file_t() { Close(); }
+  } openFile;
+  for (const auto& inputRaw : mExpandedInputs[baseSource]) {
+    if (allFound()) break;
+    string input = expand_path(inputRaw).value_or("");
+    if (str_ends_with(input, mTableFileEndings)) {
+      // tables have no folders: only part of the data source itself, and only read if requested
+      // (a directory source also contains tables nobody asked for, or text files that are no tables at all)
+      if (auto it = requiredData.find(baseSource); it != requiredData.end()) {
+        if (auto wantedIt = it->second.find(""); wantedIt != it->second.end()) {
+          set<string>& wantedNames = wantedIt->second;
+          const string name = std::filesystem::path(input).stem().string();
+          if (wantedNames.erase(name)) {
+            ReadTableData(input, name, baseSource);
+            if (wantedNames.empty()) it->second.erase(wantedIt);
+          }
+        }
+      }
+    }
+    // check if only a sub-folder in input file should be searched
+    auto fileNamePath = SplitInputPath(input);
+    string& fileName = fileNamePath[0];
+    if (!str_ends_with(fileName, ".root")) continue;
+
+    if (fileName != openFile.name) {
+      openFile.Close();
+      std::error_code existsError;
+      if (!std::filesystem::exists(fileName, existsError)) {
+        logger::warning("Input file {} not found{} (data source {}).", fileName, existsError ? " (" + existsError.message() + ")" : "", baseSource);
+        continue;
+      }
+      openFile.file = std::make_unique<TFile>(fileName.data(), "READ");
+      if (openFile.file->IsZombie()) {
+        logger::warning("Cannot open input file {} (data source {}).", fileName, baseSource);
+        openFile.file.reset();
+        continue;
+      }
+      openFile.name = fileName;
+    }
+    TFile& inputFile = *openFile.file;
+    read_cache_t& readCache = openFile.readCache;
+
+    for (auto& [dataSource, required] : requiredData) {
+      if (required.empty()) continue;
+      // where to search in this input: the folder of the input, for a restricted data source its folder within it
+      const string inputFolder = (fileNamePath.size() > 1) ? fileNamePath[1] : "";
+      const auto subFolderPos = dataSource.find(':');
+      const bool isRestricted = (subFolderPos != string::npos);
+      vector<string> folderPaths{inputFolder};
+      if (isRestricted) {
+        const string subFolder = dataSource.substr(subFolderPos + 1);
+        const string folderPath = (inputFolder.empty()) ? subFolder : inputFolder + "/" + subFolder;
+        folderPaths = (folderPath.find_first_of("*?[") != string::npos) ? MatchFolders(&inputFile, folderPath) : vector<string>{folderPath};
+      }
+      for (const auto& folderPath : folderPaths) {
+        mIsFolderInput = !folderPath.empty();
+        TObject* folder = &inputFile;
+
+        // find top level entry point for this input file
+        if (!folderPath.empty()) {
+          folder = FindSubDirectory(folder, split_string(folderPath, '/'), readCache);
+          if (!folder) {
+            // inputs that do not contain the folder of a restricted data source (dataSource:some/folder) are simply not part of it
+            if (isRestricted) continue;
+            logger::error("Subdirectory {} not found in file {}.", folderPath, fileName);
+            continue;
+          }
+        }
+
+        vector<string> emptySubDirs;
+        for (auto& [pathStr, names] : required) {
+          if (TObject* subfolder = FindSubDirectory(folder, split_string(pathStr, '/'), readCache)) {
+            // recursively traverse the file and look for input files
+            string prefix = (pathStr.empty()) ? "" : pathStr + "/";
+            string suffix = ":" + dataSource;
+            ReadData(subfolder, names, prefix, suffix, dataSource, readCache);
+          }
+          if (names.empty()) emptySubDirs.push_back(pathStr);
+        }
+
+        for (const auto& pathStr : emptySubDirs) {
+          required.erase(pathStr);
+        }
+        // trees can also be in further inputs: keep looking for them
+        for (const auto& [treeName, treeInputs] : mTreeInputs[dataSource]) {
+          auto [path, name] = split_path(treeName);
+          required[path].insert(std::move(name));
+        }
+      }
+    }
+  }
+  ChainTrees(requiredData);
+  mTreeInputs.clear();
+  for (const auto& [dataSource, required] : requiredData) {
+    for (const auto& [path, names] : required) {
+      for (const auto& name : names) {
+        mNotFoundData[dataSource].insert((path.empty()) ? name : path + "/" + name);
+      }
+    }
+  }
+  return allFound();
 }
 
 //**************************************************************************************************
