@@ -5,7 +5,7 @@ objects back from Plots.root and checks them against an independent reference (p
 It exits 0 if every check passes, 1 if one fails and 77 if it cannot run (shown as skipped by CTest).
 
 Environment (set by CTest): SRP_PREFIX, a build or install directory with bin/plot; SRP_TESTS_WORK, the scratch folder of the test;
-SRP_TESTS_FULL=1 for the full case lists (weekly), otherwise a subset holding every value of every dimension at least once.
+SRP_TESTS_FULL=1 for the full case lists (weekly), otherwise a subset holding every value of every dimension and many pairs of values.
 """
 
 import contextlib
@@ -86,18 +86,33 @@ def close(a, b, rel=1e-9):
 # ---------------------------------------------------------------------------------------------
 def cases(dims, valid=lambda case: True, named=(), always=lambda case: False):
     """The combinations of the values in dims (a dict of lists) as dicts, without those that are not valid.
-    The fast run takes those needed to have every value of every dimension at least once, and those always is true for; the full run
-    all of them. Named cases (dicts with a "why": a bug that happened) are always included."""
-    allCases = [dict(zip(dims, values)) for values in itertools.product(*dims.values())]
-    allCases = [case for case in allCases if valid(case)]
+    The fast run takes every value of every dimension at least once and as many different pairs of values as twice the number of values
+    of the largest dimension of cases allow (each case chosen for the most values, then pairs, not yet taken), plus those always is true
+    for; the full run all of them. Named cases (dicts with a "why": what they check) are always included."""
+    keys, lists = list(dims), [list(values) for values in dims.values()]
+    allCases, indices = [], []
+    for index in itertools.product(*(range(len(values)) for values in lists)):
+        case = {k: values[i] for k, values, i in zip(keys, lists, index)}
+        if valid(case):
+            allCases.append(case)
+            indices.append(index)
     chosen = allCases
-    if not FULL:
-        chosen, seen = [], set()
-        for case in allCases:
-            pairs = set(case.items())
-            if not pairs <= seen or always(case):
-                chosen.append(case)
-                seen |= pairs
+    if not FULL and allCases:
+        offsets = np.cumsum([0] + [len(values) for values in lists])
+        values = np.array(indices) + offsets[:-1]
+        pairs = np.stack([values[:, i] * offsets[-1] + values[:, j] for i, j in itertools.combinations(range(len(keys)), 2)] or [values[:, 0] * 0], axis=1)
+        valueTaken, pairTaken = np.zeros(offsets[-1], bool), np.zeros(offsets[-1] ** 2, bool)
+        picked = np.array([always(case) for case in allCases])
+        valueTaken[values[picked]] = True
+        pairTaken[pairs[picked]] = True
+        budget = picked.sum() + 2 * max(len(np.unique(values[:, i])) for i in range(len(keys)))
+        while not picked.all():
+            score = np.where(picked, -1, (~valueTaken[values]).sum(axis=1) * len(keys) ** 2 + (~pairTaken[pairs]).sum(axis=1))
+            best = int(score.argmax())
+            if score[best] <= 0 or (score[best] < len(keys) ** 2 and picked.sum() >= budget):
+                break
+            picked[best], valueTaken[values[best]], pairTaken[pairs[best]] = True, True, True
+        chosen = [case for case, take in zip(allCases, picked) if take]
     for extra in named:
         match = next((case for case in chosen if all(case.get(k) == v for k, v in extra.items() if k != "why")), None)
         if match is None:
