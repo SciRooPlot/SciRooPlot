@@ -766,7 +766,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           upper.ToUpper();
           return upper.Contains("LEGO") || upper.Contains("SURF") || upper.Contains("TRI");
         };
-        if (optionAlias) {
+        {
           const std::map<draw_option_t, string>* options{};
           const char* typeName{};
           if constexpr (is_hist_2d<data_type>()) {
@@ -794,7 +794,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             options = &defaultDrawOptions_Func3d;
             typeName = "3d function";
           }
-          if (auto it = (options) ? options->find(*optionAlias) : decltype(options->end()){}; options && it != options->end()) {
+          if (!optionAlias) {
+            // a raw option written as the name of an alias (SetDrawOption("col_clamped") for SetDrawOption(col_clamped)) goes to ROOT as it is;
+            // names that are ROOT's own option of the alias (lego, cont, text) draw as asked
+            if (const auto& raw = data->GetDrawOption(); raw && options && dataIndex != 0) {
+              const string name = TString(*raw).Strip(TString::kBoth).Data();
+              if (const auto named = draw_option_from_name(name)) {
+                const auto it = options->find(*named);
+                if (it == options->end() || str_upper(it->second).find(str_upper(name)) == string::npos) {
+                  logger::warning("Drawing option '{}' of {} is passed to ROOT as it is, but is the name of an alias: write SetDrawOption({}) for the alias.", name, data->GetName(), name);
+                }
+              }
+            }
+          } else if (auto it = (options) ? options->find(*optionAlias) : decltype(options->end()){}; options && it != options->end()) {
             drawOption += it->second;
           } else {
             if (dataIndex != 0) logger::warning("Drawing option {} is not available for {} {}, using the default of ROOT.", draw_option_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), data->GetName());
