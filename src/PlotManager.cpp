@@ -1226,6 +1226,9 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
       try {
         Plot basePlot(plotTree.second);
         reportUnknownKeys(basePlot, plotTree.second);
+        // loaded again by every call (e.g. group by group): replaced without the warning of AddBasePlot
+        mBasePlots.erase(std::remove_if(mBasePlots.begin(), mBasePlots.end(), [&basePlot](const Plot& curBasePlot) { return curBasePlot.GetUniqueName() == basePlot.GetUniqueName(); }),
+                         mBasePlots.end());
         AddBasePlot(std::move(basePlot));
         ++nBasePlotsLoaded;
       } catch (const std::exception& e) {
