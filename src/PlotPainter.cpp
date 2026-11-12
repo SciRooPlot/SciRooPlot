@@ -791,7 +791,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           upper.erase(pos, end - pos);
           option.erase(pos, end - pos);
         }
-        if (ownRange && dataIndex != 0) logger::warning("Drawing option '{}' of {}: SAME0 is removed, all data of a pad share the colour range of its frame.", *data->GetDrawOption(), data->GetName());
+        if (ownRange && dataIndex != 0) logger::warning("Drawing option '{}' of {}: SAME0 is removed, all data of a pad share the colour range of its frame.", *data->GetDrawOption(), DataName(*data));
         // AXIS and AXIG (axes or grid only) would draw no data and leave the frame drawn from it without labels: the axes are SciRooPlot's
         // (warned once per data: the frame copy of the first data, index 0, is drawn from the same item again)
         bool axesOnly{};
@@ -802,7 +802,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             axesOnly = true;
           }
         }
-        if (axesOnly && dataIndex != 0) logger::warning("Drawing option '{}' of {}: AXIS and AXIG are removed, the axes are drawn by SciRooPlot (a frame without data: Pad::SetFrame).", *data->GetDrawOption(), data->GetName());
+        if (axesOnly && dataIndex != 0) logger::warning("Drawing option '{}' of {}: AXIS and AXIG are removed, the axes are drawn by SciRooPlot (a frame without data: Pad::SetFrame).", *data->GetDrawOption(), DataName(*data));
         // PLC, PMC, PFC: ROOT counts every object drawn with them (TPad::IncrementPaletteColor) and gives each a colour spread over the palette
         // when it is painted; the frame, a copy of the first data drawn twice, would take colours of its own and shift those of the data
         if (dataIndex == 0) {
@@ -830,6 +830,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         const bool keepStoredRanges = (dataIndex == 0) && data->GetDefinesFrame() && data->GetType() != "ratio";
         TObject* input = (dataIndex == 0 && emptyFrame) ? emptyFrame.get() : dataBuffer.at(data->GetDataSource()).at(data->GetName() + data->GetDataInfo().GetNameSuffix()).get();
         rawData = GetDataClone(input, data->GetProjInfo(), keepStoredRanges);
+        if (rawData && data->GetDataSource() == kUserGraphs) {
+          std::visit([&](auto* ptr) { ptr->SetName(DataName(*data).data()); }, *rawData);
+        }
       } catch (std::out_of_range&) {
         rawData = nullopt;
       }
@@ -839,7 +842,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         if (data->GetType() == "ratio") {
           std::visit([&](auto* ptr) { dropStoredFunctions(ptr, "division"); }, *rawData);
           auto ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          numeratorMeans = prepareOperand(*rawData, ratio->GetNumModify(), data->GetName());
+          numeratorMeans = prepareOperand(*rawData, ratio->GetNumModify(), DataName(*data));
           // a function as numerator (e.g. model / data) is sampled where the denominator has its values (the points of a graph, the bin
           // centres of a histogram, after the modifiers of the denominator): the division is then that of a graph without errors, which
           // takes the errors of the denominator; a function of the inputs only within its range, a formula of the plot definition everywhere
@@ -847,12 +850,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             optional<data_ptr_t> denom;
             try {
               denom = GetDataClone(dataBuffer.at(ratio->GetDenomDataSource()).at(ratio->GetDenomName() + ratio->GetDenomDataInfo().GetNameSuffix()).get(), ratio->GetDenomProjInfo());
+              if (denom && ratio->GetDenomDataSource() == kUserGraphs) {
+                std::visit([&](auto* ptr) { ptr->SetName(DataName(ratio->GetDenomName(), kUserGraphs).data()); }, *denom);
+              }
             } catch (std::out_of_range&) {
               denom = nullopt;
             }
             if (denom) {
               repeated = true;  // reported when it is divided by
-              prepareOperand(*denom, ratio->GetDenomModify(), ratio->GetDenomName());
+              prepareOperand(*denom, ratio->GetDenomModify(), DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()));
               repeated = false;
               const bool fullRange = (data->GetDataSource() == kUserFunctions);
               auto* sampled = new TGraph();
@@ -889,10 +895,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                       if (!std::isfinite(hi)) hi = axisHist_ptr->GetXaxis()->GetXmax();
                     }
                     if (!std::isfinite(lo) || !std::isfinite(hi)) {
-                      logger::error("Ratio {}: two formulas of the plot definition have no range to be divided in: set one with SetRangeX.", data->GetName());
+                      logger::error("Ratio {}: two formulas of the plot definition have no range to be divided in: set one with SetRangeX.", DataName(*data));
                       numeratorFailed = true;
                     } else if (lo >= hi) {
-                      logger::error("Ratio {}: the ranges of the functions do not overlap.", data->GetName());
+                      logger::error("Ratio {}: the ranges of the functions do not overlap.", DataName(*data));
                       numeratorFailed = true;
                     } else {
                       const int32_t npx = std::max((*func)->GetNpx(), 2);
@@ -1594,7 +1600,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     if (auto it = (options) ? options->find(*optionAlias) : decltype(options->end()){}; options && it != options->end()) {
       drawOption += it->second;
     } else {
-      if (dataIndex != 0) logger::warning("Drawing option {} is not available for {} {}, using the default of ROOT.", draw_option_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), data->GetName());
+      if (dataIndex != 0) logger::warning("Drawing option {} is not available for {} {}, using the default of ROOT.", draw_option_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), DataName(*data));
       alias = static_cast<draw_option_t>(255);
     }
   }
@@ -1625,8 +1631,8 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
     }
     if (hasAxes || reversed) {
-      if (dataIndex != 0 && hasAxes) logger::warning("Drawing option '{}' of {}: A (new axes) is removed, the axes of the pad are drawn by SciRooPlot.", *data->GetDrawOption(), data->GetName());
-      if (dataIndex != 0 && reversed) logger::warning("Drawing option '{}' of {}: RX and RY (reversed axes) are removed, SciRooPlot cannot reverse the axes of the frame.", *data->GetDrawOption(), data->GetName());
+      if (dataIndex != 0 && hasAxes) logger::warning("Drawing option '{}' of {}: A (new axes) is removed, the axes of the pad are drawn by SciRooPlot.", *data->GetDrawOption(), DataName(*data));
+      if (dataIndex != 0 && reversed) logger::warning("Drawing option '{}' of {}: RX and RY (reversed axes) are removed, SciRooPlot cannot reverse the axes of the frame.", *data->GetDrawOption(), DataName(*data));
       if (reversed) option.ReplaceAll("rx", "").ReplaceAll("ry", "");
       option.ReplaceAll("a", "");
       drawOption = ((dataIndex != 0) ? "SAME " : "") + string(option.Data());
@@ -1636,13 +1642,13 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   // the angle of the values written by TEXT (Data::SetTextAngle) is part of ROOT's option: TEXTnn, whole degrees from 0 to 90
   // (an angle given in the option string itself is kept); points_text writes its values itself, in the same range
   if (const auto& textAngle = data->GetTextAngle()) {
-    if (dataIndex != 0 && (*textAngle < 0.f || *textAngle > 90.f)) logger::warning("The text angle {} of {} is outside of the 0 to 90 degrees ROOT writes values at: it is drawn at the nearest end.", *textAngle, data->GetName());
+    if (dataIndex != 0 && (*textAngle < 0.f || *textAngle > 90.f)) logger::warning("The text angle {} of {} is outside of the 0 to 90 degrees ROOT writes values at: it is drawn at the nearest end.", *textAngle, DataName(*data));
     if (alias != points_text) {
       TString upper(drawOption);
       upper.ToUpper();
       const Ssiz_t pos = upper.Index("TEXT");
       if (pos == kNPOS) {
-        if (dataIndex != 0) logger::warning("The text angle of {} has no effect: it is drawn without values (drawing option text or points_text).", data->GetName());
+        if (dataIndex != 0) logger::warning("The text angle of {} has no effect: it is drawn without values (drawing option text or points_text).", DataName(*data));
       } else if (pos + 4 == upper.Length() || !std::isdigit(static_cast<unsigned char>(upper[pos + 4]))) {
         drawOption.insert(static_cast<size_t>(pos) + 4, std::to_string(std::lround(std::clamp(*textAngle, 0.f, 90.f))));
       }
@@ -1660,7 +1666,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     // (a flat colour map in a 3d frame lands at the wrong place, so there it is not drawn at all)
     if (data_ptr->InheritsFrom(TH2Poly::Class()) && !upper.Contains("GL")) {
       if (dataIndex != 0 && pad_ptr->GetView()) {
-        logger::warning("TH2Poly {} cannot be drawn in the 3d frame of its pad (ROOT draws polygon bins in 3d only with OpenGL). It is not drawn.", data->GetName());
+        logger::warning("TH2Poly {} cannot be drawn in the 3d frame of its pad (ROOT draws polygon bins in 3d only with OpenGL). It is not drawn.", DataName(*data));
         delete data_ptr;
         ++dataIndex;  // the next data keeps its number
         drawOption = "SAME ";
@@ -1668,7 +1674,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
       if (upper.Contains("LEGO") || upper.Contains("SURF")) {
         const char* scale = (upper.Contains("Z")) ? "Z" : "";
-        if (dataIndex != 0) logger::warning("Drawing option {} is not available for TH2Poly {} (ROOT draws polygon bins in 3d only with OpenGL), drawing it as col{}.", (optionAlias) ? draw_option_name(*optionAlias) : data->GetDrawOption().value_or(""), data->GetName(), (*scale) ? "z" : "");
+        if (dataIndex != 0) logger::warning("Drawing option {} is not available for TH2Poly {} (ROOT draws polygon bins in 3d only with OpenGL), drawing it as col{}.", (optionAlias) ? draw_option_name(*optionAlias) : data->GetDrawOption().value_or(""), DataName(*data), (*scale) ? "z" : "");
         drawOption = ((dataIndex != 0) ? "SAME COL" : "COL") + string(scale);
         alias = (*scale) ? colz : col;
         upper = drawOption;
@@ -1709,7 +1715,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       CopyStyle(*data_ptr, *polygon);
       // the area below the points needs them in the order of x: points in another order (a closed contour, a trajectory) would change their shape
       const double_t* x = data_ptr->GetX();
-      if (dataIndex != 0 && !std::is_sorted(x, x + data_ptr->GetN())) logger::warning("The points of graph {} are not in the order of x: they are sorted to draw the area below them.", data->GetName());
+      if (dataIndex != 0 && !std::is_sorted(x, x + data_ptr->GetN())) logger::warning("The points of graph {} are not in the order of x: they are sorted to draw the area below them.", DataName(*data));
       SortGraph(data_ptr);
       polygon->SetPoint(0, data_ptr->GetPointX(0), 0.);
       for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
@@ -1744,9 +1750,9 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         TString option = (optionAlias) ? TString(draw_option_name(*optionAlias).data()) : TString(drawOption).ReplaceAll("SAME", "");
         option = option.Strip(TString::kBoth);
         if (drawn3d) {
-          logger::warning("Data {} is drawn in 3d ({}) and needs a 3d frame: the first data of the pad drawn in 3d (e.g. lego, surf, triangles or points). It is not drawn.", data->GetName(), option.Data());
+          logger::warning("Data {} is drawn in 3d ({}) and needs a 3d frame: the first data of the pad drawn in 3d (e.g. lego, surf, triangles or points). It is not drawn.", DataName(*data), option.Data());
         } else {
-          logger::warning("Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the first data of the pad is drawn in 3d). It is not drawn.", data->GetName(), option.Data());
+          logger::warning("Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the first data of the pad is drawn in 3d). It is not drawn.", DataName(*data), option.Data());
         }
         delete data_ptr;
         ++dataIndex;  // the next data keeps its number
@@ -1755,7 +1761,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
       if (projection != padProjection) {
         auto drawn = [](const string& keyword) { return (keyword.empty()) ? string("without a map projection") : "as a map (" + keyword + ")"; };
-        logger::warning("Data {} is drawn {} and cannot be drawn in its pad, whose first data is drawn {}. It is not drawn.", data->GetName(), drawn(projection), drawn(padProjection));
+        logger::warning("Data {} is drawn {} and cannot be drawn in its pad, whose first data is drawn {}. It is not drawn.", DataName(*data), drawn(projection), drawn(padProjection));
         delete data_ptr;
         ++dataIndex;  // the next data keeps its number
         drawOption = "SAME ";
@@ -1778,7 +1784,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     // map of the pad (a 2d or 3d histogram, a 2d graph or a 2d function), the one it is made from, also fewer than ROOT's 20, so that the
     // scale shows the levels of the map; levels of later data (e.g. contour lines over a map) are their own, the frame takes them only if they are more
     if constexpr (!is_2d<data_type>() && !is_3d<data_type>()) {
-      if (data->GetContours() || data->GetNContours()) ReportIgnored(fmt::format("The contours of {}", data->GetName()), "only 2d and 3d data has colour levels");
+      if (data->GetContours() || data->GetNContours()) ReportIgnored(fmt::format("The contours of {}", DataName(*data)), "only 2d and 3d data has colour levels");
     }
     if constexpr (is_2d<data_type>() || is_hist_3d<data_type>()) {
       const bool firstMap = !mapDrawn;
@@ -1806,7 +1812,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
             // the colour scale from the levels: the pad gets a palette with one colour per level, the one the scale shows for it (TPaletteAxis:
             // level j has colour (j + 0.99) * nColors / nLevels), each repeated 200 times, since a box takes colour nColors * fraction - 1
             // (with fewer copies the boxes would be one level off)
-            if (contours) logger::warning("Colour levels of {}: the boxes of a 3d histogram are coloured in {} equal steps, not at the levels given.", data->GetName(), nLevels);
+            if (contours) logger::warning("Colour levels of {}: the boxes of a 3d histogram are coloured in {} equal steps, not at the levels given.", DataName(*data), nLevels);
             padSetup += fmt::format(
               " {{ const Int_t n0 = TColor::GetNumberOfColors(), nb = {}, k = 200; std::vector<Int_t> c(nb * k);"
               " for (Int_t i = 0; i < nb * k; ++i) c[i] = TColor::GetColorPalette(Int_t((std::min(nb - 1, (i + 1) / k) + 0.99) * n0 / nb));"
@@ -1858,7 +1864,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         if (!isPoly) statsHist->ClearUnderflowAndOverflow();
       }
     } else if (data->GetStatsFormat()) {
-      logger::warning("Statistics boxes are available only for histograms, not for {}.", data->GetName());
+      logger::warning("Statistics boxes are available only for histograms, not for {}.", DataName(*data));
     }
     // named as in the plot definition (<name>), without data source, request and projection
     data_ptr->SetName((std::to_string(dataIndex - hasRefFunc) + ":" + data_ptr->GetName()).data());
@@ -1980,7 +1986,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         mNotPainted[{pad_ptr, static_cast<uint16_t>(dataIndex - hasRefFunc)}] = {data_ptr, drawOption};
         mUndrawn.emplace_back(data_ptr);
       } else if (data_ptr->GetN() == 0) {
-        logger::warning("Graph {} has no points: it is not drawn.", data->GetName());
+        logger::warning("Graph {} has no points: it is not drawn.", DataName(*data));
         mUndrawn.emplace_back(data_ptr);
         // no legend row and no statistics box either, as for other data that is not drawn (TH2Poly in 3d)
         ++dataIndex;  // the next data keeps its number
@@ -2051,7 +2057,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         ApplyBoxStyle(*statsBox, stats);
         statsBoxes.emplace_back(stats, statsBox);
       } else {
-        logger::warning("ROOT did not create a statistics box for {}.", data->GetName());
+        logger::warning("ROOT did not create a statistics box for {}.", DataName(*data));
       }
     }
     if (alias == points_text) {
@@ -2126,7 +2132,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         }
         legendBoxVector[legendID - 1]->AddDataRow(*data->GetLegendLabel(), (dataIndex - hasRefFunc), legendEntry);
       } else {
-        logger::warning("The legend set for data {} in {} does not exist in its pad (SetLegend counts the legends added by the plot itself, not those of its base plot).", data->GetName(), data->GetDataSource());
+        logger::warning("The legend set for data {} in {} does not exist in its pad (SetLegend counts the legends added by the plot itself, not those of its base plot).", DataName(*data), data->GetDataSource());
       }
     }
   }
@@ -2221,8 +2227,8 @@ void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, draw_option_t ali
     if (projected) {
       TString upper(drawOption);
       upper.ToUpper();
-      if (hasRangeX || hasRangeY) logger::warning("The range of {} does not apply to a map projection, which must cover the range of the frame: set the range on the pad instead.", data->GetName());
-      if (upper.Contains("COL")) logger::warning("{}: ROOT paints COL with a map projection twice, unprojected below the projected map. For a colour scale add Z to the projection alone.", data->GetName());
+      if (hasRangeX || hasRangeY) logger::warning("The range of {} does not apply to a map projection, which must cover the range of the frame: set the range on the pad instead.", DataName(*data));
+      if (upper.Contains("COL")) logger::warning("{}: ROOT paints COL with a map projection twice, unprojected below the projected map. For a colour scale add Z to the projection alone.", DataName(*data));
     }
     if constexpr (is_graph_2d<data_type>()) {
       if (!pad_ptr->GetView()) {
@@ -2243,7 +2249,7 @@ void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, draw_option_t ali
             if (!outside(i)) ++nInside;
           }
           if (nInside == 0) {
-            logger::warning("The range of {} contains none of its points: all points are drawn.", data->GetName());
+            logger::warning("The range of {} contains none of its points: all points are drawn.", DataName(*data));
           } else {
             for (int32_t i = data_ptr->GetN() - 1; i >= 0; --i) {  // from the back, so that the indices of the remaining points stay valid
               if (outside(i)) RemoveGraphPoint(data_ptr, i);
@@ -2254,7 +2260,7 @@ void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, draw_option_t ali
     }
     if (!pad_ptr->GetView() || projected) {
       if (hasRangeX && !projected && !is_graph_2d<data_type>() && !SetBinRange(data_ptr->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX())) {
-        logger::warning("The x range of {} contains none of its bins: all bins are drawn.", data->GetName());
+        logger::warning("The x range of {} contains none of its bins: all bins are drawn.", DataName(*data));
       }
       if (cutXAtFrame) LimitToFrame(data_ptr->GetXaxis(), axisHist_ptr->GetXaxis());
     }
@@ -2270,12 +2276,12 @@ void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, draw_option_t ali
       if (data->GetNpy()) data_ptr->SetNpy(*data->GetNpy());
     }
   } else if (data->GetNpx()) {
-    logger::warning("SetNpx applies only to functions, not to {}.", data->GetName());
+    logger::warning("SetNpx applies only to functions, not to {}.", DataName(*data));
   }
   if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
     if (!pad_ptr->GetView() || projected) {
       if (hasRangeY && !projected && !SetBinRange(data_ptr->GetYaxis(), data->GetMinRangeY(), data->GetMaxRangeY())) {
-        logger::warning("The y range of {} contains none of its bins: all bins are drawn.", data->GetName());
+        logger::warning("The y range of {} contains none of its bins: all bins are drawn.", DataName(*data));
       }
       if (cutYAtFrame) LimitToFrame(data_ptr->GetYaxis(), axisHist_ptr->GetYaxis());
     }
@@ -3405,7 +3411,7 @@ std::pair<double_t, double_t> PlotPainter::FuncRange(const item_state_t& state, 
   if (userMin) min = *userMin;
   if (userMax) max = *userMax;
   if (isSampledFunc && (min < funcMin || max > funcMax)) {
-    if (userMin || userMax) Warn(state, "Function {} has no values outside of [{:g}, {:g}] in {}: it is stored as values sampled over this range.", data->GetName(), funcMin, funcMax, axisLabel);
+    if (userMin || userMax) Warn(state, "Function {} has no values outside of [{:g}, {:g}] in {}: it is stored as values sampled over this range.", DataName(*data), funcMin, funcMax, axisLabel);
     min = std::max(min, funcMin);
     max = std::min(max, funcMax);
   }
@@ -3446,7 +3452,7 @@ std::pair<double_t, double_t> PlotPainter::FiniteRange(const item_state_t& state
   if (!nNaN) return {min, max};
   if (first < 0 || gap) {
     warn("Function {} is NaN in parts of [{:g}, {:g}] that are not one piece: ROOT cannot draw it, give it a range where it is a number (SetRangeX).",
-         state.data->GetName(), min, max);
+         DataName(*state.data), min, max);
     return {min, max};
   }
   // the end between a sample giving NaN (outside) and one giving a number (inside)
@@ -3459,7 +3465,7 @@ std::pair<double_t, double_t> PlotPainter::FiniteRange(const item_state_t& state
   };
   const double_t newMin = (first > 0) ? bisect(min + (first - 1) * step, min + first * step) : min;
   const double_t newMax = (last < nSamples - 1) ? bisect(min + (last + 1) * step, min + last * step) : max;
-  warn("Function {} is NaN in parts of [{:g}, {:g}]: drawn over [{:g}, {:g}], where it is a number.", state.data->GetName(), min, max, newMin, newMax);
+  warn("Function {} is NaN in parts of [{:g}, {:g}]: drawn over [{:g}, {:g}], where it is a number.", DataName(*state.data), min, max, newMin, newMax);
   return {newMin, newMax};
 }
 
@@ -3472,6 +3478,22 @@ template <typename... Args>
 void PlotPainter::Warn(const item_state_t& state, Args&&... args)
 {
   if (state.padState.dataIndex != 0 && !state.repeated) logger::warning(std::forward<decltype(args)>(args)...);
+}
+
+//**************************************************************************************************
+/**
+ * The name of data in messages: points added with AddPoints are stored under their coordinates, which are named by their label
+ * or their number and x range instead.
+ */
+//**************************************************************************************************
+string PlotPainter::DataName(const string& name, const string& dataSource, const optional<string>& label)
+{
+  if (dataSource != kUserGraphs) return name;
+  if (label && !label->empty()) return fmt::format("points '{}'", *label);
+  const string xValues = name.substr(0, name.find(';'));
+  const size_t lastComma = xValues.rfind(',');
+  const size_t nPoints = std::count(xValues.begin(), xValues.end(), ',') + 1;
+  return fmt::format("points ({} at x = {} to {})", nPoints, xValues.substr(0, xValues.find(',')), (lastComma == string::npos) ? xValues : xValues.substr(lastComma + 1));
 }
 
 //**************************************************************************************************
@@ -4147,14 +4169,17 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
     optional<data_ptr_t> rawDenomData;
     try {
       rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomDataSource()).at(data_as_ratio->GetDenomName() + data_as_ratio->GetDenomDataInfo().GetNameSuffix()).get(), data_as_ratio->GetDenomProjInfo());
+      if (rawDenomData && data_as_ratio->GetDenomDataSource() == kUserGraphs) {
+        std::visit([&](auto* ptr) { ptr->SetName(DataName(data_as_ratio->GetDenomName(), kUserGraphs).data()); }, *rawDenomData);
+      }
     } catch (std::out_of_range&) {
       rawDenomData = nullopt;
     }
 
     if (rawDenomData) {
-      denominatorMeans = prepareOperand(*rawDenomData, data_as_ratio->GetDenomModify(), data_as_ratio->GetDenomName());
+      denominatorMeans = prepareOperand(*rawDenomData, data_as_ratio->GetDenomModify(), DataName(data_as_ratio->GetDenomName(), data_as_ratio->GetDenomDataSource()));
       if (binomialErrors && (numeratorMeans || denominatorMeans)) {
-        warn("Ratio {}: binomial errors (SetCorrelated) are not defined for the mean values of a profile, ignoring.", data->GetName());
+        warn("Ratio {}: binomial errors (SetCorrelated) are not defined for the mean values of a profile, ignoring.", DataName(*data));
         binomialErrors = false;
       }
       std::visit(processDenominator, *rawDenomData);
@@ -4178,7 +4203,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
     }
   }  // end ratio code
 
-  removeInvalid(data_ptr, data->GetName());
+  removeInvalid(data_ptr, DataName(*data));
 
   applyModifiers(data_ptr, *data);
   // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
@@ -4224,7 +4249,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       return;
     }
     if (data->GetMinRangeY() || data->GetMaxRangeY()) {
-      logger::warning("The y range of {} is not applied with drawing option {}: it is cut at the frame.", data->GetName(), draw_option_name(clippedAlias));
+      logger::warning("The y range of {} is not applied with drawing option {}: it is cut at the frame.", DataName(*data), draw_option_name(clippedAlias));
     }
     if (!pad_ptr->GetView()) {
       if (data->GetMinRangeX() || data->GetMaxRangeX()) SetBinRange(histogram->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
@@ -4248,7 +4273,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
           drawClipped(histogram, *optionAlias);
           return;
         }
-        if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), data->GetName());
+        if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), DataName(*data));
         optionAlias.reset();
       }
     }
@@ -4270,7 +4295,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
         drawItem(hist, optionAlias);
         return;
       }
-      if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), data->GetName());
+      if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), DataName(*data));
       optionAlias.reset();
     }
   }

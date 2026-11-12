@@ -322,6 +322,8 @@ class PlotPainter
   static bool IsFlatPolar(const std::string& option);
   static bool IsColorBoxes3d(const std::string& option);
   static bool IsView3d(const std::string& option);
+  static std::string DataName(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = std::nullopt);
+  static std::string DataName(const Plot::Pad::Data& data) { return DataName(data.GetName(), data.GetDataSource(), data.GetLegendLabel()); }
   static std::pair<double_t, double_t> FuncRange(const item_state_t& state, char axisLabel, double_t frameMin, double_t frameMax, double_t funcMin, double_t funcMax,
                                                  const std::optional<double_t>& userMin, const std::optional<double_t>& userMax);
   static std::pair<double_t, double_t> FiniteRange(const item_state_t& state, TF1* func, double_t min, double_t max, bool forFrame);
