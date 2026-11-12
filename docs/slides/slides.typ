@@ -1732,7 +1732,7 @@
 
       - Filter rows, define derived quantities, and use arbitrary C++ expressions of the columns for projections and selections.
 
-      - `Join()` adds the columns of another tree, row by row or matched by up to two integer key columns (rows without a match are skipped).
+      - `Join()` adds the columns of another tree, row by row or matched by up to two integer key columns, `JoinByIndex()` at the row an index column holds (rows without a match are skipped).
 
       - Entry ranges can be selected to process only subsets of the input.
     ],
@@ -2204,6 +2204,7 @@
         [`Define(key, value)`], [Define a derived variable for use in expressions.],
         [`Filter(filter)`], [Apply a row-selection expression, e.g. `"eta > 0"`. Chainable.],
         [`Join(tree, keys, alias)`], [Add the columns of another tree, e.g. `Join("scores")` row by row or #if lang == "py" [`Join(["events", "src"], ["run", "event"])`] else [`Join({"events", "src"}, {"run", "event"})`] by key (rows without a match are skipped); columns as `"scores.col"`. Chainable.],
+        [`JoinByIndex(tree, indexColumn, alias)`], [Add the columns of the row an index column holds, counted within the joined tree of the same input, e.g. `JoinByIndex("O2collision", "fIndexCollisions")` for AO2D folders.],
         [`Entries(n)` / `Entries(min, max)`], [Limit processing to the first N entries or a range.],
       ), text-size: 11.5pt)
     ],

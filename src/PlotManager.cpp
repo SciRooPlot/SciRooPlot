@@ -31,6 +31,7 @@
 #include <TBranch.h>
 #include <TCanvas.h>
 #include <TChain.h>
+#include <TChainElement.h>
 #include <TClass.h>
 #include <TClonesArray.h>
 #include <TCollection.h>
@@ -70,7 +71,9 @@
 #include <TStyle.h>
 #include <TSystem.h>
 #include <TTree.h>
+#include <TTreeFormula.h>
 #include <TTreeIndex.h>
+#include <TVirtualIndex.h>
 #include <TVirtualX.h>
 #include <termios.h>
 
@@ -3637,7 +3640,8 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
 
 //**************************************************************************************************
 /**
- * Join a tree to a chain: its rows are matched with the rows of the chain either by their number or by the values of key columns.
+ * Join a tree to a chain: its rows are matched with the rows of the chain either by their number, by the values of key columns
+ * or by the row number an index column of the chain holds (counted within the joined tree beside each part of the chain).
  * Returns why this is not possible (if so).
  */
 //**************************************************************************************************
@@ -3664,9 +3668,83 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     if (!join.keys.empty() || !tree || !tree->TestBit(TTree::kEntriesReshuffled)) return nullopt;
     return fmt::format("the entries of {} were reshuffled when it was written (multi-threaded Snapshot), it can only be joined by key", description);
   };
-  if (auto error = reshuffled(firstTree, treeName)) return error;
+  // joined by an index column only the order of the joined tree matters
+  if (auto error = (join.indexColumn.empty()) ? reshuffled(firstTree, treeName) : nullopt) return error;
+  // rows of the joined chain by the row number the index column of the chain holds, counted within the joined tree beside the chain's current tree
+  // (TTreeIndex can only look up values); trees are recognised by file and path, since a multi-threaded RDataFrame rebuilds both chains without empty trees
+  class RowIndex : public TVirtualIndex
+  {
+   public:
+    RowIndex(TTree* joinedChain, const string& indexColumn, map<string, string> joinedTreeOf) : mIndexColumn(indexColumn), mJoinedTreeOf(std::move(joinedTreeOf)) { fTree = joinedChain; }
+    RowIndex(const RowIndex& other) : TVirtualIndex(), mIndexColumn(other.mIndexColumn), mJoinedTreeOf(other.mJoinedTreeOf) { fTree = other.fTree; }
+    RowIndex& operator=(const RowIndex&) = delete;
+    ~RowIndex() override { delete mFormula; }
+    TObject* Clone(const char*) const override { return new RowIndex(*this); }  // RDataFrame copies the index for each thread
+    Long64_t GetEntryNumberFriend(const TTree* parent) override
+    {
+      if (!parent) return -3;
+      if (parent->GetReadEntry() >= parent->GetEntriesFast()) return -2;
+      if (!mFormula || mFormula->GetTree() != parent) {
+        delete mFormula;
+        mFormula = new TTreeFormula("RowIndex", mIndexColumn.data(), const_cast<TTree*>(parent));
+        mFormula->SetQuickLoad(true);
+        mTreeNumber = -1;
+      }
+      // where the rows of the joined tree beside the current tree of the chain start in the joined chain
+      if (parent->GetTreeNumber() != mTreeNumber) {
+        mTreeNumber = parent->GetTreeNumber();
+        mOffset = 0;
+        mNRows = 0;
+        auto* chain = dynamic_cast<const TChain*>(parent);
+        auto* joinedChain = dynamic_cast<TChain*>(fTree);
+        auto* element = (chain && joinedChain) ? chain->GetListOfFiles()->At(mTreeNumber) : nullptr;
+        auto joinedTree = (element) ? mJoinedTreeOf.find(string(element->GetTitle()) + "|" + element->GetName()) : mJoinedTreeOf.end();
+        if (joinedTree != mJoinedTreeOf.end()) {
+          Long64_t offset = 0;
+          for (auto* joinedElement : *joinedChain->GetListOfFiles()) {
+            const Long64_t nRows = static_cast<TChainElement*>(joinedElement)->GetEntries();
+            if (string(joinedElement->GetTitle()) + "|" + joinedElement->GetName() == joinedTree->second) {
+              mOffset = offset;
+              mNRows = nRows;
+              break;
+            }
+            offset += nRows;
+          }
+        }
+      }
+      const auto row = static_cast<Long64_t>(mFormula->EvalInstance());
+      return (row >= 0 && row < mNRows) ? mOffset + row : -1;
+    }
+    void UpdateFormulaLeaves(const TTree* parent) override
+    {
+      if (!mFormula) return;
+      mFormula->SetTree(const_cast<TTree*>(parent));
+      mFormula->UpdateFormulaLeaves();
+    }
+    void SetTree(TTree* tree) override
+    {
+      fTree = tree;
+      mTreeNumber = -1;
+    }
+    void Append(const TVirtualIndex*, bool) override {}
+    Long64_t GetEntryNumberWithIndex(Long64_t, Long64_t) const override { return -1; }
+    Long64_t GetEntryNumberWithBestIndex(Long64_t, Long64_t) const override { return -1; }
+    const char* GetMajorName() const override { return mIndexColumn.data(); }
+    const char* GetMinorName() const override { return ""; }
+    bool IsValidFor(const TTree*) override { return true; }
+    Long64_t GetN() const override { return 0; }
+
+   private:
+    string mIndexColumn;
+    map<string, string> mJoinedTreeOf;  // tree -> its joined tree, each as file|path
+    TTreeFormula* mFormula{};
+    Int_t mTreeNumber{-1};
+    Long64_t mOffset{};
+    Long64_t mNRows{};
+  };
   auto joinedChain = std::make_shared<TChain>(join.GetAlias().data());
   const TTree* firstJoinedTree{};
+  map<string, string> joinedTreeOf;  // join by an index column: part of the chain -> its joined tree, each as file|path
   if (join.dataSource.empty()) {
     // taken from each input of the tree: the name of the joined tree starts where the name of the tree starts
     const auto nLevels = std::count(treeName.begin(), treeName.end(), '/') + 1;
@@ -3679,6 +3757,15 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       auto* joinedTree = getTree(treeInput.file, path);
       if (!joinedTree) return fmt::format("{}:{} does not exist", treeInput.file, path);
       if (!firstJoinedTree) firstJoinedTree = joinedTree;
+      if (!join.indexColumn.empty()) {
+        // an index column gives the row within the joined tree of the same input: an empty one is left out (ROOT skips it with a warning)
+        if (auto error = reshuffled(joinedTree, treeInput.file + ":" + path)) return error;
+        if (const Long64_t nRows = joinedTree->GetEntries(); nRows > 0) {
+          joinedChain->AddFile(treeInput.file.data(), nRows, path.data());
+          joinedTreeOf[treeInput.file + "|" + treeInput.treePath] = treeInput.file + "|" + path;
+        }
+        continue;
+      }
       // without keys the rows of the trees in each input belong together
       if (join.keys.empty()) {
         auto* tree = getTree(treeInput.file, treeInput.treePath);
@@ -3703,7 +3790,18 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       return fmt::format("it has {} rows, {} has {}", joinedChain->GetEntries(), treeName, chain.GetEntries());
     }
   }
-  if (!join.keys.empty()) {
+  if (!join.indexColumn.empty()) {
+    // the index column holds a single integer per row
+    auto* branch = (firstTree) ? firstTree->GetBranch(join.indexColumn.data()) : nullptr;
+    auto* leaf = (branch && branch->GetNleaves() == 1) ? static_cast<TLeaf*>(branch->GetListOfLeaves()->At(0)) : nullptr;
+    if (!leaf) return fmt::format("{} has no column {}", treeName, join.indexColumn);
+    const string type = leaf->GetTypeName();
+    if (str_contains(type, "Float") || str_contains(type, "Double") || str_contains(type, "float") || str_contains(type, "double") || leaf->GetLenStatic() > 1 || leaf->GetLeafCount()) {
+      return fmt::format("index column {} of {} is of type {}, but it must hold one integer per row", join.indexColumn, treeName, type);
+    }
+    if (joinedTreeOf.empty()) return fmt::format("it has no rows in any input of {}", treeName);
+    joinedChain->SetTreeIndex(new RowIndex(joinedChain.get(), join.indexColumn, std::move(joinedTreeOf)));  // owned by the chain
+  } else if (!join.keys.empty()) {
     for (const auto& key : join.keys) {
       for (const auto* tree : {static_cast<const TTree*>(firstTree), firstJoinedTree}) {
         // keys are top-level columns with a single value, the join filter addresses the first one as alias.key
@@ -3910,6 +4008,16 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       if (joins) {
         for (const auto& join : *joins) {
           if (!join.keys.empty()) joinKeyColumns.push_back(join.GetAlias() + "." + join.keys[0]);
+          // joined by an index column: any column of the joined tree has no value without a match
+          if (!join.indexColumn.empty()) {
+            const string prefix = join.GetAlias() + ".";
+            for (const auto& column : df->GetColumnNames()) {
+              if (str_starts_with(column, prefix)) {
+                joinKeyColumns.push_back(column);
+                break;
+              }
+            }
+          }
         }
       }
       ROOT::RDF::RNode base = *df;

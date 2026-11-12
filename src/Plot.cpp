@@ -3175,7 +3175,9 @@ auto Plot::Pad::Data::ReadJoins(const ptree& tree, const string& label) -> optio
   if (!strs) return nullopt;
   vector<data_info_t::join_t> joins;
   for (const auto& str : *strs) {
-    if (std::count(str.begin(), str.end(), '|') != 3) logger::throw_invalid_argument("Bad value '{}' of {}: tree|data source|keys|alias", str, label);
+    if (const auto nBars = std::count(str.begin(), str.end(), '|'); nBars != 3 && nBars != 4) {
+      logger::throw_invalid_argument("Bad value '{}' of {}: tree|data source|keys|alias[|index column]", str, label);
+    }
     joins.push_back(data_info_t::join_t::FromString(str));
   }
   return joins;
@@ -3191,10 +3193,16 @@ void Plot::Pad::Data::PutJoins(ptree& tree, const optional<vector<data_info_t::j
 }
 auto Plot::Pad::Data::Join(const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias) -> decltype(*this)
 {
-  AddJoin(mDataInfo, mName, tree, keys, alias);
+  AddJoin(mDataInfo, mName, tree, keys, alias, "");
   return *this;
 }
-void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const std::string& name, const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias)
+auto Plot::Pad::Data::JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias) -> decltype(*this)
+{
+  AddJoin(mDataInfo, mName, tree, {}, alias, indexColumn);
+  return *this;
+}
+void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const std::string& name, const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias,
+                              const std::string& indexColumn)
 {
   // names of columns and aliases are used in expressions
   auto isIdentifier = [](const std::string& str) {
@@ -3215,18 +3223,25 @@ void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const std::string& name, co
   for (const auto& key : keys) {
     if (!isIdentifier(key)) logger::throw_invalid_argument("Cannot join tree {} to {}: '{}' is not a column name.", tree.name, name, key);
   }
+  if (!indexColumn.empty() && !tree.dataSource.empty()) {
+    logger::throw_invalid_argument("Cannot join tree {} from {} to {}: by an index column only a tree of the same data source can be joined.", tree.name, tree.dataSource, name);
+  }
+  if (!indexColumn.empty() && !isIdentifier(indexColumn)) {
+    logger::throw_invalid_argument("Cannot join tree {} to {}: '{}' is not a column name.", tree.name, name, indexColumn);
+  }
   if (keys.size() == 2 && keys[0] == keys[1]) {
     logger::throw_invalid_argument("Cannot join tree {} to {}: key column {} is given twice.", tree.name, name, keys[0]);
   }
   if (!alias.empty() && !isIdentifier(alias)) {
     logger::throw_invalid_argument("Cannot join tree {} to {}: alias '{}' must consist of letters, digits and underscores only and must not start with a digit.", tree.name, name, alias);
   }
-  data_info_t::join_t join{tree.name, tree.dataSource, keys, alias};
+  data_info_t::join_t join{tree.name, tree.dataSource, keys, alias, indexColumn};
   if (!isIdentifier(join.GetAlias())) {
     logger::throw_invalid_argument("Cannot join tree {} to {}: its columns cannot be named {}.column, please specify an alias.", tree.name, name, join.GetAlias());
   }
   // the columns of each tree must be distinguishable by their prefix (for the tree itself this is checked when joining, since its name can still change)
   auto suggestAlias = [&]() {
+    if (!indexColumn.empty()) return fmt::format("JoinByIndex(\"{}\", \"{}\", \"{}\")", join.tree, indexColumn, "myAlias");
     return fmt::format("Join({}, {{{}}}, \"{}\")", (join.dataSource.empty()) ? "\"" + join.tree + "\"" : fmt::format("{{\"{}\", \"{}\"}}", join.tree, join.dataSource),
                        (keys.empty()) ? "" : "\"" + join_strings(keys, "\", \"") + "\"", "myAlias");
   };
@@ -3310,7 +3325,7 @@ string Plot::Pad::Data::data_info_t::join_t::GetAlias() const
 }
 string Plot::Pad::Data::data_info_t::join_t::ToString() const
 {
-  return tree + "|" + dataSource + "|" + join_strings(keys, ",") + "|" + alias;
+  return tree + "|" + dataSource + "|" + join_strings(keys, ",") + "|" + alias + ((indexColumn.empty()) ? "" : "|" + indexColumn);
 }
 auto Plot::Pad::Data::data_info_t::join_t::FromString(const string& str) -> join_t
 {
@@ -3322,8 +3337,8 @@ auto Plot::Pad::Data::data_info_t::join_t::FromString(const string& str) -> join
       fields.back() += c;
     }
   }
-  fields.resize(4);
-  join_t join{fields[0], fields[1], {}, fields[3]};
+  fields.resize(5);
+  join_t join{fields[0], fields[1], {}, fields[3], fields[4]};
   if (!fields[2].empty()) join.keys = util::split_string(fields[2], ',');
   return join;
 }
@@ -3332,7 +3347,11 @@ string Plot::Pad::Data::data_info_t::join_t::GetDescription() const
   string description = tree;
   if (!dataSource.empty()) description += " from " + dataSource;
   if (!alias.empty()) description += " as " + alias;
-  description += (keys.empty()) ? " (row by row)" : " (by " + join_strings(keys, ", ") + ")";
+  if (!indexColumn.empty()) {
+    description += " (row given by " + indexColumn + ")";
+  } else {
+    description += (keys.empty()) ? " (row by row)" : " (by " + join_strings(keys, ", ") + ")";
+  }
   return description;
 }
 
@@ -3700,6 +3719,10 @@ auto Plot::Pad::Ratio::Filter(const std::string& filter) -> decltype(*this)
 auto Plot::Pad::Ratio::Join(const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias) -> decltype(*this)
 {
   return SelectInput("Join", [&]() { Data::Join(tree, keys, alias); });
+}
+auto Plot::Pad::Ratio::JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias) -> decltype(*this)
+{
+  return SelectInput("JoinByIndex", [&]() { Data::JoinByIndex(tree, indexColumn, alias); });
 }
 auto Plot::Pad::Ratio::Entries(uint32_t nEntries) -> decltype(*this)
 {

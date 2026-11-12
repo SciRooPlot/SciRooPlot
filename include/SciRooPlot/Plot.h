@@ -985,6 +985,9 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
     std::string dataSource;
   };
   virtual Data& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "");
+  // tree of the same data source whose row is the number an integer column of this tree holds, counted within the joined tree beside each
+  // part of the tree (e.g. AO2D: JoinByIndex("O2collision", "fIndexCollisions") per DF_ folder); rows without a match are skipped
+  virtual Data& JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias = "");
   virtual Data& Entries(uint32_t nEntries);
   virtual Data& Entries(uint32_t entryMin, uint32_t entryMax);
 
@@ -1091,8 +1094,9 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
       std::string dataSource;           // empty: the data source of the tree
       std::vector<std::string> keys{};  // columns with equal values in matching rows (empty: rows are matched by their number)
       std::string alias;                // empty: last part of the tree name
+      std::string indexColumn{};        // column of the tree holding the row number in the joined tree (empty: by keys or row by row)
       std::string GetAlias() const;     // prefix of the columns of the joined tree
-      std::string ToString() const;     // stored form: tree|dataSource|key1,key2|alias
+      std::string ToString() const;     // stored form: tree|dataSource|key1,key2|alias[|indexColumn]
       static join_t FromString(const std::string& str);
       std::string GetDescription() const;
       bool operator==(const join_t& other) const { return ToString() == other.ToString(); }
@@ -1115,7 +1119,8 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   };
   static std::optional<std::vector<data_info_t::join_t>> ReadJoins(const boost::property_tree::ptree& tree, const std::string& label);
   static void PutJoins(boost::property_tree::ptree& tree, const std::optional<std::vector<data_info_t::join_t>>& joins, const std::string& label);
-  static void AddJoin(data_info_t& dataInfo, const std::string& name, const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias);
+  static void AddJoin(data_info_t& dataInfo, const std::string& name, const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias,
+                      const std::string& indexColumn);
   static void ReadDataInfo(const boost::property_tree::ptree& tree, data_info_t& dataInfo, const std::string& prefix);
   static void PutDataInfo(boost::property_tree::ptree& tree, const data_info_t& dataInfo, const std::string& prefix);
   static void ReadProjInfo(const boost::property_tree::ptree& tree, std::optional<proj_info_t>& projInfo, const std::string& prefix);
@@ -1321,6 +1326,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& Define(const std::string& key, const std::string& value) override;
   Ratio& Filter(const std::string& filter) override;
   Ratio& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "") override;
+  Ratio& JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias = "") override;
   Ratio& Entries(uint32_t nEntries) override;
   Ratio& Entries(uint32_t entryMin, uint32_t entryMax) override;
 

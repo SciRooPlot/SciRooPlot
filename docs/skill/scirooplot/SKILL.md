@@ -206,6 +206,7 @@ Incompatible binnings are divided via spline interpolation (a histogram through 
 .Join("scores")                                  // row by row, columns as 'scores.col' or 'col' if unique
 .Join("truth/events", {}, "truth")               // tree in another folder, with alias
 .Join({"events", "otherSource"}, {"run", "event"})   // from another data source, matched by up to two integer keys
+.JoinByIndex("O2collision", "fIndexCollisions")  // the row a column of the tree holds, counted within the joined tree of the same input (AO2D: inputs "AO2D.root:DF_*")
 ```
 Column expressions and filters are C++ expressions over the column/leaf names (evaluated with RDataFrame when the plot is generated); as in C++, an integer division by zero (`a/b` of integer columns) stops the program, so divide as floating point (`a/double(b)`). Without explicit bins, 100 bins over the observed range are used (integer columns: bins of whole-number width). RNTuples (ROOT's newer table format, e.g. written by uproot's `f["t"] = df`) work like trees, but cannot be joined and are chained only when they have the same path in every file.
 

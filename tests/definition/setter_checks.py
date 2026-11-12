@@ -77,6 +77,8 @@ INVALID = {
     "keys": [["k1", "k1"], ["a b"], ["k1", "k2", "x"]],
     "alias": ["1x"],
     "tree": [""],
+    "JoinByIndex.tree": ["", ["t2", "s2"]],  # by an index column only from the same data source
+    "indexColumn": ["a b"],
     "symbolElements": ["zq"],
     "tickOrientation": ["x"],
     "angle": [NAN],

@@ -1,15 +1,17 @@
 """Join gives the rows of the joined tree beside those of the tree, as computed from the raw arrays: row by row from the same data source
 (every input of the tree holds its joined tree, in a folder relative to where the tree is), from another data source (its rows in the order
 of its inputs, however they are split into files), by one or two integer keys from another data source (rows of the tree without a match
-skipped and counted in the reading summary; the joined data source may be restricted to a folder, the joined tree named by a path).
+skipped and counted in the reading summary; the joined data source may be restricted to a folder, the joined tree named by a path), by
+an index column holding the row number within the joined tree of the same input (AO2D-like DF_ folders: rows whose index is -1 or beyond
+the joined tree skipped, folders that are empty or have no joined rows, read in parallel).
 Columns of the joined tree are reached as alias.column, or by their name where the tree has no column of that name (the tree's own column
 wins); filters (also on C strings of the joined tree), defines, weights, entry ranges (counted over the rows of the tree, before rows without a match are skipped) and ratios
 work on joined columns; two joins at once, and requests with other joins on the same tree, each give their own result. A join that is
 not possible is reported with the reason and loses the plot: keys appearing more than once, keys that are no integers or reach 2^53,
 row counts that differ (per input, or in total from another data source), a joined tree or key column missing (also in only one input),
 a tree written by a multi-threaded Snapshot joined row by row, a tree in a list, a table or an RNTuple, an undefined data source, an
-alias equal to the name of the tree.
-Covers: joins (row by row, by key, inner join, shuffled tracks, entry ranges, ratios, the error cases).
+alias equal to the name of the tree, an index column missing or not integer, a joined tree without rows in any input.
+Covers: joins (row by row, by key, by an index column, inner join, shuffled tracks, entry ranges, ratios, the error cases).
 """
 
 import random
@@ -99,6 +101,32 @@ f.Close()
 write_csv(p.path("table.csv"), {"a": np.array([1, 3]), "b": np.array([2, 4])})
 write_tree(p.path("rn.root"), {"x": E["x"][:10]}, name="events", ntuple=True)
 write_tree(p.path("rn.root"), {"score": E["score"][:10]}, name="scores", ntuple=True)
+# AO2D-like files: tracks refer to the collisions of their DF_ folder by row number (-1 or beyond the collisions: no collision),
+# some folders empty or without collisions; the folders of each file are the inputs
+ao2d = [p.path("AO2D_1.root"), p.path("AO2D_2.root")]
+AO = {k: [] for k in ("pt", "idx", "posZ", "mult")}
+for path, nColls in zip(ao2d, ((40, 0, 0, 25), (0, 60))):
+    for d, nColl in enumerate(nColls):
+        folder = f"DF_{d}"
+        posZ, mult = rng.uniform(-10, 10, nColl), rng.integers(1, 100, nColl).astype(np.int32)
+        nTrk = 0 if (path, d) == (ao2d[0], 1) else int(rng.integers(100, 400))
+        idx = rng.integers(-1, nColl + 3, nTrk).astype(np.int32)
+        pt = rng.exponential(1.0, nTrk)
+        write_tree(path, {"fPosZ": posZ, "fMult": mult}, name="O2collision", folder=folder)
+        write_tree(path, {"fIndexCollisions": idx, "fPt": pt}, name="O2track", folder=folder)
+        ok = (idx >= 0) & (idx < nColl)
+        AO["pt"].extend(pt.tolist())
+        AO["idx"].extend(np.where(ok, idx, -1).tolist())
+        AO["posZ"].extend(np.where(ok, posZ[np.clip(idx, 0, max(nColl - 1, 0))] if nColl else 0.0, np.nan).tolist())
+        AO["mult"].extend(np.where(ok, mult[np.clip(idx, 0, max(nColl - 1, 0))] if nColl else 0, 0).tolist())
+AO = {k: np.array(v) for k, v in AO.items()}
+aoMatched = AO["idx"] >= 0
+noColl = p.path("AO2D_none.root")
+for d in range(2):
+    write_tree(noColl, {"fPosZ": np.zeros(0)}, name="O2collision", folder=f"DF_{d}")
+    write_tree(noColl, {"fIndexCollisions": np.zeros(5, dtype=np.int32), "fPt": np.ones(5)}, name="O2track", folder=f"DF_{d}")
+for name, inputs in (("ao2d", [f"{path}:DF_*" for path in ao2d]), ("aoNone", f"{noColl}:DF_*")):
+    p.pm.AddDataSource(name, inputs)
 for name, inputs in (("A", A), ("other", other), ("trk", tracks), ("evInfo", info), ("gid", items), ("mt", mt), ("tl", listFile), ("csv", p.path("table.csv")), ("rn", p.path("rn.root"))):
     p.pm.AddDataSource(name, inputs)
 
@@ -172,6 +200,13 @@ case("a ratio joining both sides", ratio, lambda pad: pad.AddRatio(["events", "A
 ratio = H(20, 0, 1, score)
 ratio.Divide(H(20, 0, 1, otherScores))
 case("a ratio joining the numerator only", ratio, lambda pad: pad.AddRatio(["events", "A"], ["scores", "other"]).Numer().Join("scores").Project1D(("score", 20, [0.0, 1.0])).Denom().Project1D(("score", 20, [0.0, 1.0])), contents=True)
+aoPt, aoZ, aoMult = AO["pt"][aoMatched], AO["posZ"][aoMatched], AO["mult"][aoMatched]
+case("by an index column: a column of the joined tree in the same DF folder", H(20, -10, 10, aoZ), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPosZ", 20, [-10.0, 10.0])))
+case("by an index column: rows without a row in the joined tree are skipped", H(30, 0, 6, aoPt), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPt", 30, [0.0, 6.0])))
+case("by an index column: an expression of both trees, with an alias", H(30, 0, 300, aoPt * aoMult), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions", "coll").Project1D(("fPt * coll.fMult", 30, [0.0, 300.0])))
+case("by an index column: a filter on a joined column", H(30, 0, 6, aoPt[aoZ > 0]), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPt", 30, [0.0, 6.0])).Filter("fPosZ > 0"))
+first = aoMatched & (np.arange(len(AO["pt"])) < 500)
+case("by an index column: the first entries of the tree, then rows without a match skipped", H(30, 0, 6, AO["pt"][first]), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPt", 30, [0.0, 6.0])).Entries(500))
 
 FAILING = {  # what: (setup, the reason)
     "keys appearing more than once": (lambda pad: pad.AddData("tracks", "trk").Join(["dupKeys", "evInfo"], ["run", "event"]), "run = 100 and event = 0 appears in more than one row"),
@@ -187,6 +222,10 @@ FAILING = {  # what: (setup, the reason)
     "a table": (lambda pad: pad.AddData("table", "csv").Join("table", [], "t2"), "Cannot join trees to table csv:table"),
     "an RNTuple": (lambda pad: pad.AddData("events", "rn").Join("scores"), "ROOT cannot join RNTuples"),
     "an undefined data source": (lambda pad: pad.AddData("events", "A").Join(["scores", "nosuchsource"]), "data source nosuchsource is not defined"),
+    "an index column missing": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fNope"), "O2track has no column fNope"),
+    "an index column that is no integer": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fPt"), "index column fPt of O2track is of type Double_t, but it must hold one integer per row"),
+    "a tree joined by an index column without rows in any input": (lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions"), "it has no rows in any input of O2track"),
+    "a joined tree missing beside a tree joined by an index column": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2bc", "fIndexCollisions"), f"{ao2d[0]}:DF_0/O2bc does not exist"),
     "an alias equal to the name of the tree": (lambda pad: pad.AddData("events", "A").Join(byKey, ["run", "event"]), "the columns of both would be called events.column, please specify an alias"),
 }
 for i, (what, (setup, _)) in enumerate(FAILING.items()):

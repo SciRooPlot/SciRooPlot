@@ -2730,6 +2730,7 @@ SETTER_VALUES = {
     "key": {"plain": "xx"},
     "value": {"plain": "x*2", "text": 'std::string("a;b$") == "a;b$" ? x : 0.'},
     "keys": {"plain": ["k1", "k2"]},
+    "indexColumn": {"plain": "kIdx"},
     "label": TEXT,
     "legendLabel": TEXT,
     "text": TEXT,
@@ -2792,6 +2793,7 @@ SETTER_VALUES = {
     "tickOrientation": {"plain": "+-"},
     "timeFormat": {"plain": "%d.%m.%y %H:%M"},
     "tree": {"plain": "t2", "text": ["t2", "s2"]},
+    "JoinByIndex.tree": {"plain": "t2"},
     "weight": {"plain": "w"},
     "x": {"plain": 0.3, "precise": 1 / 3},
     "y": {"plain": 0.6, "precise": 2 / 3},
@@ -2878,7 +2880,7 @@ SETTER_HOSTS = {
 }
 # The hosts each call is meant for (the others are misplaced: the call must be stored there too, or reported)
 SELECTIONS = ("Project", "ProjectX", "ProjectY", "Profile", "ProfileX", "ProfileY", "Project1D", "Project2D", "Profile1D", "Profile2D", "Scatter")
-TREE_SELECTIONS = ("Filter", "Define", "Join", "Entries")
+TREE_SELECTIONS = ("Filter", "Define", "Join", "JoinByIndex", "Entries")
 PAD_ADDERS = ("AddData", "AddFunction", "AddPoints", "AddRatio", "SetFrame")
 
 

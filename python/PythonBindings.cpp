@@ -628,6 +628,8 @@ void defDataSetters(py::class_<Self, Options...>& cls)
     .def("Filter", &Self::Filter, arg("filter"), ref_int)
     .def("Join", [](Self& self, const string& tree, const vector<string>& keys, const string& alias) -> Self& { return self.Join(tree, keys, alias); }, arg("tree"), arg("keys") = vector<string>{}, arg("alias") = "", ref_int)
     .def("Join", [](Self& self, const array<string, 2>& tree, const vector<string>& keys, const string& alias) -> Self& { return self.Join({tree[0], tree[1]}, keys, alias); }, arg("tree"), arg("keys") = vector<string>{}, arg("alias") = "", ref_int)
+    .def("JoinByIndex", [](Self& self, const string& tree, const string& indexColumn, const string& alias) -> Self& { return self.JoinByIndex(tree, indexColumn, alias); }, arg("tree"), arg("indexColumn"), arg("alias") = "", ref_int)
+    .def("JoinByIndex", [](Self& self, const array<string, 2>& tree, const string& indexColumn, const string& alias) -> Self& { return self.JoinByIndex({tree[0], tree[1]}, indexColumn, alias); }, arg("tree"), arg("indexColumn"), arg("alias") = "", ref_int)
     .def("Entries", overload_cast<uint32_t>(&Self::Entries), arg("nEntries"), ref_int)
     .def("Entries", overload_cast<uint32_t, uint32_t>(&Self::Entries), arg("entryMin"), arg("entryMax"), ref_int);
 }
