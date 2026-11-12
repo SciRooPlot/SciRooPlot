@@ -13,7 +13,8 @@ Covers: function numerator by a denominator with errors, graph points removed wi
 divided as their means, formulas as denominators divide the whole numerator, TGraphMultiErrors divided; TH2Poly
 divided without reading past its bins; NaN in a denominator removed before the division (a spline through it was NaN everywhere); two
 formulas without a range reported once; a TGraphMultiErrors denominator sorted with its errors; a ratio by a function at its zeros reported; a function numerator without values where the denominator has them
-reported as such; two formulas giving the frame divided over the pad range; empty denominator bins (also NaN) no
+reported as such; two formulas giving the frame divided over the pad range; graphs at the same
+x values divided point by point whatever their kinds of errors; empty denominator bins (also NaN) no
 knots of the interpolation (the ratio swung around them).
 """
 
@@ -109,6 +110,21 @@ plot = S.Plot("formulas_pad_range", "ratios", "1d")
 plot[1]["X"].SetRange(1.0, 3.0)
 plot[1].AddRatio(S.Data("x*x", S.kUserFunctions), S.Data("x", S.kUserFunctions))
 p.pm.AddPlot(plot)
+# graphs at the same x values divide point by point whatever their kinds of errors, also with a repeated x (no interpolation needed)
+repeatedX = (1.0, 2.0, 2.0)
+asymm, symm = ROOT.TGraphAsymmErrors(3), ROOT.TGraphErrors(3)
+for i, x in enumerate(repeatedX):
+    asymm.SetPoint(i, x, 2.0 + i)
+    asymm.SetPointError(i, 0.0, 0.0, 0.2, 0.4)
+    symm.SetPoint(i, x, 1.0 + i)
+    symm.SetPointError(i, 0.0, 0.1)
+asymm.SetName("asymm")
+symm.SetName("symm")
+p.source("same_x", {"asymm": asymm, "symm": symm})
+for name, (num, den) in {"same_x_asymm": ("asymm", "symm"), "same_x_symm": ("symm", "asymm")}.items():
+    plot = S.Plot(name, "ratios", "1d")
+    plot[1].AddRatio(S.Data(num, "same_x"), S.Data(den, "same_x"))
+    p.pm.AddPlot(plot)
 run = p.plot("ratios")
 
 
@@ -191,6 +207,11 @@ check(
     ratioPoints and math.isclose(ratioPoints[0], 1.0) and math.isclose(ratioPoints[-1], 3.0) and all(math.isclose(padRange[0][0].GetPointY(i), x) for i, x in enumerate(ratioPoints)),
     str(ratioPoints[:3]) + " | " + " | ".join(run.errors("formulas_pad_range")),
 )
+for name, (num, den) in {"same_x_asymm": (asymm, symm), "same_x_symm": (symm, asymm)}.items():
+    drawn = run.drawn(name, "ratios")
+    got = [drawn[0][0].GetPointY(i) for i in range(drawn[0][0].GetN())] if drawn else []
+    want = [num.GetPointY(i) / den.GetPointY(i) for i in range(3)]
+    check(f"graphs at the same x values with a repeated x divided point by point: {name}", len(got) == 3 and all(math.isclose(a, b) for a, b in zip(got, want)), f"{got} expected {want}" + " | ".join(run.errors(name)))
 unmatched, unexpected = match_messages(run.warnings(), expectedWarnings, True)
 check("every warning expected", not unexpected, first_five(unexpected))
 check("every expected warning given", not unmatched, first_five(unmatched))

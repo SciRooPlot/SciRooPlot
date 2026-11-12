@@ -7221,17 +7221,25 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   double_t* denomEyHigh = denominator->GetEYhigh();
   auto multiErrors = MultiErrorSums(numerator);
 
-  bool doInterpol = false;
-  if (numN > denomN || (numEy && (denomEyLow && denomEyHigh)) || ((numEyLow && numEyHigh) && denomEy)) {
-    doInterpol = true;
-  } else {
-    // check if graphs have the same x values
-    for (int32_t i = 0; i < numN; ++i) {
-      if (numX[i] != denomX[i]) {
-        doInterpol = true;
-        break;
-      }
-    }
+  // the denominator is interpolated only where the graphs have different x values
+  bool doInterpol = (numN > denomN);
+  for (int32_t i = 0; !doInterpol && i < numN; ++i) {
+    doInterpol = (numX[i] != denomX[i]);
+  }
+  // at the same x values the errors of the denominator take the kind of the numerator's, as the interpolated ones do
+  // (symmetric: the root mean square of the lower and upper error)
+  vector<double_t> mappedEy, mappedEyLow, mappedEyHigh;
+  if (!doInterpol && numEy && !denomEy && denomEyLow && denomEyHigh) {
+    for (int32_t i = 0; i < numN; ++i)
+      mappedEy.push_back(std::sqrt(0.5 * (std::pow(denomEyLow[i], 2) + std::pow(denomEyHigh[i], 2))));
+    denomEy = mappedEy.data();
+    denomEyLow = denomEyHigh = nullptr;
+  } else if (!doInterpol && numEyLow && numEyHigh && denomEy && !(denomEyLow && denomEyHigh)) {
+    mappedEyLow.assign(denomEy, denomEy + numN);
+    mappedEyHigh = mappedEyLow;
+    denomEyLow = mappedEyLow.data();
+    denomEyHigh = mappedEyHigh.data();
+    denomEy = nullptr;
   }
 
   bool deleteDenom = false;
