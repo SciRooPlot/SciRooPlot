@@ -12,9 +12,12 @@ graph or function a graph. Every warning is expected.
 Covers: function numerator by a denominator with errors, graph points removed with their errors, profiles
 divided as their means, formulas as denominators divide the whole numerator, TGraphMultiErrors divided; TH2Poly
 divided without reading past its bins; NaN in a denominator removed before the division (a spline through it was NaN everywhere); two
-formulas without a range reported once; a TGraphMultiErrors denominator sorted with its errors; a ratio by a function at its zeros reported; empty denominator bins (also NaN) no
+formulas without a range reported once; a TGraphMultiErrors denominator sorted with its errors; a ratio by a function at its zeros reported; a function numerator without values where the denominator has them
+reported as such; two formulas giving the frame divided over the pad range; empty denominator bins (also NaN) no
 knots of the interpolation (the ratio swung around them).
 """
+
+import math
 
 from srptest import (
     DATA_KINDS,
@@ -70,6 +73,7 @@ todo = cases(
         {"num": "hist", "den": "hist_var", "num_variant": "normal", "den_variant": "nan", "correlated": False, "why": "empty denominator bins"},
         {"num": "graph_errors", "den": "hist_var", "num_variant": "normal", "den_variant": "empty", "correlated": False, "why": "empty denominator bins"},
         {"num": "tf1", "den": "hist", "num_variant": "normal", "den_variant": "single", "correlated": False, "why": "empty denominator bins"},
+        {"num": "tf1", "den": "graph_errors", "num_variant": "normal", "den_variant": "empty", "correlated": False, "why": "a function numerator by a graph without points"},
         {"num": "function", "den": "function", "num_variant": "normal", "den_variant": "normal", "correlated": False, "why": "one error for two formulas"},
         {"num": "graph_multi", "den": "graph_errors", "num_variant": "normal", "den_variant": "unsorted", "correlated": False, "why": "sorting a TGraphMultiErrors"},
         {"num": "hist", "den": "graph_multi", "num_variant": "normal", "den_variant": "unsorted", "correlated": False, "why": "sorting a TGraphMultiErrors"},
@@ -93,6 +97,18 @@ for i, case in enumerate(todo):
     if case["correlated"]:
         ratio.SetCorrelated()
     p.pm.AddPlot(plot)
+# a function numerator whose range holds none of the points of the denominator: an error saying so (not an unsupported division)
+outside = ROOT.TF1("outside", "2*x", -5.0, -4.0)
+p.source("outside", {"outside": outside})
+plot = S.Plot("outside_range", "ratios", "1d")
+p.pm.AddDataSource("outside_den", p.path(f"{source_of('normal')}.root"))
+plot[1].AddRatio(S.Data("outside", "outside"), S.Data("graph_errors", "outside_den"))
+p.pm.AddPlot(plot)
+# two formulas of the plot definition giving the frame are divided over the x range of the pad
+plot = S.Plot("formulas_pad_range", "ratios", "1d")
+plot[1]["X"].SetRange(1.0, 3.0)
+plot[1].AddRatio(S.Data("x*x", S.kUserFunctions), S.Data("x", S.kUserFunctions))
+p.pm.AddPlot(plot)
 run = p.plot("ratios")
 
 
@@ -166,6 +182,15 @@ for i, case in enumerate(todo):
         compare(i, case)
 
 
+check("a function numerator without values at the denominator: not drawn", not run.drawn("outside_range", "ratios"))
+expectedErrors += ["none of the points of", "Plot outside_range from group ratios could not be created"]
+padRange = run.drawn("formulas_pad_range", "ratios")
+ratioPoints = [padRange[0][0].GetPointX(i) for i in range(padRange[0][0].GetN())] if padRange and padRange[0][0].InheritsFrom("TGraph") else []
+check(
+    "two formulas giving the frame: divided over the x range of the pad",
+    ratioPoints and math.isclose(ratioPoints[0], 1.0) and math.isclose(ratioPoints[-1], 3.0) and all(math.isclose(padRange[0][0].GetPointY(i), x) for i, x in enumerate(ratioPoints)),
+    str(ratioPoints[:3]) + " | " + " | ".join(run.errors("formulas_pad_range")),
+)
 unmatched, unexpected = match_messages(run.warnings(), expectedWarnings, True)
 check("every warning expected", not unexpected, first_five(unexpected))
 check("every expected warning given", not unmatched, first_five(unmatched))

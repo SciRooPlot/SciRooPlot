@@ -1648,8 +1648,12 @@ def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
         if df == "graph" or df == "hist1":
             den = x_errors(denObj, Points(as_divided(denObj) if df == "hist1" else denObj))
             keep = [i for i, x in enumerate(den.x) if numFunc.inside(x)]  # a function of the inputs within its range
-            if not keep:  # nothing to sample at: the function itself cannot be divided
-                exp.error(f"Cannot divide {exp.num} (TF1) by {exp.den}")
+            positions = "points" if df == "graph" else "bin centres"
+            if not den.x:  # nothing to take the function at
+                exp.error(f"has no {positions} to take the function at")
+                return None
+            if not keep:
+                exp.error(f"none of the {positions} of")
                 return None
             den = subset(den, keep)
             num = Points(denObj if df == "graph" else as_divided(denObj))
