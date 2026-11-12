@@ -739,8 +739,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     }
     if (!drawData.empty()) drawData[0]->SetLegendLabel("");  // axis frame should not appear in legend
 
-    if (hasData) {
-      // put reference function in data vector right after the axis histogram
+    if (!drawData.empty()) {
+      // put reference function in data vector right after the axis histogram (also in a pad with only a frame: SetFrame or the empty frame of its ranges)
       auto refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
       if (refFunc && !refFunc->GetName().empty()) {  // an empty one: no reference function
         drawData.insert(drawData.begin() + 1, refFunc);

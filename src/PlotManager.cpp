@@ -2037,13 +2037,14 @@ void PlotManager::ChainTrees(map<string, unordered_map<string, set<string>>>& re
 /**
  * Reference function the painter draws in a pad of a plot, as merged with its base plot in GeneratePlot:
  * the pad's own, else the one of the base plot's pad, else the one of pad 0 of the plot, else of pad 0 of the base plot.
- * It is drawn only in pads with data. An empty one (SetRefFunc("")) means none and hides those further down the list.
+ * It is drawn in pads with data or a frame (it is read for every pad: a function costs nothing to make). An empty one (SetRefFunc(""))
+ * means none and hides those further down the list.
  */
 //**************************************************************************************************
 shared_ptr<Plot::Pad::Data> PlotManager::RefFuncDrawnIn(Plot& plot, uint8_t padID)
 {
   auto padIt = plot.GetPads().find(padID);
-  if (padID == 0 || padIt == plot.GetPads().end() || padIt->second.GetData().empty()) return nullptr;
+  if (padID == 0 || padIt == plot.GetPads().end()) return nullptr;
   Plot* basePlot = nullptr;
   if (plot.GetBasePlotName()) {
     auto it = std::find_if(mBasePlots.begin(), mBasePlots.end(), [&](const auto& curBasePlot) { return *plot.GetBasePlotName() == curBasePlot.GetName(); });
