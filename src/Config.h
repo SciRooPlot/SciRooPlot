@@ -63,6 +63,7 @@ class Config
   const std::string& SettingsFile() const { return mSettingsFile; }
 
   bool Exists(const std::string& projectName) const;
+  void ReportUnknown(const std::string& projectName) const;  // the error for a project that is not registered
   std::vector<std::string> ProjectNames() const;
   std::map<std::string, std::string> Properties(const std::string& projectName) const;  // as stored (unexpanded)
   std::string Property(const std::string& projectName, const std::string& property) const;

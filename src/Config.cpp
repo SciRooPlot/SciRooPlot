@@ -403,7 +403,7 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
     return false;
   }
   if (!Exists(projectName)) {
-    logger::error("Cannot find project {}.", projectName);
+    ReportUnknown(projectName);
     return false;
   }
   if (newProjectName.empty()) {
@@ -569,7 +569,7 @@ bool Config::Remove(const string& projectName)
     return false;
   }
   if (!Exists(projectName)) {
-    logger::error("Cannot find project {}.", projectName);
+    ReportUnknown(projectName);
     return false;
   }
   const string otherProject = (mProjects.begin()->first != projectName) ? mProjects.begin()->first : (mProjects.size() > 1 ? std::next(mProjects.begin())->first : "");
@@ -691,7 +691,7 @@ bool Config::Select(const string& projectName)
     return false;
   }
   if (!Exists(projectName)) {
-    logger::error("Cannot find project {}.", projectName);
+    ReportUnknown(projectName);
     return false;
   }
   mCurrentProject = projectName;
@@ -700,6 +700,17 @@ bool Config::Select(const string& projectName)
 }
 
 // empty without a project or without a valid config path (nothing is written into the current directory instead)
+// a program can save the definitions of a project before it is registered (its config folder exists then): the error says how to register it
+void Config::ReportUnknown(const string& projectName) const
+{
+  std::error_code ec;
+  if (!ProjectPath(projectName).empty() && std::filesystem::exists(PlotsFile(projectName), ec)) {
+    logger::error("Project {} is not registered: its program saved its definitions, register it with srp add {} <program> [<outdir>].", projectName, projectName);
+  } else {
+    logger::error("Cannot find project {}. Use srp add or srp init-cpp/init-py to create it.", projectName);
+  }
+}
+
 std::filesystem::path Config::ProjectPath(const string& projectName) const
 {
   if (projectName.empty() || mPath.empty()) return {};
@@ -799,7 +810,7 @@ bool Config::SetProperty(const string& projectName, const string& property, cons
     return false;
   }
   if (!Exists(projectName)) {
-    logger::error("Cannot find project {}. Use srp add or srp init-cpp/init-py to create it.", projectName);
+    ReportUnknown(projectName);
     return false;
   }
   if (property.empty()) {

@@ -4272,14 +4272,13 @@ void PlotManager::SaveProject() const
   SaveDataSources();
   SavePlots();
 
-  if (!mOutputDirectory.empty()) {
-    if (!Config::Get().Exists(mProjectName)) {
-      // not registered yet (e.g. the program was run before srp add): a project without program would block the registration
-      logger::info("Project {} is not registered yet, the output directory is not stored: srp add {} <program> [<outdir>].", mProjectName, mProjectName);
-    } else if (mOutputDirectory != Config::Get().OutputDir(mProjectName)) {
-      Config::GetMutable().SetProperty(mProjectName, "outdir", mOutputDirectory);
-      Config::GetMutable().Save();
-    }
+  if (!Config::Get().Exists(mProjectName)) {
+    // not registered yet (e.g. the program was run before srp add): a project without program would block the registration
+    logger::info("Project {} is not registered yet{}: srp add {} <program> [<outdir>] to plot it with plot.", mProjectName,
+                 (mOutputDirectory.empty()) ? "" : ", the output directory is not stored", mProjectName);
+  } else if (!mOutputDirectory.empty() && mOutputDirectory != Config::Get().OutputDir(mProjectName)) {
+    Config::GetMutable().SetProperty(mProjectName, "outdir", mOutputDirectory);
+    Config::GetMutable().Save();
   }
 
   // create a csv file for tab completion

@@ -136,6 +136,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `srp open` and `srp colorwheel` without a graphical display printed ROOT's display errors and never ended; `srp open` without a file or with a missing one showed ROOT's errors | An error says that a display is needed, or that the file is missing or no ROOT file, and srp ends | CLI | Nothing. |
 | `srp print` listed every cycle of a name (`h;1` and `h;2` as two `h`) and a map value as its key (`[TObjString] key1`) | It lists what the plots read: the latest cycle of a name, the value of a map under its key | CLI | Nothing. |
 | An unreadable or looping config folder ended `srp` with `terminate` | An error names the exception | CLI | Nothing. |
+| `srp select`, `rename`, `remove`, `get`, `set` of a project whose program saved its definitions but which is not registered said only "Cannot find project"; `SaveProject` named `srp add` only for a project with an output directory | Both say that the project is not registered and give the `srp add` line | CLI | Nothing. |
 
 ## 3.3.3 → 4.0.0
 
