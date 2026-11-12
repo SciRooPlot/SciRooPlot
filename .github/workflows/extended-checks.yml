@@ -136,9 +136,10 @@ jobs:
       - name: Install dependencies
         run: ./.github/scripts/install-linux.sh
 
-      # the tests of the shell functions run in bash and in zsh; the output tests take screenshots with ImageMagick
-      - name: Install zsh and ImageMagick
-        run: sudo apt-get install -y --no-install-recommends zsh imagemagick
+      # the tests of the shell functions run in bash and in zsh; the output tests take screenshots with ImageMagick;
+      # the tests of remote inputs serve their files with an XRootD server
+      - name: Install zsh, ImageMagick and XRootD
+        run: sudo apt-get install -y --no-install-recommends zsh imagemagick xrootd-server
 
       - name: Install ROOT
         uses: mamba-org/setup-micromamba@v3

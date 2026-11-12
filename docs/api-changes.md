@@ -100,6 +100,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A legend of several columns (`SetNColumns`) with labels containing drawn parts (`#frac`, `#sqrt`) was too narrow: labels ran into the next column or were cut off | Every column gets the width of its labels as painted | behaviour | Nothing; such legends get wider. |
 | A legend, text or statistics box at a position set for it (no automatic placement) reaching beyond its pad was cut off without a word | It is drawn as before, with a warning giving its corner and size | behaviour | Move or shrink the box. |
 | The title of a colour scale and the common y title of a layout were placed for labels of another power of ten than the axis shows (labels of values from 10⁴ on or below 10⁻²), overlapping the labels or far from them | They keep their distance to the labels as ROOT writes them | behaviour | Nothing. |
+| An input `root://…`, `https://…` or `alien://…` in `AddDataSource` was refused as a relative path | Remote files are read through ROOT (`TFile::Open` with its XRootD, http or AliEn plugin): also a folder in them, wildcards and directories where the protocol can list them (XRootD, AliEn), a query after the file name (`file.root?authz=…:folder`); tables only from local files | behaviour | Nothing; sign in to the server as for ROOT (token, certificate). |
 
 ### Files
 

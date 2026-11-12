@@ -139,6 +139,7 @@ using util::expand_path;
 using util::for_each_item;
 using util::ignore_root_messages_below;
 using util::is_container;
+using util::is_remote;
 using util::make_scope_guard;
 using util::plural;
 using util::RegexMatcher;
@@ -395,6 +396,16 @@ bool PlotManager::IsValidDataSourceName(const string& dataSource)
 // even '.root:': split after an existing file, an existing path is not split, otherwise after the first .root)
 vector<string> PlotManager::SplitInputPath(const string& input)
 {
+  if (is_remote(input)) {
+    // a remote file may carry a query (file.root?authz=...): the folder follows after it
+    for (size_t pos = input.find(".root"); pos != string::npos; pos = input.find(".root", pos + 1)) {
+      size_t end = pos + 5;
+      if (end < input.size() && input[end] == '?') end = input.find(':', end);
+      if (end == string::npos || end == input.size()) return {input};
+      if (input[end] == ':') return {input.substr(0, end), input.substr(end + 1)};
+    }
+    return {input};
+  }
   const size_t first = input.find(".root:");
   if (first == string::npos) return {input};
   std::error_code ec;
@@ -403,6 +414,18 @@ vector<string> PlotManager::SplitInputPath(const string& input)
   }
   if (std::filesystem::exists(input, ec)) return {input};
   return {input.substr(0, first + 5), input.substr(first + 6)};
+}
+// the file name of an input without the query of a remote file (for its file type)
+string PlotManager::InputFileName(const string& filePart)
+{
+  return is_remote(filePart) ? filePart.substr(0, filePart.find('?')) : filePart;
+}
+// remote files go through TFile::Open, which picks ROOT's plugin for the protocol (XRootD, http ...);
+// local ones directly as before (TFile::Open gives local paths its URL treatment too, e.g. an archive member after '#')
+std::unique_ptr<TFile> PlotManager::OpenInputFile(const string& fileName)
+{
+  if (is_remote(fileName)) return std::unique_ptr<TFile>(TFile::Open(fileName.data(), "READ"));
+  return std::make_unique<TFile>(fileName.data(), "READ");
 }
 void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputs, bool replace)
 {
@@ -413,7 +436,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<string>& 
   for (const auto& input : inputs) {
     const auto expandedInput = expand_path(input);
     if (!expandedInput) continue;
-    if (std::filesystem::path(*expandedInput).is_relative()) {
+    if (!is_remote(*expandedInput) && std::filesystem::path(*expandedInput).is_relative()) {
       logger::warning("The path of an input must not be relative. Skipping {}.", input);
       continue;
     }
@@ -695,7 +718,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
   auto fileID = [](const string& filePart) {
     struct stat info{};
     const string path = expand_path(filePart).value_or("");
-    return (stat(path.data(), &info) == 0) ? InputID{info.st_dev, info.st_ino, ""} : InputID{0, 0, path};
+    return (!is_remote(path) && stat(path.data(), &info) == 0) ? InputID{info.st_dev, info.st_ino, ""} : InputID{0, 0, path};
   };
   auto addInput = [&](const InputID& file, const string& filePart, const string& folder) {
     const string input = folder.empty() ? filePart : filePart + ":" + folder;
@@ -709,16 +732,21 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
 
   // folders matching the (wildcard) path within a root file, e.g. DF_* or run*/sub
   auto expandFolders = [&](const string& fileName, const string& folderPattern) {
-    TFile file(fileName.data(), "READ");
-    if (file.IsZombie()) {
+    auto file = OpenInputFile(fileName);
+    if (!file || file->IsZombie()) {
       logger::warning("Cannot open input file {} (data source {}).", fileName, dataSource);
       return vector<string>{};
     }
-    return MatchFolders(&file, folderPattern);
+    return MatchFolders(file.get(), folderPattern);
   };
 
   auto addFile = [&](const string& filePart, const string& folderPart) {
-    if (!subFolder.empty() && !str_ends_with(filePart, ".root")) return;  // tables have no folders
+    const bool isRootFile = str_ends_with(InputFileName(filePart), ".root");
+    if (!subFolder.empty() && !isRootFile) return;  // tables have no folders
+    if (!isRootFile && is_remote(filePart)) {
+      logger::warning("Skipping table {} (data source {}): tables can only be read from local files.", filePart, dataSource);
+      return;
+    }
     const string folderPath = (subFolder.empty() || folderPart.empty()) ? folderPart + subFolder : folderPart + "/" + subFolder;
     const InputID file = fileID(filePart);
     if (hasWildcard(folderPath)) {
@@ -733,12 +761,89 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
     }
   };
 
+  // remote directories are listed through ROOT's system plugins (XRootD, AliEn): the sorted names in one, nullopt if it is none or cannot be listed
+  auto listRemote = [](const string& dir) -> std::optional<vector<string>> {
+    FileStat_t info;
+    if (gSystem->GetPathInfo(dir.data(), info) != 0 || !R_ISDIR(info.fMode)) return std::nullopt;
+    void* handle = gSystem->OpenDirectory(dir.data());
+    if (!handle) return std::nullopt;
+    vector<string> names;
+    while (const char* name = gSystem->GetDirEntry(handle)) {
+      if (strcmp(name, ".") != 0 && strcmp(name, "..") != 0) names.emplace_back(name);
+    }
+    gSystem->FreeDirectory(handle);
+    std::sort(names.begin(), names.end());
+    return names;
+  };
+  // the remote paths matching a pattern level by level as glob does (* and [...]; ? starts the query of a URL); from: where wildcards may start
+  std::function<void(const string&, size_t, vector<string>&)> matchRemote;
+  matchRemote = [&](const string& pattern, size_t from, vector<string>& matches) {
+    const size_t wildcard = pattern.find_first_of("*[", from);
+    if (wildcard == string::npos) {
+      FileStat_t info;
+      if (from == pattern.size() || gSystem->GetPathInfo(pattern.data(), info) == 0) matches.push_back(pattern);
+      return;
+    }
+    const size_t levelStart = pattern.rfind('/', wildcard) + 1;
+    const size_t levelEnd = std::min(pattern.find('/', wildcard), pattern.size());
+    const string level = pattern.substr(levelStart, levelEnd - levelStart);
+    for (const auto& name : listRemote(pattern.substr(0, levelStart)).value_or(vector<string>{})) {
+      if (fnmatch(level.data(), name.data(), FNM_PERIOD) == 0) matchRemote(pattern.substr(0, levelStart) + name + pattern.substr(levelEnd), levelStart + name.size(), matches);
+    }
+  };
+  // the ROOT files below a remote directory (false if it is none)
+  std::function<bool(const string&, vector<string>&)> walkRemote;
+  walkRemote = [&](const string& dir, vector<string>& files) {
+    const auto names = listRemote(dir);
+    if (!names) return false;
+    const string base = str_ends_with(dir, "/") ? dir : dir + "/";
+    for (const auto& name : *names) {
+      if (str_ends_with(name, ".root")) {
+        files.push_back(base + name);
+      } else {
+        walkRemote(base + name, files);  // a file is no directory: nothing to list
+      }
+    }
+    return true;
+  };
+
   // literal: a match of a pattern is a path, not a pattern again (a file b?.root would match itself forever, run[1]/ no longer match)
   std::function<void(const string&, bool)> addEntry;
   addEntry = [&](const string& entry, bool literal) {
     auto fileAndFolder = SplitInputPath(entry);
     const string& filePart = fileAndFolder[0];
     const string folderPart = (fileAndFolder.size() > 1) ? fileAndFolder[1] : "";
+
+    if (is_remote(filePart)) {
+      const string url = expand_path(filePart).value_or("");
+      const string path = InputFileName(url);
+      const string query = url.substr(path.size());  // kept for every file found
+      const string folderSuffix = (fileAndFolder.size() > 1) ? ":" + folderPart : "";
+      if (!literal && path.find_first_of("*[") != string::npos) {
+        vector<string> matches;
+        matchRemote(path, 0, matches);
+        if (matches.empty()) logger::warning("No files match {} (data source {}).", filePart, dataSource);
+        for (const auto& match : matches) {
+          addEntry(match + query + folderSuffix, true);
+        }
+        return;
+      }
+      if (str_ends_with(path, ".root") || str_ends_with(path, mTableFileEndings)) {
+        addFile(filePart, folderPart);
+        return;
+      }
+      vector<string> dirFileNames;
+      if (!walkRemote(path, dirFileNames)) {
+        logger::warning("Data source entry {} (data source {}) is neither a recognized file type nor a directory that can be listed. Skipping.", entry, dataSource);
+        return;
+      }
+      if (dirFileNames.empty()) logger::warning("No ROOT files found in directory {} (data source {}).", entry, dataSource);
+      std::sort(dirFileNames.begin(), dirFileNames.end());
+      for (const auto& fileName : dirFileNames) {
+        addFile(fileName + query, "");
+      }
+      return;
+    }
 
     // a path that exists as written is taken as it is, even with [ ? * in its name
     std::error_code existsError;
@@ -1744,17 +1849,17 @@ bool PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
     // check if only a sub-folder in input file should be searched
     auto fileNamePath = SplitInputPath(input);
     string& fileName = fileNamePath[0];
-    if (!str_ends_with(fileName, ".root")) continue;
+    if (!str_ends_with(InputFileName(fileName), ".root")) continue;
 
     if (fileName != openFile.name) {
       openFile.Close();
       std::error_code existsError;
-      if (!std::filesystem::exists(fileName, existsError)) {
+      if (!is_remote(fileName) && !std::filesystem::exists(fileName, existsError)) {
         logger::warning("Input file {} not found{} (data source {}).", fileName, existsError ? " (" + existsError.message() + ")" : "", baseSource);
         continue;
       }
-      openFile.file = std::make_unique<TFile>(fileName.data(), "READ");
-      if (openFile.file->IsZombie()) {
+      openFile.file = OpenInputFile(fileName);
+      if (!openFile.file || openFile.file->IsZombie()) {
         logger::warning("Cannot open input file {} (data source {}).", fileName, baseSource);
         openFile.file.reset();
         continue;
@@ -1778,6 +1883,7 @@ bool PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
       }
       for (const auto& folderPath : folderPaths) {
         mIsFolderInput = !folderPath.empty();
+        mInputFile = fileName;
         TObject* folder = &inputFile;
 
         // find top level entry point for this input file
@@ -3235,8 +3341,8 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
           dataNames.erase(name);
           mDataBuffer[dataSource][prefix + name].reset(nullptr);
           string dirPath = directory->GetPath();  // file.root:/some/folder
-          dirPath.erase(0, dirPath.find(":/") + 2);
-          mTreeInputs[dataSource][prefix + name].push_back({directory->GetFile()->GetName(), (dirPath.empty() ? "" : dirPath + "/") + name, mIsFolderInput, isRNTuple});
+          dirPath.erase(0, strlen(directory->GetFile()->GetPath()));
+          mTreeInputs[dataSource][prefix + name].push_back({mInputFile, (dirPath.empty() ? "" : dirPath + "/") + name, mIsFolderInput, isRNTuple});
           continue;
         }
         if (TObject* obj = key->ReadObj()) {
@@ -3601,7 +3707,7 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
   find = [&](TDirectory* dir) -> optional<string> {
     if (auto* key = dir->GetKey(name.data()); key && KeyInherits(key, TTree::Class())) {
       string dirPath = dir->GetPath();  // file.root:/some/folder
-      dirPath.erase(0, dirPath.find(":/") + 2);
+      dirPath.erase(0, strlen(dir->GetFile()->GetPath()));
       return (dirPath.empty() ? "" : dirPath + "/") + name;
     }
     set<string> visited;  // keys can appear in several cycles: the latest directory of a name (newer data of the name does not hide it)
@@ -3626,10 +3732,10 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
     const auto fileNamePath = SplitInputPath(expand_path(inputRaw).value_or(""));
     const string& fileName = fileNamePath[0];
     std::error_code existsError;
-    if (!str_ends_with(fileName, ".root") || !std::filesystem::exists(fileName, existsError)) continue;
-    TFile file(fileName.data(), "READ");
-    if (file.IsZombie()) continue;
-    TDirectory* dir = &file;
+    if (!str_ends_with(InputFileName(fileName), ".root") || (!is_remote(fileName) && !std::filesystem::exists(fileName, existsError))) continue;
+    auto file = OpenInputFile(fileName);
+    if (!file || file->IsZombie()) continue;
+    TDirectory* dir = file.get();
     if (fileNamePath.size() > 1) dir = subDirectory(dir, fileNamePath[1]);
     if (dir && !path.empty()) dir = subDirectory(dir, path);
     if (!dir) continue;
@@ -3654,7 +3760,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
   map<string, std::unique_ptr<TFile>> openFiles;  // each file is opened only once for the following checks
   auto getTree = [&](const string& fileName, const string& treePath) -> TTree* {
     auto& file = openFiles[fileName];
-    if (!file) file = std::make_unique<TFile>(fileName.data(), "READ");
+    if (!file) file = OpenInputFile(fileName);
     if (!file || file->IsZombie()) return nullptr;
     return file->Get<TTree>(treePath.data());
   };

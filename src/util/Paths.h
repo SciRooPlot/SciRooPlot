@@ -19,6 +19,8 @@
 #ifndef SRC_UTIL_PATHS_H_
 #define SRC_UTIL_PATHS_H_
 
+#include <algorithm>
+#include <cctype>
 #include <optional>
 #include <string>
 #include <utility>
@@ -26,6 +28,14 @@
 namespace SciRooPlot::util
 {
 std::optional<std::string> expand_path(const std::string& path);
+
+// a URL like root://host//path or https://host/path: read through ROOT's network plugins, not the local file system
+inline bool is_remote(const std::string& path)
+{
+  const size_t schemeEnd = path.find("://");
+  if (schemeEnd == std::string::npos || schemeEnd == 0 || !std::isalpha(static_cast<unsigned char>(path[0]))) return false;
+  return std::all_of(path.begin(), path.begin() + schemeEnd, [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '+' || c == '-' || c == '.'; });
+}
 
 // folder ("" if none) and name of a path within a file or data source (a/b/c: a/b and c)
 inline std::pair<std::string, std::string> split_path(const std::string& path)

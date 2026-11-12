@@ -37,6 +37,7 @@
 
 class TCanvas;
 class TDirectory;
+class TFile;
 class TChain;
 class TKey;
 class TObject;
@@ -167,6 +168,8 @@ class PlotManager
   static std::string WildcardHint(const std::string& name, const std::string& group);
   static bool IsValidDataSourceName(const std::string& dataSource);
   static std::vector<std::string> SplitInputPath(const std::string& input);
+  static std::string InputFileName(const std::string& filePart);
+  static std::unique_ptr<TFile> OpenInputFile(const std::string& fileName);
   void ForgetBufferedData(const std::string& dataSource);
   bool SaveDataToRootFile() const;
 
@@ -218,6 +221,7 @@ class PlotManager
   };
   std::map<std::string, std::map<std::string, std::vector<tree_input_t>>> mTreeInputs;  // data source -> tree name -> where it was found in the inputs of the data source currently read
   bool mIsFolderInput{};                                                                // the input currently read is a folder within a file
+  std::string mInputFile;                                                               // the file of the input currently read (as given: a URL keeps its query)
   struct container_deleter_t {
     void operator()(TObject* container) const;  // deletes a list or folder read from a file with all objects in it
   };
