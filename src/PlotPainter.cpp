@@ -1040,8 +1040,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   }
   canvas_ptr->cd();
   // the web canvas (TWebCanvas) paints data in the browser: with its default it sends one palette for the whole canvas, the one left after
-  // the last primitive of the canvas; a palette per pad, taken after the primitives of the pad, needs palette delivery 3 set before the pads
-  TExec* webExec = new TExec("web_palettes", "if (gPad->GetCanvas()->IsWeb()) gROOT->ProcessLine(Form(\"((TWebCanvas*)%p)->SetPaletteDelivery(3);\", (void*)gPad->GetCanvas()->GetCanvasImp()));");
+  // the last primitive of the canvas; a palette per pad, taken after the primitives of the pad, needs palette delivery 3 set before the pads;
+  // it also fits the canvas into the browser window, stretching the plot: a fixed canvas size keeps the plot as painted (set once, so a
+  // size the user chooses in the browser stays)
+  TExec* webExec = new TExec(
+    "web_canvas",
+    fmt::format("if (gPad->GetCanvas()->IsWeb()) gROOT->ProcessLine(Form(\"{{ auto* w = (TWebCanvas*)%p; w->SetPaletteDelivery(3); if (!w->IsFixedSize()) w->SetCanvasSize({}, {}); }}\", (void*)gPad->GetCanvas()->GetCanvasImp()));",
+                static_cast<uint32_t>(canvasWidth), static_cast<uint32_t>(canvasHeight))
+      .data());
   webExec->SetBit(kCanDelete);
   canvas_ptr->GetListOfPrimitives()->AddFirst(webExec);
   // the colours of the canvas that are not predefined by ROOT are defined by its first primitive, so that a canvas read from a file
