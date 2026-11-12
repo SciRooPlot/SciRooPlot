@@ -546,6 +546,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   }
   vector<std::pair<TPad*, string>> padSetups;  // the setup of each pad painted (see below)
   bool anyView{};                              // a pad draws in 3d: the viewing angles of pad 0 have a meaning
+  // the web canvas (TWebCanvas) paints data in the browser with one gStyle for the whole canvas: these give its values (see below)
+  optional<uint8_t> webPalettePad;                          // the first pad drawing a map: its palette
+  optional<string> webTextFormat;                           // the format of the first data setting one
+  optional<std::pair<double_t, double_t>> webCandleRanges;  // the box and whisker ranges of the first pad not using ROOT's
   if (padDefaults.GetXLow()) ReportIgnored("The position of pad 0", "pad 0 holds the defaults of all pads and is not drawn");
   for (const auto& [padID, dummy] : plot.GetPads()) {
     if (padID == 0) continue;  // pad 0 is used only to define the defaults
@@ -626,10 +630,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     if (auto frameBorderWidth = get_first(pad.GetFrameBorderWidth(), padDefaults.GetFrameBorderWidth())) pad_ptr->SetFrameLineWidth(*frameBorderWidth);
 
     // palette, candle ranges and text format are global state that ROOT reads while painting: they are set by TExec primitives,
-    // which run whenever the pad is painted (also when the canvas is read back from a file) and leave the defaults behind afterwards
-    string padSetup = fmt::format("gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange({}); TCandle::SetWhiskerRange({});",
-                                  get_first_or(0.5, pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange()),
-                                  get_first_or(1., pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange()));
+    // which run whenever the pad is painted (also when the canvas is read back from a file); the last primitive of the canvas restores
+    // the defaults afterwards (in the web canvas it sets the values for the whole canvas instead)
+    const double_t candleBoxRange = get_first_or(0.5, pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange());
+    const double_t candleWhiskerRange = get_first_or(1., pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange());
+    if (!webCandleRanges && (candleBoxRange != 0.5 || candleWhiskerRange != 1.)) webCandleRanges = {candleBoxRange, candleWhiskerRange};
+    string padSetup = fmt::format("gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange({}); TCandle::SetWhiskerRange({});", candleBoxRange, candleWhiskerRange);
 
     // a colour gradient gets one colour per data item that will actually take a colour from the defaults: the marker, line and fill
     // lists share one index (a data item taking any of the three moves it on), so all three are as long as the number of such items
@@ -925,6 +931,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     }
     FinishPad(padState);
 
+    if (!webPalettePad && mapDrawn) webPalettePad = padID;
+    for (const auto& data : drawData) {
+      if (webTextFormat) break;
+      webTextFormat = data->GetTextFormat();
+    }
     padSetups.emplace_back(pad_ptr, std::move(padSetup));
   }
   if (!anyView && (padDefaults.GetViewTheta() || padDefaults.GetViewPhi())) ReportIgnored("The view of pad 0", "no pad of the plot draws in 3d");
@@ -1028,6 +1039,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     ApplyScale(canvas_ptr.get(), done);
   }
   canvas_ptr->cd();
+  // the web canvas (TWebCanvas) paints data in the browser: with its default it sends one palette for the whole canvas, the one left after
+  // the last primitive of the canvas; a palette per pad, taken after the primitives of the pad, needs palette delivery 3 set before the pads
+  TExec* webExec = new TExec("web_palettes", "if (gPad->GetCanvas()->IsWeb()) gROOT->ProcessLine(Form(\"((TWebCanvas*)%p)->SetPaletteDelivery(3);\", (void*)gPad->GetCanvas()->GetCanvasImp()));");
+  webExec->SetBit(kCanDelete);
+  canvas_ptr->GetListOfPrimitives()->AddFirst(webExec);
   // the colours of the canvas that are not predefined by ROOT are defined by its first primitive, so that a canvas read from a file
   // in another session paints with them (ROOT itself stores the complete colour list, and only with the first canvas written);
   // it runs before the setup of any pad, so that the palettes these set take colour indices above them instead of being overwritten
@@ -1038,8 +1054,30 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     colorExec->SetBit(kCanDelete);
     canvas_ptr->GetListOfPrimitives()->AddFirst(colorExec);
   }
-  // last primitive of the canvas: restores the global settings after the pads were painted
-  TExec* resetExec = new TExec("reset_globals", fmt::format("gStyle->SetPalette({}); gStyle->SetPaintTextFormat(\"g\"); gStyle->SetOptTitle(1); TCandle::SetBoxRange(0.5); TCandle::SetWhiskerRange(1.);", static_cast<int32_t>(kBird)).data());
+  // last primitive of the canvas: restores the global settings after the pads were painted; the web canvas instead gets the values for
+  // the whole canvas, since it sends gStyle (text format, candle ranges) and the palette of the canvas as they are after this primitive:
+  // the palette of the first pad drawing a map (its setup, run in that pad), the first text format and candle ranges set
+  string webGlobals;
+  if (webPalettePad) {
+    webGlobals += fmt::format(
+      " if (auto* p = dynamic_cast<TPad*>(gPad->GetPrimitive(\"Pad_{0}\"))) if (auto* e = dynamic_cast<TExec*>(p->GetListOfPrimitives()->FindObject(\"setup_pad_{0}\"))) {{"
+      " auto* c = gPad; gPad = p; e->Exec(); gPad = c; }}",
+      *webPalettePad);
+  } else {
+    webGlobals += fmt::format(" gStyle->SetPalette({});", static_cast<int32_t>(kBird));
+  }
+  string quotedFormat;  // the format goes into interpreted code
+  for (const char c : webTextFormat.value_or("g")) {
+    if (c == '"' || c == '\\') quotedFormat += '\\';
+    quotedFormat += c;
+  }
+  const auto [webBoxRange, webWhiskerRange] = webCandleRanges.value_or(std::pair{0.5, 1.});
+  webGlobals += fmt::format(" gStyle->SetPaintTextFormat(\"{}\"); TCandle::SetBoxRange({}); TCandle::SetWhiskerRange({});", quotedFormat, webBoxRange, webWhiskerRange);
+  TExec* resetExec = new TExec(
+    "reset_globals",
+    fmt::format("gStyle->SetOptTitle(1); if (gPad->GetCanvas()->IsWeb()) {{{} }} else {{ gStyle->SetPalette({}); gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange(0.5); TCandle::SetWhiskerRange(1.); }}",
+                webGlobals, static_cast<int32_t>(kBird))
+      .data());
   resetExec->SetBit(kCanDelete);
   resetExec->Draw();
   canvas_ptr->Modified();
