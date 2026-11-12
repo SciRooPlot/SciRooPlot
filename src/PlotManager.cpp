@@ -1567,18 +1567,18 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     // the frames of a gif are the plots that can be made, in the order they were defined; the last one closes it (its file name tells ROOT
     // how the animation repeats). The gif is named after the deepest group all frames are in and lies next to the folder of that group
     // (frames of animations/legoRotation: animations/legoRotation.gif); frames without a common group make animation.gif in the output directory
-    mGifLastFrame = nullptr;
+    mGifPendingFrame.reset();
+    mGifFrames = 0;
     mGifSize.reset();
     mGifSizeReported = false;
     if (str_starts_with(mode, "gif")) {
       optional<vector<string>> commonGroup;
-      // frames that cannot be made are left out here already (missing data, a missing base plot): the last one written must close the gif
+      // frames that cannot be made are left out of the name here already (missing data, a missing base plot)
       auto hasBasePlot = [this](const Plot& plot) {
         return !plot.GetBasePlotName() || std::any_of(mBasePlots.begin(), mBasePlots.end(), [&](const Plot& basePlot) { return basePlot.GetName() == *plot.GetBasePlotName(); });
       };
       for (auto plot : selectedPlots) {
         if (!GetMissingData(*plot).empty() || plot->GetGroup().empty() || !hasBasePlot(*plot)) continue;
-        mGifLastFrame = plot;
         const vector<string> parts = split_string(plot->GetGroup(), '/');
         if (!commonGroup) {
           commonGroup = parts;
@@ -1650,7 +1650,12 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       }
       WaitForOpenWindows();
     }
-    if (!mGifName.empty()) {
+    if (mGifPendingFrame) {
+      mGifPendingFrame->SaveAs((mGifName + mGifLastFrameSuffix).data());
+      mGifPendingFrame.reset();
+      ++mGifFrames;
+    }
+    if (mGifFrames) {
       logger::log("Saved gif {}.", mGifName);
     }
     bool saved = true;
@@ -2462,9 +2467,8 @@ bool PlotManager::WriteOutput(const Plot& plot, const Plot& fullPlot, const stri
   }
 
   if (isGifMode && !mGifName.empty()) {
-    fullName = mGifName;
+    fullName = mGifName + frameSuffix;
     folderName = std::filesystem::path(mGifName).parent_path().string();
-    fullName += (&plot == mGifLastFrame) ? lastFrameSuffix : frameSuffix;
     // ROOT appends every frame at its own size, but the gif has the size of the first: viewers cut larger frames
     const std::pair<uint32_t, uint32_t> size{canvas->GetWw(), canvas->GetWh()};
     if (!mGifSize) {
@@ -2505,6 +2509,17 @@ bool PlotManager::WriteOutput(const Plot& plot, const Plot& fullPlot, const stri
   auto errorHandlerGuard = make_scope_guard([silenceNoPdfImages]() {
     if (silenceNoPdfImages) SetErrorHandler(rootErrorHandler);
   });
+  if (isGifMode && !mGifName.empty()) {
+    // the frame before is written now that this one is painted; this one waits for the next (or closes the gif at the end)
+    if (mGifPendingFrame) {
+      mGifPendingFrame->SaveAs(fullName.data());
+      ++mGifFrames;
+    }
+    mGifPendingFrame = canvas;
+    mGifLastFrameSuffix = lastFrameSuffix;
+    LogCreated(fullPlot);
+    return true;
+  }
   canvas->SaveAs(fullName.data());
   std::error_code writtenError;
   if (!isGifMode && !std::filesystem::is_regular_file(fullName, writtenError)) {

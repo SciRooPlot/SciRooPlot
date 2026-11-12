@@ -1,14 +1,14 @@
 """Mode gif makes one animation of the selected plots that can be made, in the order they were defined: gif shows every frame 50
 centiseconds and plays the animation once, gif+<cs> shows them cs centiseconds, gif+<cs>++ loops endlessly, gif+<cs>++<n> repeats it n
 times (ROOT's spelling on the last frame); other spellings are refused. The repetition is right also when the last selected plots cannot be
-made (missing data, missing base plot). The file is <group>.gif next to the folder of the deepest group all frames are in, animation.gif
+made (missing data, missing base plot, failing while painted); a gif whose frames all fail is not reported as saved. The file is <group>.gif next to the folder of the deepest group all frames are in, animation.gif
 in the output directory if they have none. Checked in the gif file itself (screen size, the size and delay of every frame, the loop count),
 for frames of every data kind of srptest (each frame the size of its canvas, so the order shows); the canvases from mode file.
 The gif has the size of its first frame (ROOT's): frames of another canvas size give one warning per gif, naming the first such plot."""
 
 import os
 
-from srptest import DATA_KINDS, Project, S, add_data, base_of, check, finish, gif_info
+from srptest import DATA_KINDS, Project, S, add_data, base_of, check, data_name, finish, gif_info
 
 p = Project("gif_animation")
 p.inputs()
@@ -31,6 +31,11 @@ p.pm.AddPlot(plot)
 plot = S.Plot("lastNoBase", "modes", "no_such_base")
 add_data(plot[1], "hist")
 p.pm.AddPlot(plot)
+# a frame that fails only while it is painted (a 2d histogram divided by a 1d one), as the last one and alone
+for name, group in (("lastPaintFails", "modes"), ("alone", "failing")):
+    plot = S.Plot(name, group, "2d")
+    plot[1].AddRatio(S.Data(data_name("hist2d"), "inputs"), S.Data(data_name("hist"), "inputs"))
+    p.pm.AddPlot(plot)
 # the names of the gif: groups of the frames -> file
 GROUPS = {
     "deep": (["anim/rot", "anim/rot", "anim/rot"], "anim/rot.gif"),
@@ -83,13 +88,15 @@ check(
 
 # the modes: delay of every frame and repetition, also when the last selected plots cannot be made
 MODES = {"gif": (50, None), "gif+20": (20, None), "gif+7++": (7, 0), "gif+20++3": (20, 3), "gif+1++1": (1, 1)}
-for selection, what in (("frame.*", "plots that can all be made"), ("frame.*|last.*", "the last two selected plots cannot be made")):
+for selection, what in (("frame.*", "plots that can all be made"), ("frame.*|last.*", "the last three selected plots cannot be made")):
     for mode, (delay, loops) in MODES.items():
         run = p.plot("modes", selection, mode)
         info = gifs().get("modes.gif")
         detail = f"{info}" if info else f"no modes.gif: {sorted(gifs())}, {run.errors()[:2]}"
         good = info is not None and info["delays"] == [delay] * 3 and len(info["frames"]) == 3 and info["loops"] == loops and not size_warnings(run)
         check(f"{mode}, {what}: 3 frames of {delay} cs, {'played once' if loops is None else ('looping' if loops == 0 else f'repeated {loops} times')}", good, detail)
+run = p.plot("failing", "alone", "gif")
+check("a single frame that fails while painted: no gif, none reported as saved", not gifs() and "Saved gif" not in run.log, f"{sorted(gifs())}")
 for mode in ("gif++20", "gif+20+", "gif+", "gif+20++x", "gif20", "gif+-5", "gif+20+++", "gif+ 20", "GIF"):
     run = p.plot("modes", "frame.*", mode)
     check(f"{mode!r} refused: an error, no gif", not gifs() and any("Invalid plot mode" in line for line in run.lines("ERR")), f"{sorted(gifs())}, {run.lines('ERR')[:1]}")

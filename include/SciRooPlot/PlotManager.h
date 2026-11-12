@@ -190,7 +190,11 @@ class PlotManager
   };
   std::vector<open_window_t> mOpenWindows;  // windows open until the user closes them: all plots in mode "spread", plots detached in mode "show"
   std::string mGifName;
-  const Plot* mGifLastFrame{};                       // the frame that closes an animated gif (its file name sets how often the animation repeats)
+  // the frame painted last: written once the next frame is painted, or at the end as the one closing the gif (its file name sets how often
+  // the animation repeats), so a frame that fails cannot leave the gif unclosed; the suffix of that last frame, the number of frames written
+  std::shared_ptr<TCanvas> mGifPendingFrame;
+  std::string mGifLastFrameSuffix;
+  uint32_t mGifFrames{};
   std::map<std::string, std::string> mWrittenFiles;  // output file (lower case) -> group:name of the plot written to it, in the current GeneratePlots call
   // canvas size of the first frame of a gif (the size of the gif), and whether a frame of another size was reported (once per gif)
   std::optional<std::pair<uint32_t, uint32_t>> mGifSize;
