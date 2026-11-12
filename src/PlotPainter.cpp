@@ -2854,6 +2854,9 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
     }
   }
   axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
+  // the web canvas (TWebCanvas) drops the minimum and maximum of a 1d histogram with entries drawn with AXIS once the browser reports
+  // the drawn ranges (ROOT bug), but keeps the y range the browser drew for one without entries; the frame of 2d data is emptied anyway
+  if (axisHist_ptr->GetDimension() == 1) axisHist_ptr->SetEntries(0);
   axisHist_ptr->SetStats(false);
   axisHist_ptr->SetTitle("");
   axisHist_ptr->SetBit(TH1::kNoTitle);
