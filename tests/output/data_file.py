@@ -2,7 +2,7 @@
 and its path in it (a data source restricted to a folder, source:folder, and a path in a name become subdirectories), equal to the object
 in the input file, for every data kind of srptest read from a file in every variant (every value at least once in the fast run); a
 function of the plot definition under its data source, named by its formula. Keys are written in a fixed order: the same plots give the
-same file."""
+same file. The plots themselves are not painted."""
 
 from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, cases, check, data_objects, describe, finish, func_diff, graph_diff, has_variant, hist_diff, source_of
 from srptest import formula as formula_of
@@ -70,6 +70,7 @@ def keys(path):
 
 run = p.plot("data", ".+", "data")
 check("mode data: no errors", not run.errors(), " | ".join(run.errors()[:3]))
+check("mode data paints nothing: no plot reported as created", "Created plot" not in run.log, " | ".join(line for line in run.log.splitlines() if "Created plot" in line)[:300])
 written = ROOT.TFile.Open(p.path("out", "Data.root"))
 check("mode data: Data.root in the output directory", bool(written))
 if written:

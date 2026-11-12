@@ -2133,6 +2133,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     Plot::Print(fullPlot.GetPropertyTree(), "");
     return true;
   }
+  if (mode == "data") return true;  // the input data is written as read, nothing is painted
 
   // the personal scale settings only change the number of pixels of plots on screen and of bitmap files, vector files do not depend on them
   const bool isBitmapMode = (mode == "png") || (mode == "jpg") || isGifMode;
@@ -2383,11 +2384,6 @@ bool PlotManager::WriteOutput(const Plot& plot, const Plot& fullPlot, const stri
     LogCreated(fullPlot);
     return true;
   }
-  if (mode == "data") {
-    LogCreated(fullPlot);
-    return true;
-  }
-
   string frameSuffix = "+50";      // ROOT's syntax for a frame of an animated gif: +<centiseconds it is shown>
   string lastFrameSuffix = "+50";  // the last frame: +NN plays the animation once, ++NN++ loops endlessly, +NN++RR repeats it RR times
 
