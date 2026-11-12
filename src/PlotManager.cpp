@@ -592,7 +592,26 @@ void PlotManager::SaveDataSources(const optional<string>& file) const
     }
     dataSourcesTree.put_child(dataSource, inputsOfDataSource);
   }
-  WriteInfoFile(dataSourcesTree, (file) ? *file : Config::Get().DataSourcesFile(mProjectName), "data sources");
+  if (const auto path = InfoFile(file, Config::Get().DataSourcesFile(mProjectName), "save the data sources")) WriteInfoFile(dataSourcesTree, *path, "data sources");
+}
+
+//**************************************************************************************************
+/**
+ * The file to read or write plots or data sources from: the one given, otherwise the one of the project (an error if there is none).
+ */
+//**************************************************************************************************
+optional<string> PlotManager::InfoFile(const optional<string>& file, const string& projectFile, const string& what) const
+{
+  if (file) return file;
+  if (mProjectName.empty()) {
+    logger::error("No project and no file given; cannot {}.", what);
+    return std::nullopt;
+  }
+  if (projectFile.empty()) {
+    logger::error("No valid config path; cannot {} of project {}.", what, mProjectName);
+    return std::nullopt;
+  }
+  return projectFile;
 }
 
 //**************************************************************************************************
@@ -604,7 +623,7 @@ void PlotManager::WriteInfoFile(const ptree& tree, const string& path, const str
 {
   const std::filesystem::path filePath = expand_path(path).value_or("");
   if (filePath.empty()) {
-    logger::error("No file path or project specified. Cannot save {}.", content);
+    logger::error("Cannot save {}: the file name is empty.", content);
     return;
   }
   std::error_code ec;
@@ -625,10 +644,12 @@ void PlotManager::WriteInfoFile(const ptree& tree, const string& path, const str
 //**************************************************************************************************
 void PlotManager::LoadDataSources(const optional<string>& file, bool replace)
 {
+  const auto path = InfoFile(file, Config::Get().DataSourcesFile(mProjectName), "load the data sources");
+  if (!path) return;
   ptree dataSourcesTree;
   try {
     using boost::property_tree::read_info;
-    read_info(expand_path((file) ? *file : Config::Get().DataSourcesFile(mProjectName)).value_or(""), dataSourcesTree);
+    read_info(expand_path(*path).value_or(""), dataSourcesTree);
   } catch (const std::exception& e) {
     logger::error("Cannot load dataSources file: {}.", util::without_final_period(e.what()));
     return;
@@ -1244,7 +1265,7 @@ void PlotManager::SavePlots(const string& name, const string& group, const optio
       plotTree.put_child(plot.GetUniqueName(), plot.GetPropertyTree());
     }
   }
-  WriteInfoFile(plotTree, (file) ? *file : Config::Get().PlotsFile(mProjectName), "plots");
+  if (const auto path = InfoFile(file, Config::Get().PlotsFile(mProjectName), "save the plots")) WriteInfoFile(plotTree, *path, "plots");
 }
 
 //**************************************************************************************************
@@ -1260,8 +1281,10 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
   const auto matches = PlotMatcher(name, group);
   if (!matches) return false;
 
+  const auto path = InfoFile(file, Config::Get().PlotsFile(mProjectName), "load the plots");
+  if (!path) return false;
   ptree fileTree;
-  const string plotsFile = expand_path((file) ? *file : Config::Get().PlotsFile(mProjectName)).value_or("");
+  const string plotsFile = expand_path(*path).value_or("");
   if (std::error_code ec; !file && !std::filesystem::exists(plotsFile, ec)) {
     logger::error("No plots are saved for project {} yet: run its program first (it saves them with SaveProject).", mProjectName);
     return false;
@@ -4224,7 +4247,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
 string PlotManager::GetProjectProperty(const string& property) const
 {
   if (mProjectName.empty()) {
-    logger::error("Pass name of project to plot manager to read its property {}.", property);
+    logger::error("No project given; cannot read the project property {}.", property);
     return "";
   }
   return Config::Get().Property(mProjectName, property);
@@ -4238,7 +4261,7 @@ string PlotManager::GetProjectProperty(const string& property) const
 void PlotManager::SaveProject() const
 {
   if (mProjectName.empty()) {
-    logger::error("Pass name of project to plot manager to save the project.");
+    logger::error("No project given; cannot save the project.");
     return;
   }
   if (Config::Get().Path().empty()) {

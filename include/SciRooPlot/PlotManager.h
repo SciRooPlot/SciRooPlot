@@ -163,6 +163,7 @@ class PlotManager
   static char TerminalKey();
   bool SavePlotsToRootFile() const;
   bool CreateOutputDirectory() const;
+  std::optional<std::string> InfoFile(const std::optional<std::string>& file, const std::string& projectFile, const std::string& what) const;
   static void WriteInfoFile(const boost::property_tree::ptree& tree, const std::string& path, const std::string& content);
   static std::function<bool(const std::string&, const std::string&)> PlotMatcher(const std::string& name, const std::string& group);
   static std::string WildcardHint(const std::string& name, const std::string& group);

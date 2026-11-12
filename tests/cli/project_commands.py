@@ -3,7 +3,8 @@ configuration folder exactly as it was: for an existing project, the selected on
 names that are no project names (.., a b, a/b) and an empty name; and for every command while projects.info cannot be read (the reason
 is given once, the file is never written over); a folder is refused as program, and a ~
 the shell did not expand in SCIROOPLOT_CONFIG_PATH is the home folder; with a relative or empty one a program stores and saves nothing
-(an error naming the config path), not even into the current directory. Removing, renaming and resetting change only what SciRooPlot wrote: program files stay, folders holding other files are
+(an error naming the config path), not even into the current directory; without a project name and without a file, saving and loading
+plots and data sources is refused with one error each. Removing, renaming and resetting change only what SciRooPlot wrote: program files stay, folders holding other files are
 kept or refused; clean forgets the projects whose code is gone (the folder of the program, for a C++ project also the sources above its
 build folder). Registering is safe against srp commands and programs running at the same time, and in-memory data moves with a renamed
 project.
@@ -177,6 +178,32 @@ for given in ("relative_config", ""):
     what = f"SCIROOPLOT_CONFIG_PATH={given!r}"
     check(f"{what}: nothing written into the current directory", not os.listdir(cwd), str(os.listdir(cwd)))
     check(f"{what}: in-memory data and SaveProject refused naming the config path", sum("No valid config path; cannot store the objects of data source mem" in e for e in out.errors()) == 2 and any("No valid config path; cannot save project R" in e for e in out.errors()), out.tail())
+
+# a PlotManager without project given no file: each file operation refused with one error of one wording; with a project but no
+# usable config path: naming the config path
+UNNAMED = """
+from SciRooPlot import *
+pm = PlotManager()
+pm.SavePlots()
+pm.LoadPlots()
+pm.SaveDataSources()
+pm.LoadDataSources()
+pm.SaveProject()
+pm.GetProjectProperty("outdir")
+named = PlotManager("U")
+named.SavePlots()
+named.LoadDataSources()
+"""
+cwd = config_folder("cwd_unnamed")
+out = python(UNNAMED, cwd=cwd, env={"SCIROOPLOT_CONFIG_PATH": ""})
+unnamed = [e for e in out.errors() if "No project and no file given; cannot " in e or "No project given; cannot " in e]
+check("no project and no file: every file operation refused with one error saying so", len(unnamed) == 6 and len(out.errors()) == 8, out.tail())
+check(
+    "a project without config path: the file operations name the config path",
+    any("No valid config path; cannot save the plots of project U" in e for e in out.errors()) and any("No valid config path; cannot load the data sources of project U" in e for e in out.errors()),
+    out.tail(),
+)
+check("no project and no file: nothing written into the current directory", not os.listdir(cwd), str(os.listdir(cwd)))
 
 # removing, renaming, resetting: only SciRooPlot's files
 config = setup()
