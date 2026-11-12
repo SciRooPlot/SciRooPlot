@@ -3642,7 +3642,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     const bool isProfile = isProfileType || dynamic_cast<TProfile3D*>(ptr);
     // ROOT merges the bins of a labelled axis but keeps the first labels, so the drawn categories are wrong
     auto warnLabelled = [&](const TAxis* axis, const optional<uint16_t>& group, const char* what) {
-      if (group && axis->GetLabels()) warn("{} on the labelled {} axis of {} mixes up the labels.", what, axis->GetName(), ptr->GetName());
+      if (group && axis->GetLabels()) warn("{} on the labelled axis of {} mixes up the labels.", what, ptr->GetName());
     };
     warnLabelled(ptr->GetXaxis(), mods.GetRebinGroupX(), "RebinX");
     warnLabelled(ptr->GetYaxis(), mods.GetRebinGroupY(), "RebinY");
