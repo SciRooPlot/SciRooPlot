@@ -1,6 +1,6 @@
 """Every drawing option alias on every data kind is drawn with the ROOT option of the documented alias table (docs/skill: drawing-options.md),
 without ROOT errors: the colour scale (the Z of COLZ, LEGO2Z, ...) is drawn by the frame, not by the data; an alias marked as drawn as the
-other type converts histograms to graphs and graphs to histograms; an alias a type cannot draw gives one warning and ROOT's default.
+other type converts histograms to graphs and graphs to histograms; an alias a type cannot draw gives one warning and ROOT's default, as a graph that cannot be made a histogram (points at one x).
 Documented adjustments: polar graphs draw the error bars of the points aliases with E, 2d graphs with errors add ERR, a TH2Poly is drawn
 flat (col, colz) with a warning instead of lego and surf, and the frame of a 3d view is an empty lego plot (no surface), keeping POL.
 The drawn data carries the name of the input.
@@ -11,7 +11,7 @@ under the name ROOT gives the graph or histogram it makes.
 
 import re
 
-from srptest import ALIASES, DATA_KINDS, Project, S, add_data, alias_table, base_of, cases, check, data_name, describe, drawn_type, finish, no_scale, per_error_set
+from srptest import ALIASES, DATA_KINDS, ROOT, Project, S, add_data, alias_table, base_of, cases, check, data_name, describe, drawn_type, finish, no_scale, per_error_set
 
 TABLE = alias_table()
 REPRESENTATIVE = ("hist", "graph_errors", "hist2d", "graph2d_errors")  # every alias in the fast run
@@ -59,6 +59,18 @@ for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "aliases", base_of(case["kind"]))
     add_data(plot[1], case["kind"]).SetDrawOption(getattr(S, case["alias"]))
     p.pm.AddPlot(plot)
+# a graph with two points at one x has no bins: drawn with the default of ROOT, one warning naming why
+repeated = ROOT.TGraph(3)
+for i, x in enumerate((1.0, 1.0, 2.0)):
+    repeated.SetPoint(i, x, 1.0 + i)
+repeated.SetName("repeated")
+p.source("repeated_x", {"repeated": repeated})
+REPEATED = ("hist", "hist_clipped")
+for alias in REPEATED:
+    plot = S.Plot(f"repeated_{alias}", "aliases", "1d")
+    plot[1].AddData("repeated", "repeated_x")
+    plot[1].AddData("repeated", "repeated_x").SetDrawOption(getattr(S, alias))
+    p.pm.AddPlot(plot)
 run = p.plot("aliases")
 
 warned = {}
@@ -94,11 +106,20 @@ for i, case in enumerate(todo):
     check(f"drawn under the name of the input: {what}", obj.GetName().split(":", 1)[1].startswith(name), obj.GetName())
     found = [line for line in warned.get(alias, []) if line.rstrip(".").endswith(f" {name}, using the default of ROOT") or f" {name} (ROOT draws" in line]
     check(f"{nWarnings} warning(s): {what}", len(found) == nWarnings, " | ".join(found))
+for alias in REPEATED:
+    drawn = run.drawn(f"repeated_{alias}", "aliases")
+    check(f"a graph with points at one x drawn {alias}: drawn with the default of ROOT", len(drawn) == 2 and drawn[1][1] == "", str([(o.ClassName(), opt) for o, opt in drawn]))
+repeatedWarnings = run.warnings("Graph repeated:repeated_x")
+check(
+    "a graph with points at one x drawn as a histogram: one warning saying why",
+    len(repeatedWarnings) == len(REPEATED) and all("needs points with distinct x values): using the default of ROOT" in w for w in repeatedWarnings),
+    " | ".join(repeatedWarnings),
+)
 # a graph with asymmetric errors drawn as a histogram is drawn with their mean, with a warning
 ASYMMETRIC = {k for k, (_, cls, _) in DATA_KINDS.items() if cls in ("TGraphAsymmErrors", "TEfficiency")}
 asymmetric = run.warnings("has asymmetric y errors")
 check("asymmetric errors drawn as their mean only for graphs that have them", all(any(f"Graph {k}:" in w for k in ASYMMETRIC) for w in asymmetric), " | ".join(asymmetric))
-expectedWarnings = sum(expected(c["kind"], c["alias"])[3] for c in todo) + len(asymmetric)
+expectedWarnings = sum(expected(c["kind"], c["alias"])[3] for c in todo) + len(asymmetric) + len(REPEATED)
 check("no other warnings", len(run.warnings()) == expectedWarnings, " | ".join(w for w in run.warnings() if "is not available" not in w)[:500])
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
 finish()

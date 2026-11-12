@@ -309,7 +309,7 @@ TH1* PlotPainter::ToHist(TGraph* graph, bool warn, bool warnAsymmetric)
   SortGraph(graph);
   const int32_t n = graph->GetN();
   if (n == 0) {
-    if (warn) logger::warning("Graph {} cannot be drawn as a histogram (it has no points).", graph->GetName());
+    if (warn) logger::warning("Graph {} cannot be drawn as a histogram (it has no points): using the default of ROOT.", graph->GetName());
     return nullptr;
   }
   // bin edges from the x errors (if the graph has them): the bins of neighbouring points must touch (within precision),
@@ -359,7 +359,7 @@ TH1* PlotPainter::ToHist(TGraph* graph, bool warn, bool warnAsymmetric)
         edges[i] = 0.5 * (graph->GetPointX(i - 1) + graph->GetPointX(i));
       }
       if (i > 0 && !(edges[i] > edges[i - 1])) {
-        if (warn) logger::warning("Graph {} cannot be drawn as a histogram (it needs points with distinct x values).", graph->GetName());
+        if (warn) logger::warning("Graph {} cannot be drawn as a histogram (it needs points with distinct x values): using the default of ROOT.", graph->GetName());
         return nullptr;
       }
     }
@@ -4304,7 +4304,6 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
           drawClipped(histogram, *optionAlias);
           return;
         }
-        if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), DataName(*data));
         optionAlias.reset();
       }
     }
@@ -4326,7 +4325,6 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
         drawItem(hist, optionAlias);
         return;
       }
-      if (dataIndex != 0) logger::warning("Drawing option {} is not available for graph {}, using the default of ROOT.", draw_option_name(*optionAlias), DataName(*data));
       optionAlias.reset();
     }
   }
