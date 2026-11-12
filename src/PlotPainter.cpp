@@ -6810,6 +6810,8 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
             *returnPointer);
         }
         return returnPointer;
+      } else if (obj->InheritsFrom(THnBase::Class())) {
+        logger::error("Input data {} is an n-dimensional histogram ({}): it is drawn through Project or Profile onto one to three of its axes.", obj->GetName(), obj->ClassName());
       } else {
         logger::error("Input data {} is of unsupported type {}.", obj->GetName(), obj->ClassName());
       }
@@ -6855,9 +6857,10 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
 optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::proj_info_t projInfo)
 {
   const bool isProfile = projInfo.isProfile && *projInfo.isProfile;
-  // only 1d and 2d histograms are valid outputs! (could be extended to 3d if there is a way to plot this)
-  if (projInfo.dims.size() == 0 || projInfo.dims.size() > 2) {
-    logger::error("Invalid number of dimensions specified for projection of histogram {}.", obj->GetName());
+  // the result keeps one to three axes (a profile one or two: TH2 and TH3 have no profile onto three axes)
+  if (projInfo.dims.size() == 0 || projInfo.dims.size() > (isProfile ? 2u : 3u)) {
+    logger::error("Cannot {} {} onto {}: {}.", (isProfile) ? "profile" : "project", obj->GetName(), fmt::format("{} {}", projInfo.dims.size(), (projInfo.dims.size() == 1) ? "axis" : "axes"),
+                  (isProfile) ? "a profile keeps one or two axes" : "a projection keeps one to three axes");
     return nullopt;
   }
   int32_t nDims{};
@@ -6875,8 +6878,14 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       return nullopt;
     }
   }
-  if (projInfo.dims.size() == 2 && projInfo.dims[0] == projInfo.dims[1]) {
-    logger::error("Cannot project {} onto the same dimension twice.", obj->GetName());
+  for (size_t i = 0; i < projInfo.dims.size(); ++i) {
+    if (std::find(projInfo.dims.begin() + i + 1, projInfo.dims.end(), projInfo.dims[i]) != projInfo.dims.end()) {
+      logger::error("Cannot project {} onto the same dimension twice.", obj->GetName());
+      return nullopt;
+    }
+  }
+  if (projInfo.dims.size() == 3 && !obj->InheritsFrom(THnBase::Class())) {
+    logger::error("Cannot project {} onto three axes: it is a 3d histogram (draw it without Project).", obj->GetName());
     return nullopt;
   }
   // the axis a profile averages: the named one, or else the only axis besides the kept ones (TH2 and TH3 profile it themselves below)
@@ -7019,8 +7028,10 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       }
       if (!setRange(histPtr->GetAxis(rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple))) return nullopt;
     }
-    if (projInfo.dims.size() == 2) {
-      return histPtr->Projection(projInfo.dims[1], projInfo.dims[0]);
+    if (projInfo.dims.size() == 3) {
+      return histPtr->Projection(projInfo.dims[0], projInfo.dims[1], projInfo.dims[2]);
+    } else if (projInfo.dims.size() == 2) {
+      return histPtr->Projection(projInfo.dims[1], projInfo.dims[0]);  // ROOT's order: y first
     } else if (projInfo.dims.size() == 1) {
       return histPtr->Projection(projInfo.dims[0]);
     }
