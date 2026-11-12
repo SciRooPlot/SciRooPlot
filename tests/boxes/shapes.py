@@ -106,6 +106,8 @@ plot[1].AddRegion((2.0, -5.0), (3.0, 5.0))  # below zero: starts at the frame
 plot[1].AddHorizontalLine(-1.0)  # cannot be shown: left out, warned
 plot[1].AddPolygon([(4.0, 0.01), (6.0, 0.01), (5.0, 5.0)])  # below the frame: cut at its lower edge
 plot[1].AddPolygon([(7.0, -1.0), (8.0, -1.0), (7.5, 5.0)])  # a point the axis cannot show: left out, warned
+plot[1].AddRegion((3.0, 5.0), (2.0, -5.0))  # the corner below zero given second: the same region
+plot[1].AddRegionY(5.0, -1.0)  # the end below zero given second: from the frame up to 5
 p.pm.AddPlot(plot)
 base = S.PlotManager.MakeBasePlot("1d")
 base.SetName("1d_with_shape")
@@ -221,10 +223,14 @@ check("lines at both limits of a log axis are drawn", len(lines) == 2 and not an
 padObj = run.pad("log_not_positive", "named")
 regions, polys = of("log_not_positive", "TBox"), of("log_not_positive", "TPolyLine")
 y1 = 10 ** padObj.GetUymin() if padObj else None
-check("log y: a region below zero starts at the frame", len(regions) == 1 and close(regions[0].GetY1(), y1, 1e-6) and close(regions[0].GetY2(), 5.0), f"{[(b.GetY1(), b.GetY2()) for b in regions]} frame from {y1}")
+check(
+    "log y: a region below zero starts at the frame, whichever corner is below zero",
+    len(regions) == 3 and all(close(b.GetY1(), y1, 1e-6) and close(b.GetY2(), 5.0) for b in regions) and close(regions[0].GetX1(), regions[1].GetX1()) and close(regions[0].GetX2(), regions[1].GetX2()),
+    f"{[(b.GetX1(), b.GetX2(), b.GetY1(), b.GetY2()) for b in regions]} frame from {y1}",
+)
 check("log y: a polygon below zero is cut at the lower edge of the frame", len(polys) == 1 and close(min(polys[0].GetY()[k] for k in range(polys[0].GetN())), y1, 1e-6))
 messages = run.messages("log_not_positive", "named")
-check("log y: a line the axis cannot show is left out, warned", not of("log_not_positive", "TLine") and any("Shape 2 (horizontal_line) of pad 1 is not drawn" in m for m in messages), " | ".join(messages))
+check("log y: a line the axis cannot show is left out, warned", not of("log_not_positive", "TLine") and any("Shape 2 (horizontal_line) of pad 1 is not drawn: its position is not positive on a log axis" in m for m in messages), " | ".join(messages))
 check("log y: a polygon with a point the axis cannot show is left out, warned", any("Shape 4 (polygon) of pad 1 is not drawn: a point is not positive" in m for m in messages), " | ".join(messages))
 check("a shape of the base plot is drawn", len([o for o in of("from_base", "TLine") if close(o.GetY1(), 5.0)]) == 1)
 check("shapes of pad 0 are not drawn, warned", not of("pad0", "TLine") and any("shapes of pad 0 are not drawn" in m for m in run.warnings()), " | ".join(run.warnings()))

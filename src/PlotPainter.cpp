@@ -5343,10 +5343,14 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
       case kind_t::horizontal_line: {
         const bool isVertical = (kind == kind_t::vertical_line);
         const double_t pos = (isVertical) ? valueX(c[0]) : valueY(c[0]);
+        if (!std::isfinite(pos)) {
+          skip("its position is not positive on a log axis");
+          continue;
+        }
         // compared in pad coordinates: 10^log10(limit) is not always the limit, so a line at a limit of a log axis would count as outside
         const bool logAxis = (isVertical) ? pad->GetLogx() : pad->GetLogy();
-        const double_t padPos = (!logAxis) ? pos : ((pos > 0.) ? std::log10(pos) : nan);
-        if (!std::isfinite(padPos) || padPos < ((isVertical) ? pad->GetUxmin() : pad->GetUymin()) || padPos > ((isVertical) ? pad->GetUxmax() : pad->GetUymax())) {
+        const double_t padPos = (logAxis) ? std::log10(pos) : pos;
+        if (padPos < ((isVertical) ? pad->GetUxmin() : pad->GetUymin()) || padPos > ((isVertical) ? pad->GetUxmax() : pad->GetUymax())) {
           skip("its position is outside of the frame");
           continue;
         }
@@ -5364,9 +5368,13 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
         } else {
           y1 = valueY(c[0]), y2 = valueY(c[1]);
         }
-        // on a log axis a region reaching below 0 starts at the frame edge
-        if (!std::isfinite(x1)) x1 = xMin;
-        if (!std::isfinite(y1)) y1 = yMin;
+        // on a log axis a region reaching below 0 starts at the frame edge (whichever corner it is)
+        for (double_t* end : {&x1, &x2}) {
+          if (!std::isfinite(*end)) *end = xMin;
+        }
+        for (double_t* end : {&y1, &y2}) {
+          if (!std::isfinite(*end)) *end = yMin;
+        }
         if (x1 > x2) std::swap(x1, x2);
         if (y1 > y2) std::swap(y1, y2);
         if (cutAtFrame) {
