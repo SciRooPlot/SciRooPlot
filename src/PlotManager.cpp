@@ -144,6 +144,7 @@ using util::is_remote;
 using util::make_scope_guard;
 using util::plural;
 using util::RegexMatcher;
+using util::split_input_path;
 using util::split_path;
 using util::split_string;
 using util::str_contains;
@@ -392,29 +393,6 @@ bool PlotManager::IsValidDataSourceName(const string& dataSource)
     return false;
   }
   return true;
-}
-// an input file.root:folder/sub is split after the .root ending (a directory in the path may contain ':', e.g. a time stamp, or
-// even '.root:': split after an existing file, an existing path is not split, otherwise after the first .root)
-vector<string> PlotManager::SplitInputPath(const string& input)
-{
-  if (is_remote(input)) {
-    // a remote file may carry a query (file.root?authz=...): the folder follows after it
-    for (size_t pos = input.find(".root"); pos != string::npos; pos = input.find(".root", pos + 1)) {
-      size_t end = pos + 5;
-      if (end < input.size() && input[end] == '?') end = input.find(':', end);
-      if (end == string::npos || end == input.size()) return {input};
-      if (input[end] == ':') return {input.substr(0, end), input.substr(end + 1)};
-    }
-    return {input};
-  }
-  const size_t first = input.find(".root:");
-  if (first == string::npos) return {input};
-  std::error_code ec;
-  for (size_t pos = first; pos != string::npos; pos = input.find(".root:", pos + 1)) {
-    if (std::filesystem::is_regular_file(input.substr(0, pos + 5), ec)) return {input.substr(0, pos + 5), input.substr(pos + 6)};
-  }
-  if (std::filesystem::exists(input, ec)) return {input};
-  return {input.substr(0, first + 5), input.substr(first + 6)};
 }
 // the file name of an input without the query of a remote file (for its file type)
 string PlotManager::InputFileName(const string& filePart)
@@ -811,7 +789,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
   // literal: a match of a pattern is a path, not a pattern again (a file b?.root would match itself forever, run[1]/ no longer match)
   std::function<void(const string&, bool)> addEntry;
   addEntry = [&](const string& entry, bool literal) {
-    auto fileAndFolder = SplitInputPath(entry);
+    auto fileAndFolder = split_input_path(entry);
     const string& filePart = fileAndFolder[0];
     const string folderPart = (fileAndFolder.size() > 1) ? fileAndFolder[1] : "";
 
@@ -1854,7 +1832,7 @@ bool PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
       }
     }
     // check if only a sub-folder in input file should be searched
-    auto fileNamePath = SplitInputPath(input);
+    auto fileNamePath = split_input_path(input);
     string& fileName = fileNamePath[0];
     if (!str_ends_with(InputFileName(fileName), ".root")) continue;
 
@@ -3737,7 +3715,7 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
   };
   auto expandedIt = mExpandedInputs.find(dataSource);
   for (const auto& inputRaw : (expandedIt != mExpandedInputs.end()) ? expandedIt->second : ExpandInputs(dataSource)) {
-    const auto fileNamePath = SplitInputPath(expand_path(inputRaw).value_or(""));
+    const auto fileNamePath = split_input_path(expand_path(inputRaw).value_or(""));
     const string& fileName = fileNamePath[0];
     std::error_code existsError;
     if (!str_ends_with(InputFileName(fileName), ".root") || (!is_remote(fileName) && !std::filesystem::exists(fileName, existsError))) continue;

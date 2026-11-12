@@ -140,6 +140,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | An unreadable or looping config folder ended `srp` with `terminate` | An error names the exception | CLI | Nothing. |
 | `srp select`, `rename`, `remove`, `get`, `set` of a project whose program saved its definitions but which is not registered said only "Cannot find project"; `SaveProject` named `srp add` only for a project with an output directory | Both say that the project is not registered and give the `srp add` line | CLI | Nothing. |
 | A program that set a locale with a decimal comma reset `screenscale` and `bitmapscale` with decimals (1.5) to 1 in `settings.info` | The settings are read independent of the locale and kept | CLI | Set the scales again if they were reset. |
+| `srp print` of a remote file (`root://…`, `https://…`), which data sources read, failed with "Could not find file" | Remote files are listed, read through ROOT as the inputs of data sources | CLI | Nothing. |
 
 ## 3.3.3 → 4.0.0
 

@@ -24,6 +24,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 namespace SciRooPlot::util
 {
@@ -36,6 +37,11 @@ inline bool is_remote(const std::string& path)
   if (schemeEnd == std::string::npos || schemeEnd == 0 || !std::isalpha(static_cast<unsigned char>(path[0]))) return false;
   return std::all_of(path.begin(), path.begin() + schemeEnd, [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '+' || c == '-' || c == '.'; });
 }
+
+// an input file.root:folder/sub is split after the .root ending (a directory in the path may contain ':', e.g. a time stamp, or
+// even '.root:': split after an existing file, an existing path is not split, otherwise after the first .root); a remote file after
+// its ending or the query following it
+std::vector<std::string> split_input_path(const std::string& input);
 
 // folder ("" if none) and name of a path within a file or data source (a/b/c: a/b and c)
 inline std::pair<std::string, std::string> split_path(const std::string& path)

@@ -55,6 +55,7 @@
 
 #include "Config.h"
 #include "Validation.h"
+#include "util/Paths.h"
 #include "util/RootContainers.h"
 #include "util/ScopeGuard.h"
 #include "util/Strings.h"
@@ -516,23 +517,10 @@ int RunCommand(const string& command, const string& project, const string& prope
 
 bool PrintRootFileContents(const string& inputPath)
 {
-  string fileName = inputPath;
-  string startPath;
-  // split after the .root ending, as the inputs of data sources (a directory in the path may contain ':')
-  // (with '.root:' also in a directory name: after an existing file, an existing path is not split)
-  std::error_code ec;
-  size_t split = inputPath.find(".root:");
-  for (size_t pos = split; pos != string::npos; pos = inputPath.find(".root:", pos + 1)) {
-    if (std::filesystem::is_regular_file(inputPath.substr(0, pos + 5), ec)) {
-      split = pos;
-      break;
-    }
-    if (inputPath.find(".root:", pos + 1) == string::npos && std::filesystem::exists(inputPath, ec)) split = string::npos;
-  }
-  if (split != string::npos) {
-    fileName = inputPath.substr(0, split + 5);
-    startPath = inputPath.substr(split + 6);
-  }
+  // split after the .root ending, as the inputs of data sources
+  const auto fileAndPath = util::split_input_path(inputPath);
+  const string fileName = fileAndPath[0];
+  string startPath = (fileAndPath.size() > 1) ? fileAndPath[1] : "";
   while (!startPath.empty() && startPath.back() == '/')
     startPath.pop_back();
   if (fileName.empty()) {
@@ -540,7 +528,7 @@ bool PrintRootFileContents(const string& inputPath)
     return false;
   }
   std::error_code existsError;
-  if (!std::filesystem::exists(fileName, existsError)) {
+  if (!util::is_remote(fileName) && !std::filesystem::exists(fileName, existsError)) {
     logger::error("Could not find file {}.", fileName);
     return false;
   }

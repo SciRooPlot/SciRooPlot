@@ -22,15 +22,40 @@
 
 #include <cctype>
 #include <cstdlib>
+#include <filesystem>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "util/Strings.h"
 
 using std::string;
+using std::vector;
 
 namespace SciRooPlot::util
 {
+vector<string> split_input_path(const string& input)
+{
+  if (is_remote(input)) {
+    // a remote file may carry a query (file.root?authz=...): the folder follows after it
+    for (size_t pos = input.find(".root"); pos != string::npos; pos = input.find(".root", pos + 1)) {
+      size_t end = pos + 5;
+      if (end < input.size() && input[end] == '?') end = input.find(':', end);
+      if (end == string::npos || end == input.size()) return {input};
+      if (input[end] == ':') return {input.substr(0, end), input.substr(end + 1)};
+    }
+    return {input};
+  }
+  const size_t first = input.find(".root:");
+  if (first == string::npos) return {input};
+  std::error_code ec;
+  for (size_t pos = first; pos != string::npos; pos = input.find(".root:", pos + 1)) {
+    if (std::filesystem::is_regular_file(input.substr(0, pos + 5), ec)) return {input.substr(0, pos + 5), input.substr(pos + 6)};
+  }
+  if (std::filesystem::exists(input, ec)) return {input};
+  return {input.substr(0, first + 5), input.substr(first + 6)};
+}
+
 // expands a leading ~ and environment variables ($VAR, ${VAR}) like bash; wildcards are matched where the paths are used
 // nullopt if a variable is not set (reported here)
 std::optional<string> expand_path(const string& path)

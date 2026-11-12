@@ -167,7 +167,6 @@ class PlotManager
   static std::function<bool(const std::string&, const std::string&)> PlotMatcher(const std::string& name, const std::string& group);
   static std::string WildcardHint(const std::string& name, const std::string& group);
   static bool IsValidDataSourceName(const std::string& dataSource);
-  static std::vector<std::string> SplitInputPath(const std::string& input);
   static std::string InputFileName(const std::string& filePart);
   static std::unique_ptr<TFile> OpenInputFile(const std::string& fileName);
   void ForgetBufferedData(const std::string& dataSource);
