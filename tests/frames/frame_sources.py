@@ -6,6 +6,7 @@ data takes its frame from the ranges of its axes, and a pad missing one of them 
 The frame input takes nothing from the data: no number, no colour, no legend row; its bin labels label the frame. It wins over data
 marked SetDefinesFrame() (with a warning), a second call replaces it, and a pad of only a frame input is made with that frame. A frame
 input in pad 0 or in a base plot is ignored with a warning when the plot is added; a ratio or a frame without name or source is refused.
+A pad with only a frame (input or axis ranges) draws its reference function.
 Cases: every data kind of a flat frame giving the frame, first, marked or set, with other data of a wider range in the pad, and the named
 cases.
 Reference: the frame of the same data drawn alone; for colours and legend rows the same data without frame input.
@@ -181,4 +182,20 @@ for name, data, n in (("outside_above", "narrow", 1), ("inside", "four", 0), ("l
     check(f"{name}: {'warned once that ' + data + ' is outside the frame' if n else 'no warning about data outside the frame'}", len(said) == n and all(f"Data {data}:other lies entirely above" in m for m in said), " | ".join(said))
 for name, result in refused.items():
     check(f"a frame of {name} is refused", isinstance(result, ValueError), f"{result!r}")
+ref = Project("frame_sources_ref")
+ref.inputs()
+plot = S.Plot("set_frame", "ref", "1d")
+plot[1].SetFrame("hist", "inputs")
+plot[1].SetRefFunc("2")
+ref.pm.AddPlot(plot)
+plot = S.Plot("ranges", "ref", "1d")
+plot[1]["X"].SetRange(1.0, 10.0)
+plot[1]["Y"].SetRange(0.0, 5.0)
+plot[1].SetRefFunc("2")
+ref.pm.AddPlot(plot)
+refRun = ref.plot("ref")
+for name in ("set_frame", "ranges"):
+    pad = refRun.pad(name, "ref")
+    functions = [o.GetTitle() for o in pad.GetListOfPrimitives() if o.InheritsFrom("TF1")] if pad else None
+    check(f"a pad with only a frame draws its reference function: {name}", functions == ["2"], str(functions))
 finish()

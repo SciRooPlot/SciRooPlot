@@ -137,9 +137,11 @@ jobs:
         run: ./.github/scripts/install-linux.sh
 
       # the tests of the shell functions run in bash and in zsh; the output tests take screenshots with ImageMagick;
-      # the tests of remote inputs serve their files with an XRootD server
-      - name: Install zsh, ImageMagick and XRootD
-        run: sudo apt-get install -y --no-install-recommends zsh imagemagick xrootd-server
+      # the tests of remote inputs serve their files with an XRootD server; programs with a decimal-comma locale need one (de_DE)
+      - name: Install zsh, ImageMagick, XRootD and a German locale
+        run: |
+          sudo apt-get install -y --no-install-recommends zsh imagemagick xrootd-server locales
+          sudo locale-gen de_DE.UTF-8
 
       - name: Install ROOT
         uses: mamba-org/setup-micromamba@v3

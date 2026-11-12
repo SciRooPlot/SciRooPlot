@@ -6,16 +6,18 @@ line and a missing last line end are read as intended. A column is numeric when 
 it floating point, an empty cell of a numeric column is nan; a column with text is text (usable in filters). Column names that are no C++
 identifiers can be requested as they are. A table that cannot be read is reported with the reason, and only its plots are lost: lines
 with another number of fields (with a hint for columns aligned by several spaces, also in the header), no data, a value not matching its column (for each
-request); spaces around the delimiters and decimal commas are warned about.
+request); spaces around the delimiters and decimal commas are warned about. A program that set a locale with a decimal comma reads
+tables and writes numbers into its plots as any other, and keeps its locale.
 Covers: decimals after integer rows, inf and a BOM in CSV files, the type inference of CSV columns,
 a value not matching its column reported for each request, a bad CSV value (only its plot lost), the ROOT error for a graph of points with x values that
 are not finite, the hint for aligned headers.
 """
 
 import math
+import os
 
 import numpy as np
-from srptest import ROOT, Project, S, check, drawn_diff, finish
+from srptest import ROOT, Project, S, check, drawn_diff, finish, python
 
 p = Project("tables")
 NAN = float("nan")
@@ -165,4 +167,34 @@ for file_name, (_, text, isWarning) in FAILING.items():
         check(f"{file_name}: reported{' for each request' if count > 1 else ''}, the plot is lost", not made and len(lines) == count, f"plot {'made' if made else 'lost'}, {len(lines)} errors: {failed.errors()[:3]}")
 diff = drawn_diff([ROOT.TGraph(3, np.array([1.0, 2.0, -3.0]), np.array([2.5, 3.5, 4.5]))], failed.objects("beside", "failing"))
 check("a table beside one that cannot be read is read as usual", not diff, diff)
+# plotting in a program with a decimal-comma locale (Python's locale.setlocale): "2.5" is a number, the text of drawn values has points
+localeFolder = os.path.join(p.dir, "locale")
+os.makedirs(localeFolder)
+open(os.path.join(localeFolder, "points.csv"), "w").write("x,y\n1,2.5\n2,3.5\n")
+code = f"""import locale
+try:
+    locale.setlocale(locale.LC_ALL, "de_DE.UTF-8")
+except locale.Error:
+    print("NO_LOCALE")
+    raise SystemExit
+from SciRooPlot import *
+pm = PlotManager("")
+pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
+pm.SetOutputDirectory({localeFolder!r})
+pm.AddDataSource("t", {os.path.join(localeFolder, "points.csv")!r})
+plot = Plot("p", "g", "1d")
+plot[1].AddData("points", "t").Project1D(("y", 4, [2.0, 4.0])).SetDrawOption(points_text).SetTextFormat(".2f")
+pm.AddPlot(plot)
+pm.GeneratePlots("file")
+print("DECIMAL", locale.localeconv()["decimal_point"])
+"""
+out = python(code)
+if "NO_LOCALE" in out.text:
+    print("[SKIP] the locale de_DE.UTF-8 is not installed: the decimal-comma case is not run")
+else:
+    f = ROOT.TFile(os.path.join(localeFolder, "Plots.root"))
+    canvas = f.Get("g/p")
+    hist = next((o for o in canvas.GetPrimitive("Pad_1").GetListOfPrimitives() if o.InheritsFrom("TH1") and ":" in o.GetName()), None) if canvas else None
+    check("a decimal-comma locale: the table read as numbers", hist is not None and math.isclose(hist.GetMean(), 3.0) and not out.errors(), out.tail())
+    check("a decimal-comma locale: the program keeps its locale", "DECIMAL ," in out.text, out.tail())
 finish()

@@ -38,6 +38,7 @@ from srptest import (
     modifier_reference,
     profile_means,
     source_of,
+    variant_warnings,
 )
 
 p = Project("modifiers", bases=("1d", "2d"))
@@ -79,6 +80,7 @@ run = p.plot("modifiers")
 
 expectedWarnings = [(f" {kind} has", "NaN or infinite") for kind, variant in bases if variant in ("nan", "inf")]  # (data name, fragment)
 expectedWarnings += [(f"Graph {kind} ", "has no points: it is not drawn") for kind, variant in bases if variant == "empty" and (DATA_KINDS[kind][1] in GRAPHS or kind == "efficiency")]
+expectedWarnings += [w for kind, variant in bases for w in variant_warnings(kind, variant)]
 silent = set()  # data whose warnings are not compared
 for i, case in enumerate(todo):
     what = describe(case)
@@ -86,6 +88,7 @@ for i, case in enumerate(todo):
     formulaKind = "formula" in DATA_KINDS[kind][2]
     if case["variant"] in ("nan", "inf"):
         expectedWarnings.append((f" {kind} has", "NaN or infinite"))
+    expectedWarnings += variant_warnings(kind, case["variant"])
     base, obs = run.drawn(bases[(kind, case["variant"])], "modifiers"), run.drawn(f"mod{i}", "modifiers")
     if not base and not obs and case["variant"] == "empty" and (DATA_KINDS[kind][1] in GRAPHS or kind == "efficiency"):
         expectedWarnings.append((f"Graph {kind} ", "has no points: it is not drawn"))

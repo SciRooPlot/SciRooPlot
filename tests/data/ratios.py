@@ -12,7 +12,7 @@ graph or function a graph. Every warning is expected.
 Covers: function numerator by a denominator with errors, graph points removed with their errors, profiles
 divided as their means, formulas as denominators divide the whole numerator, TGraphMultiErrors divided; TH2Poly
 divided without reading past its bins; NaN in a denominator removed before the division (a spline through it was NaN everywhere); two
-formulas without a range reported once; a TGraphMultiErrors denominator sorted with its errors; empty denominator bins (also NaN) no
+formulas without a range reported once; a TGraphMultiErrors denominator sorted with its errors; a ratio by a function at its zeros reported; empty denominator bins (also NaN) no
 knots of the interpolation (the ratio swung around them).
 """
 
@@ -64,6 +64,8 @@ todo = cases(
         {"num": "hist2poly", "den": "function2d", "num_variant": "normal", "den_variant": "normal", "correlated": False, "why": "TH2Poly statistics"},
         {"num": "hist2poly", "den": "hist2poly", "num_variant": "normal", "den_variant": "normal", "correlated": True, "why": "TH2Poly statistics"},
         {"num": "hist", "den": "graph_errors", "num_variant": "normal", "den_variant": "nan", "correlated": False, "why": "NaN denominator"},
+        {"num": "hist", "den": "tf1", "num_variant": "normal", "den_variant": "zeros", "correlated": False, "why": "a function zero at every bin, reported"},
+        {"num": "graph_errors", "den": "tf1_cpp", "num_variant": "normal", "den_variant": "zeros", "correlated": False, "why": "a function zero at every point, reported"},
         {"num": "graph_errors", "den": "hist_var", "num_variant": "normal", "den_variant": "nan", "correlated": False, "why": "NaN denominator"},
         {"num": "hist", "den": "hist_var", "num_variant": "normal", "den_variant": "nan", "correlated": False, "why": "empty denominator bins"},
         {"num": "graph_errors", "den": "hist_var", "num_variant": "normal", "den_variant": "empty", "correlated": False, "why": "empty denominator bins"},

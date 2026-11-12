@@ -10,7 +10,8 @@ project.
 Covers: unknown projects, confdir of an unknown project, unset program, confdir ..,
 add with an unset variable: one message, nothing left, program before srp add, concurrent
 srp add, SaveProject keeping changes made meanwhile, rename with in-memory data, srp set while a program saves, rename
-with the configuration reached through a symlink, unreadable projects.info: exit 1, reported once."""
+with the configuration reached through a symlink, unreadable projects.info: exit 1, reported once, a project saved by its program but not
+registered (SaveProject and select name srp add)."""
 
 import os
 import shutil
@@ -275,4 +276,8 @@ out = run(SRP, "rename", "mem", "moved", config=config)
 sources = open(os.path.join(config, "moved", "dataSources.info")).read()
 made = run(os.path.join(os.path.dirname(SRP), "plot"), "g", "p", "file", config=config)
 check("rename: the in-memory data moves with the project", out.rc == 0 and os.path.join(config, "moved", "UserData.root") in sources and made.rc == 0 and not made.errors(), sources + made.tail())
+unregistered = config_folder("unregistered")
+saved = python("from SciRooPlot import *\npm = PlotManager('unreg')\npm.SaveProject()", config=unregistered)
+selected = run(SRP, "select", "unreg", config=unregistered)
+check("a project saved but not registered: SaveProject and srp select name srp add", "srp add unreg" in saved.text and selected.rc == 1 and len(selected.errors()) == 1 and "not registered" in selected.errors()[0] and "srp add unreg" in selected.errors()[0], saved.tail() + " || " + selected.tail())
 finish()

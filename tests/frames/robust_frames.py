@@ -1,15 +1,17 @@
 """Every data kind in every variant (values crossing zero, a NaN or infinite value, all zeros, no entries, a single bin or point, values
-near the largest float) gives a plot with a finite frame and no ROOT errors, on linear and log scales of its value axis: a log axis
-keeps a positive range (or is switched off with a warning when there is nothing positive). Data with a NaN or infinite value is
-reported with a warning naming it, as data with contents beyond the largest float (ROOT finds axis ranges only below it). A plot that
-ROOT throws an exception on while painting is reported and loses only itself.
+near the largest float, one value everywhere, a function NaN over part of its range) gives a plot with a finite frame and no ROOT errors,
+on linear and log scales of its value axis: a log axis keeps a positive range (or is switched off with a warning when there is nothing
+positive), the colour scale of a map has two different ends unless every content is zero. Data with a NaN or infinite value is reported
+with a warning naming it, as data with contents beyond the largest float (ROOT finds axis ranges only below it) and a function NaN in
+part of its range. A plot that ROOT throws an exception on while painting is reported and loses only itself.
 Covers: crashes on NaN points of TGraphMultiErrors and on empty 2d graphs, misplaced errors of
-2d graphs after removing NaN points, the whole run lost to one plot ROOT could not paint.
+2d graphs after removing NaN points, the whole run lost to one plot ROOT could not paint, a map of one value painted in the lowest
+colour (its scale had equal ends), a function NaN in part of its range drawn as an empty plot (NaN frame).
 """
 
 import math
 
-from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, cases, check, describe, finish, has_variant, source_of
+from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, cases, check, describe, finish, formula, has_variant, source_of
 
 p = Project("robust_frames")
 p.inputs(VARIANTS)
@@ -51,7 +53,9 @@ for i, case in enumerate(todo):
     frame = run.frame_hist(f"c{i}", "robust")
     if frame and DATA_KINDS[case["kind"]][0] > 1:
         ranges += [frame.GetMinimum(), frame.GetMaximum()]
-    ordered = all(ranges[k] < ranges[k + 1] or (k == 4 and ranges[k] == ranges[k + 1]) for k in range(0, len(ranges), 2))
+    # (a TF3 is drawn as surfaces in a 3d view: its frame has no contents to colour)
+    nothingToColour = case["variant"] in ("zeros", "empty") or DATA_KINDS[case["kind"]][1] == "TF3"
+    ordered = all(ranges[k] < ranges[k + 1] or (k == 4 and nothingToColour and ranges[k] == ranges[k + 1]) for k in range(0, len(ranges), 2))
     check(f"finite frame: {what}", all(math.isfinite(v) for v in ranges) and ordered, str(ranges))
     if case["log"] and frame and DATA_KINDS[case["kind"]][0] == 2:
         if pad.GetLogz():
@@ -64,6 +68,9 @@ check("a plot ROOT cannot paint is made or reported", bool(run.pad("a_unpaintabl
 check("contents beyond the largest float are reported by name", any(line.split("]", 1)[-1].split()[0] == "unpaintable" and "beyond the largest float" in line for line in run.warnings()), " | ".join(run.warnings()[:3]))
 errors = [line for line in run.errors() if "a_unpaintable" not in line]
 check("no ROOT errors", not errors, " | ".join(errors[:5]))
+undefined = sorted({case["kind"] for case in todo if case["variant"] == "undefined"})
+unreportedUndefined = [kind for kind in undefined if not any("is NaN in parts of" in line and (f"Function {kind} " in line or formula(kind, "undefined") in line) for line in run.warnings())]
+check("a function NaN in part of its range is reported by name", not unreportedUndefined, ", ".join(unreportedUndefined))
 kinds = {case["kind"] for case in todo if case["variant"] in ("nan", "inf")}
 unreported = sorted(kind for kind in kinds if not any(line.split("]", 1)[-1].split()[0] == kind and "NaN" in line for line in run.warnings()))
 check("data with a NaN or infinite value is reported by name", not unreported, ", ".join(unreported))

@@ -4,7 +4,7 @@ projected onto x, y, (x, y) and (y, x), or profiled (the averaged axis named, or
 under- and overflow, ranges on bin edges and inside bins in axis units), as a projection of the stored histogram or as a tree request
 with a filter, and must give the contents and errors of the histogram filled directly with the selected events. A selection by bin
 numbers (0, -1: ROOT's whole axis, flows included) and in axis units (the bins the range reaches into) selects the same events in
-every route. A profile of a histogram averages the centres of the bins of the profiled axis (a tree the values), its under- and overflow
+every route; a THn (also sparse) and a tree are projected onto all three axes as well (a TH3D, in the order given). A profile of a histogram averages the centres of the bins of the profiled axis (a tree the values), its under- and overflow
 only when a selection names them by number: ROOT's ProfileX leaves them out for 0, -1, where ProjectionX counts them. Entries are not compared: ROOT counts them differently per class (a THn all fills, a TH3 projection the effective entries).
 Covers: projected axes named by the axis titles of the input, the projections (ProjectX by bins and in user coordinates, a single bin, the last bin, ProfileX,
 THnSparse with a range), profiles of a THn and THnSparse and of a TH3 onto one axis, the axis titles of projections and profiles of TProfile2D and TProfile3D, and the errors for a profile whose averaged axis is not clear.
@@ -31,7 +31,7 @@ SELECTIONS = {
     "edges": [(1, 3.0, 6.0, True), (2, 2.0, 8.0, True)],
     "inside": [(1, 2.5, 6.5, True), (2, 4.2, 4.3, True)],
 }
-TARGETS = {"x": [0], "y": [1], "xy": [0, 1], "yx": [1, 0], "profile_x": [0], "profile_xy": [0, 1]}  # profiles: the mean of the next axis (named for x, the only one left for xy)
+TARGETS = {"x": [0], "y": [1], "xy": [0, 1], "yx": [1, 0], "xyz": [0, 1, 2], "zxy": [2, 0, 1], "profile_x": [0], "profile_xy": [0, 1]}  # profiles: the mean of the next axis (named for x, the only one left for xy)
 INPUTS = ("TH3D", "THnD", "THnSparseD", "TH2D", "tree")
 
 
@@ -58,6 +58,8 @@ def reference(target, selection, binned):
     profile = target.startswith("profile")
     if len(dims) == 1:
         h = ROOT.TProfile("ref", "", NBINS, LOW, HIGH) if profile else ROOT.TH1D("ref", "", NBINS, LOW, HIGH)
+    elif len(dims) == 3:
+        h = ROOT.TH3D("ref", "", NBINS, LOW, HIGH, NBINS, LOW, HIGH, NBINS, LOW, HIGH)
     else:
         h = ROOT.TProfile2D("ref", "", NBINS, LOW, HIGH, NBINS, LOW, HIGH) if profile else ROOT.TH2D("ref", "", NBINS, LOW, HIGH, NBINS, LOW, HIGH)
     h.Sumw2()
@@ -85,6 +87,8 @@ def possible(c):
     sels, target = SELECTIONS[c["selection"]], c["target"]
     if c["input"] == "TH2D":
         return all(s[0] < 2 for s in sels) and target in ("x", "profile_x")
+    if len(TARGETS[target]) == 3 and c["input"] == "TH3D":  # it is the histogram already
+        return False
     return all(s[0] not in TARGETS[target] for s in sels)
 
 
@@ -129,6 +133,7 @@ todo = cases(
         {"input": "TH2D", "target": "x", "selection": "last_bin", "why": "the last bin, in user coordinates"},
         {"input": "THnSparseD", "target": "x", "selection": "edges", "why": "a THnSparse with a range"},
         {"input": "THnD", "target": "profile_x", "selection": "with_flows", "why": "a THn profile with the flows of the averaged axis"},
+        {"input": "THnD", "target": "zxy", "selection": "none", "why": "a THn onto three axes in another order"},
     ],
 )
 
@@ -161,6 +166,8 @@ for i, case in enumerate(todo):
             data.Profile(dimsSpec, AXES[len(dims)], "w")
         elif len(dims) == 1:
             data.Project1D(dimsSpec[0], "w")
+        elif len(dims) == 3:
+            data.Project(dimsSpec, "w")
         else:
             data.Project2D(dimsSpec[0], dimsSpec[1], "w")
     else:
@@ -179,7 +186,8 @@ for i, case in enumerate(todo):
             select = data.Profile if profile else data.Project
             args = [len(dims), dims] if profile and len(dims) == 1 else [dims]  # one axis kept: two are left, the averaged one is named
             select(*args, ranges, user) if user is not None else select(*args, ranges)
-    data.SetDrawOption("hist" if len(dims) == 1 else "colz")
+    if len(dims) < 3:
+        data.SetDrawOption("hist" if len(dims) == 1 else "colz")
     p.pm.AddPlot(plot)
 # a profile whose averaged axis is not clear: two axes left (THn) or none, a named axis that is kept or missing, a profile input
 UNCLEAR = [
@@ -188,9 +196,11 @@ UNCLEAR = [
     ("THnD", lambda d: d.Profile(3, [0]), "Cannot average axis 3 of THnD:hists: it only has 3 dimensions"),
     ("TH3D", lambda d: d.Profile([0]), "Cannot profile 3d histogram TH3D:hists onto one axis without the axis to average: name it with Profile(averagedAxis, dims), or give two axes (the mean of the third)"),
     ("TProfile2D", lambda d: d.Profile(1, [0]), "Cannot average axis 1 of TProfile2D:hists: it is a profile already, Profile(dims) gives the mean of its values"),
+    ("TH3D", lambda d: d.Project([0, 1, 2]), "Cannot project TH3D:hists onto three axes: it is a 3d histogram (draw it without Project)"),
+    ("THnD", lambda d: d.Profile([0, 1, 2]), "Cannot profile THnD:hists onto 3 axes: a profile keeps one or two axes"),
 ]
 for i, (name, select, _) in enumerate(UNCLEAR):
-    plot = S.Plot(f"u{i}", "routes", "1d")
+    plot = S.Plot(f"u{i}", "routes", "2d" if "TH3D" in name else "1d")
     select(plot[1].AddData(name, "hists"))
     p.pm.AddPlot(plot)
 # the axis titles of projections and profiles of profiles (ROOT's TProfile2D::ProfileX and TProfile3D::Project3DProfile drop them): (input, selection, axes kept)

@@ -3,7 +3,9 @@ range of its frame, coloured over the z range of the pad, with a colour scale ri
 for projections) and none otherwise, painting no cell outside the map; a range on the pad applies to the map, a range on the data is
 ignored with a warning; the axes ROOT paints for the map look like those of the frame, and no frame box is drawn again. Data drawn after
 a map must be a map of the same projection: other data is not drawn, with one warning, and the data after it keeps its number.
-COL with a projection is warned about (ROOT paints the map twice).
+COL with a projection is warned about (ROOT paints the map twice). A TH2Poly drawn in polar coordinates (col_polar, colz_polar) is drawn
+as col(z) with a warning (ROOT paints its polygons only in cartesian coordinates); a 2d graph whose points lie on one line, drawn with an
+option that interpolates (a map), is warned about (ROOT finds no triangles: nothing is drawn).
 Covers: a map over a part of the sphere too small in its frame, maps without colour scale, cells painted outside of the map on log z,
 flat maps and maps of other projections drawn silently into a map.
 """
@@ -142,4 +144,21 @@ for i in corners:
 check("COL with a projection warned once", len(run.warnings("paints COL with a map projection twice")) == 1, " | ".join(run.warnings("COL")))
 check("no other warnings", all(any(t in w for t in ("It is not drawn", "does not apply to a map projection", "paints COL with a map projection")) for w in run.warnings()), " | ".join(run.warnings()[:5]))
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
+
+flat = Project("maps_flat")
+flat.inputs()
+line = ROOT.TGraph2D(5)
+for n in range(5):
+    line.SetPoint(n, n, 2.0 * n, n * n)
+flat.source("flat", {"line": line})
+for name, data, option in (("polar", "hist2poly", "colz_polar"), ("line_map", "line", None), ("line_points", "line", "points")):
+    plot = S.Plot(name, "flat", "2d")
+    added = plot[1].AddData(data, "inputs" if data == "hist2poly" else "flat")
+    if option:
+        added.SetDrawOption(getattr(S, option))
+    flat.pm.AddPlot(plot)
+flatRun = flat.plot("flat")
+polar = flatRun.drawn("polar", "flat")
+check("a TH2Poly in polar coordinates drawn as colz, with a warning", bool(polar) and "POL" not in polar[0][1].upper() and len(flatRun.warnings("paints polygon bins only in cartesian")) == 1, str(polar[0][1] if polar else None) + " | ".join(flatRun.warnings()))
+check("a 2d graph on one line drawn as map warned about, drawn as points not", len(flatRun.warnings("lie on one line")) == 1, " | ".join(flatRun.warnings()))
 finish()

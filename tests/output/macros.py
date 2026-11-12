@@ -11,7 +11,8 @@ file get a number, with a warning. Mode macro needs a display: without one it is
 The macro is written by ROOT (TCanvas::SaveAs): what ROOT's SavePrimitive gets wrong is not SciRooPlot's to guarantee, and these data are
 left out (ROOT_CANNOT): a TF3 of compiled code (ROOT writes its title as formula), a TGraphMultiErrors with an error of 0 (an ambiguous
 SetPointEY call), every TProfile3D (its palette refers to a variable ROOT renamed), a TGraph2D of one point (pad ranges written with 6
-digits give an illegal range) and an empty polar graph (the grid drawn alone is not written). SciRooPlot completes what ROOT leaves out
+digits give an illegal range), an empty polar graph (the grid drawn alone is not written) and a TF1 of compiled code NaN in part of its
+range (its stored values are written with bare nan, which does not compile; drawn only where it is a number). SciRooPlot completes what ROOT leaves out
 of every macro: the max digits of axes (ROOT drops them from SetNdivisions) and line colour 1 of histograms (ROOT takes it as default, a
 histogram made by the macro takes the colour of the style). Other attributes are not compared (colour scales in the frame's contour
 levels)."""
@@ -29,7 +30,7 @@ if not subprocess.run(["root", "-b", "-q", "-l", "-e", "0"], capture_output=True
     skip("the root executable is needed to run the macros")
 
 # (kind, variant or None for every variant): macros ROOT cannot write
-ROOT_CANNOT = {("tf3_cpp", None), ("graph_multi", "zeros"), ("profile3d", None), ("graph2d", "single"), ("graph_polar", "empty")}
+ROOT_CANNOT = {("tf3_cpp", None), ("graph_multi", "zeros"), ("profile3d", None), ("graph2d", "single"), ("graph_polar", "empty"), ("tf1_cpp", "undefined")}
 
 
 def root_can(kind, variant):

@@ -4,8 +4,8 @@ Checked by the structure of each format: pdf (one page, shown in the canvas' asp
 box of the canvas' aspect), ps (one page), svg (an svg document of the canvas' aspect), png and jpg (the canvas' pixels at bitmapscale 1),
 html (a page holding the canvas), and root, xml and json, whose canvas must be the one of mode file (Plots.root): the same primitives with
 the same drawing options, in every sub-pad. The json canvas has no colour reservation (a TExec only a canvas read back by ROOT needs) and
-keeps a histogram drawn twice as one object; ROOT writes infinite values into json as 2e308 (JSROOT reads them as infinity), which its own
-reader refuses: they are read back as the largest double.
+keeps a histogram drawn twice as one object; ROOT writes infinite values into json as 2e308 (JSROOT reads them as infinity) and NaN as
+null, which its own reader refuses: they are read back as the largest double and as 0.
 Images (Pad::AddImage) are in every format: svg embeds a png, eps and ps a cell array, the bitmaps show the image's pixels, root, xml and
 json hold it in its sub-pad; pdf only from ROOT 6.42 on, before which one warning per run says so (instead of ROOT's line per image).
 The same for multi-panel plots (srptest's LAYOUTS: a grid, ratio panels, a gap with an explicit group, a legend strip with the rows of

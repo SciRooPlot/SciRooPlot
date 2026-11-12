@@ -1,8 +1,9 @@
 """Data is drawn through the points it was given: a graph with points in no order of x (a contour, a trajectory) is drawn in their given
 order by every alias that draws it as a graph, with the values of the input; only area sorts them (the area below the points needs the
 order of x), with one warning; drawn as a histogram (hist, text, ...) or its steps (hist_clipped) a graph becomes bins, whose order is that of x. A function keeps
-the number of points it is sampled at (SetNpx, SetNpy, SetNpz), few or many, for every alias it can be drawn with.
-Covers: area sorted the points of a graph silently.
+the number of points it is sampled at (SetNpx, SetNpy, SetNpz), few or many, for every alias it can be drawn with. Points given in the
+plot definition (AddPoints) are named in messages by their label, or by their number and x range.
+Covers: area sorted the points of a graph silently, points of the definition named by all their coordinates (warnings of kilobytes).
 """
 
 from srptest import ALIASES, DATA_KINDS, Project, S, add_data, alias_table, base_of, cases, check, close, data_objects, describe, drawn_type, finish, has_variant, source_of
@@ -87,4 +88,16 @@ for kind in GRAPHS:  # the warnings name the data, not the plot
     check(f"one warning about the order per area of unsorted points: {kind}", len(found) == unsorted, " | ".join(found))
 check("no other warnings", len(run.warnings()) == len(sortWarnings), " | ".join(w for w in run.warnings() if w not in sortWarnings)[:500])
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
+
+named = Project("given_points_named")
+xs = [0.5 * i for i in range(400)]
+ys = [1.0 + 0.01 * i for i in range(400)]
+ys[7] = float("nan")
+plot = S.Plot("named", "given", "1d")
+plot[1].AddPoints(xs, ys, "rising")
+plot[1].AddPoints(xs, ys)
+named.pm.AddPlot(plot)
+namedRun = named.plot("given")
+said = sorted(w.split("]", 1)[-1].strip().split(" has ")[0] for w in namedRun.warnings("NaN or infinite"))
+check("points of the definition named by their label, or their number and x range", said == sorted(["points 'rising'", "points (400 at x = 0 to 199.5)"]), str(said)[:300])
 finish()

@@ -183,11 +183,12 @@ FORMULAS = {"function": "1 + (x - 1) * (1 - 0.3 * ((x - 5.5) / 4.5)^2)"}
 # zero (zeros), no entries or points at all (empty), a single filled bin or point (single), values near the largest float (huge),
 # graph points in shuffled order (unsorted), histograms with large underflow and overflow contents (overflow), functions sampled with
 # few or many points (coarse, fine), coordinates from -4 to 5 on every axis with the values of normal (crossing: bins and points at and
-# below zero, for log axes). A TEfficiency counts events: it has no negative, NaN, infinite, huge or overflow variant. Polar graphs have
-# no crossing variant (their coordinates are angles).
-VARIANTS = ("normal", "negative", "nan", "inf", "zeros", "empty", "single", "huge", "unsorted", "overflow", "coarse", "fine", "crossing")
-COUNTS_VARIANTS = ("normal", "zeros", "empty", "single", "crossing")
-FUNCTION_VARIANTS = ("normal", "negative", "zeros", "coarse", "fine", "crossing")
+# below zero, for log axes), every value 3 (constant: a flat map, an efficiency of one value), a 1d function NaN below x = 4
+# (undefined: sqrt of a negative number). A TEfficiency counts events: it has no negative, NaN, infinite, huge or overflow variant. Polar
+# graphs have no crossing variant (their coordinates are angles).
+VARIANTS = ("normal", "negative", "nan", "inf", "zeros", "empty", "single", "huge", "unsorted", "overflow", "coarse", "fine", "crossing", "constant", "undefined")
+COUNTS_VARIANTS = ("normal", "zeros", "empty", "single", "crossing", "constant")
+FUNCTION_VARIANTS = ("normal", "negative", "zeros", "coarse", "fine", "crossing", "constant", "undefined")
 CROSSING_SHIFT = -5.0  # the shift of every coordinate in the variant crossing
 NPX = {"normal": 100, "coarse": 5, "fine": 10000}  # points of a function per axis, at most NPX_MAX in 2d and 3d (memory of the stored samples)
 NPX_MAX = {1: 10000, 2: 200, 3: 20}
@@ -197,6 +198,9 @@ def has_variant(kind, variant):
     _, cls, props = DATA_KINDS[kind]
     if variant == "crossing" and "polar" in props:
         return False
+    if variant == "undefined":
+        return cls == "TF1"
+
     if cls == "TEfficiency":
         return variant in COUNTS_VARIANTS
     if cls.startswith("TF"):
@@ -220,7 +224,17 @@ def formula(kind, variant="normal"):
     base = {1: FORMULAS["function"], 2: "x * y", 3: "x * y * z"}[dim]
     if variant == "crossing":
         return re.sub(r"\b([xyz])\b", rf"(\1 + {-CROSSING_SHIFT:g})", base)
-    return {"negative": f"({base}) - {5**dim}", "zeros": f"0 * {' * '.join('xyz'[:dim])}"}.get(variant, base)
+    variants = {"negative": f"({base}) - {5**dim}", "zeros": f"0 * {' * '.join('xyz'[:dim])}", "constant": f"3 + 0 * {' * '.join('xyz'[:dim])}"}
+    if dim == 1:
+        variants["undefined"] = f"({base}) * sqrt(x - 4) / sqrt(x - 4)"
+    return variants.get(variant, base)
+
+
+def variant_warnings(kind, variant):
+    """the warnings data of a kind in a variant gives where it is drawn, as (data name, fragment): a function NaN in part of its range"""
+    if variant == "undefined":
+        return [(f"Function {formula(kind, variant) if 'formula' in DATA_KINDS[kind][2] else kind} ", "is NaN in parts of")]
+    return []
 
 
 def axis_range(variant="normal"):
@@ -241,6 +255,10 @@ def _declare():
       return h;
     }
     double srptest_value(double x) { return 1. + (x - 1.) * (1. - 0.3 * std::pow((x - 5.5) / 4.5, 2)); }
+    double srptest_f1_constant(double*, double*) { return 3.; }
+    double srptest_f2_constant(double*, double*) { return 3.; }
+    double srptest_f3_constant(double*, double*) { return 3.; }
+    double srptest_f1_undefined(double* x, double*) { return srptest_value(x[0]) * std::sqrt(x[0] - 4.) / std::sqrt(x[0] - 4.); }
     """
     for variant, shift, scale, d in (("normal", 0, 1, 0), ("negative", 1, 1, 0), ("zeros", 0, 0, 0), ("crossing", 0, 1, -CROSSING_SHIFT)):
         code += f"""
@@ -273,6 +291,8 @@ def data_objects(variant="normal"):
             v -= 5.0 ** len(coords)
         elif variant == "zeros":
             v = 0.0
+        elif variant == "constant":
+            v = 3.0
         elif variant in ("nan", "inf") and index == special:
             v = float(variant)
         return v
@@ -355,12 +375,12 @@ def data_objects(variant="normal"):
     for b in range(1, 19):
         if keep(b - 1):
             total.SetBinContent(b, 100)
-            passed.SetBinContent(b, 0 if variant == "zeros" else round(8 * _value(total.GetBinCenter(b) - d)))
+            passed.SetBinContent(b, {"zeros": 0, "constant": 30}.get(variant, round(8 * _value(total.GetBinCenter(b) - d))))
     for i in range(1, 10):
         for j in range(1, 10):
             if keep(9 * (i - 1) + j - 1):
                 total2.SetBinContent(i, j, 100)
-                passed2.SetBinContent(i, j, 0 if variant == "zeros" else round(4 * (_value(i + 0.5) + _value(j + 0.5))))
+                passed2.SetBinContent(i, j, {"zeros": 0, "constant": 30}.get(variant, round(4 * (_value(i + 0.5) + _value(j + 0.5)))))
     eff = ROOT.TEfficiency(passed, total)
     eff2 = ROOT.TEfficiency(passed2, total2)
     h2 = ROOT.TH2D("hist2d", "", 18, lo, hi, 18, lo, hi)
@@ -410,14 +430,15 @@ def data_objects(variant="normal"):
     objects.update({"efficiency2d": eff2, "thn_sparse2d": sparse2, "graph2d": g2, "graph2d_errors": g2e, "hist3d": h3, "profile3d": p3})
     if variant in FUNCTION_VARIANTS:
         npx = NPX.get(variant, NPX["normal"])
-        cpp = variant if variant in ("negative", "zeros", "crossing") else "normal"
+        cpp = variant if variant in ("negative", "zeros", "crossing", "constant", "undefined") else "normal"
+        cpp2 = "normal" if variant == "undefined" else cpp  # undefined is a 1d variant
         functions = {
             "tf1": ROOT.TF1("tf1", formula("tf1", variant), lo, hi),
             "tf2": ROOT.TF2("tf2", formula("tf2", variant), lo, hi, lo, hi),
             "tf3": ROOT.TF3("tf3", formula("tf3", variant), lo, hi, lo, hi, lo, hi),
             "tf1_cpp": ROOT.TF1("tf1_cpp", getattr(ROOT, f"srptest_f1_{cpp}"), lo, hi, 0),
-            "tf2_cpp": ROOT.TF2("tf2_cpp", getattr(ROOT, f"srptest_f2_{cpp}"), lo, hi, lo, hi, 0),
-            "tf3_cpp": ROOT.TF3("tf3_cpp", getattr(ROOT, f"srptest_f3_{cpp}"), lo, hi, lo, hi, lo, hi, 0),
+            "tf2_cpp": ROOT.TF2("tf2_cpp", getattr(ROOT, f"srptest_f2_{cpp2}"), lo, hi, lo, hi, 0),
+            "tf3_cpp": ROOT.TF3("tf3_cpp", getattr(ROOT, f"srptest_f3_{cpp2}"), lo, hi, lo, hi, lo, hi, 0),
         }
         for name, func in functions.items():
             dim = DATA_KINDS[name][0]
@@ -1757,14 +1778,16 @@ def result_graph(ratio, num, numObj):
 
 
 def divide_by_function_hist(num, func, funcDim, binomial, exp):
-    """a histogram by a function: the value at the bin centre (a TH2Poly: the centre of the bounding box), bins outside its range empty"""
-    outside = 0
+    """a histogram by a function: the value at the bin centre (a TH2Poly: the centre of the bounding box), bins outside its range empty,
+    bins at a zero of the function zero (reported)"""
+    outside = zero = 0
     if num.InheritsFrom("TH2Poly"):
         for b in num.GetBins():
             c = b.GetBinNumber()
             x, y = 0.5 * (b.GetXMin() + b.GetXMax()), 0.5 * (b.GetYMin() + b.GetYMax())
             d = func.value(*[x, y][:funcDim])
             outside += d is None and num.GetBinContent(c) != 0
+            zero += d == 0
             num.SetBinError(c, num.GetBinError(c) / abs(d) if d else 0.0)
             num.SetBinContent(c, num.GetBinContent(c) / d if d else 0.0)
     else:
@@ -1780,21 +1803,27 @@ def divide_by_function_hist(num, func, funcDim, binomial, exp):
             xyz = [num.GetXaxis().GetBinCenter(bx[0]), num.GetYaxis().GetBinCenter(by[0]), num.GetZaxis().GetBinCenter(bz[0])]
             d = func.value(*xyz[:funcDim])
             outside += d is None and num.GetBinContent(c) != 0
+            zero += d == 0
             num.SetBinError(c, num.GetBinError(c) / abs(d) if d else 0.0)
             num.SetBinContent(c, num.GetBinContent(c) / d if d else 0.0)
     if outside:
         exp.warn(f"{outside} bins of {exp.num} lie outside the range of function {exp.den}")
+    if zero:
+        exp.warn(f"Function {exp.den} is zero at {zero} bin{'s' if zero != 1 else ''} of {exp.num}: the ratio is set to zero there")
     if binomial:
         exp.warn(f"Binomial errors are not supported for the division of {exp.num} by function {exp.den}")
     return num
 
 
 def divide_by_function_graph(numObj, func, binomial, exp):
-    """a graph by a function: points outside its range and where it is zero left out"""
+    """a graph by a function: points outside its range and where it is zero left out (the latter reported)"""
     v = graph_values(numObj)
     keep = [i for i, x in enumerate(v["x"]) if func.inside(x)]
     if len(keep) < len(v["x"]):
         exp.warn(f"{len(v['x']) - len(keep)} points of {exp.num} lie outside the range of function {exp.den}")
+    zero = sum(1 for i in keep if func.value(v["x"][i]) == 0)
+    if zero:
+        exp.warn(f"Function {exp.den} is zero at {zero} point{'s' if zero != 1 else ''} of {exp.num}: they are left out of the ratio")
     keep = [i for i in keep if func.value(v["x"][i])]
     out = {k: [values[i] for i in keep] for k, values in v.items()}
     for n, i in enumerate(keep):
@@ -1998,6 +2027,9 @@ def read_canvas(path):
         with open(path) as f:
             # ROOT writes an infinite value as 2e308 (JSROOT reads it as infinity), which its own reader refuses: read as the largest double
             text = re.sub(r"(?<![\w.])2e308\b", "1.7976931348623157e308", f.read())
+            # and NaN as null (the stored samples of a compiled function NaN in part of its range), which it refuses too: read as 0 in arrays of numbers
+            number = r"(?:-?[\d.]+(?:e[-+]?\d+)?|null)"
+            text = re.sub(rf"\[\s*{number}(?:\s*,\s*{number})*\s*\]", lambda m: re.sub(r"\bnull\b", "0", m.group(0)) if re.search(r"\d", m.group(0)) else m.group(0), text)
         try:
             obj = ROOT.TBufferJSON.ConvertFromJSON(text)
         except Exception:  # ROOT throws for json it cannot read

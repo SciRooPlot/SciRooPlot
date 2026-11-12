@@ -6,7 +6,7 @@ per entry and written again without it, keeping the valid entries."""
 import os
 import re
 
-from srptest import SRP, cases, check, config_files, config_folder, describe, finish, run
+from srptest import SRP, cases, check, config_files, config_folder, describe, finish, python, run
 
 MODES = ["show", "spread", "pdf", "eps", "ps", "svg", "png", "jpg", "gif", "gif+20", "gif+20++", "gif+20++3", "root", "html", "json", "xml", "macro", "file", "data", "print", "list"]
 VALID = {
@@ -65,4 +65,13 @@ check("the valid entries of an edited settings.info are kept", shown(config).get
 again = run(SRP, "settings", config=config)
 text = open(os.path.join(config, "settings.info")).read()
 check("an edited settings.info is written again without the bad entries", not [line for line in again.text.splitlines() if "settings.info" in line] and "foo" not in text and "loud" not in text and "-3" not in text and "matchmode contains" in text, again.tail() + text)
+# a program setting a locale with a decimal comma (Python's locale.setlocale) reads and keeps the scales (std::stod read 1.5 as 1, and saved that)
+comma = config_folder("comma")
+run(SRP, "screenscale", "1.5", config=comma)
+kept = python("import locale\ntry:\n    locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8')\nexcept locale.Error:\n    print('NO_LOCALE')\nfrom SciRooPlot import *\npm = PlotManager('c')\npm.SaveProject()", config=comma)
+if "NO_LOCALE" in kept.text:
+    print("[SKIP] the locale de_DE.UTF-8 is not installed: the decimal-comma case is not run")
+else:
+    text = open(os.path.join(comma, "settings.info")).read()
+    check("a program with a decimal-comma locale keeps the scale settings", "screenscale 1.5" in text, kept.tail() + text)
 finish()

@@ -92,4 +92,10 @@ with open(text, "w") as fh:
 for target, reason in ((os.path.join(folder, "nosuch.root"), "Could not find file"), (text, "Cannot read"), (path + ":nosuch", "Path not found"), (path + ":dir/nosuch", "Path not found")):
     out = run(SRP, "print", target)
     check(f"srp print {os.path.basename(target)}: exit 1, one error ({reason})", out.rc == 1 and len(out.errors()) == 1 and reason in out.errors()[0], out.tail())
+# a remote file, read through ROOT as the inputs of data sources (file:// goes through the same path as root:// and https://)
+for start in ("", ":dir"):
+    out = run(SRP, "print", f"file://{path}{start}")
+    found, _ = listing(out.stdout)
+    want = {k: v for k, v in expected.items() if not start or k.startswith("dir/")}
+    check(f"srp print of a remote file{start or ''}", out.rc == 0 and found == want, out.tail())
 finish()
