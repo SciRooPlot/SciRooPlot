@@ -2613,6 +2613,21 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
     // last used for the colour scale when that colour is not 0 (walls in the colour of the palette maximum)
     if (IsColorBoxes3d(drawOption)) pad_ptr->SetFrameFillColor(0);
   }
+  if constexpr (is_func_1d<data_type>()) {
+    // a constant function stored as values (compiled code) has samples equal up to rounding noise: ROOT spans the noise (3 ± 4e-14)
+    // instead of the range it gives a constant (THistPainter::PaintInitH: 0 to twice the value, plus its margin), which is set here
+    const TH1* samples = data_ptr->GetHistogram();
+    const double_t lo = samples->GetMinimum();
+    const double_t hi = samples->GetMaximum();
+    const bool logY = pad_ptr->GetLogy();
+    if (!logY && lo != hi && hi - lo <= 1e-9 * std::max(std::abs(lo), std::abs(hi)) && data_ptr->GetMinimumStored() == -1111 && data_ptr->GetMaximumStored() == -1111) {
+      const double_t value = 0.5 * (lo + hi);
+      const double_t yMin = (value > 0.) ? 0. : 2. * value;
+      const double_t yMax = (value > 0.) ? 2. * value : 0.;
+      data_ptr->SetMinimum(yMin);
+      data_ptr->SetMaximum(yMax + 0.05 * (yMax - yMin));  // ROOT's margin above (yMARGIN)
+    }
+  }
   if (!polargram) {
     data_ptr->Draw(drawOption.data());
     if constexpr (is_hist<data_type>()) {
