@@ -83,6 +83,7 @@
 #include <array>
 #include <cctype>
 #include <chrono>
+#include <clocale>
 #include <cmath>
 #include <csignal>
 #include <cstdint>
@@ -1391,6 +1392,12 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       return false;
     }
   }
+  // numbers are read (tables) and written (axis labels, values drawn as text, statistics boxes) by C functions following LC_NUMERIC:
+  // in a program that set a locale with a decimal comma (Python's locale.setlocale) ROOT writes "0,5" beside "0.5" of fmt, and the
+  // label "0," at the end of an axis; the plots are made with the C locale, the program keeps its own
+  const string numericLocale = std::setlocale(LC_NUMERIC, nullptr);
+  std::setlocale(LC_NUMERIC, "C");
+  auto localeGuard = make_scope_guard([&numericLocale]() { std::setlocale(LC_NUMERIC, numericLocale.data()); });
   const bool isInteractiveMode = (mode == "show" || mode == "spread");
   const bool needsDisplay = isInteractiveMode || mode == "macro";
   // said once for all plots (a program plotting in memory has no project directory unless it sets one); print writes nothing
