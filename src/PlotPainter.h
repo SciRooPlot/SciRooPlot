@@ -324,6 +324,7 @@ class PlotPainter
   static bool IsView3d(const std::string& option);
   static std::pair<double_t, double_t> FuncRange(const item_state_t& state, char axisLabel, double_t frameMin, double_t frameMax, double_t funcMin, double_t funcMax,
                                                  const std::optional<double_t>& userMin, const std::optional<double_t>& userMax);
+  static std::pair<double_t, double_t> FiniteRange(const item_state_t& state, TF1* func, double_t min, double_t max, bool forFrame);
   template <typename T>
   void SetUpFrame(item_state_t& state, T data_ptr, const std::string& polarGridOption);
   template <typename T>

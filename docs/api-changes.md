@@ -104,6 +104,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | An input `root://…`, `https://…` or `alien://…` in `AddDataSource` was refused as a relative path | Remote files are read through ROOT (`TFile::Open` with its XRootD, http or AliEn plugin): also a folder in them, wildcards and directories where the protocol can list them (XRootD, AliEn), a query after the file name (`file.root?authz=…:folder`); tables only from local files | behaviour | Nothing; sign in to the server as for ROOT (token, certificate). |
 | A 2d map whose cells all have one non-zero value (a flat efficiency, a ratio of a map by itself) was painted in the lowest colour of the palette, while its colour scale put the value in the middle | The ends of its colour scale not set by the user lie 10 % of the value beside it, as ROOT's own, and the cells take the colour of their value | behaviour | Nothing. |
 | A constant function from compiled code (stored as values) gave a frame spanning only the rounding noise of its values (3 ± 4e-14: labels of noise, a macro that cannot be replayed) | Its frame is the one ROOT gives a constant formula (0 to twice the value, plus ROOT's margin) | behaviour | Nothing. |
+| A function NaN over part of its range (`sqrt(x)` over −5…5) gave an empty plot without axes (a frame range of NaN) | It is drawn over the part where it is a number, with a warning giving that range | behaviour | Give such a function the range where it is defined (`SetRangeX`) to drop the warning. |
 
 ### Files
 

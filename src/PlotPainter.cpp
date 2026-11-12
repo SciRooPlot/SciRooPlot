@@ -2203,7 +2203,11 @@ void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, draw_option_t ali
     data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
   } else if constexpr (is_func_1d<data_type>()) {
     auto [rangeMin, rangeMax] = FuncRange(state, 'x', xmin, xmax, data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
-    if (frameFuncRange && data.get() == frameSource) std::tie(rangeMin, rangeMax) = std::make_pair((*frameFuncRange)[0], (*frameFuncRange)[1]);
+    if (frameFuncRange && data.get() == frameSource) {
+      std::tie(rangeMin, rangeMax) = std::make_pair((*frameFuncRange)[0], (*frameFuncRange)[1]);
+    } else {
+      std::tie(rangeMin, rangeMax) = FiniteRange(state, data_ptr, rangeMin, rangeMax, false);
+    }
     data_ptr->SetRange(rangeMin, rangeMax);
   } else if constexpr (is_graph_1d<data_type>()) {
     // (histograms converted for a clipped alias got the x range of the data as bins before, the y range does not apply to them)
@@ -2519,6 +2523,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
       data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
       frameFuncRange = {rangeMinX, rangeMaxX, rangeMinY, rangeMaxY};
     } else {
+      std::tie(rangeMinX, rangeMaxX) = FiniteRange(state, data_ptr, rangeMinX, rangeMaxX, true);
       data_ptr->SetRange(rangeMinX, rangeMaxX);
       frameFuncRange = {rangeMinX, rangeMaxX, 0., 0.};
     }
@@ -3405,6 +3410,57 @@ std::pair<double_t, double_t> PlotPainter::FuncRange(const item_state_t& state, 
     max = std::min(max, funcMax);
   }
   return std::make_pair(min, max);
+}
+
+//**************************************************************************************************
+/**
+ * A function that is NaN over part of [min, max] (sqrt(x) over negative x) cannot be painted by ROOT: the pad range becomes NaN, or
+ * the curve runs along the frame edge. It is drawn over the part where it is a number (its ends found by bisection), if that is one
+ * piece; infinities (log(x) at 0) are painted by ROOT and kept. Reported once: for a function giving the frame when the frame is made
+ * (the function is then drawn over the frame's range).
+ */
+//**************************************************************************************************
+std::pair<double_t, double_t> PlotPainter::FiniteRange(const item_state_t& state, TF1* func, double_t min, double_t max, bool forFrame)
+{
+  auto warn = [&](auto&&... args) {
+    if (forFrame) {
+      if (!state.repeated) logger::warning(std::forward<decltype(args)>(args)...);
+    } else {
+      Warn(state, std::forward<decltype(args)>(args)...);
+    }
+  };
+  const int32_t nSamples = std::max(func->GetNpx(), 2) + 1;
+  const double_t step = (max - min) / (nSamples - 1);
+  auto isNaN = [&](double_t x) { return std::isnan(func->Eval(x)); };
+  int32_t first{-1}, last{-1}, nNaN{};
+  bool gap{};
+  for (int32_t i = 0; i < nSamples; ++i) {
+    if (isNaN(min + i * step)) {
+      ++nNaN;
+      continue;
+    }
+    if (last >= 0 && last != i - 1) gap = true;
+    if (first < 0) first = i;
+    last = i;
+  }
+  if (!nNaN) return {min, max};
+  if (first < 0 || gap) {
+    warn("Function {} is NaN in parts of [{:g}, {:g}] that are not one piece: ROOT cannot draw it, give it a range where it is a number (SetRangeX).",
+         state.data->GetName(), min, max);
+    return {min, max};
+  }
+  // the end between a sample giving NaN (outside) and one giving a number (inside)
+  auto bisect = [&](double_t outside, double_t inside) {
+    for (int32_t k = 0; k < 60; ++k) {
+      const double_t middle = 0.5 * (outside + inside);
+      (isNaN(middle) ? outside : inside) = middle;
+    }
+    return inside;
+  };
+  const double_t newMin = (first > 0) ? bisect(min + (first - 1) * step, min + first * step) : min;
+  const double_t newMax = (last < nSamples - 1) ? bisect(min + (last + 1) * step, min + last * step) : max;
+  warn("Function {} is NaN in parts of [{:g}, {:g}]: drawn over [{:g}, {:g}], where it is a number.", state.data->GetName(), min, max, newMin, newMax);
+  return {newMin, newMax};
 }
 
 //**************************************************************************************************
