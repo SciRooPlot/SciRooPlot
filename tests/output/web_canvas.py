@@ -3,8 +3,10 @@ gStyle it sends along) keeps the global settings it was painted with: the canvas
 colours plain ROOT gives for its palette (a ROOT palette of the pad or of pad 0, with its alpha, else kBird); where a web canvas sends one
 palette for the whole canvas (its default, e.g. for images made by the web canvas) it is that of the first pad drawing a map. gStyle
 exists once per canvas there: it gets the text format of the first data setting one and the candle ranges of the first pad not using
-ROOT's (0.5 and 1), else ROOT's defaults. Skipped where ROOT is built without its web canvas.
-Covers: palettes per pad and for the whole canvas, text formats and candle ranges set in a later pad, by pad 0 or not at all.
+ROOT's (0.5 and 1), else ROOT's defaults. The canvas keeps the size it was painted with instead of being fitted into the browser window
+(a fixed canvas size), set once: a size chosen later in the browser stays. Skipped where ROOT is built without its web canvas.
+Covers: palettes per pad and for the whole canvas, text formats and candle ranges set in a later pad, by pad 0 or not at all, the
+default and a set canvas size.
 """
 
 import json
@@ -100,6 +102,14 @@ for name, (setup, *_) in STYLE.items():
     setup(plot, first, second)
     p.pm.AddPlot(plot)
 
+SIZES = {"size_default": None, "size_set": (613, 487)}
+for name, size in SIZES.items():
+    plot = S.Plot(name, "sizes", "1d")
+    if size:
+        plot.SetDimensions(*size)
+    add_data(plot[1], "hist")
+    p.pm.AddPlot(plot)
+
 run = p.plot()
 check("the plots are made without errors", run.rc == 0 and not run.errors(), "\n".join(run.errors()))
 
@@ -129,4 +139,17 @@ for name, (_, textFormat, boxRange, whiskerRange) in STYLE.items():
         close(style.get("fCandleBoxRange", 0), boxRange, 1e-6) and close(style.get("fCandleWhiskerRange", 0), whiskerRange, 1e-6),
         f"{style.get('fCandleBoxRange')} and {style.get('fCandleWhiskerRange')}",
     )
+for name, size in SIZES.items():
+    canvas = run.canvas(name, "sizes")
+    painted = (canvas.GetWw(), canvas.GetWh())  # as written
+    canvas.Draw()
+    snapshot(canvas, 1)
+    imp = canvas.GetCanvasImp()
+    got = (canvas.GetWw(), canvas.GetWh())
+    check(f"the web canvas has a fixed size ({name})", imp.IsFixedSize(), "not fixed")
+    check(f"the web canvas has the size the plot was painted with ({name})", got == painted and (not size or got == size), f"{got}, painted {painted}")
+    canvas.SetCanvasSize(300, 200)  # as chosen in the browser
+    snapshot(canvas, 1)
+    got = (canvas.GetWw(), canvas.GetWh())
+    check(f"a canvas size chosen in the browser stays ({name})", got == (300, 200), f"{got}")
 finish()
