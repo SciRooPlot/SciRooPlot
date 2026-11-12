@@ -3469,18 +3469,16 @@ std::pair<double_t, double_t> PlotPainter::FiniteRange(const item_state_t& state
   const int32_t nSamples = std::max(func->GetNpx(), 2) + 1;
   const double_t step = (max - min) / (nSamples - 1);
   auto isNaN = [&](double_t x) { return std::isnan(func->Eval(x)); };
-  int32_t first{-1}, last{-1}, nNaN{};
+  // a single NaN sample between numbers is a point ROOT draws over (sin(x)/x at 0), a longer run of them a gap it cannot draw
+  int32_t first{-1}, last{-1};
   bool gap{};
   for (int32_t i = 0; i < nSamples; ++i) {
-    if (isNaN(min + i * step)) {
-      ++nNaN;
-      continue;
-    }
-    if (last >= 0 && last != i - 1) gap = true;
+    if (isNaN(min + i * step)) continue;
+    if (last >= 0 && last < i - 2) gap = true;
     if (first < 0) first = i;
     last = i;
   }
-  if (!nNaN) return {min, max};
+  if (first == 0 && last == nSamples - 1 && !gap) return {min, max};
   if (first < 0 || gap) {
     warn("Function {} is NaN in parts of [{:g}, {:g}] that are not one piece: ROOT cannot draw it, give it a range where it is a number (SetRangeX).",
          DataName(*state.data), min, max);

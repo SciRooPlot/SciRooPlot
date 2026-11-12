@@ -6,7 +6,8 @@ with a warning naming it, as data with contents beyond the largest float (ROOT f
 part of its range. A plot that ROOT throws an exception on while painting is reported and loses only itself.
 Covers: crashes on NaN points of TGraphMultiErrors and on empty 2d graphs, misplaced errors of
 2d graphs after removing NaN points, the whole run lost to one plot ROOT could not paint, a map of one value painted in the lowest
-colour (its scale had equal ends), a function NaN in part of its range drawn as an empty plot (NaN frame).
+colour (its scale had equal ends), a function NaN in part of its range drawn as an empty plot (NaN frame), a function NaN at one point
+(a removable singularity) taken for one ROOT cannot draw.
 """
 
 import math
@@ -33,6 +34,11 @@ p.source("unpaintable", {"unpaintable": unpaintable})
 plot = S.Plot("a_unpaintable", "robust", "2d")  # defined first: the plots after it must still be made
 plot[1].AddData("unpaintable", "unpaintable")
 plot[1]["Z"].SetLog()
+p.pm.AddPlot(plot)
+
+# a removable singularity (one point where the formula is NaN, sin(x)/x at 0, hit by a sample): ROOT draws over it
+plot = S.Plot("a_removable", "robust", "1d")
+plot[1].AddFunction("sin(x)/x").SetRangeX(-10.0, 10.0)
 p.pm.AddPlot(plot)
 
 for i, case in enumerate(todo):
@@ -71,6 +77,12 @@ check("no ROOT errors", not errors, " | ".join(errors[:5]))
 undefined = sorted({case["kind"] for case in todo if case["variant"] == "undefined"})
 unreportedUndefined = [kind for kind in undefined if not any("is NaN in parts of" in line and (f"Function {kind} " in line or formula(kind, "undefined") in line) for line in run.warnings())]
 check("a function NaN in part of its range is reported by name", not unreportedUndefined, ", ".join(unreportedUndefined))
+removable = run.pad("a_removable", "robust")
+check(
+    "a function NaN at one point only is drawn over its whole range without a warning",
+    removable and math.isclose(removable.GetUxmin(), -10.0) and math.isclose(removable.GetUxmax(), 10.0) and not any("sin(x)/x" in line for line in run.warnings()),
+    " | ".join(line for line in run.warnings() if "sin(x)/x" in line),
+)
 kinds = {case["kind"] for case in todo if case["variant"] in ("nan", "inf")}
 unreported = sorted(kind for kind in kinds if not any(line.split("]", 1)[-1].split()[0] == kind and "NaN" in line for line in run.warnings()))
 check("data with a NaN or infinite value is reported by name", not unreported, ", ".join(unreported))
