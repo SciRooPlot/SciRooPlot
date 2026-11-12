@@ -6,7 +6,7 @@ scale of the group does not reach it, with a warning); a TF3 has no colour scale
 A range, log scale or time format set in one pad of the group or in pad 0 holds for all of them (differing ranges: the first pad's,
 with a warning). 3D views and polar drawings share no x and y axes: they and the flat pads beside them keep their own ranges (an explicit
 group warns that it leaves them out; a flat panel right of one warns that its hidden y axis is not shared). ShareAxis regroups: an empty list undoes the groups of the axis (the layout's too, with a warning
-that the layout shows the axis once), a single pad leaves its group, a pad listed twice or a pad the plot does not have is warned about,
+that the layout shows the axis once), a single pad leaves its group (no warning for a group of ShareAxis), a pad listed twice or a pad the plot does not have is warned about,
 an unknown axis and pad 0 are refused when defined. Panels spanning other columns share no x with the narrow ones, panels apart by a
 panel spacing still share. The title of a row (x) or column (y) of touching panels showing the same title is drawn once, under or beside
 all of them (centred if the axis says so); panels with titles of their own keep them, and SetCommonTitles(false) keeps all titles.
@@ -96,6 +96,7 @@ SETTINGS = {  # name: (base plot, kinds of pads 1, 2, ..., setup)
     "undone": ("1d_3x1", THREE, lambda pl: pl.ShareAxis("Y", [])),
     "regrouped": ("1d_3x1", THREE, lambda pl: pl.ShareAxis("Y", [3])),
     "listed twice": ("1d_2x1_gap", ("hist", "graph_errors"), lambda pl: (pl.ShareAxis("Y", [1, 2]), pl.ShareAxis("Y", [2, 1]))),
+    "left explicit group": ("1d_2x1_gap", ("hist", "graph_errors"), lambda pl: (pl.ShareAxis("Y", [1, 2]), pl.ShareAxis("Y", [2]))),
     "missing pad": ("1d_2x1_gap", ("hist", "graph_errors"), lambda pl: pl.ShareAxis("Y", [1, 7, 2])),
     "pad drawing nothing": ("1d_3x1", ("hist", "graph_errors"), lambda pl: (pl[3].AddText(0.5, 0.5, "text"), pl.ShareAxis("X", [1, 3]))),
     "spacing": (S.PanelLayout([[S.Panel(), S.Panel().SpacingLeft(20.0)]]), ("hist", "graph_errors"), lambda pl: None),
@@ -287,6 +288,9 @@ check("regrouping touching panels warns that the layout shows the axis once", le
 twice = ranges("listed twice", pads=(1, 2))
 check("a pad listed in two groups: the later group holds", same(twice[0], twice[1]), str(twice))
 check("a pad listed in two groups is warned about", len(warned("listed twice", "pad 2 is listed in two groups")) == 1, str(run.warnings("listed")))
+left = ranges("left explicit group", pads=(1, 2))
+check("a single pad leaves a group of ShareAxis", not same(left[0], left[1]), str(left))
+check("a single pad leaving a group of ShareAxis is not warned about", not warned("left explicit group", "listed in two groups"), str(run.warnings("listed")))
 missing = ranges("missing pad", pads=(1, 2))
 check("a pad the plot does not have is left out, the others share", same(missing[0], missing[1]), str(missing))
 check("a pad the plot does not have is warned about", len(warned("missing pad", "the plot has no pad 7")) == 1, str(run.warnings("no pad 7")))

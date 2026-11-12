@@ -773,7 +773,8 @@ auto Plot::ShareAxis(char axis, const vector<uint8_t>& pads) -> decltype(*this)
 //**************************************************************************************************
 /**
  * The groups of pads sharing an axis: the declarations in their order, a pad listed again leaves its earlier group
- * (a warning if both groups were declared with ShareAxis: the touching panels of the layout are meant to be regrouped).
+ * (a warning if both groups were declared with ShareAxis: the touching panels of the layout are meant to be regrouped;
+ * none for a single pad, the way to take a pad out of its group).
  */
 //**************************************************************************************************
 std::map<char, vector<Plot::shared_group_t>> Plot::GetSharedAxes() const
@@ -789,7 +790,7 @@ std::map<char, vector<Plot::shared_group_t>> Plot::GetSharedAxes() const
       for (auto& [members, layoutGroup] : groups) {
         auto member = std::find(members.begin(), members.end(), padID);
         if (member == members.end()) continue;
-        if (!layoutGroup && !fromLayout && members.size() > 1) {
+        if (!layoutGroup && !fromLayout && members.size() > 1 && pads.size() > 1) {
           logger::warning("Plot {}: pad {} is listed in two groups sharing the {} axis, the later one is used.", mName, padID, axis);
         }
         members.erase(member);
