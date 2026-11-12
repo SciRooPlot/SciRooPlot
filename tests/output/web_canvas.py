@@ -4,9 +4,10 @@ colours plain ROOT gives for its palette (a ROOT palette of the pad or of pad 0,
 palette for the whole canvas (its default, e.g. for images made by the web canvas) it is that of the first pad drawing a map. gStyle
 exists once per canvas there: it gets the text format of the first data setting one and the candle ranges of the first pad not using
 ROOT's (0.5 and 1), else ROOT's defaults. The canvas keeps the size it was painted with instead of being fitted into the browser window
-(a fixed canvas size), set once: a size chosen later in the browser stays. Skipped where ROOT is built without its web canvas.
+(a fixed canvas size), set once: a size chosen later in the browser stays. The y range of a 1d frame stays when the browser reports the
+ranges it drew without a zoom (as after every drawing). Skipped where ROOT is built without its web canvas.
 Covers: palettes per pad and for the whole canvas, text formats and candle ranges set in a later pad, by pad 0 or not at all, the
-default and a set canvas size.
+default and a set canvas size, y ranges of histogram and graph frames, linear and log, set and with room above the data.
 """
 
 import json
@@ -110,6 +111,38 @@ for name, size in SIZES.items():
     add_data(plot[1], "hist")
     p.pm.AddPlot(plot)
 
+# the report of the browser after drawing a pad (TWebCanvas::DecodePadOptions, protected): the drawn ranges, no zoom
+ROOT.gInterpreter.Declare("""
+#include "TWebCanvas.h"
+#include "TWebPadOptions.h"
+#include "TBufferJSON.h"
+struct SrpTestWebReply : public TWebCanvas {
+  static void Report(TWebCanvas* web, TPad* pad) {
+    std::vector<TWebPadOptions> options(1);
+    auto& o = options[0];
+    o.snapid = std::to_string(TString::Hash(&pad, sizeof(pad)));
+    o.logx = pad->GetLogx(); o.logy = pad->GetLogy(); o.logz = pad->GetLogz();
+    o.mleft = pad->GetLeftMargin(); o.mright = pad->GetRightMargin(); o.mtop = pad->GetTopMargin(); o.mbottom = pad->GetBottomMargin();
+    o.xlow = pad->GetAbsXlowNDC(); o.ylow = pad->GetAbsYlowNDC(); o.xup = o.xlow + pad->GetAbsWNDC(); o.yup = o.ylow + pad->GetAbsHNDC();
+    o.ranges = true;
+    o.px1 = pad->GetX1(); o.px2 = pad->GetX2(); o.py1 = pad->GetY1(); o.py2 = pad->GetY2();
+    o.ux1 = pad->GetUxmin(); o.ux2 = pad->GetUxmax(); o.uy1 = pad->GetUymin(); o.uy2 = pad->GetUymax();
+    static_cast<SrpTestWebReply*>(web)->DecodePadOptions(TBufferJSON::ToJSON(&options).Data());
+  }
+};
+""")
+RANGES = {
+    "range_hist": ("hist", lambda pl: pl[1]["Y"].SetRange(0, 30)),
+    "range_hist_log": ("hist", lambda pl: pl[1]["Y"].SetLog().SetRange(0.5, 50)),
+    "range_graph": ("graph", lambda pl: pl[1]["Y"].SetRange(0, 30)),
+    "room_hist": ("hist", lambda pl: pl[1]["Y"].SetRoomAboveMax(0.5)),
+}
+for name, (kind, setup) in RANGES.items():
+    plot = S.Plot(name, "ranges", "1d")
+    add_data(plot[1], kind)
+    setup(plot)
+    p.pm.AddPlot(plot)
+
 run = p.plot()
 check("the plots are made without errors", run.rc == 0 and not run.errors(), "\n".join(run.errors()))
 
@@ -138,6 +171,20 @@ for name, (_, textFormat, boxRange, whiskerRange) in STYLE.items():
         f"gStyle of the web canvas has the candle ranges {boxRange} and {whiskerRange} ({name})",
         close(style.get("fCandleBoxRange", 0), boxRange, 1e-6) and close(style.get("fCandleWhiskerRange", 0), whiskerRange, 1e-6),
         f"{style.get('fCandleBoxRange')} and {style.get('fCandleWhiskerRange')}",
+    )
+for name in RANGES:
+    canvas = run.canvas(name, "ranges")
+    canvas.Draw()
+    snapshot(canvas, 1)
+    pad = canvas.GetPad(1)
+    frame = pad.GetPrimitive("axis_hist_pad_1")
+    painted = (frame.GetMinimumStored(), frame.GetMaximumStored())
+    ROOT.SrpTestWebReply.Report(canvas.GetCanvasImp(), pad)
+    got = (frame.GetMinimumStored(), frame.GetMaximumStored())
+    check(
+        f"the y range stays when the browser reports the drawn ranges ({name})",
+        painted[1] != -1111 and all(close(a, b, 1e-6) for a, b in zip(got, painted)),
+        f"{got}, painted {painted}",
     )
 for name, size in SIZES.items():
     canvas = run.canvas(name, "sizes")
