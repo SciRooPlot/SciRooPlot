@@ -1767,6 +1767,26 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         drawOption = "SAME ";
         return;
       }
+      if constexpr (is_graph_2d<data_type>()) {
+        // ROOT interpolates a 2d graph (maps, surfaces, triangles) over the Delaunay triangles of its points: points on one line have none
+        bool triangles{}, points{};
+        Paints3dGraph(drawOption, triangles, points);
+        const int32_t n = data_ptr->GetN();
+        const double_t* x = data_ptr->GetX();
+        const double_t* y = data_ptr->GetY();
+        int32_t other = 1;  // a second point, apart from the first
+        while (other < n && x[other] == x[0] && y[other] == y[0])
+          ++other;
+        bool onLine = true;
+        for (int32_t i = other + 1; i < n && onLine; ++i) {
+          const double_t ax = x[other] - x[0], ay = y[other] - y[0], bx = x[i] - x[0], by = y[i] - y[0];
+          onLine = std::abs(ax * by - ay * bx) <= 1e-12 * std::hypot(ax, ay) * std::hypot(bx, by);
+        }
+        if (dataIndex != 0 && other < n && !points && onLine) {  // (points at one place are painted as one cell)
+          logger::warning("The points of 2d graph {} lie on one line: ROOT finds no triangles to interpolate between, nothing is drawn with drawing option {} (points draw them).", DataName(*data),
+                          (optionAlias) ? draw_option_name(*optionAlias) : TString(drawOption).ReplaceAll("SAME", "").Strip(TString::kBoth).Data());
+        }
+      }
       if (projection != padProjection) {
         auto drawn = [](const string& keyword) { return (keyword.empty()) ? string("without a map projection") : "as a map (" + keyword + ")"; };
         logger::warning("Data {} is drawn {} and cannot be drawn in its pad, whose first data is drawn {}. It is not drawn.", DataName(*data), drawn(projection), drawn(padProjection));

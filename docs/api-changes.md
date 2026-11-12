@@ -109,6 +109,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `Project({a, b, c})` of a THn or THnSparse failed ("Invalid number of dimensions"); an unprojected THn was reported as of unsupported type | A THn is projected onto three axes (a TH3D, in the order given); an unprojected THn is reported as needing `Project` or `Profile` | behaviour | Nothing. |
 | A ratio by a function that is zero at some of its bins or points gave zero there (histograms) or dropped the points (graphs) without a word | The same, with a warning naming the function and the number of bins or points | behaviour | Nothing. |
 | `col_polar`/`colz_polar` on a TH2Poly painted its polygons unpolarized beside a polar frame | It is drawn as `col`/`colz`, with a warning (ROOT paints polygon bins only in cartesian coordinates) | behaviour | Nothing. |
+| A 2d graph whose points lie on one line drawn as a map (`colz`, `cont`, `surf` ...) gave an empty frame without a word | The same, with a warning (ROOT finds no triangles to interpolate between) | behaviour | Draw such a graph with `points`. |
 
 ### Files
 
