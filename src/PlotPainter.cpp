@@ -1679,6 +1679,14 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         alias = (*scale) ? colz : col;
         upper = drawOption;
       }
+      // in polar coordinates ROOT paints the cell array of TH2 as well: the polygons land unpolarized beside a polar frame
+      if (IsFlatPolar(drawOption)) {
+        const char* scale = (upper.Contains("Z")) ? "Z" : "";
+        if (dataIndex != 0) logger::warning("Drawing option {} is not available for TH2Poly {} (ROOT paints polygon bins only in cartesian coordinates), drawing it as col{}.", (optionAlias) ? draw_option_name(*optionAlias) : data->GetDrawOption().value_or(""), DataName(*data), (*scale) ? "z" : "");
+        drawOption = ((dataIndex != 0) ? "SAME COL" : "COL") + string(scale);
+        alias = (*scale) ? colz : col;
+        upper = drawOption;
+      }
     }
     for (const char* keyword : {"AITOFF", "MERCATOR", "SINUSOIDAL", "PARABOLIC", "MOLLWEIDE"}) {
       if (upper.Contains(keyword)) projection = keyword;

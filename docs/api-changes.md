@@ -108,6 +108,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Messages about points given with `AddPoints` named them by all their coordinates (lines of kilobytes) | They name them by their label (`points 'label'`), or by their number and x range | behaviour | Nothing. |
 | `Project({a, b, c})` of a THn or THnSparse failed ("Invalid number of dimensions"); an unprojected THn was reported as of unsupported type | A THn is projected onto three axes (a TH3D, in the order given); an unprojected THn is reported as needing `Project` or `Profile` | behaviour | Nothing. |
 | A ratio by a function that is zero at some of its bins or points gave zero there (histograms) or dropped the points (graphs) without a word | The same, with a warning naming the function and the number of bins or points | behaviour | Nothing. |
+| `col_polar`/`colz_polar` on a TH2Poly painted its polygons unpolarized beside a polar frame | It is drawn as `col`/`colz`, with a warning (ROOT paints polygon bins only in cartesian coordinates) | behaviour | Nothing. |
 
 ### Files
 
