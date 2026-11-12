@@ -137,12 +137,15 @@ namespace SciRooPlot
 {
 using util::disable_implicit_mt;
 using util::expand_path;
+using util::find_container_key;
 using util::for_each_item;
 using util::ignore_root_messages_below;
 using util::is_container;
 using util::is_remote;
 using util::make_scope_guard;
+using util::open_directory;
 using util::plural;
+using util::readable_class;
 using util::RegexMatcher;
 using util::split_input_path;
 using util::split_path;
@@ -517,7 +520,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
         if (!key || directory->FindKey(key->GetName()) != key || !added.insert(key->GetName()).second) continue;
         if (KeyInherits(key, TDirectory::Class())) {
           if (auto* keyDir = directory->GetDirectory(key->GetName())) add(keyDir, subDir, subFolder);  // owned by the file
-        } else if (!ReadableClass(key)) {
+        } else if (!readable_class(key)) {
           // ReadObj would return an object that is no TObject (e.g. an RNTuple, whose data stays in its file anyway)
           logger::warning("Cannot add {} of class {} from {} (data source {}): {}.", key->GetName(), key->GetClassName(), directory->GetPath(), dataSource,
                           (std::string_view(key->GetClassName()) == "ROOT::RNTuple") ? "give the file by its path to read an RNTuple" : "only TObjects whose class is known can be added");
@@ -681,7 +684,7 @@ vector<string> PlotManager::MatchFolders(TDirectory* topDir, const string& patte
     for (auto* key : TRangeDynCast<TKey>(dir->GetListOfKeys())) {
       if (!key || !KeyInherits(key, TDirectory::Class()) || !visited.insert(key->GetName()).second) continue;
       if (fnmatch(levels[level].data(), key->GetName(), 0) != 0) continue;
-      if (auto* subDir = OpenDirectory(dir, key)) {
+      if (auto* subDir = open_directory(dir, key)) {
         match(subDir, levels, level + 1, path.empty() ? key->GetName() : path + "/" + key->GetName());
       }
     }
@@ -3152,17 +3155,6 @@ void PlotManager::ClearCanvasRegistry()
 
 //**************************************************************************************************
 /**
- * Class of the object behind a key, if it can be read (objects of an emulated class without dictionary cannot be read as TObject).
- */
-//**************************************************************************************************
-TClass* PlotManager::ReadableClass(TKey* key)
-{
-  TClass* cl = TClass::GetClass(key->GetClassName());
-  return (cl && cl->IsLoaded() && cl->IsTObject()) ? cl : nullptr;
-}
-
-//**************************************************************************************************
-/**
  * Whether the object behind a key is of the given class (e.g. a directory or a tree), without reading it.
  */
 //**************************************************************************************************
@@ -3170,34 +3162,6 @@ bool PlotManager::KeyInherits(TKey* key, const TClass* base)
 {
   const TClass* cl = TClass::GetClass(key->GetClassName());
   return cl && cl->InheritsFrom(base);
-}
-
-//**************************************************************************************************
-/**
- * The latest key of a name in a directory that holds a directory, folder or collection: a newer key of the same name holding data
- * does not hide it (open a directory found this way with OpenDirectory).
- */
-//**************************************************************************************************
-TKey* PlotManager::FindContainerKey(TDirectory* directory, const string& name)
-{
-  TKey* latest = directory->FindKey(name.data());
-  if (!latest || is_container(ReadableClass(latest))) return latest;
-  for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {  // the cycles of a name are listed from the latest
-    if (key && name == key->GetName() && is_container(ReadableClass(key))) return key;
-  }
-  return latest;
-}
-
-//**************************************************************************************************
-/**
- * The sub-directory behind a key of a directory: by its name (the instance ROOT keeps in memory), by name and cycle only where a newer
- * key of the name hides it from a lookup by name (ROOT then reads it again).
- */
-//**************************************************************************************************
-TDirectory* PlotManager::OpenDirectory(TDirectory* directory, TKey* key)
-{
-  const bool isLatest = (directory->FindKey(key->GetName()) == key);
-  return directory->GetDirectory(isLatest ? key->GetName() : fmt::format("{};{}", key->GetName(), key->GetCycle()).data());
 }
 
 //**************************************************************************************************
@@ -3316,7 +3280,7 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
         if (!key) continue;
         const string name = key->GetName();
         if (!traverse && !dataNames.count(name)) continue;
-        TClass* keyClass = ReadableClass(key);
+        TClass* keyClass = readable_class(key);
         if (traverse) {
           if (!is_container(keyClass)) continue;
           if (!visited.insert(name).second) {
@@ -3324,7 +3288,7 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
             continue;
           }
           if (keyClass->InheritsFrom(TDirectory::Class())) {
-            if (auto* subDir = OpenDirectory(directory, key)) {
+            if (auto* subDir = open_directory(directory, key)) {
               ReadData(subDir, dataNames, prefix, suffix, dataSource, readCache);
             }
           } else if (auto cached = readCache.find(key); cached != readCache.end()) {
@@ -3650,12 +3614,12 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, const vector<string>& su
   for (const auto& subDir : subDirs) {
     TObject* subFolder{nullptr};
     if (auto* directory = dynamic_cast<TDirectory*>(folder)) {
-      TKey* key = FindContainerKey(directory, subDir);
-      TClass* keyClass = (key) ? ReadableClass(key) : nullptr;
+      TKey* key = find_container_key(directory, subDir);
+      TClass* keyClass = (key) ? readable_class(key) : nullptr;
       if (key && !keyClass) {
         logger::warning("Cannot look into {} in {}: objects of class {} cannot be read (no dictionary loaded or not a TObject).", subDir, directory->GetPath(), key->GetClassName());
       } else if (keyClass && keyClass->InheritsFrom(TDirectory::Class())) {
-        subFolder = OpenDirectory(directory, key);
+        subFolder = open_directory(directory, key);
       } else if (is_container(keyClass)) {
         WarnHiddenDirectory(directory, subDir);
         auto& container = readCache[key];
@@ -3683,7 +3647,7 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, const vector<string>& su
 //**************************************************************************************************
 void PlotManager::WarnHiddenDirectory(TDirectory* directory, const string& name)
 {
-  TKey* latest = FindContainerKey(directory, name);
+  TKey* latest = find_container_key(directory, name);
   if (!latest || KeyInherits(latest, TDirectory::Class())) return;
   for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {
     if (!key || name != key->GetName() || !KeyInherits(key, TDirectory::Class())) continue;
@@ -3718,7 +3682,7 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
     set<string> visited;  // keys can appear in several cycles: the latest directory of a name (newer data of the name does not hide it)
     for (auto* key : TRangeDynCast<TKey>(dir->GetListOfKeys())) {
       if (!key || !KeyInherits(key, TDirectory::Class()) || !visited.insert(key->GetName()).second) continue;
-      if (auto* subDir = OpenDirectory(dir, key)) {
+      if (auto* subDir = open_directory(dir, key)) {
         if (auto treePath = find(subDir)) return treePath;
       }
     }
@@ -3727,8 +3691,8 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
   // the directory at a path below dir, level by level as when reading
   auto subDirectory = [](TDirectory* dir, const string& subPath) -> TDirectory* {
     for (const auto& level : split_string(subPath, '/')) {
-      TKey* key = (dir) ? FindContainerKey(dir, level) : nullptr;
-      dir = (key && KeyInherits(key, TDirectory::Class())) ? OpenDirectory(dir, key) : nullptr;
+      TKey* key = (dir) ? find_container_key(dir, level) : nullptr;
+      dir = (key && KeyInherits(key, TDirectory::Class())) ? open_directory(dir, key) : nullptr;
     }
     return dir;
   };

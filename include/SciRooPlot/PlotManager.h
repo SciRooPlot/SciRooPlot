@@ -229,10 +229,7 @@ class PlotManager
   TObject* FindSubDirectory(TObject* folder, const std::vector<std::string>& subDirs, read_cache_t& readCache);
   void WarnHiddenDirectory(TDirectory* directory, const std::string& name);
   std::set<std::string> mHiddenDirectories;  // directories hidden by a list or folder of their name, reported once per FillBuffer
-  static TClass* ReadableClass(TKey* key);
   static bool KeyInherits(TKey* key, const TClass* base);
-  static TKey* FindContainerKey(TDirectory* directory, const std::string& name);
-  static TDirectory* OpenDirectory(TDirectory* directory, TKey* key);
   std::shared_ptr<Plot::Pad::Data> RefFuncDrawnIn(Plot& plot, uint8_t padID);
   std::vector<std::tuple<std::string, std::string, Plot::Pad::Data::data_info_t>> GetMissingData(Plot& plot);
   bool FillBuffer();

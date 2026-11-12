@@ -1,6 +1,7 @@
 """srp print <file>[:<path>] lists every object of a ROOT file with its class and the path SciRooPlot reads it by: objects of every data
 kind at the top, in directories, lists, stacks (their histograms) and multigraphs (their graphs), trees with their branches; below a path
-only what is there; also for files below a folder with ':' in its name. A missing file, a file that is no ROOT file and a path not in the
+only what is there; also for files below a folder with ':' in its name, and for a directory hidden by a newer key of data of its name
+(as the reader finds it). A missing file, a file that is no ROOT file and a path not in the
 file fail with exit status 1 and one error.
 Covers: stack and multigraph members, file below a folder with ':'."""
 
@@ -85,6 +86,18 @@ f.Close()
 for suffix in ("", ":h"):
     out = run(SRP, "print", inner + suffix)
     check(f"srp print of a file below a folder with ':' ({suffix or 'whole file'})", out.rc == 0 and listing(out.stdout)[0] == {"h": "TH1D"}, out.tail())
+
+# a directory hidden by a newer key of its name holding data: found as the reader finds it (the directory, not the data)
+hidden = os.path.join(folder, "hidden.root")
+f = ROOT.TFile(hidden, "RECREATE")
+f.mkdir("d").cd()
+objects["hist"].Write("h")
+f.cd()
+objects["hist"].Write("d")
+f.Close()
+for start in (":d", ":d/h"):
+    out = run(SRP, "print", hidden + start)
+    check(f"srp print {start[1:]} of a directory hidden by a newer key of data: the directory", out.rc == 0 and listing(out.stdout)[0] == {"d/h": "TH1D"}, out.tail())
 
 text = os.path.join(folder, "notes.txt")
 with open(text, "w") as fh:

@@ -542,7 +542,8 @@ bool PrintRootFileContents(const string& inputPath)
     return false;
   }
 
-  // a path goes down as the reader does: the latest cycle of a directory name, the value of a map under its key
+  // a path goes down as the reader does: the latest directory, folder or collection of a name (a newer key of the name holding
+  // data does not hide it), the value of a map under its key
   auto findObject = [](TObject* root, const string& path) -> TObject* {
     TObject* current = root;
     size_t pos = 0;
@@ -550,8 +551,11 @@ bool PrintRootFileContents(const string& inputPath)
       auto next = path.find('/', pos);
       auto part = path.substr(pos, next == string::npos ? string::npos : next - pos);
 
-      if (current->InheritsFrom(TDirectory::Class())) {
-        current = static_cast<TDirectory*>(current)->Get(part.data());
+      if (auto* directory = dynamic_cast<TDirectory*>(current)) {
+        TKey* key = util::find_container_key(directory, part);
+        TClass* keyClass = (key) ? util::readable_class(key) : nullptr;
+        if (!keyClass) return nullptr;
+        current = (keyClass->InheritsFrom(TDirectory::Class())) ? static_cast<TObject*>(util::open_directory(directory, key)) : key->ReadObj();
       } else if (util::is_container(current->IsA())) {
         TObject* found{};
         util::for_each_item(current, [&](const string& name, TObject* item) {

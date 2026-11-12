@@ -24,6 +24,7 @@
 #include <TDirectory.h>
 #include <TFolder.h>
 #include <THStack.h>
+#include <TKey.h>
 #include <TMap.h>
 #include <TMultiGraph.h>
 
@@ -55,6 +56,33 @@ inline void for_each_item(TObject* container, const std::function<bool(const std
     if (auto* pair = dynamic_cast<TPair*>(item)) item = pair->Value();  // iterating a map gives its key-value pairs (named by the key)
     if (item && func(name, item)) return;
   }
+}
+
+// the class of the object behind a key, if it can be read (objects of an emulated class without dictionary cannot be read as TObject)
+inline TClass* readable_class(TKey* key)
+{
+  TClass* cl = TClass::GetClass(key->GetClassName());
+  return (cl && cl->IsLoaded() && cl->IsTObject()) ? cl : nullptr;
+}
+
+// the latest key of a name in a directory that holds a directory, folder or collection: a newer key of the same name holding data
+// does not hide it (open a directory found this way with open_directory); the latest key of the name if none holds one
+inline TKey* find_container_key(TDirectory* directory, const std::string& name)
+{
+  TKey* latest = directory->FindKey(name.data());
+  if (!latest || is_container(readable_class(latest))) return latest;
+  for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {  // the cycles of a name are listed from the latest
+    if (key && name == key->GetName() && is_container(readable_class(key))) return key;
+  }
+  return latest;
+}
+
+// the sub-directory behind a key of a directory: by its name (the instance ROOT keeps in memory), by name and cycle only where a newer
+// key of the name hides it from a lookup by name (ROOT then reads it again)
+inline TDirectory* open_directory(TDirectory* directory, TKey* key)
+{
+  const bool isLatest = (directory->FindKey(key->GetName()) == key);
+  return directory->GetDirectory(isLatest ? key->GetName() : (std::string(key->GetName()) + ";" + std::to_string(key->GetCycle())).data());
 }
 }  // namespace SciRooPlot::util
 
