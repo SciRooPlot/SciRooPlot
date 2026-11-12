@@ -42,6 +42,7 @@
 
 #include "Validation.h"
 #include "util/Paths.h"
+#include "util/Strings.h"
 
 using boost::property_tree::ptree;
 using boost::property_tree::read_info;
@@ -107,10 +108,9 @@ std::optional<int> Config::ParseColorMode(const string& name)
 }
 std::optional<double> Config::ParseScale(const string& value)
 {
-  try {
-    size_t parsed{};
-    const double scale = std::stod(value, &parsed);
-    if (parsed == value.size() && std::isfinite(scale) && scale > 0.) return scale;
+  try {  // independent of the locale (std::stod follows LC_NUMERIC, which a Python program may set)
+    const double scale = util::string_to_type<double>(value);
+    if (std::isfinite(scale) && scale > 0.) return scale;
   } catch (const std::exception&) {
   }
   return std::nullopt;
