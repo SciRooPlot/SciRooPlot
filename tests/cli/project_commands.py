@@ -12,7 +12,7 @@ Covers: unknown projects, confdir of an unknown project, unset program, confdir 
 add with an unset variable: one message, nothing left, program before srp add, concurrent
 srp add, SaveProject keeping changes made meanwhile, rename with in-memory data, srp set while a program saves, rename
 with the configuration reached through a symlink, unreadable projects.info: exit 1, reported once, a project saved by its program but not
-registered (SaveProject and select name srp add)."""
+registered (SaveProject and every srp command on it name srp add)."""
 
 import os
 import shutil
@@ -307,4 +307,10 @@ unregistered = config_folder("unregistered")
 saved = python("from SciRooPlot import *\npm = PlotManager('unreg')\npm.SaveProject()", config=unregistered)
 selected = run(SRP, "select", "unreg", config=unregistered)
 check("a project saved but not registered: SaveProject and srp select name srp add", "srp add unreg" in saved.text and selected.rc == 1 and len(selected.errors()) == 1 and "not registered" in selected.errors()[0] and "srp add unreg" in selected.errors()[0], saved.tail() + " || " + selected.tail())
+for command in (("select", "unreg"), ("projects", "unreg"), ("get", "unreg", "outdir"), ("set", "unreg", "outdir", "/tmp"), ("confdir", "unreg"), ("rename", "unreg", "other")):
+    out = run(SRP, *command, config=unregistered)
+    if command[0] == "confdir":  # the folder of a saved project is known (env.sh reads its plots.info)
+        check("srp confdir of a project saved but not registered gives its folder", out.rc == 0, out.tail())
+        continue
+    check(f"srp {command[0]} of a project saved but not registered names srp add", out.rc == 1 and len(out.errors()) == 1 and "srp add unreg" in out.errors()[0], out.tail())
 finish()

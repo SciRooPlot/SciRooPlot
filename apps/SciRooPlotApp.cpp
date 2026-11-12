@@ -391,7 +391,7 @@ int RunCommand(const string& command, const string& project, const string& prope
     // also the folder of a project saved by its program but not yet added (env.sh reads plots.info there)
     const bool unknown = find_illegal_name_char(project) || (!Config::Get().Exists(project) && !std::filesystem::is_directory(Config::Get().ProjectPath(project)));
     if (!project.empty() && unknown) {
-      logger::error("Cannot find project {}.", project);
+      Config::Get().ReportUnknown(project);
       return 1;
     }
     std::cout << ((project.empty()) ? Config::Get().Path().string() : Config::Get().ProjectPath(project).string()) << std::endl;
@@ -404,7 +404,7 @@ int RunCommand(const string& command, const string& project, const string& prope
     if (!Config::GetMutable().Reset()) return 1;
   } else if (command == "projects") {
     if (!project.empty() && !Config::Get().Exists(project)) {
-      logger::error("Cannot find project {}.", project);
+      Config::Get().ReportUnknown(project);
       return 1;
     }
     // without a project: every project, the current one marked
@@ -481,7 +481,7 @@ int RunCommand(const string& command, const string& project, const string& prope
       return 1;
     }
     if (!Config::Get().Exists(project)) {
-      logger::error("Cannot find project {}.", project);
+      Config::Get().ReportUnknown(project);
       return 1;
     }
     if (property.empty()) {

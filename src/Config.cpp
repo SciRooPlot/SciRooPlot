@@ -699,7 +699,6 @@ bool Config::Select(const string& projectName)
   return true;
 }
 
-// empty without a project or without a valid config path (nothing is written into the current directory instead)
 // a program can save the definitions of a project before it is registered (its config folder exists then): the error says how to register it
 void Config::ReportUnknown(const string& projectName) const
 {
@@ -711,6 +710,7 @@ void Config::ReportUnknown(const string& projectName) const
   }
 }
 
+// empty without a project or without a valid config path (nothing is written into the current directory instead)
 std::filesystem::path Config::ProjectPath(const string& projectName) const
 {
   if (projectName.empty() || mPath.empty()) return {};
