@@ -7490,13 +7490,14 @@ bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors, 
   // (TH1::Divide would leave them as they are); the position of a bin is its centre; underflow and overflow are always left out
   if (!numerator->GetSumw2N()) numerator->Sumw2();
   const double_t entries = numerator->GetEntries();
-  int32_t nOutside{};
+  int32_t nOutside{}, nZero{};
   auto divideBin = [&](int32_t bin, double_t* xyz, bool underOrOverflow) {
     const double_t content = numerator->GetBinContent(bin);
     const double_t error = numerator->GetBinError(bin);
     const bool inside = !underOrOverflow && denominator->IsInside(xyz);
     const double_t denom = (inside) ? denominator->EvalPar(xyz) : 0.;
     if (!inside && !underOrOverflow && content != 0.) ++nOutside;
+    if (inside && !denom) ++nZero;
     numerator->SetBinContent(bin, (denom) ? content / denom : 0.);
     numerator->SetBinError(bin, (denom) ? error / std::abs(denom) : 0.);
     return inside;
@@ -7534,6 +7535,9 @@ bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors, 
   numerator->SetEntries(entries);
   if (nOutside && verbose) {
     logger::warning("{} bins of {} lie outside the range of function {} and are left out of the ratio.", nOutside, numerator->GetName(), denominator->GetName());
+  }
+  if (nZero && verbose) {
+    logger::warning("Function {} is zero at {} of {}: the ratio is set to zero there.", denominator->GetName(), plural(nZero, "bin"), numerator->GetName());
   }
   if (binomialErrors && verbose) {
     logger::warning("Binomial errors are not supported for the division of {} by function {}.", numerator->GetName(), denominator->GetName());
@@ -7578,6 +7582,9 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
   ScaleMultiErrors(numerator, multiErrors);
   for (auto it = undefined.rbegin(); it != undefined.rend(); ++it) {
     RemoveGraphPoint(numerator, *it);
+  }
+  if (!undefined.empty() && verbose) {
+    logger::warning("Function {} is zero at {} of {}: they are left out of the ratio.", denominator->GetName(), plural(undefined.size(), "point"), numerator->GetName());
   }
   if (binomialErrors && verbose) {
     logger::warning("Binomial errors are not supported for the division of {} by function {}.", numerator->GetName(), denominator->GetName());

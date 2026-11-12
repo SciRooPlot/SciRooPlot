@@ -107,6 +107,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A function NaN over part of its range (`sqrt(x)` over −5…5) gave an empty plot without axes (a frame range of NaN) | It is drawn over the part where it is a number, with a warning giving that range | behaviour | Give such a function the range where it is defined (`SetRangeX`) to drop the warning. |
 | Messages about points given with `AddPoints` named them by all their coordinates (lines of kilobytes) | They name them by their label (`points 'label'`), or by their number and x range | behaviour | Nothing. |
 | `Project({a, b, c})` of a THn or THnSparse failed ("Invalid number of dimensions"); an unprojected THn was reported as of unsupported type | A THn is projected onto three axes (a TH3D, in the order given); an unprojected THn is reported as needing `Project` or `Profile` | behaviour | Nothing. |
+| A ratio by a function that is zero at some of its bins or points gave zero there (histograms) or dropped the points (graphs) without a word | The same, with a warning naming the function and the number of bins or points | behaviour | Nothing. |
 
 ### Files
 
