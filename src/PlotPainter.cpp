@@ -3278,6 +3278,18 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
       }
     }
     if (pad_ptr->GetLogz() && min <= 0. && max > 0.) min = std::min(1., 0.001 * max);
+    // contents of one value (a flat map, a ratio of a map by itself): ROOT widens the range by 10 % of the value for the colour scale,
+    // but data drawn on a frame with equal ends gets the lowest colour; the ends not set by the user are widened the same way here
+    // (contents of zero only stay as they are: COL leaves such cells empty)
+    if (min == max && min != 0.) {
+      const double_t widening = 0.1 * std::abs(min);
+      optional<double_t> userMax;
+      for (const auto* axis : AxisSettings(pad, padDefaults, (frameDim == 3) ? 'C' : 'Z')) {
+        if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
+      }
+      if (!MinRange(pad, padDefaults, (frameDim == 3) ? 'C' : 'Z') && !storedRangeZ.first) min -= widening;
+      if (!userMax && !storedRangeZ.second) max += widening;
+    }
     axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
     axisHist_ptr->SetMinimum(min);
     axisHist_ptr->SetMaximum(max);
