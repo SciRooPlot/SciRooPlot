@@ -722,9 +722,8 @@ vector<string> PlotManager::MatchFolders(TDirectory* topDir, const string& patte
 vector<string> PlotManager::ExpandInputs(const string& dataSource) const
 {
   vector<string> inputs;
-  const auto subFolderPos = dataSource.find(':');
-  const string subFolder = (subFolderPos == string::npos) ? "" : dataSource.substr(subFolderPos + 1);
-  auto inputsIt = mInputs.find(dataSource.substr(0, subFolderPos));
+  const bool isRestricted = (dataSource.find(':') != string::npos);
+  auto inputsIt = mInputs.find(dataSource.substr(0, dataSource.find(':')));
   if (inputsIt == mInputs.end()) return inputs;
 
   auto hasWildcard = [](const string& str) { return str.find_first_of("*?[") != string::npos; };
@@ -759,17 +758,17 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
 
   auto addFile = [&](const string& filePart, const string& folderPart) {
     const bool isRootFile = str_ends_with(InputFileName(filePart), ".root");
-    if (!subFolder.empty() && !isRootFile) return;  // tables have no folders
+    if (isRestricted && !isRootFile) return;  // tables have no folders
     if (!isRootFile && is_remote(filePart)) {
       logger::warning("Skipping table {} (data source {}): tables can only be read from local files.", filePart, dataSource);
       return;
     }
-    const string folderPath = (subFolder.empty() || folderPart.empty()) ? folderPart + subFolder : folderPart + "/" + subFolder;
+    const string folderPath = SearchedFolder(dataSource, folderPart);
     const InputID file = fileID(filePart);
     if (hasWildcard(folderPath)) {
       const auto folders = expandFolders(expand_path(filePart).value_or(""), folderPath);
       // inputs that do not contain the folder of a restricted data source are simply not part of it
-      if (folders.empty() && subFolder.empty()) logger::warning("No folders match {} in {} (data source {}).", folderPath, filePart, dataSource);
+      if (folders.empty() && !isRestricted) logger::warning("No folders match {} in {} (data source {}).", folderPath, filePart, dataSource);
       for (const auto& folder : folders) {
         addInput(file, filePart, folder);
       }
@@ -922,6 +921,20 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
     addEntry(entry, false);
   }
   return inputs;
+}
+
+//**************************************************************************************************
+/**
+ * The folder searched in an input of a data source: the folder of the input (inputFolder, empty for a whole file), for a data source
+ * restricted to a folder (dataSource:some/folder) that folder within it (either may contain wildcards).
+ */
+//**************************************************************************************************
+string PlotManager::SearchedFolder(const string& dataSource, const string& inputFolder)
+{
+  const size_t subFolderPos = dataSource.find(':');
+  if (subFolderPos == string::npos) return inputFolder;
+  const string subFolder = dataSource.substr(subFolderPos + 1);
+  return (inputFolder.empty()) ? subFolder : inputFolder + "/" + subFolder;
 }
 
 //**************************************************************************************************
@@ -1826,16 +1839,9 @@ bool PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
 
     for (auto& [dataSource, required] : requiredData) {
       if (required.empty()) continue;
-      // where to search in this input: the folder of the input, for a restricted data source its folder within it
-      const string inputFolder = (fileNamePath.size() > 1) ? fileNamePath[1] : "";
-      const auto subFolderPos = dataSource.find(':');
-      const bool isRestricted = (subFolderPos != string::npos);
-      vector<string> folderPaths{inputFolder};
-      if (isRestricted) {
-        const string subFolder = dataSource.substr(subFolderPos + 1);
-        const string folderPath = (inputFolder.empty()) ? subFolder : inputFolder + "/" + subFolder;
-        folderPaths = (folderPath.find_first_of("*?[") != string::npos) ? MatchFolders(&inputFile, folderPath) : vector<string>{folderPath};
-      }
+      const bool isRestricted = (dataSource.find(':') != string::npos);
+      const string folderPath = SearchedFolder(dataSource, (fileNamePath.size() > 1) ? fileNamePath[1] : "");
+      const vector<string> folderPaths = (isRestricted && folderPath.find_first_of("*?[") != string::npos) ? MatchFolders(&inputFile, folderPath) : vector<string>{folderPath};
       for (const auto& folderPath : folderPaths) {
         mIsFolderInput = !folderPath.empty();
         mInputFile = fileName;

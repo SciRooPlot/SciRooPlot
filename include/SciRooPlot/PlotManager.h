@@ -244,6 +244,7 @@ class PlotManager
   void ChainTrees(required_data_t& requiredData);
   bool IsBuffered(const std::string& dataSource, const std::string& name) const;
   std::vector<std::string> ExpandInputs(const std::string& dataSource) const;
+  static std::string SearchedFolder(const std::string& dataSource, const std::string& inputFolder);
   bool IsDataSourceDefined(const std::string& dataSource) const;
   static std::string DataLocation(const std::string& dataSource, const std::string& name);
   static void ReserveColorIndices(TCanvas* canvas);
