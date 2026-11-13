@@ -563,6 +563,8 @@ void PlotManager::ForgetBufferedData(const string& dataSource)
   auto joinsIt = [&](const string& name) {
     return name.find("join=") != string::npos && (name.find("|" + dataSource + "|") != string::npos || name.find("|" + dataSource + ":") != string::npos);
   };
+  for (auto it = mInputTimes.begin(); it != mInputTimes.end();)
+    it = isPart(it->first) ? mInputTimes.erase(it) : std::next(it);
   for (auto it = mDataBuffer.begin(); it != mDataBuffer.end();) {
     if (isPart(it->first)) {
       it = mDataBuffer.erase(it);
@@ -1473,6 +1475,20 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
 
   // only what the selected plots need is read: the requests of earlier calls and what they could not read are dropped (data read stays buffered)
   mDataInfoBuffer.clear();
+  // data sources whose input files were rewritten (or removed) since they were read are read again (one stat per input file;
+  // files added since to a directory or wildcard input are not noticed)
+  vector<string> rewritten;
+  for (const auto& [dataSource, times] : mInputTimes) {
+    const bool changed = std::any_of(times.begin(), times.end(), [](const auto& fileTime) {
+      std::error_code timeError;
+      return std::filesystem::last_write_time(fileTime.first, timeError) != fileTime.second || timeError;
+    });
+    if (changed) rewritten.push_back(dataSource);
+  }
+  for (const auto& dataSource : rewritten) {
+    logger::info("Inputs of data source {} changed since they were read: reading them again.", dataSource);
+    ForgetBufferedData(dataSource);
+  }
   for (auto& [dataSource, buffer] : mDataBuffer) {
     for (auto it = buffer.begin(); it != buffer.end();) {
       it = (it->second) ? std::next(it) : buffer.erase(it);
@@ -1539,7 +1555,16 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   for (const auto& dataSource : sourcesToRead) {
     // data sources restricted to a folder are read together with the data source they are part of
     const string baseSource = dataSource.substr(0, dataSource.find(':'));
-    if (mExpandedInputs.find(baseSource) == mExpandedInputs.end()) nInputs += (mExpandedInputs[baseSource] = ExpandInputs(baseSource)).size();
+    if (mExpandedInputs.find(baseSource) != mExpandedInputs.end()) continue;
+    nInputs += (mExpandedInputs[baseSource] = ExpandInputs(baseSource)).size();
+    // UserData.root holds the in-memory inputs of all data sources: AddDataSource already makes their data be read again
+    auto& times = mInputTimes[baseSource];
+    for (const auto& input : mExpandedInputs[baseSource]) {
+      const string fileName = split_input_path(expand_path(input).value_or(""))[0];
+      std::error_code timeError;
+      const auto time = std::filesystem::last_write_time(fileName, timeError);
+      if (!timeError && !is_remote(fileName) && fileName != mUserDataFile) times[fileName] = time;
+    }
   }
   if (nItemsToRead) {
     logger::info("Reading {} from {}{}.", plural(nItemsToRead, "data item"), (nInputs) ? plural(nInputs, "input") + " in " : "", plural(sourcesToRead.size(), "data source"));
@@ -3143,6 +3168,7 @@ void PlotManager::ClearDataBuffer()
 {
   mDataBuffer.clear();
   mDataInfoBuffer.clear();
+  mInputTimes.clear();
 }
 
 //**************************************************************************************************
