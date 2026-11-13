@@ -189,16 +189,16 @@ class PlotManager
     canvas_event_t handledEvent;  // the last event handled (it stays the canvas' current one until the next)
   };
   std::vector<open_window_t> mOpenWindows;  // windows open until the user closes them: all plots in mode "spread", plots detached in mode "show"
+  // the animated gif of mode gif: its file, the suffixes ROOT reads from the file name of a frame and of the one closing it, and the frame
+  // painted last (written once the next one is painted, or at the end closing the gif, so a frame that fails cannot leave it unclosed)
   std::string mGifName;
-  // the frame painted last: written once the next frame is painted, or at the end as the one closing the gif (its file name sets how often
-  // the animation repeats), so a frame that fails cannot leave the gif unclosed; the suffix of that last frame, the number of frames written
-  std::shared_ptr<TCanvas> mGifPendingFrame;
+  std::string mGifFrameSuffix;
   std::string mGifLastFrameSuffix;
-  uint32_t mGifFrames{};
-  std::map<std::string, std::string> mWrittenFiles;  // output file (lower case) -> group:name of the plot written to it, in the current GeneratePlots call
+  std::shared_ptr<TCanvas> mGifPendingFrame;
   // canvas size of the first frame of a gif (the size of the gif), and whether a frame of another size was reported (once per gif)
   std::optional<std::pair<uint32_t, uint32_t>> mGifSize;
   bool mGifSizeReported{};
+  std::map<std::string, std::string> mWrittenFiles;  // output file (lower case) -> group:name of the plot written to it, in the current GeneratePlots call
   bool mExitInteractiveBrowsing{false};
   std::optional<std::pair<std::shared_ptr<TCanvas>, std::pair<int32_t, int32_t>>> mDetached;  // in mode "show": plot detached, shown once the browsing window shows another one (with the browsing window's top)
   // mode "show": the selected plots, made when browsing reaches them
