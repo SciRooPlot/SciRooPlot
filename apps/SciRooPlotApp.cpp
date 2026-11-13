@@ -318,12 +318,8 @@ int RunCommand(const string& command, const string& project, const string& prope
       return 1;
     }
   } else if (command == "plotmode") {
-    if (project.empty()) {
-      logger::error("Specify default plotmode.");
-      return 1;
-    }
     if (project != "list" && !is_valid_plot_mode(project)) {
-      logger::error("Invalid plot mode '{}' (srp help lists the modes).", project);
+      logger::error("Invalid plotmode '{}' (srp help lists the modes).", project);
       return 1;
     }
     Config::GetMutable().SetPlotMode(project);
@@ -334,7 +330,7 @@ int RunCommand(const string& command, const string& project, const string& prope
     } else if (matchMode == "contains") {
       Config::GetMutable().SetMatchContains(true);
     } else {
-      logger::error("Invalid match mode (exact | contains).");
+      logger::error("Invalid matchmode '{}' (exact | contains).", matchMode);
       return 1;
     }
   } else if (command == "matchcase") {
@@ -344,7 +340,7 @@ int RunCommand(const string& command, const string& project, const string& prope
     } else if (matchCase == "insensitive") {
       Config::GetMutable().SetMatchCaseInsensitive(true);
     } else {
-      logger::error("Invalid case sensitivity option for matching (sensitive | insensitive).");
+      logger::error("Invalid matchcase '{}' (sensitive | insensitive).", matchCase);
       return 1;
     }
   } else if (command == "screenscale" || command == "bitmapscale") {
