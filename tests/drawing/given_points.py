@@ -56,6 +56,10 @@ def same(a, b):
     return len(a) == len(b) and all(close(x1, x2) and close(y1, y2) for (x1, y1), (x2, y2) in zip(a, b))
 
 
+def no_errors(obj):
+    return obj.InheritsFrom("TGraph") and not any(obj.GetErrorX(i) > 0 or obj.GetErrorY(i) > 0 for i in range(obj.GetN()))
+
+
 sortWarnings = run.warnings("are not in the order of x")
 for i, case in enumerate(todo):
     what = describe(case)
@@ -86,7 +90,11 @@ for kind in GRAPHS:  # the warnings name the data, not the plot
     found = [w for w in sortWarnings if f"graph {kind} " in w]
     unsorted = sum(c["kind"] == kind and c["alias"] == "area" and c["variant"] == "unsorted" for c in todo)
     check(f"one warning about the order per area of unsorted points: {kind}", len(found) == unsorted, " | ".join(found))
-check("no other warnings", len(run.warnings()) == len(sortWarnings), " | ".join(w for w in run.warnings() if w not in sortWarnings)[:500])
+# error bands, boxes and brackets of a graph without errors would draw nothing: it is drawn as without a drawing option, with a warning
+errorWarnings = run.warnings("has no errors to draw with drawing option")
+withoutErrors = sum(c["alias"] in ("band", "band_smooth", "boxes_nomarkers", "brackets") and no_errors(inputs[c["variant"]][c["kind"]]) for c in todo)
+check("one warning per graph without errors drawn with an option that draws only errors", len(errorWarnings) == withoutErrors, " | ".join(errorWarnings))
+check("no other warnings", len(run.warnings()) == len(sortWarnings) + len(errorWarnings), " | ".join(w for w in run.warnings() if w not in sortWarnings + errorWarnings)[:500])
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
 
 named = Project("given_points_named")

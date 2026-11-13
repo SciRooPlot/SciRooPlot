@@ -4406,6 +4406,18 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       }
       optionAlias = fallback;
     }
+    // error bands, boxes and brackets draw nothing for a graph without errors (ROOT draws a histogram without them as steps)
+    if (optionAlias && (*optionAlias == band || *optionAlias == band_smooth || *optionAlias == boxes_nomarkers || *optionAlias == brackets)) {
+      bool anyError{};
+      for (int32_t i = 0; i < data_ptr->GetN() && !anyError; ++i) {
+        anyError = data_ptr->GetErrorXlow(i) > 0. || data_ptr->GetErrorXhigh(i) > 0. || data_ptr->GetErrorYlow(i) > 0. || data_ptr->GetErrorYhigh(i) > 0.;
+      }
+      if (!anyError && data_ptr->GetN() > 0) {
+        const draw_option_t withErrors = *optionAlias;
+        optionAlias = defaultAlias(data_ptr);
+        if (dataIndex != 0) logger::warning("Graph {} has no errors to draw with drawing option {}: it is drawn as {}.", DataName(*data), draw_option_name(withErrors), draw_option_name(*optionAlias));
+      }
+    }
   }
   drawItem(data_ptr, optionAlias);
 }

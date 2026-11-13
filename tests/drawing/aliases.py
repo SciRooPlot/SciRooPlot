@@ -1,8 +1,8 @@
 """Every drawing option alias on every data kind is drawn with the ROOT option of the documented alias table (docs/skill: drawing-options.md),
 without ROOT errors: the colour scale (the Z of COLZ, LEGO2Z, ...) is drawn by the frame, not by the data; an alias marked as drawn as the
 other type converts histograms to graphs and graphs to histograms; an alias neither 1d type can draw gives one
-warning and draws histograms and graphs as without a drawing option (other types with ROOT's default), as does a graph that cannot be made a
-histogram (points at one x).
+warning and draws histograms and graphs as without a drawing option (other types with ROOT's default), as do a graph that cannot be made a
+histogram (points at one x) and error bands, boxes and brackets of a graph without errors.
 Documented adjustments: polar graphs draw the error bars of the points aliases with E, 2d graphs with errors add ERR, a TH2Poly is drawn
 flat (col, colz) with a warning instead of lego and surf, and the frame of a 3d view is an empty lego plot (no surface), keeping POL.
 The drawn data carries the name of the input.
@@ -13,10 +13,12 @@ under the name ROOT gives the graph or histogram it makes.
 
 import re
 
-from srptest import ALIASES, DATA_KINDS, ROOT, Project, S, add_data, alias_table, base_of, cases, check, data_name, describe, drawn_type, finish, no_scale, per_error_set
+from srptest import ALIASES, DATA_KINDS, ROOT, Project, S, add_data, alias_table, base_of, cases, check, data_name, data_objects, describe, drawn_type, finish, no_scale, per_error_set
 
 TABLE = alias_table()
 REPRESENTATIVE = ("hist", "graph_errors", "hist2d", "graph2d_errors")  # every alias in the fast run
+NEED_ERRORS = ("band", "band_smooth", "boxes_nomarkers", "brackets")  # aliases that draw only the errors of a graph
+WITHOUT_ERRORS = tuple(k for k, obj in data_objects().items() if obj.InheritsFrom("TGraph") and not any(obj.GetErrorX(i) > 0 or obj.GetErrorY(i) > 0 for i in range(obj.GetN())))
 
 
 def expected(kind, alias):
@@ -26,6 +28,8 @@ def expected(kind, alias):
     entry = TABLE[alias][kindType]
     if entry == "-":
         return ("default" if kindType in ("hist1d", "graph") else None), "", False, 1
+    if kind in WITHOUT_ERRORS and alias in NEED_ERRORS:
+        return "default", "", False, 1
     drawnType = entry if entry in ("graph", "hist1d") else kindType
     opt = TABLE[alias][drawnType]
     warnings = 0
@@ -81,10 +85,10 @@ for alias in REPEATED:
 run = p.plot("aliases")
 
 warned = {}
-for line in run.warnings("is not available for"):
-    m = re.search(r"Drawing option (\w+) is not available for", line)
+for line in run.warnings():
+    m = re.search(r"Drawing option (\w+) is not available for|has no errors to draw with drawing option (\w+)", line)
     if m:
-        warned.setdefault(m.group(1), []).append(line)
+        warned.setdefault(m.group(1) or m.group(2), []).append(line)
 for i, case in enumerate(todo):
     what = describe(case)
     kind, alias = case["kind"], case["alias"]
@@ -114,7 +118,7 @@ for i, case in enumerate(todo):
             check(f"3d view on an empty lego frame: {what}", "LEGO" in frame and "SURF" not in frame and frame.split().count("0") == 1 and ("POL" in frame) == ("POL" in data), f"frame '{frame}'")
     name = data_name(kind)
     check(f"drawn under the name of the input: {what}", obj.GetName().split(":", 1)[1].startswith(name), obj.GetName())
-    found = [line for line in warned.get(alias, []) if f" {name}, drawing it as " in line or f" {name} (ROOT draws" in line or line.rstrip(".").endswith(f" {name}, using the default of ROOT")]
+    found = [line for line in warned.get(alias, []) if f" {name}, drawing it as " in line or f" {name} (ROOT draws" in line or f"Graph {name} has no errors" in line or line.rstrip(".").endswith(f" {name}, using the default of ROOT")]
     check(f"{nWarnings} warning(s): {what}", len(found) == nWarnings, " | ".join(found))
 for alias in REPEATED:
     drawn = run.drawn(f"repeated_{alias}", "aliases")

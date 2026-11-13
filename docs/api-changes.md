@@ -118,6 +118,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | The reference function of a pad (`SetRefFunc`, also from pad 0) was not drawn in a pad with only a frame (`SetFrame`, or the empty frame of its axis ranges) | It is drawn there as well | behaviour | Nothing. |
 | `area_smooth` of a graph whose x errors leave gaps between the points dipped to zero in every gap | The curve goes through the points (the bins meet in the middle of each gap) | behaviour | Nothing. |
 | A 1d histogram or graph drawn with an alias neither can draw (a 2d alias such as `colz`, `lego`, `cont`) got ROOT's default for an empty option, which paints a graph, or a histogram filled without weights, not at all; a graph that cannot be made a histogram (points at one x) drawn with a histogram alias (`hist`, `hbars`, `area_smooth`, `text`, `hist_clipped` …) painted nothing | Drawn as without a drawing option (`points`, `hist`, `line` or `area` by the default rule); the warning names the alias it is drawn as | behaviour | Nothing. |
+| A graph without errors drawn with `band`, `band_smooth`, `boxes_nomarkers` or `brackets` painted nothing, without a warning | Drawn as without a drawing option, with a warning | behaviour | Nothing. |
 
 ### Files
 
