@@ -2237,7 +2237,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   // if interactive mode is specified, open window instead of saving the plot
   if (isInteractiveMode) return BrowseInteractively(fullPlot, mode, canvas);
 
-  return WriteOutput(fullPlot, mode, canvas);
+  return WriteOutput(fullPlot, mode, canvas, painter.GetMapPalettes());
 }
 
 //**************************************************************************************************
@@ -2372,10 +2372,10 @@ bool PlotManager::BrowseInteractively(const Plot& fullPlot, const string& mode, 
 //**************************************************************************************************
 /**
  * Writes the plot to its file in the output directory, or a frame of the gif being made (mode file keeps the canvas for the ROOT file
- * written at the end of the run, mode data writes no file per plot).
+ * written at the end of the run, mode data writes no file per plot). mapPalettes: the pads drawing a map with the commands setting their palettes.
  */
 //**************************************************************************************************
-bool PlotManager::WriteOutput(Plot& fullPlot, const string& mode, const shared_ptr<TCanvas>& canvas)
+bool PlotManager::WriteOutput(Plot& fullPlot, const string& mode, const shared_ptr<TCanvas>& canvas, const map<uint8_t, string>& mapPalettes)
 {
   if (!CreateOutputDirectory()) return false;
   const bool isMacroMode = (mode == "macro");
@@ -2539,6 +2539,27 @@ bool PlotManager::WriteOutput(Plot& fullPlot, const string& mode, const shared_p
       logger::warning("Images are missing in the pdf files: ROOT {} cannot write them there (from 6.42 on it can). Use eps or png for plots with images.", gROOT->GetVersion());
       warnedNoPdfImages = true;
     }
+  }
+  // JSROOT runs no TExec: a json file holds the colours and one palette, the one current when it is written, with which JSROOT colours
+  // every map: that of the first pad drawing a map. ROOT stores both with a canvas only if colours were defined since the canvas it wrote
+  // last: they are stored with every json file
+  const bool setsJsonPalette = (mode == "json" && !mapPalettes.empty());
+  auto jsonColorsGuard = make_scope_guard([&mode, setsJsonPalette]() {
+    if (mode == "json") TColor::DefinedColors(-1);
+    if (setsJsonPalette) gStyle->SetPalette(kBird);  // as after painting
+  });
+  if (mode == "json") TColor::DefinedColors(1);
+  if (setsJsonPalette) {
+    const auto& [firstPad, firstPalette] = *mapPalettes.begin();
+    vector<string> otherPads;
+    for (const auto& [padID, palette] : mapPalettes) {
+      if (palette != firstPalette) otherPads.push_back(std::to_string(padID));
+    }
+    if (!otherPads.empty()) {
+      logger::warning("Plot {}: a json file holds one palette, the maps of {} {} are coloured with the palette of pad {} in JSROOT.", Plot::Label(fullPlot),
+                      (otherPads.size() > 1) ? "pads" : "pad", util::join_strings(otherPads, ", "), firstPad);
+    }
+    gROOT->ProcessLine(firstPalette.data());
   }
   // only ROOT's "PDF not implemented yet" of TASImage::Paint is dropped (SciRooPlot warned above), every other message passes
   auto noPdfImagesGuard = filter_root_messages([silenceNoPdfImages](Int_t, Bool_t, const char* location, const char* msg) {

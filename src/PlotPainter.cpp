@@ -549,6 +549,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   mFrameHists.clear();
   mScaleHists.clear();
   mContentScales.clear();
+  mMapPalettes.clear();
   // the panels of a z group whose colour scale a ColorScale() cell shows draw none of their own (a panel in no z group: its own scale is shown)
   mScalesInCells.clear();
   for (const auto& [padID, pad] : plot.GetPads()) {
@@ -565,7 +566,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   vector<std::pair<TPad*, string>> padSetups;  // the setup of each pad painted (see below)
   bool anyView{};                              // a pad draws in 3d (pad_state_t::view)
   // the web canvas (TWebCanvas) paints data in the browser with one gStyle for the whole canvas: these give its values (see below)
-  optional<uint8_t> webPalettePad;                          // the first pad drawing a map: its palette
   optional<string> webTextFormat;                           // the format of the first data setting one
   optional<std::pair<double_t, double_t>> webCandleRanges;  // the box and whisker ranges of the first pad not using ROOT's
   if (padDefaults.GetXLow()) ReportIgnored("The position of pad 0", "pad 0 holds the defaults of all pads and is not drawn");
@@ -692,17 +692,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     if (auto colors = gradientColors(pad.GetDefaultFillColorsGradient(), padDefaults.GetDefaultFillColorsGradient(), pad.GetDefaultFillColors().has_value())) {
       pad.SetDefaultFillColors(*colors);
     }
+    string paletteCommand;
     if (pad.GetPaletteGradient().rgbEndpoints) {
       const auto& gradient = pad.GetPaletteGradient();
-      padSetup += GradientPaletteCommand(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
+      paletteCommand = GradientPaletteCommand(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
     } else if (padDefaults.GetPaletteGradient().rgbEndpoints && !pad.GetPalette()) {
       const auto& gradient = padDefaults.GetPaletteGradient();
-      padSetup += GradientPaletteCommand(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
+      paletteCommand = GradientPaletteCommand(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
     } else {
       // a ROOT palette with the alpha set together with it (the pad's own palette or else that of pad 0)
       const auto& alpha = (pad.GetPalette()) ? pad.GetPaletteGradient().alpha : padDefaults.GetPaletteGradient().alpha;
-      padSetup += fmt::format(" gStyle->SetPalette({}, nullptr, {});", get_first_or(static_cast<int32_t>(kBird), pad.GetPalette(), padDefaults.GetPalette()), get_first_or(1.f, alpha));
+      paletteCommand = fmt::format(" gStyle->SetPalette({}, nullptr, {});", get_first_or(static_cast<int32_t>(kBird), pad.GetPalette(), padDefaults.GetPalette()), get_first_or(1.f, alpha));
     }
+    padSetup += paletteCommand;
     pad_ptr->SetNumber(padID);
     pad_ptr->Draw();
     pad_ptr->cd();
@@ -834,7 +836,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     FinishPad(padState);
     anyView = anyView || padState.view;
 
-    if (!webPalettePad && padState.mapDrawn) webPalettePad = padID;
+    if (padState.mapDrawn) mMapPalettes[padID] = paletteCommand;
     for (const auto& data : drawData) {
       if (webTextFormat) break;
       webTextFormat = data->GetTextFormat();
@@ -1033,11 +1035,11 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   // the whole canvas, since it sends gStyle (text format, candle ranges) and the palette of the canvas as they are after this primitive:
   // the palette of the first pad drawing a map (its setup, run in that pad), the first text format and candle ranges set
   string webGlobals;
-  if (webPalettePad) {
+  if (!mMapPalettes.empty()) {
     webGlobals += fmt::format(
       " if (auto* p = dynamic_cast<TPad*>(gPad->GetPrimitive(\"Pad_{0}\"))) if (auto* e = dynamic_cast<TExec*>(p->GetListOfPrimitives()->FindObject(\"setup_pad_{0}\"))) {{"
       " auto* c = gPad; gPad = p; e->Exec(); gPad = c; }}",
-      *webPalettePad);
+      mMapPalettes.begin()->first);
   } else {
     webGlobals += fmt::format(" gStyle->SetPalette({});", static_cast<int32_t>(kBird));
   }

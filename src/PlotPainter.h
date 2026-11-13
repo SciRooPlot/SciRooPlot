@@ -258,6 +258,8 @@ class PlotPainter
   const std::set<uint8_t>& GetContentScales() const { return mContentScales; }
   // the ranges of the frames as drawn (x and y of flat frames, the colour axis of 2d frames and 3d histograms under Z), keyed by pad and axis
   const std::map<std::pair<uint8_t, char>, std::pair<double_t, double_t>>& GetFrameRanges() const { return mFrameRanges; }
+  // the pads drawing a map, each with the interpreter command setting its palette
+  const std::map<uint8_t, std::string>& GetMapPalettes() const { return mMapPalettes; }
 
  private:
   struct pad_state_t;   // the locals of GeneratePlot for one pad (PlotPainter.cpp)
@@ -458,6 +460,8 @@ class PlotPainter
   std::map<uint8_t, TH1*> mScaleHists;  // the frame histograms with a z axis, also in 3D views (owned by their pads)
   std::set<uint8_t> mContentScales;     // the pads whose colour scale shows the contents of a 3d histogram (the C axis)
   std::set<uint8_t> mScalesInCells;     // pads whose colour scale a ColorScale() cell shows instead of the pad
+  // the pads drawing a map: the command setting their palette
+  std::map<uint8_t, std::string> mMapPalettes;
   // on screen: the free user-defined line styles that stand in for styles 2-4 (their dash strings from gStyle), 0 if there is none
   std::array<Style_t, 3> mScreenDashStyles{};
   std::set<std::pair<const TObject*, size_t>> mReportedStoredRanges;  // input axes whose stored range a projection of this plot does not apply (reported once)

@@ -14,7 +14,9 @@ variants of the data are the single-pad plots' part).
 No mode gives errors, or warnings mode file does not give for the same data. Texts with characters beyond ASCII, which ROOT's png, jpg and
 gif output draws wrongly, are warned about there, once per text and run, not in the vector formats.
 Mode html needs ROOT 6.42 (before, ROOT writes PostScript under that name): with an older ROOT it is refused with an error and writes
-nothing."""
+nothing.
+A json file holds one palette, with which JSROOT colours every map: that of the first pad drawing a map (its own or that of pad 0, a ROOT
+palette or a gradient); maps of other pads with another palette are named in one warning per plot."""
 
 import json
 import os
@@ -219,6 +221,76 @@ for mode in (*MODES, "gif"):
             problem = image_problem(mode, path)
             check(f"{mode} file holds the image: {name}", not problem, problem)
     shutil.rmtree(p.path("out"), ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------------------------
+# the palette of a json file
+# ---------------------------------------------------------------------------------------------
+def json_palette(path):
+    """first, middle and last colour (rgb, 0-255) of the palette a json canvas holds ($ref n: the n-th object of the file), None without one"""
+    with open(path) as f:
+        canvas = json.load(f)
+    objects = []
+
+    def walk(obj):
+        if isinstance(obj, dict):
+            if "_typename" in obj:
+                objects.append(obj)
+            for value in obj.values():
+                walk(value)
+        elif isinstance(obj, list):
+            for value in obj:
+                walk(value)
+
+    walk(canvas)
+    palette = next((a["arr"] for a in canvas["fPrimitives"]["arr"] if isinstance(a, dict) and a.get("name") == "CurrentColorPalette"), None)
+    if not palette:
+        return None
+    colours = [objects[c["$ref"]] if "$ref" in c else c for c in (palette[0], palette[len(palette) // 2], palette[-1])]
+    return [tuple(round(255 * c[k]) for k in ("fRed", "fGreen", "fBlue")) for c in colours]
+
+
+def root_palette(palette):
+    """first, middle and last colour of a ROOT palette (rgb, 0-255)"""
+    ROOT.gStyle.SetPalette(palette)
+    n = ROOT.TColor.GetNumberOfColors()
+    colours = [ROOT.gROOT.GetColor(ROOT.TColor.GetColorPalette(i)) for i in (0, n // 2, n - 1)]
+    ROOT.gStyle.SetPalette(ROOT.kBird)
+    return [tuple(round(255 * v) for v in (c.GetRed(), c.GetGreen(), c.GetBlue())) for c in colours]
+
+
+m = Project("json_palettes", bases=("1d", "2d", "2d_2x1_gap"))
+mapHist = ROOT.TH2D("map", "", 10, 0.0, 1.0, 10, 0.0, 1.0)
+for i in range(1, 11):
+    for j in range(1, 11):
+        mapHist.SetBinContent(i, j, i + j)
+curve = ROOT.TH1D("curve", "", 10, 0.0, 1.0)
+curve.Fill(0.5)
+m.source("maps", {"map": mapHist, "curve": curve})
+GRADIENT = ((255, 0, 0), (0, 0, 255))  # red to blue
+JSON_PLOTS = {  # plot: base, how its pads are set, palette expected in the json (first, middle, last colour), pads named in the warning
+    "own": ("2d", lambda pl: pl[1].SetPalette(ROOT.kViridis), root_palette(ROOT.kViridis), None),
+    "pad0": ("2d", lambda pl: pl[0].SetPalette(ROOT.kCherry), root_palette(ROOT.kCherry), None),
+    "gradient": ("2d", lambda pl: pl[1].SetPalette([("#ff0000", 0.0), ("#0000ff", 1.0)]), [GRADIENT[0], None, GRADIENT[1]], None),
+    "different": ("2d_2x1_gap", lambda pl: (pl[1].SetPalette(ROOT.kViridis), pl[2].SetPalette(ROOT.kCherry)), root_palette(ROOT.kViridis), "pad 2"),
+    "same": ("2d_2x1_gap", lambda pl: (pl[1].SetPalette(ROOT.kViridis), pl[2].SetPalette(ROOT.kViridis)), root_palette(ROOT.kViridis), None),
+    "no_map": ("1d", lambda pl: pl[1].SetPalette(ROOT.kViridis), root_palette(ROOT.kBird), None),
+}
+for name, (base, setup, _, _) in JSON_PLOTS.items():
+    plot = S.Plot(name, "palettes", base)
+    for padID in (1, 2) if base == "2d_2x1_gap" else (1,):
+        plot[padID].AddData("curve" if base == "1d" else "map", "maps")
+    setup(plot)
+    m.pm.AddPlot(plot)
+run = m.plot("palettes", ".+", "json")
+check("json palettes: no errors", not run.errors(), " | ".join(run.errors()[:2]))
+for name, (base, _, expected, warned) in JSON_PLOTS.items():
+    path = m.path("out", "palettes", f"{name}.json")
+    got = json_palette(path) if os.path.isfile(path) else None
+    matches = got is not None and all(want is None or want == have for want, have in zip(expected, got))
+    check(f"json of plot {name}: the palette of the first pad drawing a map", matches, f"{got}, expected {expected}")
+    warnings = [line for line in run.warnings() if "a json file holds one palette" in line and f"Plot {name} " in line]
+    check(f"json of plot {name}: {'one warning naming ' + warned if warned else 'no warning'} about other palettes", len(warnings) == (1 if warned else 0) and (not warned or warned in warnings[0]), str(warnings))
 
 # texts beyond ASCII: ROOT's bitmaps draw them wrongly (one warning per text and run), vector formats draw them
 q = Project("non_ascii", bases=("1d",))

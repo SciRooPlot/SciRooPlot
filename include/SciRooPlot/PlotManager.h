@@ -142,7 +142,7 @@ class PlotManager
   Plot* FindBasePlot(const std::string& name);
   static void LogCreated(const Plot& plot);
   bool BrowseInteractively(const Plot& fullPlot, const std::string& mode, std::shared_ptr<TCanvas> canvas);
-  bool WriteOutput(Plot& fullPlot, const std::string& mode, const std::shared_ptr<TCanvas>& canvas);
+  bool WriteOutput(Plot& fullPlot, const std::string& mode, const std::shared_ptr<TCanvas>& canvas, const std::map<uint8_t, std::string>& mapPalettes);
   static void KeepOnClose(TCanvas* canvas);
   static bool IsClosed(const TCanvas* canvas);
   void ShowAt(TCanvas* canvas, int32_t topX, int32_t topY) const;
