@@ -8161,8 +8161,7 @@ void PlotPainter::HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel)
   const vector<double_t> labelValues = LabelValues(pad, axis, axisLabel);
 
   // extent of a label around its tick: half its height (y axis) or half its width (x axis), in absolute pixels
-  const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad);
-  const double_t labelSizePixel = (axis->GetLabelFont() % 10 == 3) ? axis->GetLabelSize() * mScale : axis->GetLabelSize() * std::min(padWidthPixel, padHeightPixel);
+  const double_t labelSizePixel = TextHeightPixel(axis->GetLabelFont(), axis->GetLabelSize(), pad);
   const double_t padLow = isX ? pad->XtoAbsPixel(pad->GetX1()) : pad->YtoAbsPixel(pad->GetY2());  // pixel rows grow downwards
   const double_t padHigh = isX ? pad->XtoAbsPixel(pad->GetX2()) : pad->YtoAbsPixel(pad->GetY1());
   // the labels of an x axis are measured as TGaxis writes them (exponent taken out, decades as 10^{n})
@@ -8469,7 +8468,7 @@ bool PlotPainter::PlaceZTitle(TPad* pad, TAxis* zAxis, const vector<label_range_
   const bool pixelFont = zAxis->GetTitleFont() % 10 == 3;
   // TGaxis puts the title of a vertical axis at 1.6 * offset * title size from it, the size read as a fraction of the pad width
   const double_t unit = 1.6 * (pixelFont ? zAxis->GetTitleSize() * mScale : zAxis->GetTitleSize() * padWidthPixel);
-  const double_t titleHeight = pixelFont ? zAxis->GetTitleSize() * mScale : zAxis->GetTitleSize() * std::min(padWidthPixel, padHeightPixel);
+  const double_t titleHeight = TextHeightPixel(zAxis->GetTitleFont(), zAxis->GetTitleSize(), pad);
   double_t labels{};
   for (const auto& [min, max, isLog] : ranges) {
     if (isLog && !(min > 0.)) continue;
@@ -8748,7 +8747,7 @@ void PlotPainter::DrawCommonTitle(TCanvas* canvas, char axisLabel, const vector<
   text->SetName(fmt::format("common_title_{}_{}", axisLabel, index).data());
   text->SetNDC();
   // as a pixel font (unscaled, see ApplyScale), so that the size does not depend on the canvas
-  const double_t sizePixel = (first->GetTitleFont() % 10 == 3) ? first->GetTitleSize() : first->GetTitleSize() * std::min(PadSizePixel(firstPad).first, PadSizePixel(firstPad).second) / mScale;
+  const double_t sizePixel = TextHeightPixel(first->GetTitleFont(), first->GetTitleSize(), firstPad) / mScale;
   text->SetTextFont(first->GetTitleFont() / 10 * 10 + 3);
   text->SetTextSize(static_cast<float_t>(sizePixel));
   text->SetTextColor(first->GetTitleColor());
