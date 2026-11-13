@@ -773,6 +773,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       if (fail) break;
       // data 0 is the copy of the first data that gives the frame: ROOT's messages about it come again with the data itself
       auto quiet = ignore_root_messages_below(dataIndex ? kUnset : kFatal);
+      item_state_t state{padState, data};
       if (data->GetDrawOption()) {
         // SAME (also SAMES, SAME0, SAMES0) is SciRooPlot's: the first data of a pad is also drawn as its frame, into the empty pad, where
         // SAME made ROOT paint a title box (histograms), a garbled picture (SAME0) or an extra copy (graphs); the stats boxes get SAMES anyway.
@@ -790,7 +791,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           upper.erase(pos, end - pos);
           option.erase(pos, end - pos);
         }
-        if (ownRange && dataIndex != 0) logger::warning("Drawing option '{}' of {}: SAME0 is removed, all data of a pad share the colour range of its frame.", *data->GetDrawOption(), DataName(*data));
+        if (ownRange) Warn(state, "Drawing option '{}' of {}: SAME0 is removed, all data of a pad share the colour range of its frame.", *data->GetDrawOption(), DataName(*data));
         // AXIS and AXIG (axes or grid only) would draw no data and leave the frame drawn from it without labels: the axes are SciRooPlot's
         // (warned once per data: the frame copy of the first data, index 0, is drawn from the same item again)
         bool axesOnly{};
@@ -801,7 +802,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             axesOnly = true;
           }
         }
-        if (axesOnly && dataIndex != 0) logger::warning("Drawing option '{}' of {}: AXIS and AXIG are removed, the axes are drawn by SciRooPlot (a frame without data: Pad::SetFrame).", *data->GetDrawOption(), DataName(*data));
+        if (axesOnly) Warn(state, "Drawing option '{}' of {}: AXIS and AXIG are removed, the axes are drawn by SciRooPlot (a frame without data: Pad::SetFrame).", *data->GetDrawOption(), DataName(*data));
         // PLC, PMC, PFC: ROOT counts every object drawn with them (TPad::IncrementPaletteColor) and gives each a colour spread over the palette
         // when it is painted; the frame, a copy of the first data drawn twice, would take colours of its own and shift those of the data
         if (dataIndex == 0) {
@@ -814,7 +815,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         }
         drawOption += option;
       }
-      item_state_t state{padState, data};
 
       // ranges stored with an input are what data marked SetDefinesFrame is there for: they are kept for its copy that draws the frame
       const bool keepStoredRanges = (dataIndex == 0) && data->GetDefinesFrame() && data->GetType() != "ratio";
@@ -1550,6 +1550,13 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   auto& storedRangeZ = padState.storedRangeZ;
 
   using data_type = std::decay_t<decltype(data_ptr)>;
+  // data that cannot be drawn: reported, kept until the plot is done, and the next data keeps its number
+  auto notDrawn = [&](auto&&... args) {
+    logger::warning(std::forward<decltype(args)>(args)...);
+    mUndrawn.emplace_back(data_ptr);
+    ++dataIndex;
+    drawOption = "SAME ";
+  };
   draw_option_t alias = optionAlias.value_or(static_cast<draw_option_t>(255));  // 255: no alias
   if constexpr (is_graph_2d<data_type>() || is_func_2d<data_type>()) {
     if (!data->GetDrawOption() && !optionAlias) drawOption += "COLZ";  // without an option coloured like 2d histograms
@@ -1585,7 +1592,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     if (auto it = (options) ? options->find(*optionAlias) : decltype(options->end()){}; options && it != options->end()) {
       drawOption += it->second;
     } else {
-      if (dataIndex != 0) logger::warning("Drawing option {} is not available for {} {}, using the default of ROOT.", draw_option_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), DataName(*data));
+      Warn(state, "Drawing option {} is not available for {} {}, using the default of ROOT.", draw_option_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), DataName(*data));
       alias = static_cast<draw_option_t>(255);
     }
   }
@@ -1616,8 +1623,8 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
     }
     if (hasAxes || reversed) {
-      if (dataIndex != 0 && hasAxes) logger::warning("Drawing option '{}' of {}: A (new axes) is removed, the axes of the pad are drawn by SciRooPlot.", *data->GetDrawOption(), DataName(*data));
-      if (dataIndex != 0 && reversed) logger::warning("Drawing option '{}' of {}: RX and RY (reversed axes) are removed, SciRooPlot cannot reverse the axes of the frame.", *data->GetDrawOption(), DataName(*data));
+      if (hasAxes) Warn(state, "Drawing option '{}' of {}: A (new axes) is removed, the axes of the pad are drawn by SciRooPlot.", *data->GetDrawOption(), DataName(*data));
+      if (reversed) Warn(state, "Drawing option '{}' of {}: RX and RY (reversed axes) are removed, SciRooPlot cannot reverse the axes of the frame.", *data->GetDrawOption(), DataName(*data));
       if (reversed) option.ReplaceAll("rx", "").ReplaceAll("ry", "");
       option.ReplaceAll("a", "");
       drawOption = ((dataIndex != 0) ? "SAME " : "") + string(option.Data());
@@ -1627,13 +1634,13 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   // the angle of the values written by TEXT (Data::SetTextAngle) is part of ROOT's option: TEXTnn, whole degrees from 0 to 90
   // (an angle given in the option string itself is kept); points_text writes its values itself, in the same range
   if (const auto& textAngle = data->GetTextAngle()) {
-    if (dataIndex != 0 && (*textAngle < 0.f || *textAngle > 90.f)) logger::warning("The text angle {} of {} is outside of the 0 to 90 degrees ROOT writes values at: it is drawn at the nearest end.", *textAngle, DataName(*data));
+    if (*textAngle < 0.f || *textAngle > 90.f) Warn(state, "The text angle {} of {} is outside of the 0 to 90 degrees ROOT writes values at: it is drawn at the nearest end.", *textAngle, DataName(*data));
     if (alias != points_text) {
       TString upper(drawOption);
       upper.ToUpper();
       const Ssiz_t pos = upper.Index("TEXT");
       if (pos == kNPOS) {
-        if (dataIndex != 0) logger::warning("The text angle of {} has no effect: it is drawn without values (drawing option text or points_text).", DataName(*data));
+        Warn(state, "The text angle of {} has no effect: it is drawn without values (drawing option text or points_text).", DataName(*data));
       } else if (pos + 4 == upper.Length() || !std::isdigit(static_cast<unsigned char>(upper[pos + 4]))) {
         drawOption.insert(static_cast<size_t>(pos) + 4, std::to_string(std::lround(std::clamp(*textAngle, 0.f, 90.f))));
       }
@@ -1651,11 +1658,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     // (a flat colour map in a 3d frame lands at the wrong place, so there it is not drawn at all)
     if (data_ptr->InheritsFrom(TH2Poly::Class()) && !upper.Contains("GL")) {
       if (dataIndex != 0 && pad_ptr->GetView()) {
-        logger::warning("TH2Poly {} cannot be drawn in the 3d frame of its pad (ROOT draws polygon bins in 3d only with OpenGL). It is not drawn.", DataName(*data));
-        delete data_ptr;
-        ++dataIndex;  // the next data keeps its number
-        drawOption = "SAME ";
-        return;
+        return notDrawn("TH2Poly {} cannot be drawn in the 3d frame of its pad (ROOT draws polygon bins in 3d only with OpenGL). It is not drawn.", DataName(*data));
       }
       // drawn coloured by the content where ROOT's painter of polygon bins (THistPainter::PaintTH2PolyBins) has no such drawing: in polar
       // coordinates it paints the cell array of TH2 as well (the polygons land unpolarized beside a polar frame); the aliases of boxes,
@@ -1670,7 +1673,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
       if (reason) {
         const char* scale = (upper.Contains("Z")) ? "Z" : "";
-        if (dataIndex != 0) logger::warning("Drawing option {} is not available for TH2Poly {} ({}), drawing it as col{}.", (optionAlias) ? draw_option_name(*optionAlias) : data->GetDrawOption().value_or(""), DataName(*data), reason, (*scale) ? "z" : "");
+        Warn(state, "Drawing option {} is not available for TH2Poly {} ({}), drawing it as col{}.", (optionAlias) ? draw_option_name(*optionAlias) : data->GetDrawOption().value_or(""), DataName(*data), reason, (*scale) ? "z" : "");
         drawOption = ((dataIndex != 0) ? "SAME COL" : "COL") + string(scale);
         alias = (*scale) ? colz : col;
         upper = drawOption;
@@ -1707,7 +1710,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     if (alias == area && data_ptr->GetN() > 0) {
       // the area below the points needs them in the order of x: points in another order (a closed contour, a trajectory) would change their shape
       const double_t* x = data_ptr->GetX();
-      if (dataIndex != 0 && !std::is_sorted(x, x + data_ptr->GetN())) logger::warning("The points of graph {} are not in the order of x: they are sorted to draw the area below them.", DataName(*data));
+      if (!std::is_sorted(x, x + data_ptr->GetN())) Warn(state, "The points of graph {} are not in the order of x: they are sorted to draw the area below them.", DataName(*data));
       SortGraph(data_ptr);
       // the frame spans the area between the points and zero; the data is the line through the points, with its fill below (see below).
       // A polar graph is drawn as the plain graph of its points, as its frame (the area below the points is no area in polar coordinates)
@@ -1752,14 +1755,9 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         TString option = (optionAlias) ? TString(draw_option_name(*optionAlias).data()) : TString(drawOption).ReplaceAll("SAME", "");
         option = option.Strip(TString::kBoth);
         if (drawn3d) {
-          logger::warning("Data {} is drawn in 3d ({}) and needs a 3d frame: the first data of the pad drawn in 3d (e.g. lego, surf, triangles or points). It is not drawn.", DataName(*data), option.Data());
-        } else {
-          logger::warning("Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the first data of the pad is drawn in 3d). It is not drawn.", DataName(*data), option.Data());
+          return notDrawn("Data {} is drawn in 3d ({}) and needs a 3d frame: the first data of the pad drawn in 3d (e.g. lego, surf, triangles or points). It is not drawn.", DataName(*data), option.Data());
         }
-        delete data_ptr;
-        ++dataIndex;  // the next data keeps its number
-        drawOption = "SAME ";
-        return;
+        return notDrawn("Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the first data of the pad is drawn in 3d). It is not drawn.", DataName(*data), option.Data());
       }
       if constexpr (is_graph_2d<data_type>()) {
         // ROOT interpolates a 2d graph (maps, surfaces, triangles) over the Delaunay triangles of its points: points on one line have none
@@ -1776,18 +1774,14 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
           const double_t ax = x[other] - x[0], ay = y[other] - y[0], bx = x[i] - x[0], by = y[i] - y[0];
           onLine = std::abs(ax * by - ay * bx) <= 1e-12 * std::hypot(ax, ay) * std::hypot(bx, by);
         }
-        if (dataIndex != 0 && other < n && !points && onLine) {  // (points at one place are painted as one cell)
-          logger::warning("The points of 2d graph {} lie on one line: ROOT finds no triangles to interpolate between, nothing is drawn with drawing option {} (points draw them).", DataName(*data),
-                          (optionAlias) ? draw_option_name(*optionAlias) : TString(drawOption).ReplaceAll("SAME", "").Strip(TString::kBoth).Data());
+        if (other < n && !points && onLine) {  // (points at one place are painted as one cell)
+          Warn(state, "The points of 2d graph {} lie on one line: ROOT finds no triangles to interpolate between, nothing is drawn with drawing option {} (points draw them).", DataName(*data),
+               (optionAlias) ? draw_option_name(*optionAlias) : TString(drawOption).ReplaceAll("SAME", "").Strip(TString::kBoth).Data());
         }
       }
       if (projection != padProjection) {
         auto drawn = [](const string& keyword) { return (keyword.empty()) ? string("without a map projection") : "as a map (" + keyword + ")"; };
-        logger::warning("Data {} is drawn {} and cannot be drawn in its pad, whose first data is drawn {}. It is not drawn.", DataName(*data), drawn(projection), drawn(padProjection));
-        delete data_ptr;
-        ++dataIndex;  // the next data keeps its number
-        drawOption = "SAME ";
-        return;
+        return notDrawn("Data {} is drawn {} and cannot be drawn in its pad, whose first data is drawn {}. It is not drawn.", DataName(*data), drawn(projection), drawn(padProjection));
       }
     }
     // do not draw the colour scale a second time (only types that have one: for graphs 'Z' means no end caps on the error bars)
@@ -1999,12 +1993,8 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         mNotPainted[{pad_ptr, static_cast<uint16_t>(dataIndex - hasRefFunc)}] = {data_ptr, drawOption};
         mUndrawn.emplace_back(data_ptr);
       } else if (data_ptr->GetN() == 0) {
-        logger::warning("Graph {} has no points: it is not drawn.", DataName(*data));
-        mUndrawn.emplace_back(data_ptr);
         // no legend row and no statistics box either, as for other data that is not drawn (TH2Poly in 3d)
-        ++dataIndex;  // the next data keeps its number
-        drawOption = "SAME ";
-        return;
+        return notDrawn("Graph {} has no points: it is not drawn.", DataName(*data));
       } else {
         if constexpr (is_graph_1d<data_type>()) {
           // a graph with several sets of y errors draws them as the parts of the option after ';' say, one per set, the first part being
@@ -4405,7 +4395,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
     if (optionAlias && !defaultDrawOptions_Hist.count(*optionAlias) && !defaultDrawOptions_Graph.count(*optionAlias)) {
       const draw_option_t unavailable = *optionAlias;
       optionAlias = defaultAlias(data_ptr);
-      if (dataIndex != 0) logger::warning("Drawing option {} is not available for {} {}, drawing it as {}.", draw_option_name(unavailable), (is_hist_1d<data_type>()) ? "1d histogram" : "graph", DataName(*data), draw_option_name(*optionAlias));
+      Warn(state, "Drawing option {} is not available for {} {}, drawing it as {}.", draw_option_name(unavailable), (is_hist_1d<data_type>()) ? "1d histogram" : "graph", DataName(*data), draw_option_name(*optionAlias));
     }
   }
   if (!optionAlias && !data->GetDrawOption()) optionAlias = defaultAlias(data_ptr);
@@ -4472,7 +4462,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       if (!HasErrors(data_ptr, false, true) && data_ptr->GetN() > 0) {
         const draw_option_t withErrors = *optionAlias;
         optionAlias = defaultAlias(data_ptr);
-        if (dataIndex != 0) logger::warning("Graph {} has no errors to draw with drawing option {}: it is drawn as {}.", DataName(*data), draw_option_name(withErrors), draw_option_name(*optionAlias));
+        Warn(state, "Graph {} has no errors to draw with drawing option {}: it is drawn as {}.", DataName(*data), draw_option_name(withErrors), draw_option_name(*optionAlias));
       }
     }
   }
