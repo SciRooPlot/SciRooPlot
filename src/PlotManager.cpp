@@ -1223,7 +1223,7 @@ void PlotManager::AddColorOverview(const string& name, const string& group, cons
 
 //**************************************************************************************************
 /**
- * Whether a plot of the group and name matches the requested name and group regex (empty for an invalid expression, which is reported).
+ * Whether a plot of the name and group matches the requested name and group regex (empty for an invalid expression, which is reported).
  */
 //**************************************************************************************************
 std::function<bool(const string&, const string&)> PlotManager::PlotMatcher(const string& name, const string& group)
@@ -1246,7 +1246,7 @@ std::function<bool(const string&, const string&)> PlotManager::PlotMatcher(const
     logger::error("'{}' is not a valid {} pattern{}.", groupRegex.IsValid() ? name : group, groupRegex.IsValid() ? "name" : "group", WildcardHint(name, group));
     return {};
   }
-  return [groupRegex, nameRegex](const string& plotGroup, const string& plotName) { return groupRegex.Matches(plotGroup) && nameRegex.Matches(plotName); };
+  return [groupRegex, nameRegex](const string& plotName, const string& plotGroup) { return groupRegex.Matches(plotGroup) && nameRegex.Matches(plotName); };
 }
 
 //**************************************************************************************************
@@ -1277,7 +1277,7 @@ void PlotManager::SavePlots(const string& name, const string& group, const optio
 
   for (const vector<Plot>& plots : {std::ref(mBasePlots), std::ref(mPlots)}) {
     for (const Plot& plot : plots) {
-      if (plot.GetGroup() != "BASE_PLOTS" && !matches(plot.GetGroup(), plot.GetName())) continue;
+      if (plot.GetGroup() != "BASE_PLOTS" && !matches(plot.GetName(), plot.GetGroup())) continue;
       plotTree.put_child(plot.GetUniqueName(), plot.GetPropertyTree());
     }
   }
@@ -1362,7 +1362,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
       continue;
     }
     ++nPlotsInFile;
-    if (!matches(curGroup, *curNameValue)) continue;
+    if (!matches(*curNameValue, curGroup)) continue;
 
     ++nMatched;
     try {
@@ -1512,7 +1512,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     if (known == dataInfos.end()) dataInfos.push_back(info);
   };
   for (auto& plot : mPlots) {
-    if (!matches(plot.GetGroup(), plot.GetName())) continue;
+    if (!matches(plot.GetName(), plot.GetGroup())) continue;
     selectedPlots.push_back(&plot);
     if (mode == "print") continue;  // printing the definitions needs no data
 
