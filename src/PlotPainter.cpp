@@ -5690,8 +5690,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       return {nullptr, ""};
     };
     auto findData = [&findDrawn](uint16_t dataID, const optional<uint8_t>& padID) { return findDrawn(dataID, padID).first; };
-    // the data a placeholder of a text names (a histogram drawn as graph: the histogram)
-    auto findTextData = [&](uint16_t dataID, const optional<uint8_t>& padID) -> TNamed* {
+    // the data the placeholders of a legend row or a text refer to (a histogram drawn as graph: the histogram)
+    auto findPlaceholderData = [&](uint16_t dataID, const optional<uint8_t>& padID) -> TNamed* {
       TObject* data_ptr = findData(dataID, padID);
       if (auto source = mSourceHists.find(data_ptr); data_ptr && source != mSourceHists.end()) {
         data_ptr = source->second.get();
@@ -5758,17 +5758,14 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         const auto& entry = box->GetEntries()[lineID];
         if (entry.GetTextFont() || entry.GetTextSize()) std::tie(lineTextFont, lineTextSize) = entryText(entry);
         if (entry.GetRefDataID()) {
-          if (TObject* data_ptr = findData(*entry.GetRefDataID(), entry.GetRefPadID())) {
-            if (auto source = mSourceHists.find(data_ptr); source != mSourceHists.end()) {
-              data_ptr = source->second.get();  // a histogram drawn as graph
-            }
-            ReplacePlaceholders(line, static_cast<TNamed*>(data_ptr));
+          if (TNamed* data_ptr = findPlaceholderData(*entry.GetRefDataID(), entry.GetRefPadID())) {
+            ReplacePlaceholders(line, data_ptr);
           } else {
             logger::warning("Legend entry '{}' refers to data {}, which is not drawn in {}.", line, *entry.GetRefDataID(), (entry.GetRefPadID()) ? "pad " + std::to_string(*entry.GetRefPadID()) : "this pad");
           }
         }
       } else if (line.find('<') != string::npos) {
-        ReplacePlaceholders(line, nullptr, findTextData);
+        ReplacePlaceholders(line, nullptr, findPlaceholderData);
       }
       DropEmptyGroups(line);
 
