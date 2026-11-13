@@ -1979,10 +1979,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     // at each end without a z range set by the user, that range covers all 2d data of the pad (not only the data the frame is made of)
     if constexpr (is_hist_2d<data_type>() || is_graph_2d<data_type>() || is_func_2d<data_type>()) {
       const optional<double_t> userMinZ = MinRange(pad, padDefaults, 'Z');
-      optional<double_t> userMaxZ;
-      for (const auto* axis : AxisSettings(pad, padDefaults, 'Z')) {
-        if (axis->GetMaxRange()) userMaxZ = axis->GetMaxRange();
-      }
+      const optional<double_t> userMaxZ = MaxRange(pad, padDefaults, 'Z');
       bool isEmpty{};
       if constexpr (is_graph_2d<data_type>()) isEmpty = data_ptr->GetN() == 0;  // not drawn (and ROOT reads its first point)
       if (!(userMinZ && userMaxZ) && !isEmpty && axisHist_ptr->GetDimension() == 2 && !pad_ptr->GetView()) {
@@ -2546,10 +2543,9 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
     const bool isFormula = (data->GetDataSource() == kUserFunctions);
     auto padRange = [&](char padLabel, double_t& min, double_t& max, int32_t nSamples, const optional<double_t>& dataMin, const optional<double_t>& dataMax) {
       const optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
-      optional<double_t> userMax;
+      const optional<double_t> userMax = MaxRange(pad, padDefaults, padLabel);
       bool log{};
       for (const auto* axis : AxisSettings(pad, padDefaults, padLabel)) {
-        if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
         if (axis->GetLog()) log = *axis->GetLog();
       }
       const double_t newMin = (userMin && ((isFormula && !dataMin) || (*userMin > min && *userMin < max))) ? *userMin : min;
@@ -2694,10 +2690,9 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
         // by ROOT for those points alone
         static thread_local std::pair<double_t, double_t> shownX;
         const optional<double_t> userMin = MinRange(pad, padDefaults, 'X');
-        optional<double_t> userMax;
+        const optional<double_t> userMax = MaxRange(pad, padDefaults, 'X');
         bool logX{};
         for (const auto* axis : AxisSettings(pad, padDefaults, 'X')) {
-          if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
           if (axis->GetLog()) logX = *axis->GetLog();
         }
         shownX = {userMin.value_or(-std::numeric_limits<double_t>::infinity()), userMax.value_or(std::numeric_limits<double_t>::infinity())};
@@ -2807,13 +2802,10 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
       const char padLabel = (hbarFrame) ? ((axisLabel == 'X') ? 'Y' : 'X') : axisLabel;  // where it is drawn
       const char valueLabel = (hbarFrame) ? 'X' : 'Y';                                   // the pad axis of the contents of a 1d frame
       optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
-      optional<double_t> userMax;
+      optional<double_t> userMax = MaxRange(pad, padDefaults, padLabel);
       optional<bool> logY;
       for (const auto* axis : AxisSettings(pad, padDefaults, valueLabel)) {
         if (axis->GetLog()) logY = axis->GetLog();
-      }
-      for (const auto* axis : AxisSettings(pad, padDefaults, padLabel)) {
-        if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
       }
       const TAxis* axis = (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis();
       const optional<double_t> rangeMin = userMin, rangeMax = userMax;  // the user's range, before the reset below
@@ -3297,10 +3289,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
       // the interpolated histogram of a graph can stay below its highest point (and above its lowest one): the z range includes the
       // points (with their errors), as ROOT's own range of the graph (TGraph2D::GetHistogram), unless the user set that end
       const optional<double_t> userMinZ = MinRange(pad, padDefaults, 'Z');
-      optional<double_t> userMaxZ;
-      for (const auto* axis : AxisSettings(pad, padDefaults, 'Z')) {
-        if (axis->GetMaxRange()) userMaxZ = axis->GetMaxRange();
-      }
+      const optional<double_t> userMaxZ = MaxRange(pad, padDefaults, 'Z');
       // a minimum or maximum stored with the graph defining the frame is kept like a range set by the user
       storedRangeZ = {graphStoredZ.first != -1111, graphStoredZ.second != -1111};
       if (!userMinZ) min = (storedRangeZ.first) ? graphStoredZ.first : std::min(min, graphRangeZ.first);
@@ -3353,12 +3342,9 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
     // (contents of zero only stay as they are: COL leaves such cells empty)
     if (min == max && min != 0.) {
       const double_t widening = 0.1 * std::abs(min);
-      optional<double_t> userMax;
-      for (const auto* axis : AxisSettings(pad, padDefaults, (frameDim == 3) ? 'C' : 'Z')) {
-        if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
-      }
-      if (!MinRange(pad, padDefaults, (frameDim == 3) ? 'C' : 'Z') && !storedRangeZ.first) min -= widening;
-      if (!userMax && !storedRangeZ.second) max += widening;
+      const char valueLabel = (frameDim == 3) ? 'C' : 'Z';
+      if (!MinRange(pad, padDefaults, valueLabel) && !storedRangeZ.first) min -= widening;
+      if (!MaxRange(pad, padDefaults, valueLabel) && !storedRangeZ.second) max += widening;
     }
     axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
     axisHist_ptr->SetMinimum(min);
@@ -4404,11 +4390,10 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
     if (mCommonRanges.count({padID, axisLabel})) continue;  // the common range of a shared axis includes the room of its pads
     room_t room{axisLabel, {}, {}};
     const optional<double_t> userMin = MinRange(padSettings, padDefaults, axisLabel);
-    optional<double_t> userMax;
+    const optional<double_t> userMax = MaxRange(padSettings, padDefaults, axisLabel);
     for (const auto* axis : AxisSettings(padSettings, padDefaults, axisLabel)) {
       if (axis->GetRoomBelowMin()) room.below = axis->GetRoomBelowMin();
       if (axis->GetRoomAboveMax()) room.above = axis->GetRoomAboveMax();
-      if (axis->GetMaxRange()) userMax = axis->GetMaxRange();
     }
     if (!room.below && !room.above) continue;
     if (axisLabel == 'Z' && !is2d) {
