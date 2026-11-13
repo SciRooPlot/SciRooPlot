@@ -4502,7 +4502,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
 //**************************************************************************************************
 bool PlotPainter::IsHBarFrame(TPad* pad, const TH1* frame)
 {
-  return frame->GetDimension() == 1 && TString(FrameOption(pad, frame)).Contains("HBAR", TString::kIgnoreCase);
+  return frame->GetDimension() == 1 && TString(DrawOption(pad, frame)).Contains("HBAR", TString::kIgnoreCase);
 }
 
 //**************************************************************************************************
@@ -4512,20 +4512,35 @@ bool PlotPainter::IsHBarFrame(TPad* pad, const TH1* frame)
 //**************************************************************************************************
 bool PlotPainter::IsViewFrame(TPad* pad, const TH1* frame)
 {
-  return frame->GetDimension() == 3 || IsView3d(FrameOption(pad, frame));
+  return frame->GetDimension() == 3 || IsView3d(DrawOption(pad, frame));
 }
 
 //**************************************************************************************************
 /**
- * The option the frame histogram is drawn with in its pad (its first link), empty if it is not drawn there.
+ * The option an object is drawn with in a pad (its first link), empty if it is not drawn there.
  */
 //**************************************************************************************************
-string PlotPainter::FrameOption(TPad* pad, const TH1* frame)
+string PlotPainter::DrawOption(TPad* pad, const TObject* obj)
 {
   for (TObjLink* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
-    if (link->GetObject() == frame) return link->GetOption();
+    if (link->GetObject() == obj) return link->GetOption();
   }
   return {};
+}
+
+//**************************************************************************************************
+/**
+ * A drawing option upper case and without the parts that contain the letters of markers, lines, fills and error bars but draw nothing
+ * of that kind (kNonSymbolTokens): what is left tells which of them are drawn.
+ */
+//**************************************************************************************************
+string PlotPainter::SymbolOption(const string& option)
+{
+  TString symbols(option);
+  symbols.ToUpper();
+  for (const char* ignored : kNonSymbolTokens)
+    symbols.ReplaceAll(ignored, "");
+  return symbols.Data();
 }
 
 //**************************************************************************************************
@@ -5259,15 +5274,13 @@ bool PlotPainter::HasErrors(const TObject* obj, bool countErrors, bool xErrors)
 //**************************************************************************************************
 PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string option)
 {
-  option = str_upper(option);
+  option = SymbolOption(option);
   auto takeToken = [&option](const string& token) {
     const size_t pos = option.find(token);
     if (pos == string::npos) return false;
     option.erase(pos, token.size());
     return true;
   };
-  for (const char* ignored : kNonSymbolTokens)
-    takeToken(ignored);
   auto has = [&option](char c) { return option.find(c) != string::npos; };
   auto fill = dynamic_cast<TAttFill*>(obj);
   auto line = dynamic_cast<TAttLine*>(obj);
@@ -6448,9 +6461,8 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   // contour lines of 2d data (CONT, CONT1 to CONT3; CONT0 and CONT4 fill, COL is a map): only the cells a line passes through, i.e. where a
   // level lies between the values at the corners of the cell (widened by half a cell for the width of the lines); the levels are those of
   // the painted histogram (that of a 2d function is made when it is painted); without levels the whole range counts as before
-  auto isLineContour = [](TObject* obj) {
-    TString option = obj->GetDrawOption();
-    option.ToUpper();
+  auto isLineContour = [pad](TObject* obj) {
+    const TString option = str_upper(DrawOption(pad, obj));
     return option.Contains("CONT") && !option.Contains("CONT0") && !option.Contains("CONT4") && !option.Contains("COL");
   };
   auto markContourLines = [&](TH1* levelsFrom, const std::function<double_t(double_t, double_t)>& valueAt, double_t xMin, double_t yMin, double_t xMax, double_t yMax) {
@@ -6530,10 +6542,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     if (hist->GetDimension() != 1) return;
     // error bars as ROOT draws them (THistPainter::MakeChopt): with an E in the option, also after HIST, or with stored errors unless HIST
     // is given; SAME, TEXT etc. contain an E but are no error option
-    TString option = hist->GetDrawOption();
-    option.ToUpper();
-    for (const char* ignored : kNonSymbolTokens)
-      option.ReplaceAll(ignored, "");
+    const TString option = SymbolOption(DrawOption(pad, hist));
     TAxis* axis = hist->GetXaxis();
     // bar charts (THistPainter::PaintBar and PaintBarH): boxes from the frame edge to the content, also without fill style
     if (const bool isHorizontal = option.Contains("HBAR"); isHorizontal || option.Contains("BAR")) {
@@ -6617,15 +6626,12 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     }
   };
   auto markGraph = [&](TGraph* graph, const TObject* drawn = nullptr) {  // drawn: the object in the pad whose drawing option applies, if not the graph
-    TString option = (drawn ? drawn : graph)->GetDrawOption();
-    option.ToLower();
-    for (const char* ignored : {"same", "pfc", "plc", "pmc"})
-      option.ReplaceAll(ignored, "");
+    const TString option = SymbolOption(DrawOption(pad, (drawn) ? drawn : graph));
     const bool hasErrorBoxes = option.Contains("2") || option.Contains("5");
     const bool hasErrorBand = option.Contains("3") || option.Contains("4");
     // lines between consecutive points only with L or C, or without any option (TGraphPainter::PaintGraph): markers alone leave the space between them free
-    const bool hasLine = option.Contains("l") || option.Contains("c") || option.Strip(TString::kBoth).IsNull();
-    const float_t markerSize = (option.Contains("p") || option.Contains("*")) ? graph->GetMarkerSize() : 0.f;
+    const bool hasLine = option.Contains("L") || option.Contains("C") || option.Strip(TString::kBoth).IsNull();
+    const float_t markerSize = (option.Contains("P") || option.Contains("*")) ? graph->GetMarkerSize() : 0.f;
     const int32_t n = graph->GetN();
     // the errors of point i (a graph without errors gives -1)
     auto errorXlow = [graph](int32_t i) { return std::max(graph->GetErrorXlow(i), 0.); };
@@ -6644,7 +6650,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
         error = std::max(error, multi->GetErrorYhigh(i, set));
       return error;
     };
-    if (n > 0 && option.Contains("b")) {
+    if (n > 0 && option.Contains("B")) {
       // bar chart (TGraphPainter::PaintGraph): boxes of a fraction of the mean point distance around each point, from the base of a fill
       const auto [xMin, xMax] = std::minmax_element(graph->GetX(), graph->GetX() + n);
       const double_t halfWidth = 0.5 * (*xMax - *xMin) / n * gStyle->GetBarWidth();
@@ -6652,7 +6658,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
         setRect(cellX(padX(graph->GetPointX(i) - halfWidth)), cellY(fillBaseY()), cellX(padX(graph->GetPointX(i) + halfWidth)), cellY(padY(graph->GetPointY(i))), kObject);
       }
     }
-    if (option.Contains("f") && graph->GetFillColor() != 0 && graph->GetFillStyle() != 0) {
+    if (option.Contains("F") && graph->GetFillColor() != 0 && graph->GetFillStyle() != 0) {
       // filled area: the polygon through the points (closed from the last point back to the first)
       vector<std::pair<double_t, double_t>> polygon;
       polygon.reserve(n);
