@@ -5,9 +5,16 @@ palette for the whole canvas (its default, e.g. for images made by the web canva
 exists once per canvas there: it gets the text format of the first data setting one and the candle ranges of the first pad not using
 ROOT's (0.5 and 1), else ROOT's defaults. The canvas keeps the size it was painted with instead of being fitted into the browser window
 (a fixed canvas size), set once: a size chosen later in the browser stays. The y range of a 1d frame stays when the browser reports the
-ranges it drew without a zoom (as after every drawing). Skipped where ROOT is built without its web canvas.
+ranges it drew without a zoom (as after every drawing). The browser (JSROOT) gets what it needs to draw as ROOT does: the z range of each
+2d frame and colour scale in their options (HMIN, HMAX), also after the browser reported its options, one colour scale per frame, data
+with levels of its own drawn SAME0, x errors left out with X0 right after E, the x divisions of a pad as ROOT scales them by its width,
+the divisions of a colour scale those of the z axis, the max digits of the axes (one more where a negative label has as many digits),
+no titles where a polar graph switches them off, sampled values for functions, and a white canvas. Skipped where ROOT is built without
+its web canvas.
 Covers: palettes per pad and for the whole canvas, text formats and candle ranges set in a later pad, by pad 0 or not at all, the
-default and a set canvas size, y ranges of histogram and graph frames, linear and log, set and with room above the data.
+default and a set canvas size, y ranges of histogram and graph frames, linear and log, set and with room above the data; maps in one
+pad, in panels with a colour-scale cell and with levels of their own; points in a narrow panel, a polar graph, a formula function
+evaluated with TMath, axes with and without negative labels.
 """
 
 import json
@@ -48,7 +55,7 @@ def sent_palette(snap):
     return [rgba(int(round(index))) for index in colors[-1].get("fBuf", [])] if colors else None
 
 
-p = Project("web_canvas", bases=("1d", "2d", "2d_2x1_gap"))
+p = Project("web_canvas", bases=("1d", "2d", "1d_2x1_gap", "2d_2x1_gap"))
 p.inputs()
 todo = cases(
     {"first": ["map", "hist"], "palette1": list(PALETTES), "palette2": list(PALETTES), "pad0": [None, "kViridis", "alpha"]},
@@ -143,6 +150,28 @@ for name, (kind, setup) in RANGES.items():
     setup(plot)
     p.pm.AddPlot(plot)
 
+# what the browser needs to draw as ROOT does (see the docstring)
+plot = S.Plot("map", "browser", "2d")
+add_data(plot[1], "hist2d").SetDrawOption(S.colz)
+add_data(plot[1], "hist2d").SetDrawOption(S.cont).SetContours([2.0, 5.0])
+p.pm.AddPlot(plot)
+plot = S.Plot("panels", "browser", "2d_2x1_gap")
+for padID in (1, 2):
+    add_data(plot[padID], "hist2d").SetDrawOption(S.col)
+p.pm.AddPlot(plot)
+plot = S.Plot("narrow", "browser", "1d_2x1_gap")
+for padID in (1, 2):
+    add_data(plot[padID], "hist").SetDrawOption(S.points)
+plot[1]["Y"].SetRange(-500.0, 500.0)
+p.pm.AddPlot(plot)
+plot = S.Plot("positive", "browser", "1d")
+add_data(plot[1], "hist")
+plot[1].AddFunction("1 + cos(x * TMath::DegToRad())").SetRangeX(0.0, 10.0)
+p.pm.AddPlot(plot)
+plot = S.Plot("polar", "browser", "1d")
+add_data(plot[1], "graph_polar")
+p.pm.AddPlot(plot)
+
 run = p.plot()
 check("the plots are made without errors", run.rc == 0 and not run.errors(), "\n".join(run.errors()))
 
@@ -199,4 +228,67 @@ for name, size in SIZES.items():
     snapshot(canvas, 1)
     got = (canvas.GetWw(), canvas.GetWh())
     check(f"a canvas size chosen in the browser stays ({name})", got == (300, 200), f"{got}")
+
+
+def prims(snap):
+    """(option, object) of the primitives of a pad snapshot that are objects"""
+    return [(prim.get("fOption", ""), prim["fSnapshot"]) for prim in snap.get("fPrimitives", []) if prim.get("fKind") == 1 and isinstance(prim.get("fSnapshot"), dict)]
+
+
+def ndivisions(n):
+    """the number of divisions ROOT paints an x axis with in a pad of width w (THistPainter::PaintAxis): n % 100 scaled for n > 1000"""
+    return lambda w: (n % 1000000 - n % 100 + int(max(1, n % 100) * w)) if n > 1000 else n
+
+
+for name in ("map", "panels", "narrow", "positive", "polar"):
+    canvas = run.canvas(name, "browser")
+    canvas.Draw()
+    pads = {f"Pad_{i}": canvas.GetPad(i) for i in range(1, 4) if canvas.GetPad(i)}
+    written = {}  # z ranges and divisions as written, before the browser sees the canvas
+    for padName, pad in pads.items():
+        for obj in pad.GetListOfPrimitives():
+            if obj.InheritsFrom("TH1") and (obj.GetName().startswith("axis_hist_pad_") or obj.GetName().startswith("color_scale_pad_")):
+                written.setdefault((padName, obj.GetName()), (obj.GetMinimumStored(), obj.GetMaximumStored(), obj.GetXaxis().GetNdivisions(), obj.GetZaxis().GetNdivisions(), pad.GetAbsWNDC()))
+    snap = snapshot(canvas, 3)
+    for padName, pad in pads.items():
+        ROOT.SrpTestWebReply.Report(canvas.GetCanvasImp(), pad)  # the browser reports its options and ranges
+    again = snapshot(canvas, 3)
+    for which, current in (("drawn", snap), ("after the report of the browser", again)):
+        canvasSnap = current.get("fSnapshot", {})
+        check(f"the web canvas is white ({name}, {which})", canvasSnap.get("fFillStyle") == 1001 and canvasSnap.get("fFillColor") == 0, f"{canvasSnap.get('fFillStyle')} {canvasSnap.get('fFillColor')}")
+        styles = specials(current, 5)
+        style = styles[0] if styles else {}
+        digits = 4 if name == "narrow" else 3
+        check(f"gStyle of the web canvas has the max digits {digits} ({name}, {which})", style.get("fAxisMaxDigits") == digits, f"{style.get('fAxisMaxDigits')}")
+        check(f"gStyle of the web canvas has titles {'off' if name == 'polar' else 'on'} ({name}, {which})", style.get("fOptTitle") == (0 if name == "polar" else 1), f"{style.get('fOptTitle')}")
+        for padName in pads:
+            padSnap = sub_pad(current, padName) or {}
+            objects = prims(padSnap)
+            if name == "polar":
+                check(f"a polar graph has no title box ({which})", not any(obj.get("fName") == "title" for _, obj in objects), "title")
+            seen = set()
+            for option, obj in objects:
+                key = (padName, obj.get("fName"))
+                copy = "AXIG" in option.upper() or "AXIS" in option.upper()  # the axes drawn again
+                if key in written and key not in seen and not copy:
+                    seen.add(key)
+                    low, high, xDivisions, zDivisions, width = written[key]
+                    if obj["_typename"].startswith("TH2") and low != -1111 and high != -1111:
+                        check(f"the first drawing of {key[1]} gives its z range ({name}, {which})", f";HMIN:{low:.17g};HMAX:{high:.17g}" in option, option)
+                    check(
+                        f"the x divisions of {key[1]} are those ROOT paints ({name}, {which})",
+                        obj["fXaxis"]["fNdivisions"] % 1000000 == ndivisions(xDivisions)(width),
+                        f"{obj['fXaxis']['fNdivisions']}, written {xDivisions}, pad width {width:.3f}",
+                    )
+                    palettes = [f for f in obj.get("fFunctions", {}).get("arr", []) if f.get("_typename") == "TPaletteAxis"]
+                    for palette in palettes:
+                        check(f"the colour scale of {key[1]} is divided as the z axis ({name}, {which})", palette["fAxis"]["fNdiv"] == zDivisions % 1000000, f"{palette['fAxis']['fNdiv']}, z {zDivisions}")
+                elif key in written:
+                    check(f"a later drawing of {key[1]} draws no colour scale ({name}, {which})", "Z" not in option.upper().replace("HMIN", "").replace("HMAX", ""), option)
+                if obj["_typename"] == "TH1D" and not obj.get("fName", "").startswith("axis_hist") and name == "narrow":
+                    check(f"points leave out x errors with X0 after E ({which})", "EX0" in option.replace(" ", "") and " X0" not in f" {option}", option)
+                if obj["_typename"] == "TH2D" and obj.get("fContour") and len(obj["fContour"]) == 2:
+                    check(f"data with levels of its own are drawn SAME0 ({which})", "SAME0" in option, option)
+                if obj["_typename"] == "TF1":
+                    check(f"a function has its sampled values ({which})", len(obj.get("fSave", [])) > 0, f"{len(obj.get('fSave', []))} values")
 finish()
