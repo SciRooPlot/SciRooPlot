@@ -249,7 +249,7 @@ class PlotManager
   static void RepairMacro(const std::string& path);
   static std::vector<std::string> MatchFolders(TDirectory* topDir, const std::string& pattern);
   void ReadData(TObject* folder, std::set<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource, read_cache_t& readCache);
-  static bool PrepareInput(TObject* obj, const std::string& location);
+  static bool PrepareInput(TObject*& obj, const std::string& location);
   void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataSource);
   void ProcessDataRequests(const std::string& type, const std::string& dataSource, const std::string& name, const std::string& objNameSuffix,
                            const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, TTree* tree, const std::string& inputsDescription = "",

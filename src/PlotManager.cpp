@@ -48,6 +48,7 @@
 #include <TGClient.h>
 #include <TGraph2D.h>
 #include <TGraphErrors.h>
+#include <TGraphMultiErrors.h>
 #include <TH1.h>
 #include <THStack.h>
 #include <THnBase.h>
@@ -3371,14 +3372,22 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
 
 //**************************************************************************************************
 /**
- * Prepares an object read from an input for plotting; returns false if it cannot be plotted.
+ * Prepares an object read from an input for plotting (it may be replaced); returns false if it cannot be plotted.
  * Display settings stored with a histogram or graph (axis ranges, minimum and maximum) are kept with the object: the painter applies them
  * only where the object defines the frame of a pad and discards them everywhere else (see PlotPainter::GetDataClone).
  * A function given by a formula has to compile: one calling C++ code unknown to ROOT's interpreter crashes when it is evaluated.
  */
 //**************************************************************************************************
-bool PlotManager::PrepareInput(TObject* obj, const string& location)
+bool PlotManager::PrepareInput(TObject*& obj, const string& location)
 {
+  // ROOT crashes making the histogram of a TGraphMultiErrors without y error sets (ROOT bug): its points are drawn as a TGraph
+  if (auto* multi = dynamic_cast<TGraphMultiErrors*>(obj); multi && !multi->GetNYErrors()) {
+    logger::warning("{} is a TGraphMultiErrors without y errors, which ROOT cannot draw: it is drawn as a TGraph.", location);
+    auto* graph = new TGraph(static_cast<const TGraph&>(*multi));
+    delete obj;
+    obj = graph;
+    return true;
+  }
   if (auto* func = dynamic_cast<TF1*>(obj); func && func->GetFormula()) {
     const TString expression = func->GetFormula()->GetExpFormula();
     bool isValid{};
