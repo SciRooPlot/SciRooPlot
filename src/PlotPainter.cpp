@@ -567,7 +567,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   if (padDefaults.GetXLow()) ReportIgnored("The position of pad 0", "pad 0 holds the defaults of all pads and is not drawn");
   for (const auto& [padID, dummy] : plot.GetPads()) {
     if (padID == 0) continue;  // pad 0 is used only to define the defaults
-    auto& pad = plot[padID];   // needed because processData lambda cannot capture variable from structured binding ('dummy')
+    auto& pad = plot[padID];   // a lambda cannot capture a structured binding ('dummy') in C++17
     if (pad.GetColorScaleOf()) {
       // a ColorScale() cell is drawn once all panels are drawn (see DrawColorScaleCell)
       if (!pad.GetData().empty() || pad.GetFrame()) logger::warning("Pad {} is the cell of a colour scale: its data is not drawn.", padID);
@@ -834,9 +834,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       // the inputs of the ratio were profiles, divided as their means (see PrepareOperand)
       bool numeratorMeans{}, denominatorMeans{};
       item_state_t state{padState, data, isSampledFunc, repeated, numeratorMeans, denominatorMeans};
-      auto dropStoredFunctions = [&](auto&&... args) { return DropStoredFunctions(state, std::forward<decltype(args)>(args)...); };
-      auto prepareOperand = [&](auto&&... args) { return PrepareOperand(state, std::forward<decltype(args)>(args)...); };
-      auto processData = [&](auto&&... args) { return ProcessData(state, std::forward<decltype(args)>(args)...); };
 
       optional<data_ptr_t> rawData;
       try {
@@ -855,9 +852,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       if (rawData) {
         bool numeratorFailed{};  // a function numerator that could not be sampled (reported)
         if (data->GetType() == "ratio") {
-          std::visit([&](auto* ptr) { dropStoredFunctions(ptr, "division"); }, *rawData);
+          std::visit([&](auto* ptr) { DropStoredFunctions(state, ptr, "division"); }, *rawData);
           auto ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          numeratorMeans = prepareOperand(*rawData, ratio->GetNumModify(), DataName(*data));
+          numeratorMeans = PrepareOperand(state, *rawData, ratio->GetNumModify(), DataName(*data));
           // a function as numerator (e.g. model / data) is sampled where the denominator has its values (the points of a graph, the bin
           // centres of a histogram, after the modifiers of the denominator): the division is then that of a graph without errors, which
           // takes the errors of the denominator; a function of the inputs only within its range, a formula of the plot definition everywhere
@@ -873,7 +870,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             }
             if (denom) {
               repeated = true;  // reported when it is divided by
-              prepareOperand(*denom, ratio->GetDenomModify(), DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()));
+              PrepareOperand(state, *denom, ratio->GetDenomModify(), DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()));
               repeated = false;
               const bool fullRange = (data->GetDataSource() == kUserFunctions);
               auto* sampled = new TGraph();
@@ -949,7 +946,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         if (numeratorFailed) {
           fail = true;  // reported above: not again as an unsupported division
         } else {
-          std::visit(processData, *rawData);
+          std::visit([&](auto*& ptr) { ProcessData(state, ptr); }, *rawData);
         }
       } else {
         fail = true;
@@ -3629,8 +3626,6 @@ string PlotPainter::DataName(const string& name, const string& dataSource, const
 template <typename ObjT>
 void PlotPainter::DropStoredFunctions(item_state_t& state, ObjT* ptr, const char* reason)
 {
-  auto warn = [&](auto&&... args) { return Warn(state, std::forward<decltype(args)>(args)...); };
-
   using T = std::remove_pointer_t<decltype(ptr)>;
   if constexpr (std::is_base_of_v<TH1, T> || std::is_base_of_v<TGraph, T>) {
     TList* functions = ptr->GetListOfFunctions();
@@ -3639,7 +3634,7 @@ void PlotPainter::DropStoredFunctions(item_state_t& state, ObjT* ptr, const char
       TObject* obj = link->GetObject();
       link = link->Next();
       if (!obj->InheritsFrom(TF1::Class())) continue;
-      warn("The function {} stored with {} is not drawn: it does not follow the {}.", obj->GetName(), ptr->GetName(), reason);
+      Warn(state, "The function {} stored with {} is not drawn: it does not follow the {}.", obj->GetName(), ptr->GetName(), reason);
       delete functions->Remove(obj);
     }
   }
@@ -3653,9 +3648,6 @@ void PlotPainter::DropStoredFunctions(item_state_t& state, ObjT* ptr, const char
 template <typename PtrT>
 void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad::Data& mods)
 {
-  auto warn = [&](auto&&... args) { return Warn(state, std::forward<decltype(args)>(args)...); };
-  auto dropStoredFunctions = [&](auto&&... args) { return DropStoredFunctions(state, std::forward<decltype(args)>(args)...); };
-
   using ptr_type = std::decay_t<decltype(ptr)>;
   auto ignored = [&](const string& setting, const string& reason) { ReportIgnored(state, setting + " of " + ptr->GetName(), reason); };
   auto warnUnsupported = [&](bool requested, const char* what) {
@@ -3669,7 +3661,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
   if (m.scaleBinWidthNorm || m.normMaximum || m.cumulative || m.divideBinWidth.value_or(false) || scales(m.scaleFactor) ||
       changes(m.rebinGroupX, 1) || changes(m.rebinGroupY, 1) || changes(m.rebinGroupZ, 1) || scales(m.scaleAxisX) ||
       scales(m.scaleAxisY) || scales(m.scaleAxisZ) || changes(m.nIterSmooth, 0))
-    dropStoredFunctions(ptr, "modifiers of the data");
+    DropStoredFunctions(state, ptr, "modifiers of the data");
   // multiplies a factor of Scale (axis 0) or ScaleX/Y/Z into product; a factor that is not positive is ignored
   auto multiplyFactor = [&](optional<double_t>& product, const optional<double_t>& factor, char axis = 0) {
     if (!factor) return;
@@ -3700,7 +3692,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     }
     if constexpr (is_hist_1d<ptr_type>()) {
       if (axisIndex == 2) {
-        warn("Cannot scale z axis of 1d histogram {} (no such axis).", ptr->GetName());
+        Warn(state, "Cannot scale z axis of 1d histogram {} (no such axis).", ptr->GetName());
         return;
       }
       ScaleAxis(ptr, axisIndex, *factor);
@@ -3714,7 +3706,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       ScaleAxis(ptr, axisIndex, *factor);
     } else if constexpr (is_graph_1d<ptr_type>()) {
       if (axisIndex == 2) {
-        warn("Cannot scale z axis of graph {} (graphs have no z-axis).", ptr->GetName());
+        Warn(state, "Cannot scale z axis of graph {} (graphs have no z-axis).", ptr->GetName());
         return;
       }
       ScaleGraphAxis(ptr, axisIndex, *factor);
@@ -3733,7 +3725,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     const bool isProfile = isProfileType || dynamic_cast<TProfile3D*>(ptr);
     // ROOT merges the bins of a labelled axis but keeps the first labels, so the drawn categories are wrong
     auto warnLabelled = [&](const TAxis* axis, const optional<uint16_t>& group, const char* what) {
-      if (group && axis->GetLabels()) warn("{} on the labelled axis of {} mixes up the labels.", what, ptr->GetName());
+      if (group && axis->GetLabels()) Warn(state, "{} on the labelled axis of {} mixes up the labels.", what, ptr->GetName());
     };
     warnLabelled(ptr->GetXaxis(), mods.GetRebinGroupX(), "RebinX");
     warnLabelled(ptr->GetYaxis(), mods.GetRebinGroupY(), "RebinY");
@@ -3744,7 +3736,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       if (group && *group > 0 && *group <= axis->GetNbins() && axis->GetNbins() % *group && !ptr->InheritsFrom(TH2Poly::Class()) &&
           !ptr->InheritsFrom(TProfile3D::Class())) {
         const int32_t left = axis->GetNbins() % *group;
-        warn("{}({}): the {} bins of {} are no multiple of it, the last {} {} left out (the axis ends at {:g}).", what, *group, axis->GetNbins(),
+        Warn(state, "{}({}): the {} bins of {} are no multiple of it, the last {} {} left out (the axis ends at {:g}).", what, *group, axis->GetNbins(),
              ptr->GetName(), (left == 1) ? "bin" : plural(left, "bin"), (left == 1) ? "is" : "are", axis->GetBinUpEdge(axis->GetNbins() / *group * *group));
       }
     };
@@ -3822,7 +3814,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     } else if (mods.GetNiterSmooth()) {
       // TH2::Smooth smooths once, whatever the number of times (ROOT warns about more): said here
       if (ptr->GetDimension() == 2 && *mods.GetNiterSmooth() > 1) {
-        warn("Smooth({}) smooths 2d histogram {} once: ROOT smooths 2d histograms only once.", *mods.GetNiterSmooth(), ptr->GetName());
+        Warn(state, "Smooth({}) smooths 2d histogram {} once: ROOT smooths 2d histograms only once.", *mods.GetNiterSmooth(), ptr->GetName());
       }
       if constexpr (isProfileType) {
         // ROOT's Smooth would treat the sums stored in a profile as its contents: the mean values are smoothed instead,
@@ -3921,7 +3913,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       const optional<double_t> integral = inRangeX(mods.GetNormMin(), mods.GetNormMax(), "Normalize", [&]() { return ptr->Integral(scaleMode.data()); });
       if (integral) {
         if (*integral == 0.) {
-          warn("Cannot normalize {} because its integral is zero.", ptr->GetName());
+          Warn(state, "Cannot normalize {} because its integral is zero.", ptr->GetName());
         } else {
           ptr->Scale(1. / *integral);
         }
@@ -3958,7 +3950,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       const optional<double_t> maximum = inRangeX(mods.GetNormMaximumMin(), mods.GetNormMaximumMax(), "NormalizeToMaximum", [&]() { return ptr->GetMaximum(); });
       if (maximum) {
         if (*maximum == 0.) {
-          warn("Cannot normalize {} to maximum because it is zero.", ptr->GetName());
+          Warn(state, "Cannot normalize {} to maximum because it is zero.", ptr->GetName());
         } else {
           scaleFactor = 1. / *maximum;
         }
@@ -4010,22 +4002,22 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       if (values.empty() && ptr->GetN() > 0) {
         ignored("Normalize", "its range contains no points");
       } else if (integral == 0.) {
-        warn("Cannot normalize graph {} because the sum of its values is zero.", ptr->GetName());
+        Warn(state, "Cannot normalize graph {} because the sum of its values is zero.", ptr->GetName());
       } else {
         scaleFactor = 1. / integral;
       }
       if (*mods.GetScaleBinWidthNorm()) {
-        warn("Cannot normalize graph {} by width.", ptr->GetName());
+        Warn(state, "Cannot normalize graph {} by width.", ptr->GetName());
       }
     }
     if (mods.GetNormMaximum() && *mods.GetNormMaximum()) {
       const vector<double_t> values = valuesInRangeX(mods.GetNormMaximumMin(), mods.GetNormMaximumMax());
       if (ptr->GetN() == 0) {
-        warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
+        Warn(state, "Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
       } else if (values.empty()) {
         ignored("NormalizeToMaximum", "its range contains no points");
       } else if (double_t maxY = *std::max_element(values.begin(), values.end()); maxY == 0.) {
-        warn("Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
+        Warn(state, "Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
       } else {
         scaleFactor = 1. / maxY;
       }
@@ -4053,11 +4045,11 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
         maxZ = std::max(maxZ.value_or(ptr->GetZ()[i]), ptr->GetZ()[i]);
       }
       if (ptr->GetN() == 0) {
-        warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
+        Warn(state, "Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
       } else if (!maxZ) {
         ignored("NormalizeToMaximum", "its range contains no points");
       } else if (*maxZ == 0.) {
-        warn("Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
+        Warn(state, "Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
       } else {
         scaleFactor = 1. / *maxZ;
       }
@@ -4113,8 +4105,6 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
 template <typename ObjT>
 void PlotPainter::RemoveInvalid(item_state_t& state, ObjT* ptr, const string& name, bool checkFloatRange)
 {
-  auto warn = [&](auto&&... args) { return Warn(state, std::forward<decltype(args)>(args)...); };
-
   using ptr_type = decltype(ptr);
   if constexpr (is_hist<ptr_type>()) {
     // a profile keeps sums per bin: they are cleared, so the bin is empty (a TProfile3D is held as a TH3)
@@ -4146,9 +4136,9 @@ void PlotPainter::RemoveInvalid(item_state_t& state, ObjT* ptr, const string& na
         ++nBeyondFloat;  // ROOT finds minima and maxima (axis ranges, colour scales) only below the largest float
       }
     }
-    if (nInvalid) warn("{} has {} with NaN or infinite values, which are drawn as zero.", name, plural(nInvalid, "bin"));
+    if (nInvalid) Warn(state, "{} has {} with NaN or infinite values, which are drawn as zero.", name, plural(nInvalid, "bin"));
     if (nBeyondFloat) {
-      warn("{} has {} with contents beyond the largest float (3.4e38): ROOT finds axis ranges only below it, so they are wrong (a log scale fails).", name,
+      Warn(state, "{} has {} with contents beyond the largest float (3.4e38): ROOT finds axis ranges only below it, so they are wrong (a log scale fails).", name,
            plural(nBeyondFloat, "bin"));
     }
   } else if constexpr (is_graph_1d<ptr_type>() || is_graph_2d<ptr_type>()) {
@@ -4167,7 +4157,7 @@ void PlotPainter::RemoveInvalid(item_state_t& state, ObjT* ptr, const string& na
         ++nInvalid;
       }
     }
-    if (nInvalid) warn("{} has {} with NaN or infinite values, which are not drawn.", name, plural(nInvalid, "point"));
+    if (nInvalid) Warn(state, "{} has {} with NaN or infinite values, which are not drawn.", name, plural(nInvalid, "point"));
   }
 }
 
@@ -4181,15 +4171,13 @@ void PlotPainter::RemoveInvalid(item_state_t& state, ObjT* ptr, const string& na
 bool PlotPainter::PrepareOperand(item_state_t& state, data_ptr_t& operand, const Plot::Pad::Data::modify_t& operandModify, const string& name)
 {
   auto& data = state.data;
-  auto applyModifiers = [&](auto&&... args) { return ApplyModifiers(state, std::forward<decltype(args)>(args)...); };
-  auto removeInvalid = [&](auto&&... args) { return RemoveInvalid(state, std::forward<decltype(args)>(args)...); };
 
   Plot::Pad::Data mods = *data;
   mods.Modify() = operandModify;
   std::visit(
     [&](auto& ptr) {
-      removeInvalid(ptr, name);
-      applyModifiers(ptr, mods);
+      RemoveInvalid(state, ptr, name);
+      ApplyModifiers(state, ptr, mods);
     },
     operand);
   return ProfileMeans(operand);
@@ -4218,11 +4206,6 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
   auto& clippedSteps = padState.clippedSteps;
   auto& dataIndex = padState.dataIndex;
   auto& usedDefaults = padState.usedDefaults;
-  auto drawItem = [&](auto&&... args) { return DrawItem(state, std::forward<decltype(args)>(args)...); };
-  auto warn = [&](auto&&... args) { return Warn(state, std::forward<decltype(args)>(args)...); };
-  auto applyModifiers = [&](auto&&... args) { return ApplyModifiers(state, std::forward<decltype(args)>(args)...); };
-  auto removeInvalid = [&](auto&&... args) { return RemoveInvalid(state, std::forward<decltype(args)>(args)...); };
-  auto prepareOperand = [&](auto&&... args) { return PrepareOperand(state, std::forward<decltype(args)>(args)...); };
 
   using data_type = std::decay_t<decltype(data_ptr)>;
   if constexpr (is_func<data_type>()) isSampledFunc = !data_ptr->GetFormula();
@@ -4313,7 +4296,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
     }
 
     if (rawDenomData) {
-      denominatorMeans = prepareOperand(*rawDenomData, data_as_ratio->GetDenomModify(), DataName(data_as_ratio->GetDenomName(), data_as_ratio->GetDenomDataSource()));
+      denominatorMeans = PrepareOperand(state, *rawDenomData, data_as_ratio->GetDenomModify(), DataName(data_as_ratio->GetDenomName(), data_as_ratio->GetDenomDataSource()));
       if (binomialErrors && (numeratorMeans || denominatorMeans)) {
         ReportIgnored(state, fmt::format("SetCorrelated of ratio {}", DataName(*data)), "binomial errors are not defined for the mean values of a profile");
         binomialErrors = false;
@@ -4326,16 +4309,16 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
     // modifiers on the ratio itself are applied as requested, but most of them are rarely meaningful there
     constexpr auto hint = "use Numer() / Denom() to apply it to the inputs before the division";
     if (data->GetRebinGroupX() || data->GetRebinGroupY() || data->GetRebinGroupZ()) {
-      warn("Rebinning ratio {} sums ratio values; {}.", data_ptr->GetName(), hint);
+      Warn(state, "Rebinning ratio {} sums ratio values; {}.", data_ptr->GetName(), hint);
     }
     if (data->GetCumulative()) {
-      warn("Cumulative of ratio {} sums ratio values; {}.", data_ptr->GetName(), hint);
+      Warn(state, "Cumulative of ratio {} sums ratio values; {}.", data_ptr->GetName(), hint);
     }
     if (data->GetDivideBinWidth() && *data->GetDivideBinWidth()) {
-      warn("Dividing ratio {} by bin width is rarely meaningful; {}.", data_ptr->GetName(), hint);
+      Warn(state, "Dividing ratio {} by bin width is rarely meaningful; {}.", data_ptr->GetName(), hint);
     }
     if (data->GetScaleBinWidthNorm()) {
-      warn("Normalizing ratio {} to its integral is rarely meaningful; {}.", data_ptr->GetName(), hint);
+      Warn(state, "Normalizing ratio {} to its integral is rarely meaningful; {}.", data_ptr->GetName(), hint);
     }
   }  // end ratio code
 
@@ -4345,10 +4328,10 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
                                m.divideBinWidth.value_or(false) || (m.scaleFactor && *m.scaleFactor > 0. && *m.scaleFactor != 1.) ||
                                m.rebinGroupX.value_or(1) > 1 || m.rebinGroupY.value_or(1) > 1 || m.rebinGroupZ.value_or(1) > 1 ||
                                (m.scaleAxisY && *m.scaleAxisY != 1.) || (m.scaleAxisZ && *m.scaleAxisZ != 1.);
-  removeInvalid(data_ptr, DataName(*data), !changesContents);
+  RemoveInvalid(state, data_ptr, DataName(*data), !changesContents);
 
-  applyModifiers(data_ptr, *data);
-  if (changesContents) removeInvalid(data_ptr, DataName(*data));
+  ApplyModifiers(state, data_ptr, *data);
+  if (changesContents) RemoveInvalid(state, data_ptr, DataName(*data));
   // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
   if constexpr (is_graph_1d<data_type>()) data_ptr->SetBit(TGraph::kResetHisto);
 
@@ -4396,7 +4379,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
   // that lie outside of the frame onto its edge (HIST, and HIST C on a log axis); the axis frame (first data) is the histogram itself
   auto drawClipped = [&](TH1* histogram, draw_option_t clippedAlias) {
     if (dataIndex == 0) {
-      drawItem(histogram, (clippedAlias == curve_clipped) ? curve : ((clippedAlias == hist_clipped) ? hist : hist_open));
+      DrawItem(state, histogram, (clippedAlias == curve_clipped) ? curve : ((clippedAlias == hist_clipped) ? hist : hist_open));
       return;
     }
     if (data->GetMinRangeY() || data->GetMaxRangeY()) {
@@ -4408,7 +4391,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
     }
     TGraph* graph = ToClippedGraph(histogram, clippedAlias, pad_ptr->GetLogy());
     mSourceHists[graph].reset(histogram);
-    drawItem(graph, clippedAlias);
+    DrawItem(state, graph, clippedAlias);
     if (clippedAlias != curve_clipped) clippedSteps.emplace_back(graph, clippedAlias == hist_open_clipped);
   };
   if (optionAlias && (*optionAlias == hist_clipped || *optionAlias == hist_open_clipped || *optionAlias == curve_clipped)) {
@@ -4435,7 +4418,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
     if (optionAlias && !defaultDrawOptions_Hist.count(*optionAlias) && defaultDrawOptions_Graph.count(*optionAlias)) {
       TGraph* graph = ToGraph(data_ptr);
       mSourceHists[graph].reset(data_ptr);
-      drawItem(graph, optionAlias);
+      DrawItem(state, graph, optionAlias);
       return;
     }
   } else if constexpr (is_graph_1d<data_type>()) {
@@ -4444,7 +4427,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       const draw_option_t fallback = *defaultAlias(data_ptr);
       if (TH1* hist = ToHist(data_ptr, *optionAlias, fallback, dataIndex != 0, !aliasesWithoutErrors.count(*optionAlias))) {
         mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
-        drawItem(hist, optionAlias);
+        DrawItem(state, hist, optionAlias);
         return;
       }
       optionAlias = fallback;
@@ -4462,7 +4445,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       }
     }
   }
-  drawItem(data_ptr, optionAlias);
+  DrawItem(state, data_ptr, optionAlias);
 }
 
 //**************************************************************************************************
