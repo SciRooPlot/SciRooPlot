@@ -10,12 +10,13 @@ Covers: colz_text, clamped maps, 3d histograms, functions, 2d functions, 2d grap
 frame of 3d views, error bars of polar graphs, frame of 2d graphs drawn in 3d, and a TEfficiency drawn
 under the name ROOT gives the graph or histogram it makes; data that painted nothing: a graph or a histogram without stored errors drawn
 with a 2d alias, a graph with points at one x drawn as a histogram, error bands and brackets of a graph without errors, boxes, contours and
-candles of a TH2Poly; lines down to zero at both ends of area of a graph.
+candles of a TH2Poly; lines down to zero at both ends of area of a graph; the steps of a histogram keeping its style with a fill colour
+filled by every alias that fills them; no warning about asymmetric errors where an alias shows none (text).
 """
 
 import re
 
-from srptest import ALIASES, DATA_KINDS, ROOT, Project, S, add_data, alias_table, base_of, cases, check, data_name, data_objects, describe, drawn_type, finish, in_chunks, is_data, message_name, no_scale, per_error_set, pixels
+from srptest import ALIASES, DATA_KINDS, ROOT, Project, S, add_data, alias_table, base_of, cases, check, data_name, data_objects, describe, drawn_type, finish, in_chunks, is_data, message_name, no_scale, per_error_set, pixels, rgba
 
 TABLE = alias_table()
 REPRESENTATIVE = ("hist", "graph_errors", "hist2d", "graph2d_errors")  # every alias in the fast run
@@ -74,8 +75,10 @@ todo = cases(
         {"kind": "hist2poly", "alias": "box", "why": "boxes of a TH2Poly drawn flat"},
         {"kind": "hist2poly", "alias": "candle", "why": "candles of a TH2Poly drawn flat"},
         {"kind": "hist2poly", "alias": "cont_colz", "why": "contours of a TH2Poly drawn flat"},
+        {"kind": "graph_asymm", "alias": "text", "why": "a graph with asymmetric errors written as values (no errors shown)"},
     ],
 )
+KEPT_FILL = ("hist", "hist_open", "hist_open_clipped")  # aliases filling the steps, drawn on a histogram keeping its input's style
 
 p = Project("aliases")
 p.inputs()
@@ -105,6 +108,11 @@ for alias in REPEATED:
     plot = S.Plot(f"repeated_{alias}", "aliases", "1d")
     plot[1].AddData("repeated", "repeated_x")
     plot[1].AddData("repeated", "repeated_x").SetDrawOption(getattr(S, alias))
+    p.pm.AddPlot(plot)
+# a histogram keeping its input's style (no fill) with a fill colour set but no fill style: every alias filling the steps fills them
+for alias in KEPT_FILL:
+    plot = S.Plot(f"kept_fill_{alias}", "aliases", "1d")
+    add_data(plot[1], "hist").SetKeepInputStyle().SetFillColor(ROOT.kOrange).SetDrawOption(getattr(S, alias))
     p.pm.AddPlot(plot)
 run = p.plot("aliases")
 
@@ -159,6 +167,10 @@ check(
 ASYMMETRIC = {k for k, (_, cls, _) in DATA_KINDS.items() if cls in ("TGraphAsymmErrors", "TEfficiency")}
 asymmetric = run.warnings("has asymmetric y errors")
 check("asymmetric errors drawn as their mean only for graphs that have them", all(any(f"Graph {k}:" in w for k in ASYMMETRIC) for w in asymmetric), " | ".join(asymmetric))
+asText = next(i for i, c in enumerate(todo) if c["kind"] == "graph_asymm" and c["alias"] == "text")
+check("a graph with asymmetric errors written as values: no warning about drawing its errors with their mean", not any("has asymmetric y errors" in m for m in run.messages(f"c{asText}", "aliases")), " | ".join(run.messages(f"c{asText}", "aliases")))
+fills = {alias: [(rgba(obj.GetFillColor()), obj.GetFillStyle()) for obj, _ in run.drawn(f"kept_fill_{alias}", "aliases")] for alias in KEPT_FILL}
+check("a histogram keeping its style with a fill colour: filled alike by every alias filling the steps", fills["hist"] and fills["hist"][0][1] != 0 and all(f == fills["hist"] for f in fills.values()), str(fills))
 expectedWarnings = sum(expected(c["kind"], c["alias"])[3] for c in todo) + len(asymmetric) + len(REPEATED)
 check("no other warnings", len(run.warnings()) == expectedWarnings, " | ".join(w for w in run.warnings() if "is not available" not in w)[:500])
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))

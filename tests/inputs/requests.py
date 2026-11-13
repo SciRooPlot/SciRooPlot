@@ -16,7 +16,7 @@ the passes over the data (at most two per group of requests: the automatic range
 Covers: typed requests: the column types, 'return' in identifiers, function bodies, C-string columns in filters,
 Scatter in 3d, the weighted profiles merged by ROOT (TProfile::Merge, ROOT's merge of profiles) and the axis titles of function bodies
 (semicolons), the automatic ranges of columns with inf and nan, a throwing expression loses only its
-request.
+request, two bin edges as one bin.
 """
 
 import math
@@ -386,6 +386,7 @@ for lo in (0.1, 0.1 + 1e-12, 0.10000001, 1 / 10):
 for nb in (10, 11, 100, 1000):
     same_tree(f"{nb} bins", filled(ROOT.TH1D("ref", "", nb, -3.0, 3.0), [xs], np.ones(N)), lambda d, nb=nb: d.Project1D(("x", nb, [-3.0, 3.0])))
 same_tree("edges equal to fixed bins", filled(ROOT.TH1D("ref", "", 4, np.array([-3.0, -1.5, 0.0, 1.5, 3.0])), [xs], np.ones(N)), lambda d: d.Project1D(("x", [-3.0, -1.5, 0.0, 1.5, 3.0])))
+same_tree("two bin edges: one bin", filled(ROOT.TH1D("ref", "", 1, -1.0, 1.0), [xs], np.ones(N)), lambda d: d.Project1D(("x", [-1.0, 1.0])))
 FILTERS = {
     "y > 0": ys > 0,
     "y>0": ys > 0,

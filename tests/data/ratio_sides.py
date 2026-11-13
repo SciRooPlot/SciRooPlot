@@ -5,7 +5,7 @@ plain ratio as for any data. Every input kind divided by itself, and pairs of a 
 data (the modifiers of an input name that input; the denominator of a function numerator, prepared to sample it and to divide by,
 reports once), and every warning is expected.
 Covers: the ratio sides (both normalized, both rebinned, result scaled, numerator scaled), profiles
-rebinned before the division.
+rebinned before the division, a modifier refused where it is set naming the input of its side.
 """
 
 from srptest import (
@@ -19,6 +19,7 @@ from srptest import (
     Project,
     S,
     base_of,
+    captured,
     cases,
     check,
     data_objects,
@@ -222,4 +223,12 @@ check("every expected warning given", not unmatched, first_five(unmatched))
 unmatched, unexpected = match_messages(run.errors(), expectedErrors, False)
 check("every error expected", not unexpected, first_five(unexpected))
 check("every expected error given", not unmatched, first_five(unmatched))
+
+# a modifier value refused where it is set names the input of the side it is set on
+for side, named, other in (("numer", "hnum", "hden"), ("denom", "hden", "hnum"), ("result", "hnum", "hden")):
+    plot = S.Plot("refused", "refused", "1d")
+    ratio = plot[1].AddRatio(["hnum", "s"], ["hden", "s"])
+    _, printed = captured(lambda ratio=ratio, side=side: SIDES[side](ratio).RebinX(0))
+    said = [line for line in printed.splitlines() if line.startswith("[ WARN")]
+    check(f"a modifier refused on the {side} side names {named}", len(said) == 1 and named in said[0] and other not in said[0], printed.strip())
 finish()

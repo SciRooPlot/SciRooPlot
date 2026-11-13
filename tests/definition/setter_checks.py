@@ -98,6 +98,7 @@ INVALID = {
     "dataID": [0],
     "dataIDs": [[0]],
     "refDataID": [0],
+    "SetLegend.legendID": [0],  # legends are numbered from 1
     "radiusX": [-1.0, NAN],
     "radiusY": [-1.0, NAN],
     "points": [[(1.0, 2.0), (3.0, 4.0)], [(1.0, 2.0), (NAN, 4.0), (5.0, 1.0)]],

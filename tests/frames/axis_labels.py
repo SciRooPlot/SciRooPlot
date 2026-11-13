@@ -11,7 +11,8 @@
 Cases: a ratio layout (linear and log main pad) and panels side by side with labels at the shared edges × the flag on or off; layouts of
 one, two and three panels, an hbars side panel, 3d views × the divisions set or not; every angle of ROOT's orientations and others.
 Reference: the pixels of each pad painted alone at its edges; ROOT's scaling of the divisions; ROOT's angles of its label orientations.
-Covers: labels cut at the edge, divisions of narrow panels, label and text angles.
+Covers: labels cut at the edge, divisions of narrow panels, label and text angles, labels measured as written (the exponent taken out, log
+decades as 10^{n}).
 """
 
 import numpy as np
@@ -43,9 +44,17 @@ WIDE = {
     "wide_exponent": (0.0, 1e12, True, False),
     "time_day": (0.0, 86400.0, False, False),
 }
+# labels measured as TGaxis writes them (the exponent taken out, log decades as 10^{n}), not as the numbers they stand for: none of them
+# is hidden as clipped or said to run into others: (low, high, exponent wanted, log x)
+WRITTEN = {"exponent_2e6": (0.0, 2e6, True, False), "log_decades": (1.0, 1e6, False, True)}
 wide = {}
 for name, (low, high, _, _) in WIDE.items():
     wide[name] = ROOT.TH1D(name, "", 20, low, high)
+    for b in range(1, 21):
+        wide[name].SetBinContent(b, b)
+for name, (low, high, _, log) in WRITTEN.items():
+    edges = np.geomspace(low, high, 21) if log else np.linspace(low, high, 21)
+    wide[name] = ROOT.TH1D(name, "", 20, edges)
     for b in range(1, 21):
         wide[name].SetBinContent(b, b)
 wide["time_day"].GetXaxis().SetTimeDisplay(1)  # a time axis stored with the input: hourly labels, no power of ten to advise
@@ -139,12 +148,25 @@ for name, (_, _, exponent, _) in WIDE.items():
     if exponent:
         plot[1]["X"].SetNoExponent(False)
     p.pm.AddPlot(plot)
+for name, (_, _, exponent, log) in WRITTEN.items():
+    plot = S.Plot(name, "written", "1d")
+    plot[1].AddData(name, "s")
+    plot[1]["X"].SetNoExponent(not exponent)
+    plot[1]["X"].SetLog(log)
+    p.pm.AddPlot(plot)
 
 run = p.plot()
 check("the plots are made without errors", not run.errors(), " | ".join(run.errors()[:3]))
 for name, (low, high, exponent, overlap) in WIDE.items():
     said = [m for m in run.messages(name, "wide") if "run into each other" in m]
     check(f"x labels from {low:g} to {high:g}{' with exponent' if exponent else ''}: {'warned once that they run into each other' if overlap else 'no warning'}", len(said) == (1 if overlap else 0), " | ".join(said))
+for name, (low, high, exponent, log) in WRITTEN.items():
+    padObj = run.pad(name, "written")
+    axis = padObj.GetPrimitive("axis_hist_pad_1").GetXaxis() if padObj else None
+    hidden = [(m.GetLabNum(), m.GetLabValue()) for m in axis.GetModifiedLabels()] if axis and axis.GetModifiedLabels() else []
+    said = [m for m in run.messages(name, "written") if "run into each other" in m]
+    what = f"x labels from {low:g} to {high:g}{' with exponent' if exponent else ''}{' on a log axis' if log else ''}"
+    check(f"{what}: measured as written, none hidden as clipped, no warning", axis is not None and not hidden and not said, f"hidden {hidden}; {' | '.join(said)}")
 
 
 def edge_pixels(name, group, padID, side):

@@ -1697,7 +1697,8 @@ def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
             exp.error(f"Cannot divide {exp.num} ({as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}) by {exp.den}")
             return None
         den = as_divided(denObj)
-        if all(den.GetBinContent(c) == 0 for c in range(den.GetNcells())):
+        empty = all(den.GetBinContent(c) == 0 for c in range(den.GetNcells()))
+        if empty:
             exp.warn(f"{exp.den} is empty: the ratio {exp.num} has no values")
         if den.GetDimension() != dim:
             exp.error(f"Cannot divide {exp.num} ({dim}d) by {exp.den}")
@@ -1710,7 +1711,11 @@ def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
             if dim > 1:
                 exp.error(f"Cannot divide {exp.num} by {exp.den}: their binnings differ")
                 return None
-            return graph_to_hist(num, divide_points(x_errors(num, Points(num)), x_errors(den, Points(den)), binomial, exp))
+            said = len(exp.warnings)
+            ratio = graph_to_hist(num, divide_points(x_errors(num, Points(num)), x_errors(den, Points(den)), binomial, exp))
+            if empty:  # said once: the division of the points says nothing more (that the denominator is zero everywhere)
+                del exp.warnings[said:]
+            return ratio
         if num.InheritsFrom("TH2Poly"):
             return divide_polygons(num, den, binomial)
         for operand in (num, den):  # without stored errors TH1::Divide gives sqrt(ratio) as error, NaN for a negative denominator
@@ -2410,8 +2415,9 @@ class Output:
 
 
 def run(program, *args, config=None, cwd=None, env=None, timeout=600):
-    """runs a program (srp, plot) with a configuration folder (default: the one of the test)"""
-    environ = dict(os.environ, **(env or {}))
+    """runs a program (srp, plot) with a configuration folder (default: the one of the test); env: variables changed for it (None as
+    value: removed)"""
+    environ = {k: v for k, v in dict(os.environ, **(env or {})).items() if v is not None}
     if config:
         environ["SCIROOPLOT_CONFIG_PATH"] = config
     start = time.time()

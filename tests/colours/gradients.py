@@ -6,7 +6,8 @@ pad wins over pad 0's; the alpha given with it makes every colour transparent. A
 are checked when set: fewer than two stops, a number of colours below 1, positions outside 0 to 1, decreasing positions and components
 outside 0 to 1 warn and the gradient is ignored (the colours stay as before, nothing is said again when plotted), equal neighbours (a hard
 step) do not.
-Covers: no gradient error without data taking colours, stops checked, end colours beyond the first and last stop.
+Covers: no gradient error without data taking colours, stops checked, end colours beyond the first and last stop, marker and line
+gradients of a pad without a fill list sized by the data taking colours.
 """
 
 from srptest import DEFAULT_COLORS, ROOT, Project, S, add_data, cases, check, describe, finish, python, rgba
@@ -97,6 +98,15 @@ plot = S.Plot("zero", "zero", "1d")
 plot[1].SetDefaultColors(STOPS["two"], None, 0)
 add_data(plot[1], "hist")
 p.pm.AddPlot(plot)
+# marker and line gradients of a pad without any fill list (no base plot): data setting its marker and line colours takes no colour, so
+# the gradient is sized by the others and the last of them gets the end colour
+plot = S.Plot("no_fill_list", "no_base")
+plot[1].SetDefaultMarkerColors(STOPS["two"])
+plot[1].SetDefaultLineColors(STOPS["two"])
+add_data(plot[1], "hist").SetMarkerColor(SET_COLOR).SetLineColor(SET_COLOR)
+for _ in range(2):
+    add_data(plot[1], "hist")
+p.pm.AddPlot(plot)
 run = p.plot("gradients")
 
 
@@ -134,6 +144,15 @@ check("a gradient no data takes from gives no messages", not run.errors() and no
 run = p.plot("zero")
 drawn = run.objects("zero", "zero")
 check("a gradient ignored when set (0 colours): the default colours, nothing said when plotted", drawn and rgba(drawn[0].GetMarkerColor()) == rgba(DEFAULT_COLORS[0]) and not run.errors() and not run.warnings(), " | ".join(run.errors()[:3] + run.warnings()[:3]))
+run = p.plot("no_base")
+drawn = run.objects("no_fill_list", "no_base")
+want = gradient_rgb(STOPS["two"], 2)
+found = [(rgba(obj.GetMarkerColor()), rgba(obj.GetLineColor())) for obj in drawn[1:]]
+check(
+    "marker and line gradients without a fill list: sized by the data taking colours (the last gets the end colour)",
+    len(drawn) == 3 and all(near(colour, want[k], None) for k, pair in enumerate(found) for colour in pair),
+    f"{found}, expected {[rgba(c) for c in want]}",
+)
 
 # stops are checked when set: warnings of the definition (a process of its own)
 STOP_CHECKS = {  # stops, number of colours and the warning they give (None: accepted silently)

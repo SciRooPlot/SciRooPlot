@@ -12,7 +12,7 @@ Covers: unknown projects, confdir of an unknown project, unset program, confdir 
 add with an unset variable: one message, nothing left, program before srp add, concurrent
 srp add, SaveProject keeping changes made meanwhile, rename with in-memory data, srp set while a program saves, rename
 with the configuration reached through a symlink, unreadable projects.info: exit 1, reported once, a project saved by its program but not
-registered (SaveProject and every srp command on it name srp add)."""
+registered (SaveProject and every srp command on it name srp add), a project folder that is a symlink loop."""
 
 import os
 import shutil
@@ -313,4 +313,11 @@ for command in (("select", "unreg"), ("projects", "unreg"), ("get", "unreg", "ou
         check("srp confdir of a project saved but not registered gives its folder", out.rc == 0, out.tail())
         continue
     check(f"srp {command[0]} of a project saved but not registered names srp add", out.rc == 1 and len(out.errors()) == 1 and "srp add unreg" in out.errors()[0], out.tail())
+# a project folder that is a symlink loop: the file system calls throw, srp ends with one error naming why
+config = setup()
+shutil.rmtree(os.path.join(config, "A"))
+for a, b in (("L1", "L2"), ("L2", "L1"), ("L1", "A")):
+    os.symlink(os.path.join(config, a), os.path.join(config, b))
+out = run(SRP, "projects", "A", config=config)
+check("srp projects of a project whose folder is a symlink loop: exit 1, one error naming the loop", out.rc == 1 and len(out.errors()) == 1 and "symbolic links" in out.errors()[0], out.tail())
 finish()

@@ -9,6 +9,7 @@ plot is loaded together with an unchanged one. Reference: what was written:
 - a misspelt key, and a part under a changed key, are read as before (the key names its kind) or reported naming the key;
 - the unchanged plot loads in every case, and the file as written names no key as unknown (also where repeated parts, the rows of a
   legend, hold different keys).
+A file loaded group by group into one manager gives no messages (its base plots are read again with every call and replaced silently).
 (Text after a value on the same line is dropped by the reader of the format, before SciRooPlot sees it: not checked.)
 """
 
@@ -108,4 +109,18 @@ unchanged = S.S.PlotManager("unchanged")
 _, printed = S.captured(lambda: unchanged.LoadPlots(file=path))
 unknown = [line for line in printed.splitlines() if "does not know" in line]
 S.check("the file as written loads without naming a key as unknown", not unknown, " | ".join(unknown)[:300])
+
+# a file loaded group by group into one manager: its base plots are read with every call and replaced silently
+grouped = S.S.PlotManager("grouped")
+grouped.AddBasePlot(S.S.PlotManager.MakeBasePlot("1d"))
+for group in ("a", "b"):
+    plot = S.S.Plot("p", group, "1d")
+    plot[1].AddData("h", "s")
+    grouped.AddPlot(plot)
+groupedFile = os.path.join(S.WORK, "grouped.info")
+grouped.SavePlots(file=groupedFile)
+loaded = S.S.PlotManager("loaded_by_group")
+_, printed = S.captured(lambda: [loaded.LoadPlots(group=group, file=groupedFile) for group in ("a", "b")])
+said = [line for line in printed.splitlines() if "[ WARN" in line or "[ ERR" in line]
+S.check("a file loaded group by group: no messages (its base plots replaced silently)", not said, " | ".join(said)[:300])
 S.finish()

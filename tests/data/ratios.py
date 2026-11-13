@@ -15,7 +15,7 @@ divided without reading past its bins; NaN in a denominator removed before the d
 formulas without a range reported once; a TGraphMultiErrors denominator sorted with its errors; a ratio by a function at its zeros reported; a function numerator without values where the denominator has them
 reported as such; two formulas giving the frame divided over the pad range; graphs at the same
 x values divided point by point whatever their kinds of errors; empty denominator bins (also NaN) no
-knots of the interpolation (the ratio swung around them).
+knots of the interpolation (the ratio swung around them); an empty denominator of other binning reported once.
 """
 
 import math
@@ -71,6 +71,7 @@ todo = cases(
         {"num": "graph_errors", "den": "tf1_cpp", "num_variant": "normal", "den_variant": "zeros", "correlated": False, "why": "a function zero at every point, reported"},
         {"num": "graph_errors", "den": "hist_var", "num_variant": "normal", "den_variant": "nan", "correlated": False, "why": "NaN denominator"},
         {"num": "hist", "den": "hist_var", "num_variant": "normal", "den_variant": "nan", "correlated": False, "why": "empty denominator bins"},
+        {"num": "hist", "den": "hist_var", "num_variant": "normal", "den_variant": "empty", "correlated": False, "why": "an empty denominator of other binning reported once"},
         {"num": "graph_errors", "den": "hist_var", "num_variant": "normal", "den_variant": "empty", "correlated": False, "why": "empty denominator bins"},
         {"num": "tf1", "den": "hist", "num_variant": "normal", "den_variant": "single", "correlated": False, "why": "empty denominator bins"},
         {"num": "tf1", "den": "graph_errors", "num_variant": "normal", "den_variant": "empty", "correlated": False, "why": "a function numerator by a graph without points"},
