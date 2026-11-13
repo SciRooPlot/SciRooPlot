@@ -340,7 +340,7 @@ class PlotPainter
   template <typename ObjT>
   void DropStoredFunctions(item_state_t& state, ObjT* ptr, const char* reason);
   template <typename PtrT>
-  void ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad::Data& mods);
+  void ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad::Data::modify_t& m);
   template <typename ObjT>
   void RemoveInvalid(item_state_t& state, ObjT* ptr, const std::string& name, bool checkFloatRange = true);
   bool PrepareOperand(item_state_t& state, data_ptr_t& operand, const Plot::Pad::Data::modify_t& operandModify, const std::string& name);
