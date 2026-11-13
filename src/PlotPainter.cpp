@@ -2541,10 +2541,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
     auto padRange = [&](char padLabel, double_t& min, double_t& max, int32_t nSamples, const optional<double_t>& dataMin, const optional<double_t>& dataMax) {
       const optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
       const optional<double_t> userMax = MaxRange(pad, padDefaults, padLabel);
-      bool log{};
-      for (const auto* axis : AxisSettings(pad, padDefaults, padLabel)) {
-        if (axis->GetLog()) log = *axis->GetLog();
-      }
+      const bool log = IsLog(pad, padDefaults, padLabel).value_or(false);
       const double_t newMin = (userMin && ((isFormula && !dataMin) || (*userMin > min && *userMin < max))) ? *userMin : min;
       const double_t newMax = (userMax && ((isFormula && !dataMax) || (*userMax < max && *userMax > min))) ? *userMax : max;
       if (newMin < newMax) std::tie(min, max) = std::make_pair(newMin, newMax);
@@ -2688,10 +2685,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
         static thread_local std::pair<double_t, double_t> shownX;
         const optional<double_t> userMin = MinRange(pad, padDefaults, 'X');
         const optional<double_t> userMax = MaxRange(pad, padDefaults, 'X');
-        bool logX{};
-        for (const auto* axis : AxisSettings(pad, padDefaults, 'X')) {
-          if (axis->GetLog()) logX = *axis->GetLog();
-        }
+        const bool logX = IsLog(pad, padDefaults, 'X').value_or(false);
         shownX = {userMin.value_or(-std::numeric_limits<double_t>::infinity()), userMax.value_or(std::numeric_limits<double_t>::infinity())};
         if (logX) shownX.first = std::max(shownX.first, std::numeric_limits<double_t>::min());
         static const auto isShown = [](const TGraph* graph, int32_t i) {
@@ -2800,19 +2794,13 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
       const char valueLabel = (hbarFrame) ? 'X' : 'Y';       // the pad axis of the contents of a 1d frame
       optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
       optional<double_t> userMax = MaxRange(pad, padDefaults, padLabel);
-      optional<bool> logY;
-      for (const auto* axis : AxisSettings(pad, padDefaults, valueLabel)) {
-        if (axis->GetLog()) logY = axis->GetLog();
-      }
+      const optional<bool> logY = IsLog(pad, padDefaults, valueLabel);
       const TAxis* axis = (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis();
       const optional<double_t> rangeMin = userMin, rangeMax = userMax;  // the user's range, before the reset below
       constexpr double_t relTol = 1e-12;
       // a log axis shows the bins from the first positive edge on: a positive minimum below it is beyond the shown axis as well
       // (ExtendFrameAxis drops the bins up to it), whether the bins start at 0.5, 0 or -0.5
-      optional<bool> logAxis;
-      for (const auto* settings : AxisSettings(pad, padDefaults, padLabel)) {
-        if (settings->GetLog()) logAxis = settings->GetLog();
-      }
+      const optional<bool> logAxis = IsLog(pad, padDefaults, padLabel);
       double_t shownMin = axis->GetXmin();
       if (logAxis.value_or(false) && shownMin <= 0. && userMin && *userMin > 0. && !axis->GetLabels()) {
         int32_t bin = 1;
@@ -8379,12 +8367,24 @@ vector<const Plot::Pad::Axis*> PlotPainter::AxisSettings(const Plot::Pad& pad, c
 optional<double_t> PlotPainter::MinRange(const Plot::Pad& pad, const Plot::Pad& padDefaults, char axisLabel)
 {
   optional<double_t> min;
-  bool log{};
   for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
     if (axis->GetMinRange()) min = axis->GetMinRange();
-    if (axis->GetLog()) log = *axis->GetLog();
   }
-  return (log && min && *min <= 0.) ? nullopt : min;
+  return (IsLog(pad, padDefaults, axisLabel).value_or(false) && min && *min <= 0.) ? nullopt : min;
+}
+
+//**************************************************************************************************
+/**
+ * Whether an axis is set to log for the pad (or for all pads in pad 0); none if it is not set.
+ */
+//**************************************************************************************************
+optional<bool> PlotPainter::IsLog(const Plot::Pad& pad, const Plot::Pad& padDefaults, char axisLabel)
+{
+  optional<bool> log;
+  for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
+    if (axis->GetLog()) log = axis->GetLog();
+  }
+  return log;
 }
 
 //**************************************************************************************************

@@ -414,6 +414,7 @@ class PlotPainter
   static std::vector<const Plot::Pad::Axis*> AxisSettings(const Plot::Pad& pad, const Plot::Pad& padDefaults, char axisLabel);
   static std::optional<double_t> MinRange(const Plot::Pad& pad, const Plot::Pad& padDefaults, char axisLabel);
   static std::optional<double_t> MaxRange(const Plot::Pad& pad, const Plot::Pad& padDefaults, char axisLabel);
+  static std::optional<bool> IsLog(const Plot::Pad& pad, const Plot::Pad& padDefaults, char axisLabel);
   bool ProfileMeans(data_ptr_t& data);
   void MoveProjectionTitles(const TObject* from, const TObject* to);
   void DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID);
