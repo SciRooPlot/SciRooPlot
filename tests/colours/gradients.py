@@ -141,8 +141,8 @@ STOP_CHECKS = {  # stops, number of colours and the warning they give (None: acc
     "outside": ([(0, 0, 0, -0.1), (1, 1, 1, 1.0)], None, "stop 1 is at position -0.1, outside of 0 to 1"),
     "beyond": ([(0, 0, 0, 0.0), (1, 1, 1, 1.5)], None, "stop 2 is at position 1.5, outside of 0 to 1"),
     "component": ([(1.5, 0, 0, 0.0), (0, 0, 1, 1.0)], None, "stop 1 has the colour (1.5, 0, 0), components must be between 0 and 1"),
-    "one_stop": ([(1, 0, 0, 0.5)], None, "a gradient needs at least two stops, got 1"),
-    "zero_colours": ([(1, 0, 0, 0.0), (0, 0, 1, 1.0)], 0, "the number of gradient colours must be positive, got 0"),
+    "one_stop": ([(1, 0, 0, 0.5)], None, "it needs at least two stops, got 1"),
+    "zero_colours": ([(1, 0, 0, 0.0), (0, 0, 1, 1.0)], 0, "the number of its colours must be positive, got 0"),
     "step": ([(1, 0, 0, 0.0), (1, 0, 0, 0.5), (0, 0, 1, 0.5), (0, 0, 1, 1.0)], None, None),
     "colour_forms": ([("#ff0000", 0.0), (int(ROOT.kBlue), 1.0)], 3, None),
 }

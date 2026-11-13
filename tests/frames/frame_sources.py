@@ -176,7 +176,7 @@ check("a frame input has no legend row", found[1] == want[1] and want[1] is not 
 same_frame("pad0_frame", "alone_hist_other")
 check("a frame input in pad 0: warned when the plot is added", "added to pad 0 are not drawn" in pad0Said, pad0Said)
 same_frame("base_frame", "alone_hist_other")
-check("a frame input in a base plot: warned when it is added", "has data or a frame in pad 1, which is ignored" in baseSaid, baseSaid)
+check("a frame input in a base plot: warned when it is added", "The data or frame in pad 1 of base plot" in baseSaid, baseSaid)
 for name, data, n in (("outside_above", "narrow", 1), ("inside", "four", 0), ("line_crossing", "crossing", 0), ("filled_above", "narrow", 0)):
     said = [m for m in run.messages(name, "named") if "lies entirely" in m]
     check(f"{name}: {'warned once that ' + data + ' is outside the frame' if n else 'no warning about data outside the frame'}", len(said) == n and all(f"Data {data}:other lies entirely above" in m for m in said), " | ".join(said))

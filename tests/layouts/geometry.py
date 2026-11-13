@@ -437,12 +437,12 @@ for what, (call, message) in INVALID_SETTERS.items():
         check(f"invalid value throws: {what}", message in str(e), str(e))
 shapes = python("import SciRooPlot as S\nshape = S.BasePlotShape()\nfor value in (0.0, -1.0, float('nan'), float('inf')):\n    shape.SetAspectRatio(value).SetRatioHeight(value).SetPullHeight(value)\nS.PlotManager.MakeBasePlot('1d_wide_ratio_pull', S.PanelLayout(), shape)\n")
 for setter in ("SetAspectRatio", "SetRatioHeight", "SetPullHeight"):
-    warned = [line for line in shapes.warnings() if f"BasePlotShape::{setter}(" in line and "ignoring it" in line]
+    warned = [line for line in shapes.warnings() if f"BasePlotShape::{setter}(" in line and "is ignored" in line]
     check(f"BasePlotShape::{setter} with 0, a negative, NaN or infinite value warns and keeps its value", len(warned) == 4 and shapes.rc == 0, shapes.tail())
 code = "".join(f"sizes.{setter}({', '.join(f'float({str(a)!r})' for a in args)})\n" for setter, calls in INVALID_LENGTHS.items() for args in calls)
 lengths = python("import SciRooPlot as S\nsizes = S.PanelLayout()\n" + code)
 for setter, calls in INVALID_LENGTHS.items():
-    warned = [line for line in lengths.warnings() if f"PanelLayout::{setter}" in line and line.rstrip().endswith("ignored.")]
+    warned = [line for line in lengths.warnings() if f"PanelLayout::{setter}" in line and "is ignored: it is" in line]
     check(f"PanelLayout::{setter} with an invalid length warns and keeps its value", len(warned) == sum(map(len, calls)) and lengths.rc == 0, lengths.tail())
 refused = python("import SciRooPlot as S\n" + "".join(f"S.PlotManager.MakeBasePlot({name!r})\n" for name in REFUSED))
 for name in REFUSED:

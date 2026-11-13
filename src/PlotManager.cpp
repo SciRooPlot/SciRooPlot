@@ -989,7 +989,7 @@ void PlotManager::AddPlot(Plot plot)
 BasePlotShape& BasePlotShape::SetAspectRatio(double_t ratio)
 {
   if (!std::isfinite(ratio) || ratio <= 0.) {
-    logger::warning("BasePlotShape::SetAspectRatio({}) needs a positive finite value, ignoring it.", ratio);
+    logger::warning("BasePlotShape::SetAspectRatio({}) is ignored: it needs a positive finite value.", ratio);
     return *this;
   }
   mAspectRatio = ratio;
@@ -999,7 +999,7 @@ BasePlotShape& BasePlotShape::SetAspectRatio(double_t ratio)
 BasePlotShape& BasePlotShape::SetRatioHeight(double_t height)
 {
   if (!std::isfinite(height) || height <= 0.) {
-    logger::warning("BasePlotShape::SetRatioHeight({}) needs a positive finite value, ignoring it.", height);
+    logger::warning("BasePlotShape::SetRatioHeight({}) is ignored: it needs a positive finite value.", height);
     return *this;
   }
   mRatioHeight = height;
@@ -1009,7 +1009,7 @@ BasePlotShape& BasePlotShape::SetRatioHeight(double_t height)
 BasePlotShape& BasePlotShape::SetPullHeight(double_t height)
 {
   if (!std::isfinite(height) || height <= 0.) {
-    logger::warning("BasePlotShape::SetPullHeight({}) needs a positive finite value, ignoring it.", height);
+    logger::warning("BasePlotShape::SetPullHeight({}) is ignored: it needs a positive finite value.", height);
     return *this;
   }
   mPullHeight = height;
@@ -1113,13 +1113,13 @@ void PlotManager::AddBasePlot(Plot basePlot)
     return;
   }
   // base plots are found by their name alone
-  if (!basePlot.GetGroup().empty() && basePlot.GetGroup() != "BASE_PLOTS") logger::warning("Base plot {}: its group {} is ignored (base plots have no group).", basePlot.GetName(), basePlot.GetGroup());
+  if (!basePlot.GetGroup().empty() && basePlot.GetGroup() != "BASE_PLOTS") logger::warning("The group {} of base plot {} is ignored: base plots have no group.", basePlot.GetGroup(), basePlot.GetName());
   basePlot.SetGroup("BASE_PLOTS");
   // base plots define the layout: their data would never be read (only the data of the plots is), and would define the frame,
   // take the first default styles and the first data numbers of every plot built on them
   for (auto& [padID, pad] : basePlot.GetPads()) {
     if (pad.GetData().empty() && !pad.GetFrame()) continue;
-    logger::warning("Base plot {} has data or a frame in pad {}, which is ignored: data belongs into the plots (shared data e.g. via a loop or a data template).", basePlot.GetName(), padID);
+    logger::warning("The data or frame in pad {} of base plot {} is ignored: data belongs into the plots (shared data e.g. via a loop or a data template).", padID, basePlot.GetName());
     pad.GetData().clear();
     pad.mFrame.reset();
   }

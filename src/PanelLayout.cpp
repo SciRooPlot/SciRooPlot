@@ -143,7 +143,7 @@ bool PanelLayout::ValidLength(const char* setter, double_t pixel, bool zeroAllow
   const string what = fmt::format("length of {}", setter);
   if (!Plot::CheckNotNegative(pixel, what)) return false;
   if (zeroAllowed || pixel > 0.) return true;
-  logger::warning("The {} ({}) is not positive: ignored.", what, Plot::Shown(pixel));
+  logger::warning("The {} ({}) is ignored: it is not positive.", what, Plot::Shown(pixel));
   return false;
 }
 
