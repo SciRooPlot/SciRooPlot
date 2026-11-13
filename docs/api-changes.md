@@ -127,6 +127,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A TH2Poly drawn with `box` or a `cont…`, `candle…` or `violin…` alias painted nothing (ROOT paints polygon bins with none of them) | Drawn as `col` (`colz`) with a warning, as for `lego` and `surf`; raw options (`"BOX"`) still reach ROOT as given | behaviour | Nothing. |
 | A graph drawn as `area` (also the default for a graph with a fill) was the polygon closed at zero drawn with its outline: lines went down to zero at both ends, also without a fill; its legend row showed the fill without the line | The line through the points with the area between them and zero filled below it, as `area` of histograms (`HIST LF2`), and the same legend row | behaviour | Nothing. |
 | A placeholder with a malformed data number or format (`<mean:1@>`, `<mean: 1>`, `<mean:-1>`, `<mean:1e3>`, `<mean[.2f]x>`) stayed in the label without a word | The same, with a warning saying how data and format are written | behaviour | Fix the placeholder. |
+| The printf integer format `i` in a placeholder (`<entries[i]>`) gave the error `Incompatible format string` | It formats as `d` | behaviour | Nothing. |
 
 ### Files
 

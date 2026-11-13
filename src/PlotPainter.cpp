@@ -9033,17 +9033,19 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
 
     if (value) {
       // the format in brackets as in printf or fmt (<mean[.2f]>, <entries[d]>), without '%' and spaces; general ('g') by default
-      string format = ((*match)[2].matched) ? (*match)[2].str() : (*match)[5].str();
+      const string given = ((*match)[2].matched) ? (*match)[2].str() : (*match)[5].str();
+      string format = given;
       format.erase(remove(format.begin(), format.end(), '%'), format.end());
       format.erase(remove(format.begin(), format.end(), ' '), format.end());
       const bool integerFormat = !format.empty() && (format.back() == 'd' || format.back() == 'i');
+      if (integerFormat) format.back() = 'd';  // printf's i is d for fmt
       if (!integerFormat && format.find_first_of("eEfFgG") == string::npos) format += "g";
       format = "{:" + format + "}";
       try {
         // all values are doubles; integer formats need an integer argument
         replaceStr = (integerFormat) ? fmt::format(fmt::runtime(format), std::llround(*value)) : fmt::format(fmt::runtime(format), *value);
-      } catch (const fmt::format_error& e) {
-        logger::error("Incompatible format string in {}: {}.", matchStr, e.what());
+      } catch (const fmt::format_error&) {
+        logger::error("Placeholder {}: [{}] is not a format for a number, e.g. [.2f], [.3e], [>8.1f] or [d].", matchStr, given);
       }
     }
 

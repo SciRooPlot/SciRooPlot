@@ -106,6 +106,7 @@ DESCRIPTIONS = {  # name: (definition, label, expected label)
     "title_graph": (lambda pad, lab: pad.AddData("g", "s", lab), "<title>", "graph title"),
     "format_aligned": (lambda pad, lab: pad.AddData("h", "s", lab), "<entries[>8.1f]>|", f"{1000:>8.1f}|"),
     "format_integer": (lambda pad, lab: pad.AddData("h", "s", lab), "<entries[d]> entries", "1000 entries"),
+    "format_integer_printf_i": (lambda pad, lab: pad.AddData("h", "s", lab), "<entries[%i]> entries", "1000 entries"),
     "format_after_number": (lambda pad, lab: pad.AddData("h", "s", lab), "<entries[.1e]>", f"{1000:.1e}"),
     "not_a_placeholder": (lambda pad, lab: pad.AddData("h", "s", lab), "x < 3, y [cm] <x[cm]>", "x < 3, y [cm] <x[cm]>"),
 }
@@ -251,5 +252,5 @@ for name in ("stats_title", "stats_title_graph"):
     title = stats[0].GetListOfLines().First().GetTitle() if stats else None
     want = "h s 1000" if name == "stats_title" else "h s"
     check(f"{name}: the title of the statistics box reads {want!r}", title == want, f"{title!r}")
-check("a format that does not fit is an error, the placeholder left as it is", labels("bad_format", "texts") == ["<mean[q]>"] and any("Incompatible format string in <mean[q]>" in m for m in run.messages("bad_format", "texts")), f"{labels('bad_format', 'texts')}")
+check("a format that does not fit is an error, the placeholder left as it is", labels("bad_format", "texts") == ["<mean[q]>"] and any("Placeholder <mean[q]>: [q] is not a format for a number" in m for m in run.messages("bad_format", "texts")), f"{labels('bad_format', 'texts')}")
 finish()
