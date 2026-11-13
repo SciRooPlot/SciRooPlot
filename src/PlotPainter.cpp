@@ -1075,9 +1075,6 @@ void PlotPainter::FinishPad(pad_state_t& padState)
   auto& pad_ptr = padState.pad_ptr;
   auto& drawData = padState.drawData;
   auto& padSetup = padState.padSetup;
-  auto& textFont = padState.textFont;
-  auto& textSize = padState.textSize;
-  auto& textColor = padState.textColor;
   auto& hasRefFunc = padState.hasRefFunc;
   auto& axisHist_ptr = padState.axisHist_ptr;
   auto& polarFrame = padState.polarFrame;
@@ -1151,84 +1148,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
   }
   // z titles with offset 0 next to their labels: the z axis of a 3D view and the colour scales (the range of the frame is final now)
   if (axisHist_ptr && axisHist_ptr->GetDimension() == 3) {
-    // the binned z axis has a title of its own; the colour scale shows the contents (the C axis). ROOT makes the scale of a 3d histogram
-    // once, with the look of the z axis at that time: it is made again with the look of the scale (the texts of the pad and the defaults
-    // of a layout, then the settings of C; nothing of Z) and its title placed by the content labels, then the z axis gets its own look back
-    // (the scale keeps its copy)
-    TAxis* zAxis = axisHist_ptr->GetZaxis();
-    PlaceZTitle(pad_ptr, zAxis, {{zAxis->GetBinLowEdge(zAxis->GetFirst()), zAxis->GetBinUpEdge(zAxis->GetLast()), false}});
-    TList* functions = axisHist_ptr->GetListOfFunctions();
-    if (TObject* palette = functions->FindObject("palette")) {
-      TAttAxis zLook;
-      zAxis->TAttAxis::Copy(zLook);
-      // the bits of the look are kept apart from TAttAxis: they are given back with it
-      constexpr std::array lookBits{TAxis::kCenterTitle, TAxis::kCenterLabels, TAxis::kNoExponent, TAxis::kTickPlus, TAxis::kTickMinus};
-      std::array<bool, lookBits.size()> zBits{};
-      for (size_t i = 0; i < lookBits.size(); ++i)
-        zBits[i] = zAxis->TestBit(lookBits[i]);
-      zAxis->ResetAttAxis("Z");  // ROOT's look of a z axis (gStyle), the title next to the labels
-      zAxis->SetTitleOffset(0.f);
-      if (textFont) {
-        zAxis->SetTitleFont(*textFont);
-        zAxis->SetLabelFont(*textFont);
-      }
-      if (textColor) {
-        zAxis->SetTitleColor(textColor->ToIndex());
-        zAxis->SetLabelColor(textColor->ToIndex());
-      }
-      if (textSize) zAxis->SetLabelSize(*textSize);
-      if (auto titleSize = LayoutValue(pad, padDefaults, "title_size")) zAxis->SetTitleSize(*titleSize);
-      if (auto titleOffset = LayoutValue(pad, padDefaults, "title_offset_z")) zAxis->SetTitleOffset(*titleOffset);
-      bool ownTitleOffset = zAxis->GetTitleOffset() != 0.f;  // a fixed distance from the layout
-      optional<float_t> titleAlpha, labelAlpha, axisAlpha;
-      for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
-        const auto& content = *contentSettings;
-        if (content.GetTitleFont()) zAxis->SetTitleFont(*content.GetTitleFont());
-        if (content.GetTitleSize()) zAxis->SetTitleSize(*content.GetTitleSize());
-        if (content.GetTitleColor()) zAxis->SetTitleColor(content.GetTitleColor()->ToIndex());
-        if (content.GetTitleOffset()) zAxis->SetTitleOffset(*content.GetTitleOffset());
-        ownTitleOffset = ownTitleOffset || content.GetTitleOffset();
-        if (content.GetTitleCenter()) zAxis->CenterTitle(*content.GetTitleCenter());
-        if (content.GetLabelFont()) zAxis->SetLabelFont(*content.GetLabelFont());
-        if (content.GetLabelSize()) zAxis->SetLabelSize(*content.GetLabelSize());
-        if (content.GetLabelColor()) zAxis->SetLabelColor(content.GetLabelColor()->ToIndex());
-        if (content.GetLabelOffset()) zAxis->SetLabelOffset(*content.GetLabelOffset());
-        if (content.GetLabelCenter()) zAxis->CenterLabels(*content.GetLabelCenter());
-        if (content.GetAxisColor()) zAxis->SetAxisColor(content.GetAxisColor()->ToIndex());
-        if (content.GetTickLength()) zAxis->SetTickLength(*content.GetTickLength());
-        if (content.GetTickOrientation()) zAxis->SetTicks((*content.GetTickOrientation()).data());
-        if (content.GetNumDivisions()) zAxis->SetNdivisions(*content.GetNumDivisions());
-        if (content.GetMaxDigits()) zAxis->SetMaxDigits(*content.GetMaxDigits());
-        if (content.GetNoExponent()) zAxis->SetNoExponent(*content.GetNoExponent());
-        if (content.GetTitleAlpha()) titleAlpha = content.GetTitleAlpha();
-        if (content.GetLabelAlpha()) labelAlpha = content.GetLabelAlpha();
-        if (content.GetAxisAlpha()) axisAlpha = content.GetAxisAlpha();
-      }
-      if (titleAlpha) zAxis->SetTitleColor(TColor::GetColorTransparent(zAxis->GetTitleColor(), *titleAlpha));
-      if (labelAlpha) zAxis->SetLabelColor(TColor::GetColorTransparent(zAxis->GetLabelColor(), *labelAlpha));
-      if (axisAlpha) zAxis->SetAxisColor(TColor::GetColorTransparent(zAxis->GetAxisColor(), *axisAlpha));
-      if (!ownTitleOffset) {
-        // TPaletteAxis reads the divisions (with the max digits, which decide the power of ten taken out of the labels) from the z axis at
-        // every paint, i.e. those given back below: the labels are measured with them
-        TAttAxis made;
-        zAxis->TAttAxis::Copy(made);
-        const Int_t painted = zLook.GetNdivisions();
-        zAxis->SetNdivisions(std::abs(painted) % 1000000, painted > 0);
-        if (std::abs(painted) / 1000000 > 0) zAxis->SetMaxDigits(std::abs(painted) / 1000000);
-        PlaceZTitle(pad_ptr, zAxis, {{axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), false}});
-        const float_t offset = zAxis->GetTitleOffset();
-        made.Copy(*zAxis);
-        zAxis->SetTitleOffset(offset);
-      }
-      functions->Remove(palette);
-      delete palette;
-      pad_ptr->Modified();
-      pad_ptr->Update();
-      zLook.Copy(*zAxis);
-      for (size_t i = 0; i < lookBits.size(); ++i)
-        zAxis->SetBit(lookBits[i], zBits[i]);
-      pad_ptr->Modified();
-    }
+    StyleContentScale(padState);
   } else if (axisHist_ptr && axisHist_ptr->GetDimension() == 2) {
     const vector<label_range_t> ranges{{axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), static_cast<bool>(pad_ptr->GetLogz())}};
     if (IsViewFrame(pad_ptr, axisHist_ptr)) PlaceZTitle(pad_ptr, axisHist_ptr->GetZaxis(), ranges);
@@ -1382,62 +1302,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
 
   // statistics boxes, placed after the boxes with a given position and before the automatically placed ones
   for (auto& [stats, statsBox] : statsBoxes) {
-    const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad_ptr);
-    auto textWidth = [&, textFont = stats->GetTextFont(), textSize = stats->GetTextSize()](const TString& text) {
-      TLatex latex(0, 0, text.Data());
-      latex.SetTextFont(textFont);
-      latex.SetTextSize(textSize);
-      return static_cast<double_t>(std::get<0>(GetTextDimensions(latex, pad_ptr)));
-    };
-    // TPaveStats::Paint writes the title centered, "label = value" in two columns (the value right-aligned, '-' as #minus)
-    // and the under- and overflows of 2D histograms ("a | b | c") in three
-    double_t titleWidth{};
-    double_t labelWidth{};
-    double_t valueWidth{};
-    double_t cellWidth{};
-    bool isTitle = (stats->GetOptStat() % 10 != 0);
-    for (auto* line : *stats->GetListOfLines()) {
-      const TString text = line->GetTitle();
-      if (isTitle) {
-        titleWidth = textWidth(text);
-        isTitle = false;
-      } else if (const Ssiz_t pos = text.First('='); pos != kNPOS) {
-        TString value = text(pos + 1, text.Length());
-        value = value.Strip(TString::kBoth);
-        value.ReplaceAll("-", "#minus");
-        labelWidth = std::max(labelWidth, textWidth(text(0, pos)));
-        valueWidth = std::max(valueWidth, textWidth(value));
-      } else {
-        unique_ptr<TObjArray> cells(text.Tokenize("|"));
-        for (auto* cell : *cells) {
-          cellWidth = std::max(cellWidth, textWidth(cell->GetName()));
-        }
-      }
-    }
-    const double_t lineHeightPixel = TextHeightPixel(stats->GetTextFont(), stats->GetTextSize(), pad_ptr);
-    const double_t lineSpacing = statsBox->GetLineSpacing().value_or(0.3);  // as for legends and texts
-    const double_t contentWidthPixel = std::max({labelWidth + lineHeightPixel + valueWidth, titleWidth, 3. * cellWidth});
-    // the margin of TPaveStats is a fraction of the box width, the one set for a box is in NDC (as for legends and texts)
-    double_t widthNDC = (statsBox->GetMargin()) ? contentWidthPixel / padWidthPixel + 2. * *statsBox->GetMargin() : contentWidthPixel / (1. - 2. * stats->GetMargin()) / padWidthPixel;
-    double_t heightNDC = (1. + lineSpacing) * lineHeightPixel * stats->GetListOfLines()->GetSize() / padHeightPixel;
-    const coordinates_t coordinates = get_first_or(frame_coordinates, statsBox->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
-    const auto [unitX, unitY] = SizeUnit(coordinates, pad_ptr);
-    if (statsBox->GetWidth()) widthNDC = *statsBox->GetWidth() * unitX;
-    if (statsBox->GetHeight()) heightNDC = *statsBox->GetHeight() * unitY;
-    if (statsBox->GetMargin()) stats->SetMargin(*statsBox->GetMargin() / widthNDC);
-
-    // the border is drawn centered on the edges of the box, so half of it sticks out on each side
-    const double_t borderX = mScale * stats->GetLineWidth() / padWidthPixel;
-    const double_t borderY = mScale * stats->GetLineWidth() / padHeightPixel;
-    const auto [upperLeftX, upperLeftY] = PlaceBox(*statsBox, coordinates, pad_ptr, widthNDC, heightNDC, borderX, borderY, "statistics box");
-    if (!statsBox->IsAutoPlacement()) WarnIfBeyondPad("statistics box", upperLeftX, upperLeftY, widthNDC, heightNDC);
-    stats->SetX1NDC(upperLeftX);
-    stats->SetY1NDC(upperLeftY - heightNDC);
-    stats->SetX2NDC(upperLeftX + widthNDC);
-    stats->SetY2NDC(upperLeftY);
-    pad_ptr->cd();
-    stats->SetUniqueID(coordinates);  // a double-click in show mode reports the position as given
-    stats.release()->Draw();
+    PlaceStatsBox(padState, std::move(stats), *statsBox);
   }
 
   placeBoxes(false);
@@ -1500,6 +1365,169 @@ void PlotPainter::FinishPad(pad_state_t& padState)
     }
   }
   if (axisHist_ptr && !polarFrame && !polargram && !hbarFrame && !pad_ptr->GetView()) WarnIfOutsideFrame(pad_ptr);
+}
+
+//**************************************************************************************************
+/**
+ * The z title and colour scale of a frame that is a 3d histogram: the binned z axis has a title of its own; the colour scale shows the
+ * contents (the C axis). ROOT makes the scale of a 3d histogram once, with the look of the z axis at that time: it is made again with the
+ * look of the scale (the texts of the pad and the defaults of a layout, then the settings of C; nothing of Z) and its title placed by the
+ * content labels, then the z axis gets its own look back (the scale keeps its copy)
+ */
+//**************************************************************************************************
+void PlotPainter::StyleContentScale(pad_state_t& padState)
+{
+  auto& padDefaults = padState.padDefaults;
+  auto& pad = padState.pad;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& textFont = padState.textFont;
+  auto& textSize = padState.textSize;
+  auto& textColor = padState.textColor;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+
+  TAxis* zAxis = axisHist_ptr->GetZaxis();
+  PlaceZTitle(pad_ptr, zAxis, {{zAxis->GetBinLowEdge(zAxis->GetFirst()), zAxis->GetBinUpEdge(zAxis->GetLast()), false}});
+  TList* functions = axisHist_ptr->GetListOfFunctions();
+  if (TObject* palette = functions->FindObject("palette")) {
+    TAttAxis zLook;
+    zAxis->TAttAxis::Copy(zLook);
+    // the bits of the look are kept apart from TAttAxis: they are given back with it
+    constexpr std::array lookBits{TAxis::kCenterTitle, TAxis::kCenterLabels, TAxis::kNoExponent, TAxis::kTickPlus, TAxis::kTickMinus};
+    std::array<bool, lookBits.size()> zBits{};
+    for (size_t i = 0; i < lookBits.size(); ++i)
+      zBits[i] = zAxis->TestBit(lookBits[i]);
+    zAxis->ResetAttAxis("Z");  // ROOT's look of a z axis (gStyle), the title next to the labels
+    zAxis->SetTitleOffset(0.f);
+    if (textFont) {
+      zAxis->SetTitleFont(*textFont);
+      zAxis->SetLabelFont(*textFont);
+    }
+    if (textColor) {
+      zAxis->SetTitleColor(textColor->ToIndex());
+      zAxis->SetLabelColor(textColor->ToIndex());
+    }
+    if (textSize) zAxis->SetLabelSize(*textSize);
+    if (auto titleSize = LayoutValue(pad, padDefaults, "title_size")) zAxis->SetTitleSize(*titleSize);
+    if (auto titleOffset = LayoutValue(pad, padDefaults, "title_offset_z")) zAxis->SetTitleOffset(*titleOffset);
+    bool ownTitleOffset = zAxis->GetTitleOffset() != 0.f;  // a fixed distance from the layout
+    optional<float_t> titleAlpha, labelAlpha, axisAlpha;
+    for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
+      const auto& content = *contentSettings;
+      if (content.GetTitleFont()) zAxis->SetTitleFont(*content.GetTitleFont());
+      if (content.GetTitleSize()) zAxis->SetTitleSize(*content.GetTitleSize());
+      if (content.GetTitleColor()) zAxis->SetTitleColor(content.GetTitleColor()->ToIndex());
+      if (content.GetTitleOffset()) zAxis->SetTitleOffset(*content.GetTitleOffset());
+      ownTitleOffset = ownTitleOffset || content.GetTitleOffset();
+      if (content.GetTitleCenter()) zAxis->CenterTitle(*content.GetTitleCenter());
+      if (content.GetLabelFont()) zAxis->SetLabelFont(*content.GetLabelFont());
+      if (content.GetLabelSize()) zAxis->SetLabelSize(*content.GetLabelSize());
+      if (content.GetLabelColor()) zAxis->SetLabelColor(content.GetLabelColor()->ToIndex());
+      if (content.GetLabelOffset()) zAxis->SetLabelOffset(*content.GetLabelOffset());
+      if (content.GetLabelCenter()) zAxis->CenterLabels(*content.GetLabelCenter());
+      if (content.GetAxisColor()) zAxis->SetAxisColor(content.GetAxisColor()->ToIndex());
+      if (content.GetTickLength()) zAxis->SetTickLength(*content.GetTickLength());
+      if (content.GetTickOrientation()) zAxis->SetTicks((*content.GetTickOrientation()).data());
+      if (content.GetNumDivisions()) zAxis->SetNdivisions(*content.GetNumDivisions());
+      if (content.GetMaxDigits()) zAxis->SetMaxDigits(*content.GetMaxDigits());
+      if (content.GetNoExponent()) zAxis->SetNoExponent(*content.GetNoExponent());
+      if (content.GetTitleAlpha()) titleAlpha = content.GetTitleAlpha();
+      if (content.GetLabelAlpha()) labelAlpha = content.GetLabelAlpha();
+      if (content.GetAxisAlpha()) axisAlpha = content.GetAxisAlpha();
+    }
+    if (titleAlpha) zAxis->SetTitleColor(TColor::GetColorTransparent(zAxis->GetTitleColor(), *titleAlpha));
+    if (labelAlpha) zAxis->SetLabelColor(TColor::GetColorTransparent(zAxis->GetLabelColor(), *labelAlpha));
+    if (axisAlpha) zAxis->SetAxisColor(TColor::GetColorTransparent(zAxis->GetAxisColor(), *axisAlpha));
+    if (!ownTitleOffset) {
+      // TPaletteAxis reads the divisions (with the max digits, which decide the power of ten taken out of the labels) from the z axis at
+      // every paint, i.e. those given back below: the labels are measured with them
+      TAttAxis made;
+      zAxis->TAttAxis::Copy(made);
+      const Int_t painted = zLook.GetNdivisions();
+      zAxis->SetNdivisions(std::abs(painted) % 1000000, painted > 0);
+      if (std::abs(painted) / 1000000 > 0) zAxis->SetMaxDigits(std::abs(painted) / 1000000);
+      PlaceZTitle(pad_ptr, zAxis, {{axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), false}});
+      const float_t offset = zAxis->GetTitleOffset();
+      made.Copy(*zAxis);
+      zAxis->SetTitleOffset(offset);
+    }
+    functions->Remove(palette);
+    delete palette;
+    pad_ptr->Modified();
+    pad_ptr->Update();
+    zLook.Copy(*zAxis);
+    for (size_t i = 0; i < lookBits.size(); ++i)
+      zAxis->SetBit(lookBits[i], zBits[i]);
+    pad_ptr->Modified();
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Sizes a statistics box to its text (as TPaveStats::Paint lays it out) or as set, places it and draws it into the pad.
+ */
+//**************************************************************************************************
+void PlotPainter::PlaceStatsBox(pad_state_t& padState, unique_ptr<TPaveStats> stats, const Plot::Pad::StatsBox& statsBox)
+{
+  auto& padDefaults = padState.padDefaults;
+  auto& pad = padState.pad;
+  auto& pad_ptr = padState.pad_ptr;
+
+  const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad_ptr);
+  auto textWidth = [&, textFont = stats->GetTextFont(), textSize = stats->GetTextSize()](const TString& text) {
+    TLatex latex(0, 0, text.Data());
+    latex.SetTextFont(textFont);
+    latex.SetTextSize(textSize);
+    return static_cast<double_t>(std::get<0>(GetTextDimensions(latex, pad_ptr)));
+  };
+  // TPaveStats::Paint writes the title centered, "label = value" in two columns (the value right-aligned, '-' as #minus)
+  // and the under- and overflows of 2D histograms ("a | b | c") in three
+  double_t titleWidth{};
+  double_t labelWidth{};
+  double_t valueWidth{};
+  double_t cellWidth{};
+  bool isTitle = (stats->GetOptStat() % 10 != 0);
+  for (auto* line : *stats->GetListOfLines()) {
+    const TString text = line->GetTitle();
+    if (isTitle) {
+      titleWidth = textWidth(text);
+      isTitle = false;
+    } else if (const Ssiz_t pos = text.First('='); pos != kNPOS) {
+      TString value = text(pos + 1, text.Length());
+      value = value.Strip(TString::kBoth);
+      value.ReplaceAll("-", "#minus");
+      labelWidth = std::max(labelWidth, textWidth(text(0, pos)));
+      valueWidth = std::max(valueWidth, textWidth(value));
+    } else {
+      unique_ptr<TObjArray> cells(text.Tokenize("|"));
+      for (auto* cell : *cells) {
+        cellWidth = std::max(cellWidth, textWidth(cell->GetName()));
+      }
+    }
+  }
+  const double_t lineHeightPixel = TextHeightPixel(stats->GetTextFont(), stats->GetTextSize(), pad_ptr);
+  const double_t lineSpacing = statsBox.GetLineSpacing().value_or(0.3);  // as for legends and texts
+  const double_t contentWidthPixel = std::max({labelWidth + lineHeightPixel + valueWidth, titleWidth, 3. * cellWidth});
+  // the margin of TPaveStats is a fraction of the box width, the one set for a box is in NDC (as for legends and texts)
+  double_t widthNDC = (statsBox.GetMargin()) ? contentWidthPixel / padWidthPixel + 2. * *statsBox.GetMargin() : contentWidthPixel / (1. - 2. * stats->GetMargin()) / padWidthPixel;
+  double_t heightNDC = (1. + lineSpacing) * lineHeightPixel * stats->GetListOfLines()->GetSize() / padHeightPixel;
+  const coordinates_t coordinates = get_first_or(frame_coordinates, statsBox.GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
+  const auto [unitX, unitY] = SizeUnit(coordinates, pad_ptr);
+  if (statsBox.GetWidth()) widthNDC = *statsBox.GetWidth() * unitX;
+  if (statsBox.GetHeight()) heightNDC = *statsBox.GetHeight() * unitY;
+  if (statsBox.GetMargin()) stats->SetMargin(*statsBox.GetMargin() / widthNDC);
+
+  // the border is drawn centered on the edges of the box, so half of it sticks out on each side
+  const double_t borderX = mScale * stats->GetLineWidth() / padWidthPixel;
+  const double_t borderY = mScale * stats->GetLineWidth() / padHeightPixel;
+  const auto [upperLeftX, upperLeftY] = PlaceBox(statsBox, coordinates, pad_ptr, widthNDC, heightNDC, borderX, borderY, "statistics box");
+  if (!statsBox.IsAutoPlacement()) WarnIfBeyondPad("statistics box", upperLeftX, upperLeftY, widthNDC, heightNDC);
+  stats->SetX1NDC(upperLeftX);
+  stats->SetY1NDC(upperLeftY - heightNDC);
+  stats->SetX2NDC(upperLeftX + widthNDC);
+  stats->SetY2NDC(upperLeftY);
+  pad_ptr->cd();
+  stats->SetUniqueID(coordinates);  // a double-click in show mode reports the position as given
+  stats.release()->Draw();
 }
 
 //**************************************************************************************************

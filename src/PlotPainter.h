@@ -51,6 +51,7 @@ class TLatex;
 class TPad;
 class TVirtualPad;
 class TObjArray;
+class TPaveStats;
 class TPave;
 class TAxis;
 
@@ -308,6 +309,8 @@ class PlotPainter
   struct pad_state_t;   // the locals of GeneratePlot for one pad (PlotPainter.cpp)
   struct item_state_t;  // and those for the data item drawn
   void FinishPad(pad_state_t& padState);
+  void StyleContentScale(pad_state_t& padState);
+  void PlaceStatsBox(pad_state_t& padState, std::unique_ptr<TPaveStats> stats, const Plot::Pad::StatsBox& statsBox);
   template <typename T>
   void DrawItem(item_state_t& state, T data_ptr, std::optional<draw_option_t> optionAlias);
   template <typename T>
