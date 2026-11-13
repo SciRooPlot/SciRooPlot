@@ -9,16 +9,16 @@ data with a marker style or size set, with non-zero errors or a graph of a singl
 
 | alias | 1D histogram | graph | function | 2D histogram | 2D graph | 2D function | 3D histogram | 3D function |
 |---|---|---|---|---|---|---|---|---|
-| `points` | `X0 E P` | `P Z` | `P` | – | `P` | – | – | – |
+| `points` | `X0 E P` | `P Z` | `P` | – | `P AXIS` | – | – | – |
 | `points_xerr` | `E P` | `P Z` | – | – | – | – | – | – |
 | `points_endcaps` | `X0 E1 P` | `P` | – | – | – | – | – | – |
 | `points_xerr_endcaps` | `E1 P` | `P` | – | – | – | – | – | – |
 | `points_line` | *as graph* | `P Z L` | – | – | – | – | – | – |
 | `points_text` | `X0 E P` | `P Z` | – | – | – | – | – | – |
 | `points_arrows` | *as graph* | `P Z |>` | – | – | – | – | – | – |
-| `points_col` | – | – | – | – | `PCOL` | – | – | – |
-| `points_colz` | – | – | – | – | `PCOLZ` | – | – | – |
-| `line` | `HIST L` | `X L` | `L` | – | `LINE` | – | – | – |
+| `points_col` | – | – | – | – | `PCOL AXIS` | – | – | – |
+| `points_colz` | – | – | – | – | `PCOLZ AXIS` | – | – | – |
+| `line` | `HIST L` | `X L` | `L` | – | `LINE AXIS` | – | – | – |
 | `curve` | `HIST C` | `X C` | `C` | – | – | – | – | – |
 | `curve_clipped` | *as graph* | `X C` | – | – | – | – | – | – |
 | `hist` | `HIST` | *as histogram* | – | – | – | – | – | – |

@@ -214,10 +214,12 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Graph2d{
   {triangles_colz, "TRI1Z"},
   {triangles_fill, "TRI2"},
   {triangles_fillz, "TRI2Z"},
-  {points, "P"},
-  {points_col, "PCOL"},
-  {points_colz, "PCOLZ"},
-  {line, "LINE"},
+  // AXIS: the empty histogram the points and lines are painted from (TGraph2D::Paint) paints its cells of zero when the z range goes below
+  // zero (a plane of colour behind PCOL, a mesh under LINE); with AXIS it paints only the points and lines
+  {points, "P AXIS"},
+  {points_col, "PCOL AXIS"},
+  {points_colz, "PCOLZ AXIS"},
+  {line, "LINE AXIS"},
 };
 
 inline const std::map<draw_option_t, std::string> defaultDrawOptions_Func2d{
