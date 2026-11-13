@@ -57,6 +57,10 @@ for rel in sorted(set(pictures["A"]) | set(pictures["B"])):
     if rel not in pictures["A"] or rel not in pictures["B"]:
         alone.append(f"{rel}: only {'A' if rel in pictures['A'] else 'B'}")
         continue
+    with open(pictures["A"][rel], "rb") as fa, open(pictures["B"][rel], "rb") as fb:
+        if fa.read() == fb.read():  # equal files need no decoding (each decoded picture keeps its memory: a long run ran out of it)
+            same += 1
+            continue
     if args.mode in S.BITMAP_MODES:
         a, b = S.bitmap(pictures["A"][rel]), S.bitmap(pictures["B"][rel])
         changed = a is None or b is None or a.shape != b.shape or (a != b).any()
