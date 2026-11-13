@@ -816,19 +816,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       }
       item_state_t state{padState, data};
 
-      optional<data_ptr_t> rawData;
-      try {
-        // ranges stored with an input are what data marked SetDefinesFrame is there for: they are kept for its copy that draws the frame
-        const bool keepStoredRanges = (dataIndex == 0) && data->GetDefinesFrame() && data->GetType() != "ratio";
-        TObject* input = (dataIndex == 0 && emptyFrame) ? emptyFrame.get() : dataBuffer.at(data->GetDataSource()).at(data->GetName() + data->GetDataInfo().GetNameSuffix()).get();
-        rawData = GetDataClone(input, data->GetProjInfo(), keepStoredRanges);
-        // named as in messages (the drawn object gets its full name in DrawItem)
-        if (rawData) {
-          std::visit([&](auto* ptr) { ptr->SetName(DataName(*data).data()); }, *rawData);
-        }
-      } catch (std::out_of_range&) {
-        rawData = nullopt;
-      }
+      // ranges stored with an input are what data marked SetDefinesFrame is there for: they are kept for its copy that draws the frame
+      const bool keepStoredRanges = (dataIndex == 0) && data->GetDefinesFrame() && data->GetType() != "ratio";
+      TObject* input = (dataIndex == 0 && emptyFrame) ? emptyFrame.get() : Input(*data, dataBuffer);
+      optional<data_ptr_t> rawData = InputClone(input, DataName(*data), data->GetProjInfo(), keepStoredRanges);
 
       if (rawData) {
         bool numeratorFailed{};  // a function numerator that could not be sampled (reported)
@@ -840,16 +831,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           // centres of a histogram, after the modifiers of the denominator): the division is then that of a graph without errors, which
           // takes the errors of the denominator; a function of the inputs only within its range, a formula of the plot definition everywhere
           if (auto* func = std::get_if<TF1*>(&*rawData)) {
-            optional<data_ptr_t> denom;
-            try {
-              denom = GetDataClone(dataBuffer.at(ratio->GetDenomDataSource()).at(ratio->GetDenomName() + ratio->GetDenomDataInfo().GetNameSuffix()).get(), ratio->GetDenomProjInfo());
-              if (denom) {
-                std::visit([&](auto* ptr) { ptr->SetName(DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()).data()); }, *denom);
-              }
-            } catch (std::out_of_range&) {
-              denom = nullopt;
-            }
-            if (denom) {
+            if (optional<data_ptr_t> denom = DenominatorClone(*ratio, dataBuffer)) {
               state.repeated = true;  // reported when it is divided by
               PrepareOperand(state, *denom, ratio->GetDenomModify(), DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()));
               state.repeated = false;
@@ -4264,18 +4246,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       delete denom_data_ptr;
     };
 
-    // retrieve the actual pointer to the denominator data
-    optional<data_ptr_t> rawDenomData;
-    try {
-      rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomDataSource()).at(data_as_ratio->GetDenomName() + data_as_ratio->GetDenomDataInfo().GetNameSuffix()).get(), data_as_ratio->GetDenomProjInfo());
-      if (rawDenomData) {
-        std::visit([&](auto* ptr) { ptr->SetName(DataName(data_as_ratio->GetDenomName(), data_as_ratio->GetDenomDataSource()).data()); }, *rawDenomData);
-      }
-    } catch (std::out_of_range&) {
-      rawDenomData = nullopt;
-    }
-
-    if (rawDenomData) {
+    if (optional<data_ptr_t> rawDenomData = DenominatorClone(*data_as_ratio, dataBuffer)) {
       const bool denominatorMeans = PrepareOperand(state, *rawDenomData, data_as_ratio->GetDenomModify(), DataName(data_as_ratio->GetDenomName(), data_as_ratio->GetDenomDataSource()));
       if (binomialErrors && (numeratorMeans || denominatorMeans)) {
         ReportIgnored(state, fmt::format("SetCorrelated of ratio {}", DataName(*data)), "binomial errors are not defined for the mean values of a profile");
@@ -8438,15 +8409,42 @@ size_t PlotPainter::FrameDataIndex(const vector<shared_ptr<Plot::Pad::Data>>& da
 
 //**************************************************************************************************
 /**
- * The input of data from the buffer of the inputs (nullptr if it is not there).
+ * The input of data from the buffer of the inputs, by data source and name with the suffix of its data info (nullptr if it is not there).
  */
 //**************************************************************************************************
-TObject* PlotPainter::Input(const Plot::Pad::Data& data, const data_buffer_t& dataBuffer)
+TObject* PlotPainter::Input(const string& source, const string& key, const data_buffer_t& dataBuffer)
 {
-  auto source = dataBuffer.find(data.GetDataSource());
-  if (source == dataBuffer.end()) return nullptr;
-  auto item = source->second.find(data.GetName() + data.GetDataInfo().GetNameSuffix());
-  return (item == source->second.end()) ? nullptr : item->second.get();
+  auto inputs = dataBuffer.find(source);
+  if (inputs == dataBuffer.end()) return nullptr;
+  auto item = inputs->second.find(key);
+  return (item == inputs->second.end()) ? nullptr : item->second.get();
+}
+
+//**************************************************************************************************
+/**
+ * A copy of an input to draw (see GetDataClone; nullopt for none), named as in messages (the drawn object gets its full name in DrawItem).
+ */
+//**************************************************************************************************
+optional<data_ptr_t> PlotPainter::InputClone(TObject* input, const string& messageName, const optional<Plot::Pad::Data::proj_info_t>& projInfo, bool keepStoredRanges)
+{
+  if (!input) return nullopt;
+  optional<data_ptr_t> clone = GetDataClone(input, projInfo, keepStoredRanges);
+  if (clone) {
+    std::visit([&](auto* ptr) { ptr->SetName(messageName.data()); }, *clone);
+  }
+  return clone;
+}
+
+//**************************************************************************************************
+/**
+ * A copy of the denominator of a ratio to draw (see InputClone).
+ */
+//**************************************************************************************************
+optional<data_ptr_t> PlotPainter::DenominatorClone(const Plot::Pad::Ratio& ratio, const data_buffer_t& dataBuffer)
+{
+  const string& source = ratio.GetDenomDataSource();
+  TObject* input = Input(source, ratio.GetDenomName() + ratio.GetDenomDataInfo().GetNameSuffix(), dataBuffer);
+  return InputClone(input, DataName(ratio.GetDenomName(), source), ratio.GetDenomProjInfo());
 }
 
 //**************************************************************************************************

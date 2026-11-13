@@ -337,7 +337,10 @@ class PlotPainter
   void DataRanges(item_state_t& state, T& data_ptr, draw_option_t alias, bool projected, bool hasRangeX, bool hasRangeY);
   void FinishPad(pad_state_t& padState);
   static size_t FrameDataIndex(const std::vector<std::shared_ptr<Plot::Pad::Data>>& data, const data_buffer_t& dataBuffer);
-  static TObject* Input(const Plot::Pad::Data& data, const data_buffer_t& dataBuffer);
+  static TObject* Input(const std::string& source, const std::string& key, const data_buffer_t& dataBuffer);
+  static TObject* Input(const Plot::Pad::Data& data, const data_buffer_t& dataBuffer) { return Input(data.GetDataSource(), data.GetName() + data.GetDataInfo().GetNameSuffix(), dataBuffer); }
+  std::optional<data_ptr_t> InputClone(TObject* input, const std::string& messageName, const std::optional<Plot::Pad::Data::proj_info_t>& projInfo, bool keepStoredRanges = false);
+  std::optional<data_ptr_t> DenominatorClone(const Plot::Pad::Ratio& ratio, const data_buffer_t& dataBuffer);
   void AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefaults, const Plot::Pad& padSettings, uint8_t padID, const Plot::Pad::Data* refFunc, std::string& padSetup);
   void ApplyScale(TObject* obj, std::set<TObject*>& done, const std::string& drawOption = "");
   Width_t ScaleLineWidth(Width_t width) const;
