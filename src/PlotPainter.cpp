@@ -5381,7 +5381,7 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
         if (cutAtFrame) {
           x1 = std::max(x1, xMin), x2 = std::min(x2, xMax), y1 = std::max(y1, yMin), y2 = std::min(y2, yMax);
         }
-        if (!std::isfinite(x2) || !std::isfinite(y2) || x1 >= x2 || y1 >= y2) {
+        if (x1 >= x2 || y1 >= y2) {
           skip("it is outside of the frame");
           continue;
         }
