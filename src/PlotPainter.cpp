@@ -1554,9 +1554,6 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     drawOption = "SAME ";
   };
   draw_option_t alias = optionAlias.value_or(static_cast<draw_option_t>(255));  // 255: no alias
-  if constexpr (is_graph_2d<data_type>() || is_func_2d<data_type>()) {
-    if (!data->GetDrawOption() && !optionAlias) drawOption += "COLZ";  // without an option coloured like 2d histograms
-  }
   if (optionAlias) {
     const std::map<draw_option_t, string>* options{};
     const char* typeName{};
@@ -4353,7 +4350,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
 
   // without a drawing option SciRooPlot decides, the same for histograms and graphs: a fill is drawn (hist, for a graph area),
   // so is a marker set for the data (points; the defaults of the pad always set one), data with errors is a measurement (points),
-  // data without errors a shape (hist, for a graph line); 2d histograms are coloured. Data its alias cannot draw is drawn the same way
+  // data without errors a shape (hist, for a graph line); 2d histograms, graphs and functions are coloured (colz). Data its alias cannot draw is drawn the same way
   // (ROOT's default for an empty option draws a graph or a histogram without stored errors not at all)
   auto defaultAlias = [&](auto* object) -> optional<draw_option_t> {
     using object_type = std::decay_t<decltype(object)>;
@@ -4376,7 +4373,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       if (fillStyle != 0 && fillColor != 0) return (isHist) ? hist : area;
       if (data->GetMarkerStyle() || data->GetMarkerSize() || HasErrors(object, true) || singlePoint) return points;
       return (isHist) ? hist : line;
-    } else if constexpr (is_hist_2d<object_type>() || is_hist_3d<object_type>()) {
+    } else if constexpr (is_hist_2d<object_type>() || is_hist_3d<object_type>() || is_graph_2d<object_type>() || is_func_2d<object_type>()) {
       return colz;
     }
     return std::nullopt;
