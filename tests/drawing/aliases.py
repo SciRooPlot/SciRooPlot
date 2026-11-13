@@ -1,6 +1,8 @@
 """Every drawing option alias on every data kind is drawn with the ROOT option of the documented alias table (docs/skill: drawing-options.md),
 without ROOT errors: the colour scale (the Z of COLZ, LEGO2Z, ...) is drawn by the frame, not by the data; an alias marked as drawn as the
-other type converts histograms to graphs and graphs to histograms; an alias a type cannot draw gives one warning and ROOT's default, as a graph that cannot be made a histogram (points at one x).
+other type converts histograms to graphs and graphs to histograms; an alias neither 1d type can draw gives one
+warning and draws histograms and graphs as without a drawing option (other types with ROOT's default), as does a graph that cannot be made a
+histogram (points at one x).
 Documented adjustments: polar graphs draw the error bars of the points aliases with E, 2d graphs with errors add ERR, a TH2Poly is drawn
 flat (col, colz) with a warning instead of lego and surf, and the frame of a 3d view is an empty lego plot (no surface), keeping POL.
 The drawn data carries the name of the input.
@@ -18,11 +20,12 @@ REPRESENTATIVE = ("hist", "graph_errors", "hist2d", "graph2d_errors")  # every a
 
 
 def expected(kind, alias):
-    """(type the data is drawn as, None if the alias is not available; option of the data; frame draws a colour scale; warnings)"""
+    """(type the data is drawn as, None if the alias is not available, "default" if drawn as without a drawing option; option of the data;
+    frame draws a colour scale; warnings)"""
     kindType = drawn_type(kind)
     entry = TABLE[alias][kindType]
     if entry == "-":
-        return None, "", False, 1
+        return ("default" if kindType in ("hist1d", "graph") else None), "", False, 1
     drawnType = entry if entry in ("graph", "hist1d") else kindType
     opt = TABLE[alias][drawnType]
     warnings = 0
@@ -59,7 +62,11 @@ for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "aliases", base_of(case["kind"]))
     add_data(plot[1], case["kind"]).SetDrawOption(getattr(S, case["alias"]))
     p.pm.AddPlot(plot)
-# a graph with two points at one x has no bins: drawn with the default of ROOT, one warning naming why
+for kind in {c["kind"] for c in todo if expected(c["kind"], c["alias"])[0] == "default"}:  # the data drawn without a drawing option
+    plot = S.Plot(f"default_{kind}", "aliases", base_of(kind))
+    add_data(plot[1], kind)
+    p.pm.AddPlot(plot)
+# a graph with two points at one x has no bins: drawn as without a drawing option, one warning naming why
 repeated = ROOT.TGraph(3)
 for i, x in enumerate((1.0, 1.0, 2.0)):
     repeated.SetPoint(i, x, 1.0 + i)
@@ -87,13 +94,16 @@ for i, case in enumerate(todo):
         continue
     drawnType, data, scale, nWarnings = expected(kind, alias)
     obj, opt = drawn[0]
-    if drawnType is not None and obj.InheritsFrom("TGraphMultiErrors"):
+    if drawnType not in (None, "default") and obj.InheritsFrom("TGraphMultiErrors"):
         data = per_error_set(data)
     if drawnType is None:
         check(f"not available: drawn with the default of ROOT: {what}", opt == "", f"drawn with '{opt}'")
+    elif drawnType == "default":
+        refObj, refOpt = run.drawn(f"default_{kind}", "aliases")[0]
+        check(f"not drawable: drawn as without a drawing option: {what}", (obj.ClassName(), opt) == (refObj.ClassName(), refOpt), f"drawn as {obj.ClassName()} with '{opt}', without an option as {refObj.ClassName()} with '{refOpt}'")
     else:
         check(f"drawn with the ROOT option of the table: {what}", opt == data, f"drawn with '{opt}', expected '{data}'")
-    if drawnType != drawn_type(kind) and drawnType is not None:
+    if drawnType not in (drawn_type(kind), None, "default"):
         converted = obj.InheritsFrom("TGraph") if drawnType == "graph" else obj.InheritsFrom("TH1")
         check(f"drawn as {drawnType}: {what}", converted, obj.ClassName())
     frame = run.frame_option(f"c{i}", "aliases")
@@ -104,13 +114,13 @@ for i, case in enumerate(todo):
             check(f"3d view on an empty lego frame: {what}", "LEGO" in frame and "SURF" not in frame and frame.split().count("0") == 1 and ("POL" in frame) == ("POL" in data), f"frame '{frame}'")
     name = data_name(kind)
     check(f"drawn under the name of the input: {what}", obj.GetName().split(":", 1)[1].startswith(name), obj.GetName())
-    found = [line for line in warned.get(alias, []) if line.rstrip(".").endswith(f" {name}, using the default of ROOT") or f" {name} (ROOT draws" in line]
+    found = [line for line in warned.get(alias, []) if f" {name}, drawing it as " in line or f" {name} (ROOT draws" in line or line.rstrip(".").endswith(f" {name}, using the default of ROOT")]
     check(f"{nWarnings} warning(s): {what}", len(found) == nWarnings, " | ".join(found))
 for alias in REPEATED:
     drawn = run.drawn(f"repeated_{alias}", "aliases")
-    check(f"a graph with points at one x drawn {alias}: drawn with the default of ROOT", len(drawn) == 2 and drawn[1][1] == "", str([(o.ClassName(), opt) for o, opt in drawn]))
+    check(f"a graph with points at one x drawn {alias}: drawn as without a drawing option", len(drawn) == 2 and drawn[1][1] == drawn[0][1] and drawn[1][1] != "", str([(o.ClassName(), opt) for o, opt in drawn]))
 repeatedWarnings = run.warnings("graph repeated:repeated_x")
-named = [m.group(1) for w in repeatedWarnings if (m := re.search(r"Drawing option (\w+) .* \(it needs points with distinct x values\), using the default of ROOT", w))]
+named = [m.group(1) for w in repeatedWarnings if (m := re.search(r"Drawing option (\w+) .* \(it needs points with distinct x values\), drawing it as ", w))]
 check(
     "a graph with points at one x drawn as a histogram: one warning naming the option and why",
     len(repeatedWarnings) == len(REPEATED) and sorted(named) == sorted(REPEATED),

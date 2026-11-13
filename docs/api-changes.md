@@ -117,6 +117,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `GeneratePlots` called again in one process (a notebook, a program plotting in a loop) used the data read before from an input file that was rewritten since | Data sources whose input files changed since they were read are read again, with an info line (files newly matching a directory or wildcard input are not noticed: `ClearDataBuffer()`) | behaviour | Nothing. |
 | The reference function of a pad (`SetRefFunc`, also from pad 0) was not drawn in a pad with only a frame (`SetFrame`, or the empty frame of its axis ranges) | It is drawn there as well | behaviour | Nothing. |
 | `area_smooth` of a graph whose x errors leave gaps between the points dipped to zero in every gap | The curve goes through the points (the bins meet in the middle of each gap) | behaviour | Nothing. |
+| A 1d histogram or graph drawn with an alias neither can draw (a 2d alias such as `colz`, `lego`, `cont`) got ROOT's default for an empty option, which paints a graph, or a histogram filled without weights, not at all; a graph that cannot be made a histogram (points at one x) drawn with a histogram alias (`hist`, `hbars`, `area_smooth`, `text`, `hist_clipped` …) painted nothing | Drawn as without a drawing option (`points`, `hist`, `line` or `area` by the default rule); the warning names the alias it is drawn as | behaviour | Nothing. |
 
 ### Files
 

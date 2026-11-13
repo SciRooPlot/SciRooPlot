@@ -307,13 +307,13 @@ double_t PlotPainter::ClippedBase(const TGraph* graph, bool logY)
 //**************************************************************************************************
 /**
  * A graph as a histogram, to draw it with a drawing option ROOT has only for histograms (the graph is deleted): none if it has no bins
- * (no points, or points at one x), with a warning naming the option if warn is set.
+ * (no points, or points at one x), with a warning naming the option and the fallback the graph is drawn with instead if warn is set.
  */
 //**************************************************************************************************
-TH1* PlotPainter::ToHist(TGraph* graph, draw_option_t option, bool warn, bool warnAsymmetric)
+TH1* PlotPainter::ToHist(TGraph* graph, draw_option_t option, draw_option_t fallback, bool warn, bool warnAsymmetric)
 {
   auto warnNoBins = [&](const char* reason) {
-    if (warn) logger::warning("Drawing option {} is not available for graph {} ({}), using the default of ROOT.", draw_option_name(option), graph->GetName(), reason);
+    if (warn) logger::warning("Drawing option {} is not available for graph {} ({}), drawing it as {}.", draw_option_name(option), graph->GetName(), reason, draw_option_name(fallback));
   };
   SortGraph(graph);
   const int32_t n = graph->GetN();
@@ -4311,10 +4311,12 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
 
   // without a drawing option SciRooPlot decides, the same for histograms and graphs: a fill is drawn (hist, for a graph area),
   // so is a marker set for the data (points; the defaults of the pad always set one), data with errors is a measurement (points),
-  // data without errors a shape (hist, for a graph line); 2d histograms are coloured
-  if (!optionAlias && !data->GetDrawOption()) {
-    if constexpr (is_hist_1d<data_type>() || is_graph_1d<data_type>()) {
-      constexpr bool isHist = is_hist_1d<data_type>();
+  // data without errors a shape (hist, for a graph line); 2d histograms are coloured. Data its alias cannot draw is drawn the same way
+  // (ROOT's default for an empty option draws a graph or a histogram without stored errors not at all)
+  auto defaultAlias = [&](auto* object) -> optional<draw_option_t> {
+    using object_type = std::decay_t<decltype(object)>;
+    if constexpr (is_hist_1d<object_type>() || is_graph_1d<object_type>()) {
+      constexpr bool isHist = is_hist_1d<object_type>();
       // the fill the data will be drawn with: set for the data, else the next default of the pad (unless the style of the input is kept), else the input's
       auto drawnFill = [&](const auto& dataValue, uint16_t index, const auto& padValues, const auto& defaultValues, int16_t inputValue) -> std::decay_t<decltype(*dataValue)> {
         if (dataValue) return *dataValue;
@@ -4324,22 +4326,28 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
         return inputValue;
       };
       // the input's fill is visible only with a colour (ROOT's default is colour 0 with a solid style): see keptWithoutFill
-      const int16_t inputFillStyle = (data->GetKeepInputStyle() && !data->GetFillStyle() && data_ptr->GetFillColor() == 0) ? 0 : data_ptr->GetFillStyle();
+      const int16_t inputFillStyle = (data->GetKeepInputStyle() && !data->GetFillStyle() && object->GetFillColor() == 0) ? 0 : object->GetFillStyle();
       const int16_t fillStyle = drawnFill(data->GetFillStyle(), usedDefaults.fillStyle, pad.GetDefaultFillStyles(), padDefaults.GetDefaultFillStyles(), inputFillStyle);
-      const color_t fillColor = drawnFill(data->GetFillColor(), usedDefaults.color, pad.GetDefaultFillColors(), fillDefaults(pad, *data), data_ptr->GetFillColor());
+      const color_t fillColor = drawnFill(data->GetFillColor(), usedDefaults.color, pad.GetDefaultFillColors(), fillDefaults(pad, *data), object->GetFillColor());
       bool singlePoint{};  // a line through a single point draws nothing
-      if constexpr (!isHist) singlePoint = (data_ptr->GetN() == 1);
-      if (fillStyle != 0 && fillColor != 0) {
-        optionAlias = (isHist) ? hist : area;
-      } else if (data->GetMarkerStyle() || data->GetMarkerSize() || HasErrors(data_ptr, true) || singlePoint) {
-        optionAlias = points;
-      } else {
-        optionAlias = (isHist) ? hist : line;
-      }
-    } else if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
-      optionAlias = colz;
+      if constexpr (!isHist) singlePoint = (object->GetN() == 1);
+      if (fillStyle != 0 && fillColor != 0) return (isHist) ? hist : area;
+      if (data->GetMarkerStyle() || data->GetMarkerSize() || HasErrors(object, true) || singlePoint) return points;
+      return (isHist) ? hist : line;
+    } else if constexpr (is_hist_2d<object_type>() || is_hist_3d<object_type>()) {
+      return colz;
+    }
+    return std::nullopt;
+  };
+  if constexpr (is_hist_1d<data_type>() || is_graph_1d<data_type>()) {
+    // an alias of neither 1d type (one only the other type has is drawn by converting the data, below)
+    if (optionAlias && !defaultDrawOptions_Hist.count(*optionAlias) && !defaultDrawOptions_Graph.count(*optionAlias)) {
+      const draw_option_t unavailable = *optionAlias;
+      optionAlias = defaultAlias(data_ptr);
+      if (dataIndex != 0) logger::warning("Drawing option {} is not available for {} {}, drawing it as {}.", draw_option_name(unavailable), (is_hist_1d<data_type>()) ? "1d histogram" : "graph", DataName(*data), draw_option_name(*optionAlias));
     }
   }
+  if (!optionAlias && !data->GetDrawOption()) optionAlias = defaultAlias(data_ptr);
 
   // the clipped aliases draw a histogram as a graph: ROOT cuts the lines of a graph at the frame, while it moves the bins of a histogram
   // that lie outside of the frame onto its edge (HIST, and HIST C on a log axis); the axis frame (first data) is the histogram itself
@@ -4368,12 +4376,13 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       // a graph is cut at the frame anyway: only the steps need its bins
       if (*optionAlias != curve_clipped) {
         // steps show no errors: no warning about asymmetric ones
-        if (TH1* histogram = ToHist(data_ptr, *optionAlias, dataIndex != 0, false)) {
+        const draw_option_t fallback = *defaultAlias(data_ptr);
+        if (TH1* histogram = ToHist(data_ptr, *optionAlias, fallback, dataIndex != 0, false)) {
           mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
           drawClipped(histogram, *optionAlias);
           return;
         }
-        optionAlias.reset();
+        optionAlias = fallback;
       }
     }
   }
@@ -4389,12 +4398,13 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
   } else if constexpr (is_graph_1d<data_type>()) {
     if (optionAlias && !defaultDrawOptions_Graph.count(*optionAlias) && defaultDrawOptions_Hist.count(*optionAlias)) {
       // the warning about asymmetric errors (drawn with their mean) only where the option shows errors
-      if (TH1* hist = ToHist(data_ptr, *optionAlias, dataIndex != 0, !aliasesWithoutErrors.count(*optionAlias))) {
+      const draw_option_t fallback = *defaultAlias(data_ptr);
+      if (TH1* hist = ToHist(data_ptr, *optionAlias, fallback, dataIndex != 0, !aliasesWithoutErrors.count(*optionAlias))) {
         mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
         drawItem(hist, optionAlias);
         return;
       }
-      optionAlias.reset();
+      optionAlias = fallback;
     }
   }
   drawItem(data_ptr, optionAlias);
