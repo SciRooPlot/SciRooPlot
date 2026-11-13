@@ -8347,8 +8347,7 @@ vector<string> PlotPainter::LabelTexts(const TAxis* axis, const vector<double_t>
       const auto decade = static_cast<int32_t>(std::lround(std::log10(value)));
       text = (decade == 0) ? "1" : ((decade == 1) ? "10" : fmt::format("10^{{{}}}", decade));
     } else {
-      const double_t shown = value / factor;
-      text = fmt::format("{:g}", (std::abs(shown) < 1e-9 * largest / factor) ? 0. : shown);
+      text = fmt::format("{:g}", value / factor);  // (the values of LabelValues, 0 where the steps miss it by rounding)
     }
     texts.emplace_back(TString(text).ReplaceAll("-", "#minus").Data());  // as TGaxis writes a minus sign
   }
