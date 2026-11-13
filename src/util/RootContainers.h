@@ -65,6 +65,13 @@ inline TClass* readable_class(TKey* key)
   return (cl && cl->IsLoaded() && cl->IsTObject()) ? cl : nullptr;
 }
 
+// whether the object behind a key is of the given class (e.g. a directory or a tree), without reading it
+inline bool key_inherits(TKey* key, const TClass* base)
+{
+  const TClass* cl = TClass::GetClass(key->GetClassName());
+  return cl && cl->InheritsFrom(base);
+}
+
 // the latest key of a name in a directory that holds a directory, folder or collection: a newer key of the same name holding data
 // does not hide it (open a directory found this way with open_directory); the latest key of the name if none holds one
 inline TKey* find_container_key(TDirectory* directory, const std::string& name)

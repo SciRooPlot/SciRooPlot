@@ -142,6 +142,7 @@ using util::for_each_item;
 using util::ignore_root_messages_below;
 using util::is_container;
 using util::is_remote;
+using util::key_inherits;
 using util::make_scope_guard;
 using util::open_directory;
 using util::plural;
@@ -518,7 +519,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
       }
       for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {
         if (!key || directory->FindKey(key->GetName()) != key || !added.insert(key->GetName()).second) continue;
-        if (KeyInherits(key, TDirectory::Class())) {
+        if (key_inherits(key, TDirectory::Class())) {
           if (auto* keyDir = directory->GetDirectory(key->GetName())) add(keyDir, subDir, subFolder);  // owned by the file
         } else if (!readable_class(key)) {
           // ReadObj would return an object that is no TObject (e.g. an RNTuple, whose data stays in its file anyway)
@@ -682,7 +683,7 @@ vector<string> PlotManager::MatchFolders(TDirectory* topDir, const string& patte
     }
     set<string> visited;  // keys can appear in several cycles: the latest directory of a name (newer data of the name does not hide it)
     for (auto* key : TRangeDynCast<TKey>(dir->GetListOfKeys())) {
-      if (!key || !KeyInherits(key, TDirectory::Class()) || !visited.insert(key->GetName()).second) continue;
+      if (!key || !key_inherits(key, TDirectory::Class()) || !visited.insert(key->GetName()).second) continue;
       if (fnmatch(levels[level].data(), key->GetName(), 0) != 0) continue;
       if (auto* subDir = open_directory(dir, key)) {
         match(subDir, levels, level + 1, path.empty() ? key->GetName() : path + "/" + key->GetName());
@@ -3158,17 +3159,6 @@ void PlotManager::ClearCanvasRegistry()
 
 //**************************************************************************************************
 /**
- * Whether the object behind a key is of the given class (e.g. a directory or a tree), without reading it.
- */
-//**************************************************************************************************
-bool PlotManager::KeyInherits(TKey* key, const TClass* base)
-{
-  const TClass* cl = TClass::GetClass(key->GetClassName());
-  return cl && cl->InheritsFrom(base);
-}
-
-//**************************************************************************************************
-/**
  * Delete a list or folder read from a file with everything in it. Each object is deleted exactly once, also if it is in several lists
  * (ROOT restores objects shared by several lists as shared), independent of the ownership settings of the collections.
  */
@@ -3651,9 +3641,9 @@ TObject* PlotManager::FindSubDirectory(TObject* folder, const vector<string>& su
 void PlotManager::WarnHiddenDirectory(TDirectory* directory, const string& name)
 {
   TKey* latest = find_container_key(directory, name);
-  if (!latest || KeyInherits(latest, TDirectory::Class())) return;
+  if (!latest || key_inherits(latest, TDirectory::Class())) return;
   for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {
-    if (!key || name != key->GetName() || !KeyInherits(key, TDirectory::Class())) continue;
+    if (!key || name != key->GetName() || !key_inherits(key, TDirectory::Class())) continue;
     string path = directory->GetPath();  // file.root:/some/folder
     path += (path.back() == '/' ? "" : "/") + name;
     if (mHiddenDirectories.insert(path).second) {
@@ -3677,14 +3667,14 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
   // first match should be the one in the current folder; traverse deeper only if not found
   std::function<optional<string>(TDirectory*)> find;
   find = [&](TDirectory* dir) -> optional<string> {
-    if (auto* key = dir->GetKey(name.data()); key && KeyInherits(key, TTree::Class())) {
+    if (auto* key = dir->GetKey(name.data()); key && key_inherits(key, TTree::Class())) {
       string dirPath = dir->GetPath();  // file.root:/some/folder
       dirPath.erase(0, strlen(dir->GetFile()->GetPath()));
       return (dirPath.empty() ? "" : dirPath + "/") + name;
     }
     set<string> visited;  // keys can appear in several cycles: the latest directory of a name (newer data of the name does not hide it)
     for (auto* key : TRangeDynCast<TKey>(dir->GetListOfKeys())) {
-      if (!key || !KeyInherits(key, TDirectory::Class()) || !visited.insert(key->GetName()).second) continue;
+      if (!key || !key_inherits(key, TDirectory::Class()) || !visited.insert(key->GetName()).second) continue;
       if (auto* subDir = open_directory(dir, key)) {
         if (auto treePath = find(subDir)) return treePath;
       }
@@ -3695,7 +3685,7 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
   auto subDirectory = [](TDirectory* dir, const string& subPath) -> TDirectory* {
     for (const auto& level : split_string(subPath, '/')) {
       TKey* key = (dir) ? find_container_key(dir, level) : nullptr;
-      dir = (key && KeyInherits(key, TDirectory::Class())) ? open_directory(dir, key) : nullptr;
+      dir = (key && key_inherits(key, TDirectory::Class())) ? open_directory(dir, key) : nullptr;
     }
     return dir;
   };
