@@ -24,6 +24,7 @@
 
 #include <cstdlib>
 #include <memory>
+#include <set>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -131,6 +132,20 @@ inline bool& muted()
   return isMuted;
 }
 
+// the errors given while a plot is painted a first time, so that a second paint gives only new ones: recorded, then muted
+struct error_memory_t {
+  std::set<std::string> texts{};
+  bool muteRecorded{};
+  // whether an error with this text is printed
+  bool Pass(const std::string& text) { return (muteRecorded) ? !texts.count(text) : (texts.insert(text), true); }
+};
+// set while errors are remembered (only for plots painted twice)
+inline error_memory_t*& error_memory()
+{
+  static error_memory_t* memory{};
+  return memory;
+}
+
 template <typename... Args>
 inline void info(std::string_view fmt_str, Args&&... args)
 {
@@ -175,9 +190,9 @@ template <typename... Args>
 inline void error(std::string_view fmt_str, Args&&... args)
 {
   if (detail::verbosity() >= detail::level::error) {
-    fmt::print(stderr, "{}[ ERR  ]{} ", begin_color(Color::Red), end_color());
-    fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
-    fmt::print(stderr, "\n");
+    const std::string text = fmt::format(fmt::runtime(fmt_str), std::forward<Args>(args)...);
+    if (error_memory() && !error_memory()->Pass(text)) return;
+    fmt::print(stderr, "{}[ ERR  ]{} {}\n", begin_color(Color::Red), end_color(), text);
   }
 }
 

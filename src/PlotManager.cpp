@@ -2662,6 +2662,18 @@ bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map
     }
   }
   painter.SetSharedAxes(groups);
+  // the errors of the first paint (SciRooPlot's and ROOT's) are not repeated by a second one, new ones are given
+  logger::error_memory_t firstErrors;
+  logger::error_memory() = &firstErrors;
+  static ErrorHandlerFunc_t outerHandler = nullptr;
+  outerHandler = SetErrorHandler([](Int_t level, Bool_t abort, const char* location, const char* msg) {
+    if (level >= kError && !abort && logger::error_memory() && !logger::error_memory()->Pass(fmt::format("{}: {}", location, msg))) return;
+    outerHandler(level, abort, location, msg);
+  });
+  auto forgetErrors = make_scope_guard([]() {
+    logger::error_memory() = nullptr;
+    SetErrorHandler(outerHandler);
+  });
   // the automatic ranges: the union of the ranges the pads get on their own (with their room), known after a first paint;
   // the plot is painted again only if a pad got another range than the union
   Plot firstPlot = fullPlot;  // painting changes the plot (e.g. the legend rows of the data)
@@ -2737,6 +2749,7 @@ bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map
     firstCanvas.reset();
     painter.SetSharedAxes(groups, commonRanges);
     auto quiet = ignore_root_messages_below(kError);
+    firstErrors.muteRecorded = true;
     logger::muted() = true;
     auto unmute = make_scope_guard([]() { logger::muted() = false; });
     canvas.reset(Paint(painter, fullPlot).release());

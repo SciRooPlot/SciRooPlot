@@ -12,10 +12,10 @@ panel spacing still share. The title of a row (x) or column (y) of touching pane
 all of them (centred if the axis says so); panels with titles of their own keep them, and SetCommonTitles(false) keeps all titles.
 Covers: shared axes, common titles, colour-scale cells, undoing the axes of touching panels warns, a
 colour-scale cell naming its panel, 3d histograms in z groups, flat panels
-beside 3d views keeping their labels hidden.
+beside 3d views keeping their labels hidden; a plot painted again for the union of the ranges gives the errors of its first paint once.
 """
 
-from srptest import Chunks, DATA_1D, DATA_2D, DATA_3D, DATA_POLAR, Project, S, add_data, cases, check, close, data_objects, describe, finish, has_variant, hist_diff, python, source_of
+from srptest import ROOT, Chunks, DATA_1D, DATA_2D, DATA_3D, DATA_POLAR, Project, S, add_data, cases, check, close, data_objects, describe, finish, has_variant, hist_diff, python, source_of
 
 FLAT_2D = tuple(k for k in DATA_2D)  # drawn as flat maps (colz) by default
 VARIANTS = ("normal", "negative", "single", "huge")
@@ -364,4 +364,21 @@ for i, (what, (base, nPads, titles, _, wantX, wantY)) in enumerate(TITLES.items(
             abs(x - (0.5 * (left + right) if centred else right)) < 1e-3 and common["X"][0].GetTextAlign() == (22 if centred else 32),
             f"at {x:.4f} (row {left:.4f} to {right:.4f}), align {common['X'][0].GetTextAlign()}",
         )
+
+# a plot painted again since its pads get other ranges on their own than their union: the errors of the first paint are given once (as
+# for the same plot painted once), new ones of the second paint would still be given
+painted = Project("shared_errors", bases=("1d_2x1",))
+spectrum = ROOT.TH1D("spectrum", "", 10, 0.0, 10.0)
+for b in range(1, 11):
+    spectrum.SetBinContent(b, b)
+painted.source("s", {"spectrum": spectrum})
+for name, scale in (("once", 1.0), ("again", 2.0)):
+    plot = S.Plot(name, "errors", "1d_2x1")
+    plot[1].AddData("spectrum", "s").Scale(scale)
+    plot[2].AddData("spectrum", "s")
+    plot[2].AddText(0.3, 0.5, "#frac{a}{")  # an unbalanced brace: ROOT's errors at every paint of the text
+    painted.pm.AddPlot(plot)
+paintedRun = painted.plot()
+said = {name: [line for line in paintedRun.messages(name, "errors") if "Error in <" in line] for name in ("once", "again")}
+check("the errors of the first paint are not repeated by the second", said["once"] and said["again"] == said["once"], f"{len(said['once'])} errors painted once, {len(said['again'])} painted again")
 finish()
