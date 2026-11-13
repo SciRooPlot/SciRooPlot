@@ -94,7 +94,7 @@ class Config
   bool CheckProjectDir(const std::string& projectName) const;  // true if the project's directory is inside the config path
   bool DeleteProjectDir(const std::string& projectName) const;
   static std::string ForeignEntries(const std::filesystem::path& projectPath);  // names in it SciRooPlot did not write, comma separated
-  // the files SciRooPlot writes into a project's directory; names of older versions stay in the list
+  // the files SciRooPlot writes into a project's directory, and the one macOS adds
   inline static const std::set<std::string> kProjectFiles{"plots.info", "dataSources.info", "tabcomp.csv", "UserData.root", ".DS_Store"};
   std::vector<std::string> RemoveProjects(const std::vector<std::string>& projectNames, const std::string& nextCurrent);
   bool SaveProjects();  // writes the projects at once (before the files of a project are changed on disk)

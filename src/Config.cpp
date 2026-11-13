@@ -42,11 +42,11 @@
 
 #include "Validation.h"
 #include "util/Paths.h"
+#include "util/PropertyTree.h"
 #include "util/Strings.h"
 
 using boost::property_tree::ptree;
 using boost::property_tree::read_info;
-using boost::property_tree::write_info;
 using std::string;
 using std::vector;
 
@@ -142,7 +142,7 @@ void Config::LoadConfig()
   // a leading ~ is the home folder, also where the shell did not expand it (SCIROOPLOT_CONFIG_PATH='~/cfg'), as in the paths of projects
   // (variables are not expanded: an unset one would be reported by the logger, which needs this configuration)
   std::string configPath = (envPath) ? envPath : "~/.SciRooPlot";
-  if (configPath == "~" || configPath.compare(0, 2, "~/") == 0) configPath = expand_path("~").value_or("~") + configPath.substr(1);
+  if (configPath == "~" || util::str_starts_with(configPath, "~/")) configPath = expand_path("~").value_or("~") + configPath.substr(1);
   if (configPath.empty()) {
     std::cerr << "SCIROOPLOT_CONFIG_PATH must not be empty." << std::endl;
     return;
@@ -190,7 +190,7 @@ void Config::LoadConfig()
           continue;
         }
         if (project.second.empty()) continue;
-        // the name is a directory in the config path: one written by hand or by an old version could be '..' or '.',
+        // the name is a directory in the config path: one written by hand could be '..' or '.',
         // and remove, clean and reset would then delete the folder above the config path or the config path itself
         if (project.first.empty() || find_illegal_name_char(project.first)) {
           std::cerr << "Ignoring project '" << project.first << "' in " << mProjectsFile << ": the name may contain only letters, digits, _ and -." << std::endl;
@@ -250,16 +250,11 @@ Config::Lock::~Lock()
   if (mFd >= 0) close(mFd);  // releases the lock
 }
 
-// writes to a temporary file and renames it, so an interrupted write cannot leave a truncated file behind
 bool Config::WriteInfoFile(const string& file, const ptree& tree)
 {
-  const string tmpFile = file + "." + std::to_string(getpid()) + ".tmp";
   try {
-    write_info(tmpFile, tree);
-    std::filesystem::rename(tmpFile, file);
+    util::write_info_file(file, tree);
   } catch (const std::exception& e) {
-    std::error_code ec;
-    std::filesystem::remove(tmpFile, ec);
     logger::error("Cannot save the configuration: {}.", e.what());
     return false;
   }
@@ -477,8 +472,7 @@ bool Config::Rename(const std::string& projectName, const std::string& newProjec
       for (auto& [key, input] : inputs) {
         if (key != "INPUT") continue;
         const string value = input.get_value<string>();
-        const size_t split = value.find(".root:");
-        const string file = value.substr(0, (split == string::npos) ? value.size() : split + 5);
+        const string file = util::split_input_path(value)[0];
         if (std::filesystem::weakly_canonical(file, ec) != oldUserData || ec) continue;
         input.put_value(newUserData + value.substr(file.size()));
         changed = true;

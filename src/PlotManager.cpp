@@ -120,6 +120,7 @@
 #include "PlotPainter.h"
 #include "Validation.h"
 #include "util/Paths.h"
+#include "util/PropertyTree.h"
 #include "util/Regex.h"
 #include "util/RootContainers.h"
 #include "util/ScopeGuard.h"
@@ -597,7 +598,7 @@ void PlotManager::AddDataSource(const string& dataSource, TObject* input, bool r
 //**************************************************************************************************
 void PlotManager::ForgetBufferedData(const string& dataSource)
 {
-  auto isPart = [&](const string& source) { return source == dataSource || source.rfind(dataSource + ":", 0) == 0; };
+  auto isPart = [&](const string& source) { return source == dataSource || str_starts_with(source, dataSource + ":"); };
   // tree requests of other data sources joining a tree of this one: the join is in the name suffix as {...@join=tree|source|keys|alias}
   auto joinsIt = [&](const string& name) {
     return name.find("join=") != string::npos && (name.find("|" + dataSource + "|") != string::npos || name.find("|" + dataSource + ":") != string::npos);
@@ -672,7 +673,7 @@ void PlotManager::WriteInfoFile(const ptree& tree, const string& path, const str
     logger::info("Created folder: {}.", filePath.parent_path().string());
   }
   try {
-    boost::property_tree::write_info(filePath.string(), tree);
+    util::write_info_file(filePath.string(), tree);
   } catch (const std::exception& e) {
     logger::error("Cannot save {} to {}: {}.", content, filePath.string(), util::without_final_period(e.what()));
   }
@@ -1173,6 +1174,17 @@ void PlotManager::AddBasePlot(Plot basePlot)
 
 //**************************************************************************************************
 /**
+ * The base plot of the name (null if there is none).
+ */
+//**************************************************************************************************
+Plot* PlotManager::FindBasePlot(const string& name)
+{
+  auto basePlot = std::find_if(mBasePlots.begin(), mBasePlots.end(), [&](const Plot& curBasePlot) { return curBasePlot.GetName() == name; });
+  return (basePlot != mBasePlots.end()) ? &*basePlot : nullptr;
+}
+
+//**************************************************************************************************
+/**
  * Add a plot showing the colours the data of a pad of a base plot gets when it sets none, in this order: the pad's own colour list
  * or gradient, else that of pad 0, else SciRooPlot's (as the painter takes them; the marker colours, which SetDefaultColors sets too).
  * A gradient is shown with its number of colours, or with 8 when that depends on the data.
@@ -1180,8 +1192,8 @@ void PlotManager::AddBasePlot(Plot basePlot)
 //**************************************************************************************************
 void PlotManager::AddColorOverview(const string& name, const string& group, const string& basePlot, uint8_t padID)
 {
-  auto base = std::find_if(mBasePlots.begin(), mBasePlots.end(), [&](const auto& plot) { return plot.GetName() == basePlot; });
-  if (base == mBasePlots.end()) {
+  Plot* base = FindBasePlot(basePlot);
+  if (!base) {
     logger::error("Colour overview {}: there is no base plot {} (add it with AddBasePlot before).", name, basePlot);
     return;
   }
@@ -1643,7 +1655,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       optional<vector<string>> commonGroup;
       // frames that cannot be made are left out of the name here already (missing data, a missing base plot)
       auto hasBasePlot = [this](const Plot& plot) {
-        return !plot.GetBasePlotName() || std::any_of(mBasePlots.begin(), mBasePlots.end(), [&](const Plot& basePlot) { return basePlot.GetName() == *plot.GetBasePlotName(); });
+        return !plot.GetBasePlotName() || FindBasePlot(*plot.GetBasePlotName());
       };
       for (auto plot : selectedPlots) {
         if (!GetMissingData(*plot).empty() || plot->GetGroup().empty() || !hasBasePlot(*plot)) continue;
@@ -1760,12 +1772,11 @@ bool PlotManager::IsBuffered(const string& dataSource, const string& name) const
 
 //**************************************************************************************************
 /**
- * Fills all the nodes defined in buffer hash map with data read from files.
+ * Fills all the nodes defined in buffer hash map with data read from files (what is not found is left empty, see GetMissingData).
  */
 //**************************************************************************************************
-bool PlotManager::FillBuffer()
+void PlotManager::FillBuffer()
 {
-  bool success = true;
   // data sources restricted to a folder (dataSource:some/folder) are read in the same pass as the data source they are part of,
   // so each input file is opened only once
   mNotFoundData.clear();
@@ -1775,18 +1786,17 @@ bool PlotManager::FillBuffer()
     sourceGroups[dataSource.substr(0, dataSource.find(':'))].push_back(dataSource);
   }
   for (const auto& [baseSource, dataSources] : sourceGroups) {
-    success &= ReadSourceGroup(baseSource, dataSources);
+    ReadSourceGroup(baseSource, dataSources);
   }
-  return success;
 }
 
 //**************************************************************************************************
 /**
- * Reads the data requested from a data source and from its folders (dataSource:some/folder) in one pass over its inputs; false if
- * some was not found.
+ * Reads the data requested from a data source and from its folders (dataSource:some/folder) in one pass over its inputs; what is not
+ * found is noted in mNotFoundData.
  */
 //**************************************************************************************************
-bool PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>& dataSources)
+void PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>& dataSources)
 {
   required_data_t requiredData;
   for (const auto& dataSource : dataSources) {
@@ -1803,7 +1813,7 @@ bool PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
   }
   auto allFound = [&]() { return std::all_of(requiredData.begin(), requiredData.end(), [](const auto& entry) { return entry.second.empty(); }); };
 
-  if (allFound()) return true;  // nothing left to read, e.g. read by a previous GeneratePlots call
+  if (allFound()) return;  // nothing left to read, e.g. read by a previous GeneratePlots call
 
   // open all input files belonging to the data source and extract the data
   mTreeInputs.clear();
@@ -1912,7 +1922,6 @@ bool PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
       }
     }
   }
-  return allFound();
 }
 
 //**************************************************************************************************
@@ -2122,11 +2131,7 @@ shared_ptr<Plot::Pad::Data> PlotManager::RefFuncDrawnIn(Plot& plot, uint8_t padI
 {
   auto padIt = plot.GetPads().find(padID);
   if (padID == 0 || padIt == plot.GetPads().end()) return nullptr;
-  Plot* basePlot = nullptr;
-  if (plot.GetBasePlotName()) {
-    auto it = std::find_if(mBasePlots.begin(), mBasePlots.end(), [&](const auto& curBasePlot) { return *plot.GetBasePlotName() == curBasePlot.GetName(); });
-    if (it != mBasePlots.end()) basePlot = &*it;
-  }
+  Plot* basePlot = (plot.GetBasePlotName()) ? FindBasePlot(*plot.GetBasePlotName()) : nullptr;
   auto refFuncOf = [](Plot* curPlot, uint8_t curPadID) -> shared_ptr<Plot::Pad::Data> {
     if (!curPlot) return nullptr;
     auto curPadIt = curPlot->GetPads().find(curPadID);
@@ -2189,11 +2194,8 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   Plot fullPlot;
   if (plot.GetBasePlotName()) {
     const string& basePlotName = *plot.GetBasePlotName();
-    auto iterator = std::find_if(
-      mBasePlots.begin(), mBasePlots.end(),
-      [&](Plot& basePlot) { return basePlot.GetName() == basePlotName; });
-    if (iterator != mBasePlots.end()) {
-      fullPlot = *iterator;
+    if (const Plot* basePlot = FindBasePlot(basePlotName)) {
+      fullPlot = *basePlot;
     } else {
       if (mMissingBasePlots.insert(basePlotName).second) {
         logger::error("Could not find base plot {}: add it with AddBasePlot(PlotManager::MakeBasePlot(\"{}\")) or define it yourself.", basePlotName, basePlotName);
@@ -2481,21 +2483,10 @@ bool PlotManager::WriteOutput(Plot& fullPlot, const string& mode, const shared_p
     return s;
   };
 
-  string fileEnding;
-  if (isMacroMode) {
-    fileEnding = ".C";
-    // ROOT converts the names of all drawn objects to valid variable names, but not the one of the canvas itself
-    canvas->SetName(sanitize(canvas->GetName()).data());
-  } else if ((mode == "pdf") || (mode == "png") || (mode == "eps") || (mode == "svg") || (mode == "ps") || (mode == "html") || (mode == "json") || (mode == "xml") || (mode == "jpg") || (mode == "root")) {
-    fileEnding = "." + mode;
-  } else if (isGifMode) {
-    fileEnding = ".gif";
-  }
-
-  if (fileEnding.empty()) {
-    logger::error("No valid output format was specified. Cannot save plot.");
-    return false;
-  }
+  // the ending is the mode (the modes without a file per plot returned before)
+  const string fileEnding = (isMacroMode) ? ".C" : ((isGifMode) ? ".gif" : "." + mode);
+  // ROOT converts the names of all drawn objects to valid variable names, but not the one of the canvas itself
+  if (isMacroMode) canvas->SetName(sanitize(canvas->GetName()).data());
 
   string fileName = fullPlot.GetName();
   // ROOT names the macro function after the file, so it must be a valid identifier as well
@@ -3480,7 +3471,7 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
   bool isBomLineSkipped = false;  // the line with the mark is not data (a comment): ROOT can simply skip it
   while (lines.size() < 100 && std::getline(file, line)) {
     ++lineNumber;
-    if (lineNumber == 1 && line.compare(0, 3, "\xEF\xBB\xBF") == 0) {
+    if (lineNumber == 1 && str_starts_with(line, "\xEF\xBB\xBF")) {
       hasBom = true;
       line.erase(0, 3);
       isBomLineSkipped = trim(line).empty() || trim(line)[0] == '#';
@@ -4046,7 +4037,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
     std::istringstream lines(rootOutput);
     for (string line; std::getline(lines, line);) {
       const auto compilerError = line.find("error: ");
-      const auto readerError = (line.rfind("Error in <TTreeReader", 0) == 0) ? line.find(">: ") : string::npos;
+      const auto readerError = (str_starts_with(line, "Error in <TTreeReader")) ? line.find(">: ") : string::npos;
       if (compilerError != string::npos || readerError != string::npos) {
         string reason = line.substr((compilerError != string::npos) ? compilerError + 7 : readerError + 3);
         if (str_ends_with(reason, ".")) reason.pop_back();
@@ -4338,13 +4329,13 @@ void PlotManager::SaveProject() const
     Config::GetMutable().Save();
   }
 
-  // create a csv file for tab completion
-  std::ofstream tabCompFile;
-  tabCompFile.open(Config::Get().ProjectPath(mProjectName) / "tabcomp.csv");
+  // the plot names for the tab completion of plot
+  const auto tabCompPath = Config::Get().ProjectPath(mProjectName) / "tabcomp.csv";
+  std::ofstream tabCompFile(tabCompPath);
   for (const auto& plot : mPlots) {
-    string line = plot.GetName() + "," + plot.GetGroup() + "\n";
-    tabCompFile << line;
+    tabCompFile << plot.GetName() << "," << plot.GetGroup() << "\n";
   }
   tabCompFile.close();
+  if (!tabCompFile) logger::warning("Cannot write {}: the tab completion of plot misses the plots of project {}.", tabCompPath.string(), mProjectName);
 }
 }  // end namespace SciRooPlot

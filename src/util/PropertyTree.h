@@ -19,11 +19,15 @@
 #ifndef SRC_UTIL_PROPERTYTREE_H_
 #define SRC_UTIL_PROPERTYTREE_H_
 
+#include <boost/property_tree/info_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+#include <filesystem>
 #include <optional>
 #include <string>
+#include <system_error>
 #include <type_traits>
+#include <unistd.h>
 
 #include "util/Strings.h"
 #include "util/TypeTraits.h"
@@ -64,6 +68,21 @@ void read_from_tree(const boost::property_tree::ptree& tree, std::optional<T>& v
     }
   } catch (const std::exception& e) {
     logger::throw_invalid_argument("Bad value '{}' of {}: {}", *value, label, without_final_period(e.what()));  // the callers end the message
+  }
+}
+
+// writes the tree to a temporary file beside the file and renames it, so an interrupted write cannot leave a truncated file behind
+// (throws if it fails, leaving no temporary file)
+inline void write_info_file(const std::string& file, const boost::property_tree::ptree& tree)
+{
+  const std::string tmpFile = file + "." + std::to_string(getpid()) + ".tmp";
+  try {
+    boost::property_tree::write_info(tmpFile, tree);
+    std::filesystem::rename(tmpFile, file);
+  } catch (const std::exception&) {
+    std::error_code ec;
+    std::filesystem::remove(tmpFile, ec);
+    throw;
   }
 }
 

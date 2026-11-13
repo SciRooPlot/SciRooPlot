@@ -544,9 +544,9 @@ bool PrintRootFileContents(const string& inputPath)
     [&](TObject* object, const string& path) {
       if (!util::is_container(object->IsA())) {
         // listed by the name under which it is stored, which is the one to access it with (the object's own name can differ)
-        const auto slashPos = path.rfind('/');
-        if (slashPos != string::npos) logger::print("{}/", path.substr(0, slashPos));
-        logger::print("- [{}] {}", object->ClassName(), path.substr((slashPos == string::npos) ? 0 : slashPos + 1));
+        const auto [folder, name] = util::split_path(path);
+        if (!folder.empty()) logger::print("{}/", folder);
+        logger::print("- [{}] {}", object->ClassName(), name);
         printBranches(object);
         return;
       }
