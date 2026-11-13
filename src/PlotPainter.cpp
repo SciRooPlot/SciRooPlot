@@ -1757,17 +1757,20 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         drawOption = "SAME ";
         return;
       }
+      // drawn coloured by the content where ROOT's painter of polygon bins (THistPainter::PaintTH2PolyBins) has no such drawing: in polar
+      // coordinates it paints the cell array of TH2 as well (the polygons land unpolarized beside a polar frame); the aliases of boxes,
+      // contours, candles and violins would paint nothing (raw options reach ROOT as given)
+      const char* reason{};
       if (upper.Contains("LEGO") || upper.Contains("SURF")) {
-        const char* scale = (upper.Contains("Z")) ? "Z" : "";
-        if (dataIndex != 0) logger::warning("Drawing option {} is not available for TH2Poly {} (ROOT draws polygon bins in 3d only with OpenGL), drawing it as col{}.", (optionAlias) ? draw_option_name(*optionAlias) : data->GetDrawOption().value_or(""), DataName(*data), (*scale) ? "z" : "");
-        drawOption = ((dataIndex != 0) ? "SAME COL" : "COL") + string(scale);
-        alias = (*scale) ? colz : col;
-        upper = drawOption;
+        reason = "ROOT draws polygon bins in 3d only with OpenGL";
+      } else if (IsFlatPolar(drawOption)) {
+        reason = "ROOT paints polygon bins only in cartesian coordinates";
+      } else if (optionAlias && (upper.Contains("BOX") || upper.Contains("CONT") || upper.Contains("CANDLE") || upper.Contains("VIOLIN"))) {
+        reason = "ROOT paints polygon bins only coloured, filled, outlined, as markers or with their values";
       }
-      // in polar coordinates ROOT paints the cell array of TH2 as well: the polygons land unpolarized beside a polar frame
-      if (IsFlatPolar(drawOption)) {
+      if (reason) {
         const char* scale = (upper.Contains("Z")) ? "Z" : "";
-        if (dataIndex != 0) logger::warning("Drawing option {} is not available for TH2Poly {} (ROOT paints polygon bins only in cartesian coordinates), drawing it as col{}.", (optionAlias) ? draw_option_name(*optionAlias) : data->GetDrawOption().value_or(""), DataName(*data), (*scale) ? "z" : "");
+        if (dataIndex != 0) logger::warning("Drawing option {} is not available for TH2Poly {} ({}), drawing it as col{}.", (optionAlias) ? draw_option_name(*optionAlias) : data->GetDrawOption().value_or(""), DataName(*data), reason, (*scale) ? "z" : "");
         drawOption = ((dataIndex != 0) ? "SAME COL" : "COL") + string(scale);
         alias = (*scale) ? colz : col;
         upper = drawOption;

@@ -4,8 +4,8 @@ other type converts histograms to graphs and graphs to histograms; an alias neit
 warning and draws histograms and graphs as without a drawing option (other types with ROOT's default), as do a graph that cannot be made a
 histogram (points at one x) and error bands, boxes and brackets of a graph without errors.
 Documented adjustments: polar graphs draw the error bars of the points aliases with E, 2d graphs with errors add ERR, a TH2Poly is drawn
-flat (col, colz) with a warning instead of lego and surf, and the frame of a 3d view is an empty lego plot (no surface), keeping POL.
-The drawn data carries the name of the input.
+flat (col, colz) with a warning instead of lego, surf, polar, boxes, contours, candles and violins, and the frame of a 3d view is an empty lego plot
+(no surface), keeping POL. The drawn data carries the name of the input.
 Covers: colz_text, clamped maps, 3d histograms, functions, 2d functions, 2d graphs, TH2Poly drawn flat,
 frame of 3d views, error bars of polar graphs, frame of 2d graphs drawn in 3d, and a TEfficiency drawn
 under the name ROOT gives the graph or histogram it makes.
@@ -17,6 +17,7 @@ from srptest import ALIASES, DATA_KINDS, ROOT, Project, S, add_data, alias_table
 
 TABLE = alias_table()
 REPRESENTATIVE = ("hist", "graph_errors", "hist2d", "graph2d_errors")  # every alias in the fast run
+FLAT_ONLY = ("lego", "surf", "polar", "box", "cont", "candle", "violin")  # aliases a TH2Poly is drawn flat (and cartesian) for
 NEED_ERRORS = ("band", "band_smooth", "boxes_nomarkers", "brackets")  # aliases that draw only the errors of a graph
 WITHOUT_ERRORS = tuple(k for k, obj in data_objects().items() if obj.InheritsFrom("TGraph") and not any(obj.GetErrorX(i) > 0 or obj.GetErrorY(i) > 0 for i in range(obj.GetN())))
 
@@ -33,7 +34,7 @@ def expected(kind, alias):
     drawnType = entry if entry in ("graph", "hist1d") else kindType
     opt = TABLE[alias][drawnType]
     warnings = 0
-    if DATA_KINDS[kind][2] >= {"polygons"} and ("lego" in alias or "surf" in alias):
+    if DATA_KINDS[kind][2] >= {"polygons"} and any(word in alias for word in FLAT_ONLY):
         opt, warnings = "COLZ" if "Z" in opt.split()[0] else "COL", 1
     data = no_scale(opt)
     if alias.startswith("points") and DATA_KINDS[kind][1] == "TGraphPolar":
@@ -118,7 +119,7 @@ for i, case in enumerate(todo):
             check(f"3d view on an empty lego frame: {what}", "LEGO" in frame and "SURF" not in frame and frame.split().count("0") == 1 and ("POL" in frame) == ("POL" in data), f"frame '{frame}'")
     name = data_name(kind)
     check(f"drawn under the name of the input: {what}", obj.GetName().split(":", 1)[1].startswith(name), obj.GetName())
-    found = [line for line in warned.get(alias, []) if f" {name}, drawing it as " in line or f" {name} (ROOT draws" in line or f"Graph {name} has no errors" in line or line.rstrip(".").endswith(f" {name}, using the default of ROOT")]
+    found = [line for line in warned.get(alias, []) if f" {name}, drawing it as " in line or f" {name} (ROOT " in line or f"Graph {name} has no errors" in line or line.rstrip(".").endswith(f" {name}, using the default of ROOT")]
     check(f"{nWarnings} warning(s): {what}", len(found) == nWarnings, " | ".join(found))
 for alias in REPEATED:
     drawn = run.drawn(f"repeated_{alias}", "aliases")
