@@ -434,6 +434,7 @@ class PlotPainter
   static void CopyFuncAttributes(FuncT* from, FuncT* to);
   static std::pair<double_t, double_t> PadSizePixel(const TVirtualPad* pad);
   static double_t FromPad(double_t padValue, bool isLog) { return (isLog) ? std::pow(10., padValue) : padValue; }  // pad coordinates of a log axis are decades
+  static double_t ToPad(double_t value, bool isLog) { return (isLog) ? std::log10(value) : value; }
   static std::pair<double_t, double_t> TextPadSizePixel(const TVirtualPad* pad);
   double_t TextHeightPixel(int16_t textFont, float_t textSize, const TVirtualPad* pad) const;
 

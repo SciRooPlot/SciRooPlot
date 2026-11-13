@@ -1099,11 +1099,11 @@ void PlotPainter::FinishPad(pad_state_t& padState)
   if (!clippedSteps.empty()) {
     const bool logX = pad_ptr->GetLogx();
     const bool logY = pad_ptr->GetLogy();
-    const double_t bottom = (logY) ? std::pow(10., pad_ptr->GetUymin()) : pad_ptr->GetUymin();
-    const double_t top = (logY) ? std::pow(10., pad_ptr->GetUymax()) : pad_ptr->GetUymax();
+    const double_t bottom = FromPad(pad_ptr->GetUymin(), logY);
+    const double_t top = FromPad(pad_ptr->GetUymax(), logY);
     const double_t base = (logY) ? bottom : std::clamp(0., bottom, top);
     // left of the frame: steps without any bin in the range of the frame are drawn there (ROOT refuses a graph without points)
-    const double_t outside = (logX) ? std::pow(10., 2. * pad_ptr->GetUxmin() - pad_ptr->GetUxmax()) : 2. * pad_ptr->GetUxmin() - pad_ptr->GetUxmax();
+    const double_t outside = FromPad(2. * pad_ptr->GetUxmin() - pad_ptr->GetUxmax(), logX);
     auto onBase = [&](double_t y) { return y == base || (y < base && base == bottom); };
     for (auto [steps, open] : clippedSteps) {
       vector<double_t> x(steps->GetX(), steps->GetX() + steps->GetN());
@@ -2134,7 +2134,7 @@ void PlotPainter::DrawPointValues(item_state_t& state, T data_ptr)
   const double_t gapY = 0.015 * (pad_ptr->GetUymax() - pad_ptr->GetUymin());
   auto drawLabel = [&](double_t x, double_t y, double_t value) {
     const bool logY = pad_ptr->GetLogy();
-    if (!logY || y > 0.) y = FromPad(((logY) ? std::log10(y) : y) + gapY, logY);
+    if (!logY || y > 0.) y = FromPad(ToPad(y, logY) + gapY, logY);
     label.DrawLatex(x, y, TString::Format(format.data(), value).Data());
   };
   // only drawn points get a value: the labels, unlike the markers, are not clipped at the frame
@@ -4794,7 +4794,7 @@ void PlotPainter::AddAxisRoom(const Plot::Pad& pad, const Plot::Pad& padDefaults
     const auto extent = dataExtent(axisLabel);
     if (!extent) continue;  // nothing drawn to leave room around
     const bool isLog = isLogAxis(axisLabel);
-    auto toFrame = [isLog](double_t value) { return (isLog) ? std::log10(value) : value; };
+    auto toFrame = [isLog](double_t value) { return ToPad(value, isLog); };
     const double_t curMin = (axisLabel == 'X') ? xMin : ((axisLabel == 'Y') ? yMin : frame->GetMinimum());
     const double_t curMax = (axisLabel == 'X') ? xMax : ((axisLabel == 'Y') ? yMax : frame->GetMaximum());
     if (isLog && !(curMin > 0. && curMax > 0.)) continue;
@@ -5473,7 +5473,7 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
         }
         // compared in pad coordinates: 10^log10(limit) is not always the limit, so a line at a limit of a log axis would count as outside
         const bool logAxis = (isVertical) ? pad_ptr->GetLogx() : pad_ptr->GetLogy();
-        const double_t padPos = (logAxis) ? std::log10(pos) : pos;
+        const double_t padPos = ToPad(pos, logAxis);
         if (padPos < ((isVertical) ? pad_ptr->GetUxmin() : pad_ptr->GetUymin()) || padPos > ((isVertical) ? pad_ptr->GetUxmax() : pad_ptr->GetUymax())) {
           skip("its position is outside of the frame");
           continue;
@@ -5531,13 +5531,12 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
       }
       case kind_t::polygon: {
         // cut at the frame (Sutherland-Hodgman, edge by edge) in pad coordinates, where the edges are straight also on log axes
-        auto padCoord = [](double_t value, bool isLog) { return (isLog) ? std::log10(value) : value; };
         vector<std::pair<double_t, double_t>> points;
         bool valid = true;
         for (size_t i = 0; i + 1 < c.size(); i += 2) {
           const double_t x = valueX(c[i]), y = valueY(c[i + 1]);
           valid = valid && std::isfinite(x) && std::isfinite(y);
-          points.emplace_back(padCoord(x, pad_ptr->GetLogx()), padCoord(y, pad_ptr->GetLogy()));
+          points.emplace_back(ToPad(x, pad_ptr->GetLogx()), ToPad(y, pad_ptr->GetLogy()));
         }
         if (!valid) {
           skip("a point is not positive on a log axis");
@@ -6339,8 +6338,8 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   auto cellX = [&](double_t x) { return (x - pad->GetX1()) * cellsPerX; };
   auto cellY = [&](double_t y) { return (y - pad->GetY1()) * cellsPerY; };
   // conversion from user coordinates to pad coordinates (on a log axis non-positive values are moved to the pad edge)
-  auto padX = [&](double_t x) { return (!pad->GetLogx()) ? x : ((x > 0.) ? std::log10(x) : pad->GetX1()); };
-  auto padY = [&](double_t y) { return (!pad->GetLogy()) ? y : ((y > 0.) ? std::log10(y) : pad->GetY1()); };
+  auto padX = [&](double_t x) { return (!pad->GetLogx() || x > 0.) ? ToPad(x, pad->GetLogx()) : pad->GetX1(); };
+  auto padY = [&](double_t y) { return (!pad->GetLogy() || y > 0.) ? ToPad(y, pad->GetLogy()) : pad->GetY1(); };
 
   auto setRect = [&](double_t x1, double_t y1, double_t x2, double_t y2, uint8_t value) {  // in cells, inclusive (value: kObject, kMap or kBox)
     if (!std::isfinite(x1) || !std::isfinite(y1) || !std::isfinite(x2) || !std::isfinite(y2)) return;
@@ -6452,14 +6451,13 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       levels[k] = levelsFrom->GetContourLevel(k);
     std::sort(levels.begin(), levels.end());
     // the values on the corners of half cells, from which each widened cell takes its 4 x 4 corners
-    const auto user = [](double_t padValue, bool isLog) { return (isLog) ? std::pow(10., padValue) : padValue; };
     const int32_t nCornersX = 2 * (i2 - i1 + 1) + 3;
     const int32_t nCornersY = 2 * (j2 - j1 + 1) + 3;
     vector<double_t> corners(static_cast<size_t>(nCornersX) * nCornersY);
     for (int32_t a = 0; a < nCornersX; ++a) {
-      const double_t x = std::clamp(user(pad->GetX1() + (i1 - 0.5 + 0.5 * a) / cellsPerX, pad->GetLogx()), xMin, xMax);
+      const double_t x = std::clamp(FromPad(pad->GetX1() + (i1 - 0.5 + 0.5 * a) / cellsPerX, pad->GetLogx()), xMin, xMax);
       for (int32_t b = 0; b < nCornersY; ++b) {
-        const double_t y = std::clamp(user(pad->GetY1() + (j1 - 0.5 + 0.5 * b) / cellsPerY, pad->GetLogy()), yMin, yMax);
+        const double_t y = std::clamp(FromPad(pad->GetY1() + (j1 - 0.5 + 0.5 * b) / cellsPerY, pad->GetLogy()), yMin, yMax);
         corners[a + static_cast<size_t>(b) * nCornersX] = valueAt(x, y);
       }
     }
@@ -8131,7 +8129,7 @@ void PlotPainter::HideClippedLabels(TPad* pad, TAxis* axis, char axisLabel)
     const double_t value = labelValues[index];
     if (value < wmin - 1e-9 * (wmax - wmin) || value > wmax + 1e-9 * (wmax - wmin)) continue;
     ++labelNumber;
-    const double_t padCoord = isLog ? TMath::Log10(value) : value;
+    const double_t padCoord = ToPad(value, isLog);
     const double_t tickPixel = isX ? pad->XtoAbsPixel(padCoord) : pad->YtoAbsPixel(padCoord);
     const double_t halfExtent = 0.5 * (isX ? LabelWidth(pad, axis, labelTexts[index]) : labelSizePixel);
     if (tickPixel - halfExtent < padLow || tickPixel + halfExtent > padHigh) {
@@ -8444,8 +8442,8 @@ bool PlotPainter::PlaceZTitle(TPad* pad, TAxis* zAxis, const vector<label_range_
   double_t labels{};
   for (const auto& [min, max, isLog] : ranges) {
     if (isLog && !(min > 0.)) continue;
-    const double_t padMin = isLog ? std::log10(min) : min;
-    const double_t padMax = isLog ? std::log10(max) : max;
+    const double_t padMin = ToPad(min, isLog);
+    const double_t padMax = ToPad(max, isLog);
     if (padMax > padMin) labels = std::max(labels, MaxLabelWidth(pad, zAxis, LabelValues(zAxis, padMin, padMax, isLog), isLog));
   }
   zAxis->SetTitleOffset(static_cast<float_t>((labels + titleHeight) / unit));
@@ -8845,11 +8843,10 @@ void PlotPainter::ReportIgnored(const item_state_t& state, const string& setting
 //**************************************************************************************************
 void PlotPainter::WarnIfOutsideFrame(TPad* pad) const
 {
-  const auto user = [](double_t value, bool isLog) { return (isLog) ? std::pow(10., value) : value; };
-  const double_t xMin = user(pad->GetUxmin(), pad->GetLogx());
-  const double_t xMax = user(pad->GetUxmax(), pad->GetLogx());
-  const double_t yMin = user(pad->GetUymin(), pad->GetLogy());
-  const double_t yMax = user(pad->GetUymax(), pad->GetLogy());
+  const double_t xMin = FromPad(pad->GetUxmin(), pad->GetLogx());
+  const double_t xMax = FromPad(pad->GetUxmax(), pad->GetLogx());
+  const double_t yMin = FromPad(pad->GetUymin(), pad->GetLogy());
+  const double_t yMax = FromPad(pad->GetUymax(), pad->GetLogy());
   for (TObject* obj : *pad->GetListOfPrimitives()) {
     // the data of the pad: named <number>:<name>
     const string name = obj->GetName();
