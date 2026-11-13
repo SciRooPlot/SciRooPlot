@@ -445,10 +445,17 @@ class PlotPainter
   static std::string SymbolOption(const std::string& option);
   static std::string DrawOption(TPad* pad, const TObject* obj);  // the option an object is drawn with in a pad
   static bool HasErrors(const TObject* obj, bool countErrors = false, bool xErrors = false);
-  void DrawImage(const Plot::Pad::ImageBox& box, coordinates_t coordinates, TPad* pad, const std::string& name);
+  void DrawImage(const Plot::Pad::ImageBox& box, const Plot::Pad& pad, const Plot::Pad& padDefaults, TPad* pad_ptr, const std::string& name);
   bool DrawBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, const Plot::Pad& pad, const Plot::Pad& padDefaults, TPad* pad_ptr,
                const std::string& name);
-  TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, coordinates_t coordinates, TPad* pad);
+  // the text attributes of a box: its own, else the defaults of its pad and of pad 0
+  struct box_text_t {
+    std::optional<int16_t> font;
+    std::optional<float_t> size;
+    std::optional<color_t> color;
+    std::optional<float_t> alpha;
+  };
+  TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, coordinates_t coordinates, const box_text_t& text, TPad* pad);
   void DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults, uint8_t padID, TPad* pad_ptr, Plot::Pad::Shape::layer_t layer, TObject* insertAfter);
   bool FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY, bool& coversData);
   void FindBoxPosition(TPad* pad, double_t width, double_t height, box_placement_t placement, const std::string& boxType, double_t& lowerLeftX, double_t& lowerLeftY);

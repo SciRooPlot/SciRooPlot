@@ -1288,7 +1288,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
     for (const auto& box : pad.GetImageBoxes()) {
       ++imageIndex;
       if (box->IsAutoPlacement() == fixedPositions) continue;
-      DrawImage(*box, get_first_or(frame_coordinates, box->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates()), pad_ptr, "ImageBox_" + std::to_string(imageIndex));
+      DrawImage(*box, pad, padDefaults, pad_ptr, "ImageBox_" + std::to_string(imageIndex));
     }
   };
   placeBoxes(true);
@@ -5647,20 +5647,12 @@ bool PlotPainter::DrawBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<P
                           const Plot::Pad& padDefaults, TPad* pad_ptr, const string& name)
 {
   auto generate = [&](auto& box) -> TPave* {
-    if (!box->GetTextFont()) {
-      if (auto font = get_first(pad.GetDefaultTextFont(), padDefaults.GetDefaultTextFont())) box->SetTextFont(*font);
-    }
-    if (!box->GetTextSize()) {
-      if (auto size = get_first(pad.GetDefaultTextSize(), padDefaults.GetDefaultTextSize())) box->SetTextSize(*size);
-    }
-    if (!box->GetTextColor()) {
-      if (auto color = get_first(pad.GetDefaultTextColor(), padDefaults.GetDefaultTextColor())) box->SetTextColor(*color);
-    }
-    if (!box->GetTextAlpha()) {
-      if (auto alpha = get_first(pad.GetDefaultTextAlpha(), padDefaults.GetDefaultTextAlpha())) box->SetTextAlpha(*alpha);
-    }
+    const box_text_t text{get_first(box->GetTextFont(), pad.GetDefaultTextFont(), padDefaults.GetDefaultTextFont()),
+                          get_first(box->GetTextSize(), pad.GetDefaultTextSize(), padDefaults.GetDefaultTextSize()),
+                          get_first(box->GetTextColor(), pad.GetDefaultTextColor(), padDefaults.GetDefaultTextColor()),
+                          get_first(box->GetTextAlpha(), pad.GetDefaultTextAlpha(), padDefaults.GetDefaultTextAlpha())};
     const coordinates_t coordinates = get_first_or(frame_coordinates, box->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
-    TPave* generated = GenerateBox(box, coordinates, pad_ptr);
+    TPave* generated = GenerateBox(box, coordinates, text, pad_ptr);
     if (generated) generated->SetUniqueID(coordinates);  // a double-click in show mode reports the position as given
     return generated;
   };
@@ -5678,7 +5670,7 @@ bool PlotPainter::DrawBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<P
  * The legend or text box with its rows or lines, styled and at its place in the pad (in the given coordinates).
  */
 //**************************************************************************************************
-TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> boxVariant, coordinates_t coordinates, TPad* pad)
+TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> boxVariant, coordinates_t coordinates, const box_text_t& text, TPad* pad)
 {
   TPave* returnBox{nullptr};
 
@@ -5686,8 +5678,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     using BoxType = std::decay_t<decltype(*box)>;
     constexpr bool isLegend = std::is_same_v<BoxType, Plot::Pad::LegendBox>;
 
-    const float_t textSize = box->GetTextSize().value_or(24.f);
-    const int16_t textFont = box->GetTextFont().value_or(43);
+    const float_t textSize = text.size.value_or(24.f);
+    const int16_t textFont = text.font.value_or(43);
 
     // the drawn data a legend row refers to (named "<number of the data in the pad>:<name>" when drawn), in this pad or in another one
     // (with the option it is drawn with, which TObject::GetDrawOption finds only in the current pad)
@@ -5920,8 +5912,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       legend->SetColumnSeparation(static_cast<float_t>(relColumnSeparation));
       legend->SetTextFont(textFont);
       legend->SetTextSize(textSize);
-      if (const auto& textColor = box->GetTextColor()) legend->SetTextColor(textColor->ToIndex());
-      if (const auto& textAlpha = box->GetTextAlpha()) legend->SetTextColor(TColor::GetColorTransparent(legend->GetTextColor(), *textAlpha));
+      if (text.color) legend->SetTextColor(text.color->ToIndex());
+      if (text.alpha) legend->SetTextColor(TColor::GetColorTransparent(legend->GetTextColor(), *text.alpha));
 
       if (auto title = box->GetTitle()) {
         DropEmptyGroups(*title);
@@ -6069,13 +6061,13 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       paveText->SetBorderSize(1);
       paveText->SetTextFont(textFont);
       paveText->SetTextSize(textSize);
-      if (const auto& textColor = box->GetTextColor()) paveText->SetTextColor(textColor->ToIndex());
-      if (const auto& textAlpha = box->GetTextAlpha()) paveText->SetTextColor(TColor::GetColorTransparent(paveText->GetTextColor(), *textAlpha));
+      if (text.color) paveText->SetTextColor(text.color->ToIndex());
+      if (text.alpha) paveText->SetTextColor(TColor::GetColorTransparent(paveText->GetTextColor(), *text.alpha));
 
       for (const auto& line : lines) {
-        TText* text = paveText->AddText(line.data());
-        text->SetTextFont(textFont);
-        text->SetTextSize(textSize);
+        TText* added = paveText->AddText(line.data());
+        added->SetTextFont(textFont);
+        added->SetTextSize(textSize);
       }
       returnBox = paveText;
     }
@@ -6099,8 +6091,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
  * The image itself is stored with the canvas (Plots.root then opens without the file); a size not given keeps its aspect ratio.
  */
 //**************************************************************************************************
-void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, coordinates_t coordinates, TPad* pad, const string& name)
+void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, const Plot::Pad& pad, const Plot::Pad& padDefaults, TPad* pad_ptr, const string& name)
 {
+  const coordinates_t coordinates = get_first_or(frame_coordinates, box.GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
   const auto path = expand_path(box.GetPath());
   if (!path) return;
   std::error_code existsError;
@@ -6120,21 +6113,21 @@ void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, coordinates_t coordi
     }
     return;
   }
-  const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad);
+  const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad_ptr);
   const double_t aspect = static_cast<double_t>(image->GetHeight()) / image->GetWidth() * padWidthPixel / padHeightPixel;  // height / width in NDC
-  const auto [unitX, unitY] = SizeUnit(coordinates, pad);
+  const auto [unitX, unitY] = SizeUnit(coordinates, pad_ptr);
   double_t widthNDC = box.GetWidth().value_or(0.2) * unitX;
   double_t heightNDC = (box.GetHeight()) ? *box.GetHeight() * unitY : widthNDC * aspect;
   if (box.GetHeight() && !box.GetWidth()) widthNDC = heightNDC / aspect;
 
-  const auto [upperLeftX, upperLeftY] = PlaceBox(box, coordinates, pad, widthNDC, heightNDC, 0., 0., "image");
+  const auto [upperLeftX, upperLeftY] = PlaceBox(box, coordinates, pad_ptr, widthNDC, heightNDC, 0., 0., "image");
   constexpr double_t tolerance = 1e-9;
   if (widthNDC <= 0. || heightNDC <= 0. || upperLeftX < -tolerance || upperLeftY - heightNDC < -tolerance || upperLeftX + widthNDC > 1. + tolerance || upperLeftY > 1. + tolerance) {
     logger::warning("Image {} is not drawn: it does not fit into its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}).", name.substr(name.find('_') + 1), upperLeftX, upperLeftY, widthNDC, heightNDC);
     delete image;
     return;
   }
-  pad->cd();
+  pad_ptr->cd();
   auto* imagePad = new TPad(name.data(), path->data(), std::max(upperLeftX, 0.), std::max(upperLeftY - heightNDC, 0.), std::min(upperLeftX + widthNDC, 1.), std::min(upperLeftY, 1.));
   imagePad->SetFillStyle(0);
   imagePad->SetBorderMode(0);
@@ -6153,7 +6146,7 @@ void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, coordinates_t coordi
   auto* textAfterImage = new TText(0., 0., "");
   textAfterImage->SetBit(kCanDelete);
   textAfterImage->Draw();
-  pad->cd();
+  pad_ptr->cd();
 }
 
 //**************************************************************************************************
