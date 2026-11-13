@@ -84,7 +84,7 @@ for i, case in enumerate(todo):
             check(f"log scale without positive values ignored with a warning: {what}", bool(ignored), "log scale off without warning")
 unpaintableErrors = [line for line in run.errors() if "a_unpaintable" in line]
 check("a plot ROOT cannot paint is made or reported", bool(run.pad("a_unpaintable", "robust")) or any("could not be painted" in line for line in unpaintableErrors), str(unpaintableErrors))
-check("contents beyond the largest float are reported by name", any(line.split("]", 1)[-1].split()[0] == "unpaintable" and "beyond the largest float" in line for line in run.warnings()), " | ".join(run.warnings()[:3]))
+check("contents beyond the largest float are reported by name", any(line.split("]", 1)[-1].split()[0] == "unpaintable:unpaintable" and "beyond the largest float" in line for line in run.warnings()), " | ".join(run.warnings()[:3]))
 tinyErrors = [line for line in run.errors() if "a_tiny" in line]
 check("an axis too narrow for ROOT: the plot is lost with the reason", not run.pad("a_tiny", "robust") and any("ROOT cannot draw one of its axes" in line for line in tinyErrors), str(tinyErrors))
 noErrorSetsDrawn = run.objects("a_noy", "robust")
@@ -93,7 +93,7 @@ check("a TGraphMultiErrors without y error sets is reported", bool(run.warnings(
 errors = [line for line in run.errors() if "a_unpaintable" not in line and "a_tiny" not in line]
 check("no ROOT errors", not errors, " | ".join(errors[:5]))
 undefined = sorted({case["kind"] for case in todo if case["variant"] == "undefined"})
-unreportedUndefined = [kind for kind in undefined if not any("is NaN in parts of" in line and (f"Function {kind} " in line or formula(kind, "undefined") in line) for line in run.warnings())]
+unreportedUndefined = [kind for kind in undefined if not any("is NaN in parts of" in line and (f"Function {kind}:" in line or formula(kind, "undefined") in line) for line in run.warnings())]
 check("a function NaN in part of its range is reported by name", not unreportedUndefined, ", ".join(unreportedUndefined))
 removable = run.pad("a_removable", "robust")
 check(
@@ -102,6 +102,6 @@ check(
     " | ".join(line for line in run.warnings() if "sin(x)/x" in line),
 )
 kinds = {case["kind"] for case in todo if case["variant"] in ("nan", "inf")}
-unreported = sorted(kind for kind in kinds if not any(line.split("]", 1)[-1].split()[0] == kind and "NaN" in line for line in run.warnings()))
+unreported = sorted(kind for kind in kinds if not any(line.split("]", 1)[-1].split()[0].split(":")[0] == kind and "NaN" in line for line in run.warnings()))
 check("data with a NaN or infinite value is reported by name", not unreported, ", ".join(unreported))
 finish()

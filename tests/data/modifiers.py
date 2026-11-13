@@ -80,8 +80,8 @@ for i, case in enumerate(todo):
     add_plot(f"mod{i}", case, case["mods"])
 run = p.plot("modifiers")
 
-expectedWarnings = [(f" {kind} has", "NaN or infinite") for kind, variant in bases if variant in ("nan", "inf")]  # (data name, fragment)
-expectedWarnings += [(f"Graph {kind} ", "has no points: it is not drawn") for kind, variant in bases if variant == "empty" and (DATA_KINDS[kind][1] in GRAPHS or kind == "efficiency")]
+expectedWarnings = [(f" {kind}:{name} has", "NaN or infinite") for (kind, variant), name in bases.items() if variant in ("nan", "inf")]  # (data name, fragment)
+expectedWarnings += [(f"Graph {kind}:{name} ", "has no points: it is not drawn") for (kind, variant), name in bases.items() if variant == "empty" and (DATA_KINDS[kind][1] in GRAPHS or kind == "efficiency")]
 expectedWarnings += [w for kind, variant in bases for w in variant_warnings(kind, variant)]
 silent = set()  # data whose warnings are not compared
 for i, case in enumerate(todo):
@@ -89,18 +89,18 @@ for i, case in enumerate(todo):
     kind = case["kind"]
     formulaKind = "formula" in DATA_KINDS[kind][2]
     if case["variant"] in ("nan", "inf"):
-        expectedWarnings.append((f" {kind} has", "NaN or infinite"))
+        expectedWarnings.append((f" {kind}:mod{i} has", "NaN or infinite"))
     expectedWarnings += variant_warnings(kind, case["variant"])
     base, obs = run.drawn(bases[(kind, case["variant"])], "modifiers"), run.drawn(f"mod{i}", "modifiers")
     if not base and not obs and case["variant"] == "empty" and (DATA_KINDS[kind][1] in GRAPHS or kind == "efficiency"):
-        expectedWarnings.append((f"Graph {kind} ", "has no points: it is not drawn"))
+        expectedWarnings.append((f"Graph {kind}:mod{i} ", "has no points: it is not drawn"))
         silent.add(f"{kind}:mod{i}")  # what its modifiers report about no points is not compared
         continue  # an empty graph is not drawn (see frames/robust_frames.py), modified or not
     if not base or not obs:
         check(f"plot made: {what}", False, " | ".join(run.errors()[:2]))
         continue
     base, obs = base[0][0], obs[0][0]
-    exp = ModifierExpected(data_name(kind, case["variant"]) if formulaKind else obs.GetName().split(":", 1)[1].removesuffix("_cumulative"))
+    exp = ModifierExpected(data_name(kind, case["variant"]) if formulaKind else obs.GetName().split(":", 1)[1].removesuffix("_cumulative").split("_Proj")[0])
     fam = family(base)
     ref = modifier_reference(base, case["mods"], exp)
     expectedWarnings += [(exp.name, w) for w in exp.warnings]
@@ -141,8 +141,8 @@ limitCases = {  # plot: (data, base, modifier, expected warning, expected bins a
     "x2": ("h2", "2d", lambda d: d.RebinX(11), "RebinX(11) needs at least as many bins, h2:lim has 10", (10, 8)),
     "xy2": ("h2", "2d", lambda d: d.RebinXY(11, 2), "RebinX(11) needs at least as many bins, h2:lim has 10", (10, 4)),
     "z3": ("h3", "2d", lambda d: d.RebinXYZ(2, 2, 5), "RebinZ(5) needs at least as many bins, h3:lim has 4", (2, 2, 4)),
-    "float": ("h1", "1d", lambda d: d.Scale(1e40), "h1 has 12 bins with contents beyond the largest float", (10,)),
-    "inf": ("h1", "1d", lambda d: d.Scale(1e300), "h1 has 12 bins with NaN or infinite values", (10,)),
+    "float": ("h1", "1d", lambda d: d.Scale(1e40), "h1:lim has 12 bins with contents beyond the largest float", (10,)),
+    "inf": ("h1", "1d", lambda d: d.Scale(1e300), "h1:lim has 12 bins with NaN or infinite values", (10,)),
 }
 for name, (data, base, modify, _, _) in limitCases.items():
     plot = S.Plot(name, "limits", base)

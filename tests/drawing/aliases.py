@@ -15,7 +15,7 @@ candles of a TH2Poly; lines down to zero at both ends of area of a graph.
 
 import re
 
-from srptest import ALIASES, DATA_KINDS, ROOT, Project, S, add_data, alias_table, base_of, cases, check, data_name, data_objects, describe, drawn_type, finish, in_chunks, is_data, no_scale, per_error_set, pixels
+from srptest import ALIASES, DATA_KINDS, ROOT, Project, S, add_data, alias_table, base_of, cases, check, data_name, data_objects, describe, drawn_type, finish, in_chunks, is_data, message_name, no_scale, per_error_set, pixels
 
 TABLE = alias_table()
 REPRESENTATIVE = ("hist", "graph_errors", "hist2d", "graph2d_errors")  # every alias in the fast run
@@ -142,7 +142,8 @@ for i, case in enumerate(todo):
             check(f"3d view on an empty lego frame: {what}", "LEGO" in frame and "SURF" not in frame and frame.split().count("0") == 1 and ("POL" in frame) == ("POL" in data), f"frame '{frame}'")
     name = data_name(kind)
     check(f"drawn under the name of the input: {what}", obj.GetName().split(":", 1)[1].startswith(name), obj.GetName())
-    found = [line for line in warned.get(alias, []) if f" {name}, drawing it as " in line or f" {name} (ROOT " in line or f"Graph {name} has no errors" in line or line.rstrip(".").endswith(f" {name}, using the default of ROOT")]
+    said = message_name(kind)
+    found = [line for line in warned.get(alias, []) if f" {said}, drawing it as " in line or f" {said} (ROOT " in line or f"Graph {said} has no errors" in line or line.rstrip(".").endswith(f" {said}, using the default of ROOT")]
     check(f"{nWarnings} warning(s): {what}", len(found) == nWarnings, " | ".join(found))
 for alias in REPEATED:
     drawn = run.drawn(f"repeated_{alias}", "aliases")

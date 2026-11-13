@@ -844,7 +844,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         const bool keepStoredRanges = (dataIndex == 0) && data->GetDefinesFrame() && data->GetType() != "ratio";
         TObject* input = (dataIndex == 0 && emptyFrame) ? emptyFrame.get() : dataBuffer.at(data->GetDataSource()).at(data->GetName() + data->GetDataInfo().GetNameSuffix()).get();
         rawData = GetDataClone(input, data->GetProjInfo(), keepStoredRanges);
-        if (rawData && data->GetDataSource() == kUserGraphs) {
+        // named as in messages (the drawn object gets its full name in DrawItem)
+        if (rawData) {
           std::visit([&](auto* ptr) { ptr->SetName(DataName(*data).data()); }, *rawData);
         }
       } catch (std::out_of_range&) {
@@ -864,8 +865,8 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
             optional<data_ptr_t> denom;
             try {
               denom = GetDataClone(dataBuffer.at(ratio->GetDenomDataSource()).at(ratio->GetDenomName() + ratio->GetDenomDataInfo().GetNameSuffix()).get(), ratio->GetDenomProjInfo());
-              if (denom && ratio->GetDenomDataSource() == kUserGraphs) {
-                std::visit([&](auto* ptr) { ptr->SetName(DataName(ratio->GetDenomName(), kUserGraphs).data()); }, *denom);
+              if (denom) {
+                std::visit([&](auto* ptr) { ptr->SetName(DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()).data()); }, *denom);
               }
             } catch (std::out_of_range&) {
               denom = nullopt;
@@ -1991,8 +1992,10 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     } else if (data->GetStatsFormat()) {
       logger::warning("Statistics boxes are available only for histograms, not for {}.", DataName(*data));
     }
-    // named as in the plot definition (<name>), without data source, request and projection
-    data_ptr->SetName((std::to_string(dataIndex - hasRefFunc) + ":" + data_ptr->GetName()).data());
+    // named <number>:<name>[<request>]:<data source>[<projection>], AddPoints data <number>:<name in messages>
+    const auto& projInfo = data->GetProjInfo();
+    const string inputName = (is_user_defined(data->GetDataSource())) ? DataName(*data) : data->GetName() + data->GetDataInfo().GetNameSuffix() + ":" + data->GetDataSource() + ((projInfo) ? projInfo->GetNameSuffix() : "");
+    data_ptr->SetName((std::to_string(dataIndex - hasRefFunc) + ":" + inputName).data());
     mDataDefinitions[data_ptr] = data;
     if constexpr (is_graph_2d<data_type>()) {
       // ROOT paints a 2d graph through a histogram it makes when painting and does not store with the graph: it gets the colour levels at every paint
@@ -2256,7 +2259,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         }
         legendBoxVector[legendID - 1]->AddDataRow(*data->GetLegendLabel(), (dataIndex - hasRefFunc), legendEntry);
       } else {
-        logger::warning("The legend set for data {} in {} does not exist in its pad (SetLegend counts the legends added by the plot itself, not those of its base plot).", DataName(*data), data->GetDataSource());
+        logger::warning("The legend set for data {} does not exist in its pad (SetLegend counts the legends added by the plot itself, not those of its base plot).", DataName(*data));
       }
     }
   }
@@ -3596,13 +3599,15 @@ void PlotPainter::Warn(const item_state_t& state, Args&&... args)
 
 //**************************************************************************************************
 /**
- * The name of data in messages: points added with AddPoints are stored under their coordinates, which are named by their label
- * or their number and x range instead.
+ * The name of data in messages: name:source as in the plot definition (without request and projection), a formula of the plot
+ * definition by itself; points added with AddPoints are stored under their coordinates, which are named by their label or their number
+ * and x range instead.
  */
 //**************************************************************************************************
 string PlotPainter::DataName(const string& name, const string& dataSource, const optional<string>& label)
 {
-  if (dataSource != kUserGraphs) return name;
+  if (dataSource == kUserFunctions) return name;
+  if (dataSource != kUserGraphs) return name + ":" + dataSource;
   if (label && !label->empty()) return fmt::format("points '{}'", *label);
   const string xValues = name.substr(0, name.find(';'));
   const size_t lastComma = xValues.rfind(',');
@@ -4296,8 +4301,8 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
     optional<data_ptr_t> rawDenomData;
     try {
       rawDenomData = GetDataClone(dataBuffer.at(data_as_ratio->GetDenomDataSource()).at(data_as_ratio->GetDenomName() + data_as_ratio->GetDenomDataInfo().GetNameSuffix()).get(), data_as_ratio->GetDenomProjInfo());
-      if (rawDenomData && data_as_ratio->GetDenomDataSource() == kUserGraphs) {
-        std::visit([&](auto* ptr) { ptr->SetName(DataName(data_as_ratio->GetDenomName(), kUserGraphs).data()); }, *rawDenomData);
+      if (rawDenomData) {
+        std::visit([&](auto* ptr) { ptr->SetName(DataName(data_as_ratio->GetDenomName(), data_as_ratio->GetDenomDataSource()).data()); }, *rawDenomData);
       }
     } catch (std::out_of_range&) {
       rawDenomData = nullopt;
@@ -8775,7 +8780,7 @@ void PlotPainter::ReportIgnored(const string& setting, const char* reason)
  * not warned about, since its lines may cross the frame. One pass over the bins or points of each item.
  */
 //**************************************************************************************************
-void PlotPainter::WarnIfOutsideFrame(TPad* pad)
+void PlotPainter::WarnIfOutsideFrame(TPad* pad) const
 {
   const auto user = [](double_t value, bool isLog) { return (isLog) ? std::pow(10., value) : value; };
   const double_t xMin = user(pad->GetUxmin(), pad->GetLogx());
@@ -8828,7 +8833,9 @@ void PlotPainter::WarnIfOutsideFrame(TPad* pad)
     const char* where = (left) ? "left of" : (right) ? "right of"
                                            : (below) ? "below"
                                                      : "above";
-    logger::warning("Data {} lies entirely {} the frame of its pad (the first data, or the data set with SetDefinesFrame, decides the frame): nothing of it is visible.", name.substr(colon + 1), where);
+    auto definition = mDataDefinitions.find(obj);
+    logger::warning("Data {} lies entirely {} the frame of its pad (the first data, or the data set with SetDefinesFrame, decides the frame): nothing of it is visible.",
+                    (definition != mDataDefinitions.end()) ? DataName(*definition->second) : name.substr(colon + 1), where);
   }
 }
 
@@ -9028,8 +9035,9 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
         value = std::isfinite(extreme) ? extreme : 0.;
       }
     } else {
+      auto definition = mDataDefinitions.find(data_ptr);
       const string name = data_ptr->GetName();
-      logger::warning("Placeholder {} is not available for {} {}.", matchStr, data_ptr->ClassName(), name.substr(name.find(':') + 1));  // without the "<index>:" prefix
+      logger::warning("Placeholder {} is not available for {} {}.", matchStr, data_ptr->ClassName(), (definition != mDataDefinitions.end()) ? DataName(*definition->second) : name.substr(name.find(':') + 1));
     }
 
     if (value) {

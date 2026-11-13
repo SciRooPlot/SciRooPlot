@@ -23,7 +23,7 @@ from srptest import (
     check,
     data_objects,
     describe,
-    division_name,
+    message_name,
     division_reference,
     family,
     finish,
@@ -120,7 +120,7 @@ def drawn(name):
 
 def name_of(kind, source):
     """the name of the data (an input or a ratio) in messages of its modifiers"""
-    return division_name(kind, VARIANT, source)
+    return message_name(kind, VARIANT, source)
 
 
 def operand(kind, source, alone, mods, warnings):
@@ -207,7 +207,7 @@ for i, case in enumerate(todo):
         continue
     expectedWarnings += caseWarnings  # a failing ratio stops the plot in the frame pass, where warnings are muted
     if isinstance(ref, dict) and not ref["x"]:
-        expectedWarnings.append((f"Graph {num} ", "has no points: it is not drawn"))
+        expectedWarnings.append((f"Graph {names[0]} ", "has no points: it is not drawn"))
         check(f"a ratio without points not drawn: {what}", obs is None, "drawn")
         continue
     if obs is None:

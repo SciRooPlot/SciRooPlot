@@ -12,7 +12,7 @@ of 3d functions, a plane of colour behind the coloured points and a mesh under t
 
 import re
 
-from srptest import DATA_2D, DATA_3D, DATA_KINDS, ROOT, Project, S, add_data, cases, check, data_name, data_objects, describe, drawn_type, finish, in_chunks, pixels, rgba
+from srptest import DATA_2D, DATA_3D, DATA_KINDS, ROOT, Project, S, add_data, cases, check, data_name, data_objects, describe, drawn_type, finish, in_chunks, message_name, pixels, rgba
 
 OPTIONS = {  # aliases of what the data is drawn as, flat and in 3d (None: the default of the kind)
     "hist2d": ("colz", "cont", "box", "text", "lego", "surf", "surf_col"),
@@ -138,7 +138,7 @@ for i, case in enumerate(frames):
     check(f"drawn only into a frame of its kind, the next data keeping its number: {what}", names == want, f"drawn {names}, expected {want}")
     messages = [line for line in run.messages(f"f{i}", "frames") if "[ WARN" in line or "[WARN" in line]
     refused = [line for line in messages if line.rstrip(".").endswith("It is not drawn")]
-    check(f"{0 if drawn else 1} warning that it is not drawn: {what}", len(refused) == (0 if drawn else 1) and all(f" {name} " in line for line in refused), " | ".join(messages))
+    check(f"{0 if drawn else 1} warning that it is not drawn: {what}", len(refused) == (0 if drawn else 1) and all(f" {message_name(case['kind'])} " in line for line in refused), " | ".join(messages))
 
 
 def erased(i, case):

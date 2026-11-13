@@ -233,7 +233,7 @@ def formula(kind, variant="normal"):
 def variant_warnings(kind, variant):
     """the warnings data of a kind in a variant gives where it is drawn, as (data name, fragment): a function NaN in part of its range"""
     if variant == "undefined":
-        return [(f"Function {formula(kind, variant) if 'formula' in DATA_KINDS[kind][2] else kind} ", "is NaN in parts of")]
+        return [(f"Function {formula(kind, variant)} " if "formula" in DATA_KINDS[kind][2] else f"Function {kind}:", "is NaN in parts of")]
     return []
 
 
@@ -719,7 +719,8 @@ def drawn_type(kind):
 
 
 def data_name(kind, variant="normal"):
-    """the name SciRooPlot gives data of a kind in messages: the formula of a function of the plot definition, else the input's name"""
+    """the name of data of a kind in the plot definition: the formula of a function of the plot definition, else the input's name (in
+    messages: message_name)"""
     return formula(kind, variant) if "formula" in DATA_KINDS[kind][2] else kind
 
 
@@ -1895,11 +1896,12 @@ def ratio_input(kind, source, variant):
     return d
 
 
-def division_name(kind, variant, source):
-    """the name of data in messages about the division"""
+def message_name(kind, variant="normal", source=None):
+    """the name of data of a kind in messages: name:source (by default the source Project.inputs makes for the variant), a formula of
+    the plot definition by itself"""
     if "formula" in DATA_KINDS[kind][2]:
         return formula(kind, variant)
-    return f"{kind}:{source}" + ("_Proj{0}" if DATA_KINDS[kind][0] == 1 else "_Proj{01}") * ("projected" in DATA_KINDS[kind][2])
+    return f"{kind}:{source or source_of(variant)}"
 
 
 def match_messages(lines, expected, keyed):

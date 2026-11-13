@@ -6,7 +6,7 @@ plot definition (AddPoints) are named in messages by their label, or by their nu
 Covers: area sorted the points of a graph silently, points of the definition named by all their coordinates (warnings of kilobytes).
 """
 
-from srptest import ALIASES, DATA_KINDS, Project, S, add_data, alias_table, base_of, cases, check, close, data_objects, describe, drawn_type, finish, has_variant, source_of
+from srptest import ALIASES, DATA_KINDS, Project, S, add_data, alias_table, base_of, cases, check, close, data_objects, describe, drawn_type, finish, has_variant, message_name, source_of
 
 TABLE = alias_table()
 GRAPHS = tuple(k for k in DATA_KINDS if drawn_type(k) == "graph" and has_variant(k, "unsorted"))
@@ -85,7 +85,7 @@ for i, case in enumerate(todo):
     else:
         check(f"drawn through the points as given: {what}", same(points(obj), points(given)), f"drawn {[(round(x, 3), round(y, 3)) for x, y in points(obj)[:6]]}")
 for kind in GRAPHS:  # the warnings name the data, not the plot
-    found = [w for w in sortWarnings if f"graph {kind} " in w]
+    found = [w for w in sortWarnings if f"graph {message_name(kind, 'unsorted')} " in w]
     unsorted = sum(c["kind"] == kind and c["alias"] == "area" and c["variant"] == "unsorted" for c in todo)
     check(f"one warning about the order per area of unsorted points: {kind}", len(found) == unsorted, " | ".join(found))
 # error bands, boxes and brackets of a graph without errors would draw nothing: it is drawn as without a drawing option, with a warning

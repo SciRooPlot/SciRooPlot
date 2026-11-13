@@ -30,10 +30,9 @@ from srptest import (
     base_of,
     cases,
     check,
-    data_name,
     data_objects,
     describe,
-    division_name,
+    message_name,
     division_reference,
     finish,
     first_five,
@@ -139,9 +138,9 @@ def stand_in(kind, variant):
 expectedWarnings, expectedErrors = [], []
 for kind, variant in bases:
     if variant in ("nan", "inf"):
-        expectedWarnings.append((f" {kind} has", "NaN or infinite"))
+        expectedWarnings.append((f" {kind}:{bases[(kind, variant)]} has", "NaN or infinite"))
     if stand_in(kind, variant) is not None:
-        expectedWarnings.append((f"Graph {kind} ", "has no points: it is not drawn"))
+        expectedWarnings.append((f"Graph {kind}:{bases[(kind, variant)]} ", "has no points: it is not drawn"))
 
 
 def compare(i, case):
@@ -156,16 +155,16 @@ def compare(i, case):
         check(f"data drawn alone: {what}", False, " | ".join(run.errors()[:2]))
         return
     denInput = inputs[case["den_variant"]].get(case["den"])
-    exp = DivisionExpected(division_name(case["num"], case["num_variant"], f"n{i}"), division_name(case["den"], case["den_variant"], f"d{i}"), input_range(denInput) if denInput else None)
+    exp = DivisionExpected(message_name(case["num"], case["num_variant"], f"n{i}"), message_name(case["den"], case["den_variant"], f"d{i}"), input_range(denInput) if denInput else None)
     caseWarnings = []
     for k in ("num", "den"):  # each input reported by its name before the division
         if case[f"{k}_variant"] in ("nan", "inf") and not DATA_KINDS[case[k]][1].startswith("TF"):
-            caseWarnings.append((f" {case[k]} has", "NaN or infinite"))
+            caseWarnings.append((f" {case[k]}:{k[0]}{i} has", "NaN or infinite"))
     profiles = [k for k in ("num", "den") if any(base.InheritsFrom(c) for base in ([numObj] if k == "num" else [denObj]) for c in ("TProfile", "TProfile2D", "TProfile3D"))]
     binomial = case["correlated"]
     if binomial and profiles:
         binomial = False
-        caseWarnings.append((f"Ratio {data_name(case['num'], case['num_variant'])}:", "binomial errors (SetCorrelated) are not defined for the mean values of a profile"))
+        caseWarnings.append((f"Ratio {message_name(case['num'], case['num_variant'], f'n{i}')}:", "binomial errors (SetCorrelated) are not defined for the mean values of a profile"))
     funcs = {k: Func(case[k], case[f"{k}_variant"], numObj if k == "num" else denObj) for k in ("num", "den") if DATA_KINDS[case[k]][1].startswith("TF")}
     ref = division_reference(numObj, denObj, funcs.get("num"), funcs.get("den"), binomial, exp)
     caseWarnings += [(exp.num, w) for w in exp.warnings]
@@ -177,7 +176,7 @@ def compare(i, case):
         check(f"reported as not possible: {what}", not drawn, "the ratio was drawn")
         return
     if isinstance(ref, dict) and not ref["x"]:  # no points left: a graph without points is not drawn
-        expectedWarnings.append((f"Graph {data_name(case['num'], case['num_variant'])} ", "has no points: it is not drawn"))
+        expectedWarnings.append((f"Graph {message_name(case['num'], case['num_variant'], f'n{i}')} ", "has no points: it is not drawn"))
         check(f"a ratio without points not drawn: {what}", not drawn, "drawn")
         return
     if not drawn:
