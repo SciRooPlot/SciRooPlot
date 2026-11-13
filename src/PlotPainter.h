@@ -475,6 +475,7 @@ class PlotPainter
 
   static std::vector<int16_t> GenerateGradientColors(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha = 1.);
   static void CollectCustomColors(TObject* obj, std::set<int32_t>& colors);
+  static void ForEachContained(TObject* obj, const std::function<void(TObject*, const char*)>& visit);
   static std::string ColorDefinitionCommand(const std::set<int32_t>& colors);
   static std::string GradientPaletteCommand(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha);
 

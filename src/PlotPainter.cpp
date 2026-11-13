@@ -4895,12 +4895,6 @@ void PlotPainter::CollectCustomColors(TObject* obj, std::set<int32_t>& colors)
     const bool isPredefined = (color >= 0 && color <= 50) || (color >= 300 && color <= kGray + 3);  // basic colours and the colour wheel
     if (!isPredefined && gROOT->GetColor(color)) colors.insert(color);
   };
-  auto addList = [&](TList* list) {
-    if (!list) return;
-    TIter next(list);
-    while (TObject* item = next())
-      CollectCustomColors(item, colors);
-  };
   if (auto line = dynamic_cast<TAttLine*>(obj)) add(line->GetLineColor());
   if (auto fill = dynamic_cast<TAttFill*>(obj)) add(fill->GetFillColor());
   if (auto marker = dynamic_cast<TAttMarker*>(obj)) add(marker->GetMarkerColor());
@@ -4908,7 +4902,6 @@ void PlotPainter::CollectCustomColors(TObject* obj, std::set<int32_t>& colors)
   if (auto pad = dynamic_cast<TPad*>(obj)) {
     add(pad->GetFrameFillColor());
     add(pad->GetFrameLineColor());
-    addList(pad->GetListOfPrimitives());
   }
   if (auto hist = dynamic_cast<TH1*>(obj)) {
     for (TAxis* axis : {hist->GetXaxis(), hist->GetYaxis(), hist->GetZaxis()}) {
@@ -4916,13 +4909,31 @@ void PlotPainter::CollectCustomColors(TObject* obj, std::set<int32_t>& colors)
       add(axis->GetLabelColor());
       add(axis->GetTitleColor());
     }
-    addList(hist->GetListOfFunctions());
   }
-  if (auto graph = dynamic_cast<TGraph*>(obj)) addList(graph->GetListOfFunctions());
-  if (auto multiGraph = dynamic_cast<TMultiGraph*>(obj)) addList(multiGraph->GetListOfGraphs());
-  if (auto stack = dynamic_cast<THStack*>(obj)) addList(stack->GetHists());
-  if (auto legend = dynamic_cast<TLegend*>(obj)) addList(legend->GetListOfPrimitives());
-  if (auto paveText = dynamic_cast<TPaveText*>(obj)) addList(paveText->GetListOfLines());
+  ForEachContained(obj, [&colors](TObject* item, const char*) { CollectCustomColors(item, colors); });
+}
+
+//**************************************************************************************************
+/**
+ * Calls visit with each object an object holds and its option: the primitives of a pad, the functions of histograms and graphs, the graphs
+ * of a TMultiGraph, the histograms of a THStack, the rows of a legend and the lines of a TPaveText.
+ */
+//**************************************************************************************************
+void PlotPainter::ForEachContained(TObject* obj, const std::function<void(TObject*, const char*)>& visit)
+{
+  auto walk = [&visit](TCollection* list) {
+    if (!list) return;
+    TIter next(list);
+    while (TObject* item = next())
+      visit(item, next.GetOption());
+  };
+  if (auto pad = dynamic_cast<TPad*>(obj)) walk(pad->GetListOfPrimitives());
+  if (auto hist = dynamic_cast<TH1*>(obj)) walk(hist->GetListOfFunctions());
+  if (auto graph = dynamic_cast<TGraph*>(obj)) walk(graph->GetListOfFunctions());
+  if (auto multiGraph = dynamic_cast<TMultiGraph*>(obj)) walk(multiGraph->GetListOfGraphs());
+  if (auto stack = dynamic_cast<THStack*>(obj)) walk(stack->GetHists());
+  if (auto legend = dynamic_cast<TLegend*>(obj)) walk(legend->GetListOfPrimitives());
+  if (auto paveText = dynamic_cast<TPaveText*>(obj)) walk(paveText->GetListOfLines());
 }
 
 //**************************************************************************************************
@@ -5031,13 +5042,6 @@ Style_t PlotPainter::ScreenLineStyle(Style_t style) const
 void PlotPainter::ApplyScale(TObject* obj, std::set<TObject*>& done, const std::string& drawOption)
 {
   if (!obj || !done.insert(obj).second) return;
-  auto applyToList = [&](TCollection* list) {
-    if (!list) return;
-    TIter next(list);
-    while (TObject* entry = next()) {
-      ApplyScale(entry, done, next.GetOption());
-    }
-  };
   // ROOT moves filled histograms away from the frame by half of the frame line width (integer division) and then also draws their outer
   // vertical edges (see TGraphPainter::PaintGrapHist): a frame line of width 1 has to stay 1, otherwise these edges would appear
   auto scaleFrameLineWidth = [&](Width_t width) { return (width <= 1) ? width : ScaleLineWidth(width); };
@@ -5065,14 +5069,12 @@ void PlotPainter::ApplyScale(TObject* obj, std::set<TObject*>& done, const std::
     pad->SetFrameLineWidth(scaleFrameLineWidth(pad->GetFrameLineWidth()));
     pad->SetFrameLineStyle(ScreenLineStyle(pad->GetFrameLineStyle()));
     pad->SetBorderSize(static_cast<Short_t>(std::lround(pad->GetBorderSize() * mScale)));
-    applyToList(pad->GetListOfPrimitives());
   }
   if (auto hist = dynamic_cast<TH1*>(obj)) {
     for (TAxis* axis : {hist->GetXaxis(), hist->GetYaxis(), hist->GetZaxis()}) {
       if (axis->GetLabelFont() % 10 == 3) axis->SetLabelSize(axis->GetLabelSize() * mScale);
       if (axis->GetTitleFont() % 10 == 3) axis->SetTitleSize(axis->GetTitleSize() * mScale);
     }
-    applyToList(hist->GetListOfFunctions());
   }
   if (auto gaxis = dynamic_cast<TGaxis*>(obj)) {  // e.g. the radial axis of a polar drawing: label and title size are its own members
     if (gaxis->GetLabelFont() % 10 == 3) gaxis->SetLabelSize(gaxis->GetLabelSize() * mScale);
@@ -5082,11 +5084,7 @@ void PlotPainter::ApplyScale(TObject* obj, std::set<TObject*>& done, const std::
     if (grid->GetPolarLabelFont() % 10 == 3) grid->SetPolarLabelSize(grid->GetPolarLabelSize() * mScale);
     if (grid->GetRadialLabelFont() % 10 == 3) grid->SetRadialLabelSize(grid->GetRadialLabelSize() * mScale);
   }
-  if (auto graph = dynamic_cast<TGraph*>(obj)) applyToList(graph->GetListOfFunctions());
-  if (auto multiGraph = dynamic_cast<TMultiGraph*>(obj)) applyToList(multiGraph->GetListOfGraphs());
-  if (auto stack = dynamic_cast<THStack*>(obj)) applyToList(stack->GetHists());
-  if (auto legend = dynamic_cast<TLegend*>(obj)) applyToList(legend->GetListOfPrimitives());
-  if (auto paveText = dynamic_cast<TPaveText*>(obj)) applyToList(paveText->GetListOfLines());
+  ForEachContained(obj, [&](TObject* item, const char* option) { ApplyScale(item, done, option); });
 }
 
 //**************************************************************************************************
