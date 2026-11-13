@@ -476,14 +476,14 @@ bool PrintRootFileContents(const string& inputPath)
     return false;
   }
   std::error_code existsError;
-  if (!util::is_remote(fileName) && !std::filesystem::exists(fileName, existsError)) {
+  if (util::is_missing_local_file(fileName, existsError)) {
     logger::error("Could not find file {}.", fileName);
     return false;
   }
   std::unique_ptr<TFile> inputFile;
   {
     auto quiet = util::ignore_root_messages_below(kFatal);  // a file that is not a ROOT file is reported below
-    inputFile.reset(TFile::Open(fileName.data(), "READ"));
+    inputFile = util::open_input_file(fileName);
   }
   if (!inputFile || inputFile->IsZombie()) {
     logger::error("Cannot read {}: srp print lists the contents of ROOT files.", fileName);

@@ -22,6 +22,7 @@
 #include <TClass.h>
 #include <TCollection.h>
 #include <TDirectory.h>
+#include <TFile.h>
 #include <TFolder.h>
 #include <THStack.h>
 #include <TKey.h>
@@ -29,10 +30,17 @@
 #include <TMultiGraph.h>
 
 #include <functional>
+#include <memory>
 #include <string>
 
 namespace SciRooPlot::util
 {
+// an input file opened for reading, through ROOT's plugin for the protocol of a remote one (XRootD, http ...); null if it cannot be opened
+inline std::unique_ptr<TFile> open_input_file(const std::string& fileName)
+{
+  return std::unique_ptr<TFile>(TFile::Open(fileName.data(), "READ"));
+}
+
 // directories, folders and collections (lists, arrays, maps, ...), stacks (their histograms) and multigraphs (their graphs)
 // are searched for data; everything else is data
 inline bool is_container(const TClass* cl)

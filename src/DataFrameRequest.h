@@ -201,7 +201,7 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
       node = node.Range(*dataInfo.entries.max);
     }
   }
-  // rows without values in these columns (no matching row in a tree joined by key) are skipped like filtered rows, after the entry range
+  // rows without values in these columns (no matching row in a joined tree) are skipped like filtered rows, after the entry range
   for (const auto& column : requiredColumns) {
     node = node.FilterAvailable(column);
   }

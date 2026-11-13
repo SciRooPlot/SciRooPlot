@@ -167,8 +167,6 @@ class PlotManager
   static std::string WildcardHint(const std::string& name, const std::string& group);
   static std::string UserDataFile(const std::string& projectName, const PlotManager* manager);
   static bool IsValidDataSourceName(const std::string& dataSource);
-  static std::string InputFileName(const std::string& filePart);
-  static std::unique_ptr<TFile> OpenInputFile(const std::string& fileName);
   void ForgetBufferedData(const std::string& dataSource);
   bool SaveDataToRootFile() const;
 

@@ -21,8 +21,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <optional>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -36,6 +38,25 @@ inline bool is_remote(const std::string& path)
   const size_t schemeEnd = path.find("://");
   if (schemeEnd == std::string::npos || schemeEnd == 0 || !std::isalpha(static_cast<unsigned char>(path[0]))) return false;
   return std::all_of(path.begin(), path.begin() + schemeEnd, [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '+' || c == '-' || c == '.'; });
+}
+
+// the file name of an input without the query of a remote file (for its file type)
+inline std::string input_file_name(const std::string& filePart)
+{
+  return is_remote(filePart) ? filePart.substr(0, filePart.find('?')) : filePart;
+}
+
+// an input that is a ROOT file (otherwise a table)
+inline bool is_root_input(const std::string& filePart)
+{
+  const std::string name = input_file_name(filePart);
+  return name.size() >= 5 && name.compare(name.size() - 5, 5, ".root") == 0;
+}
+
+// a local file that does not exist (whether a remote file exists shows when it is opened); ec tells why a file could not be checked
+inline bool is_missing_local_file(const std::string& fileName, std::error_code& ec)
+{
+  return !is_remote(fileName) && !std::filesystem::exists(fileName, ec);
 }
 
 // an input file.root:folder/sub is split after the .root ending (a directory in the path may contain ':', e.g. a time stamp, or

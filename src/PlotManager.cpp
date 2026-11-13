@@ -145,11 +145,15 @@ using util::filter_root_messages;
 using util::find_container_key;
 using util::for_each_item;
 using util::ignore_root_messages_below;
+using util::input_file_name;
 using util::is_container;
+using util::is_missing_local_file;
 using util::is_remote;
+using util::is_root_input;
 using util::key_inherits;
 using util::make_scope_guard;
 using util::open_directory;
+using util::open_input_file;
 using util::plural;
 using util::readable_class;
 using util::RegexMatcher;
@@ -416,18 +420,6 @@ bool PlotManager::IsValidDataSourceName(const string& dataSource)
     return false;
   }
   return true;
-}
-// the file name of an input without the query of a remote file (for its file type)
-string PlotManager::InputFileName(const string& filePart)
-{
-  return is_remote(filePart) ? filePart.substr(0, filePart.find('?')) : filePart;
-}
-// remote files go through TFile::Open, which picks ROOT's plugin for the protocol (XRootD, http ...);
-// local ones directly as before (TFile::Open gives local paths its URL treatment too, e.g. an archive member after '#')
-std::unique_ptr<TFile> PlotManager::OpenInputFile(const string& fileName)
-{
-  if (is_remote(fileName)) return std::unique_ptr<TFile>(TFile::Open(fileName.data(), "READ"));
-  return std::make_unique<TFile>(fileName.data(), "READ");
 }
 
 //**************************************************************************************************
@@ -773,7 +765,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
 
   // folders matching the (wildcard) path within a root file, e.g. DF_* or run*/sub
   auto expandFolders = [&](const string& fileName, const string& folderPattern) {
-    auto file = OpenInputFile(fileName);
+    auto file = open_input_file(fileName);
     if (!file || file->IsZombie()) {
       logger::warning("Cannot open input file {} (data source {}).", fileName, dataSource);
       return vector<string>{};
@@ -782,7 +774,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
   };
 
   auto addFile = [&](const string& filePart, const string& folderPart) {
-    const bool isRootFile = str_ends_with(InputFileName(filePart), ".root");
+    const bool isRootFile = is_root_input(filePart);
     if (isRestricted && !isRootFile) return;  // tables have no folders
     if (!isRootFile && is_remote(filePart)) {
       logger::warning("Skipping table {} (data source {}): tables can only be read from local files.", filePart, dataSource);
@@ -857,7 +849,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
 
     if (is_remote(filePart)) {
       const string url = expand_path(filePart).value_or("");
-      const string path = InputFileName(url);
+      const string path = input_file_name(url);
       const string query = url.substr(path.size());  // kept for every file found
       const string folderSuffix = (fileAndFolder.size() > 1) ? ":" + folderPart : "";
       if (!literal && path.find_first_of("*[") != string::npos) {
@@ -1851,16 +1843,16 @@ void PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
     // check if only a sub-folder in input file should be searched
     auto fileNamePath = split_input_path(input);
     string& fileName = fileNamePath[0];
-    if (!str_ends_with(InputFileName(fileName), ".root")) continue;
+    if (!is_root_input(fileName)) continue;
 
     if (fileName != openFile.name) {
       openFile.Close();
       std::error_code existsError;
-      if (!is_remote(fileName) && !std::filesystem::exists(fileName, existsError)) {
+      if (is_missing_local_file(fileName, existsError)) {
         logger::warning("Input file {} not found{} (data source {}).", fileName, existsError ? " (" + existsError.message() + ")" : "", baseSource);
         continue;
       }
-      openFile.file = OpenInputFile(fileName);
+      openFile.file = open_input_file(fileName);
       if (!openFile.file || openFile.file->IsZombie()) {
         logger::warning("Cannot open input file {} (data source {}).", fileName, baseSource);
         openFile.file.reset();
@@ -3801,8 +3793,8 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
     const auto fileNamePath = split_input_path(expand_path(inputRaw).value_or(""));
     const string& fileName = fileNamePath[0];
     std::error_code existsError;
-    if (!str_ends_with(InputFileName(fileName), ".root") || (!is_remote(fileName) && !std::filesystem::exists(fileName, existsError))) continue;
-    auto file = OpenInputFile(fileName);
+    if (!is_root_input(fileName) || is_missing_local_file(fileName, existsError)) continue;
+    auto file = open_input_file(fileName);
     if (!file || file->IsZombie()) continue;
     TDirectory* dir = file.get();
     if (fileNamePath.size() > 1) dir = subDirectory(dir, fileNamePath[1]);
@@ -3829,7 +3821,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
   map<string, std::unique_ptr<TFile>> openFiles;  // each file is opened only once for the following checks
   auto getTree = [&](const string& fileName, const string& treePath) -> TTree* {
     auto& file = openFiles[fileName];
-    if (!file) file = OpenInputFile(fileName);
+    if (!file) file = open_input_file(fileName);
     if (!file || file->IsZombie()) return nullptr;
     return file->Get<TTree>(treePath.data());
   };
@@ -3917,6 +3909,15 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     Long64_t mOffset{};
     Long64_t mNRows{};
   };
+  // the leaf of a top-level column with a single value per row (null if the tree has none), and whether it holds floating-point values
+  auto columnLeaf = [](const TTree* tree, const string& column) -> TLeaf* {
+    auto* branch = (tree) ? const_cast<TTree*>(tree)->GetBranch(column.data()) : nullptr;
+    return (branch && branch->GetNleaves() == 1) ? static_cast<TLeaf*>(branch->GetListOfLeaves()->At(0)) : nullptr;
+  };
+  auto isFloating = [](const TLeaf* leaf) {
+    const string type = leaf->GetTypeName();
+    return str_contains(type, "Float") || str_contains(type, "Double") || str_contains(type, "float") || str_contains(type, "double");
+  };
   auto joinedChain = std::make_shared<TChain>(join.GetAlias().data());
   const TTree* firstJoinedTree{};
   map<string, string> joinedTreeOf;  // join by an index column: part of the chain -> its joined tree, each as file|path
@@ -3967,12 +3968,10 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
   }
   if (!join.indexColumn.empty()) {
     // the index column holds a single integer per row
-    auto* branch = (firstTree) ? firstTree->GetBranch(join.indexColumn.data()) : nullptr;
-    auto* leaf = (branch && branch->GetNleaves() == 1) ? static_cast<TLeaf*>(branch->GetListOfLeaves()->At(0)) : nullptr;
+    auto* leaf = columnLeaf(firstTree, join.indexColumn);
     if (!leaf) return fmt::format("{} has no column {}", treeName, join.indexColumn);
-    const string type = leaf->GetTypeName();
-    if (str_contains(type, "Float") || str_contains(type, "Double") || str_contains(type, "float") || str_contains(type, "double") || leaf->GetLenStatic() > 1 || leaf->GetLeafCount()) {
-      return fmt::format("index column {} of {} is of type {}, but it must hold one integer per row", join.indexColumn, treeName, type);
+    if (isFloating(leaf) || leaf->GetLenStatic() > 1 || leaf->GetLeafCount()) {
+      return fmt::format("index column {} of {} is of type {}, but it must hold one integer per row", join.indexColumn, treeName, leaf->GetTypeName());
     }
     if (joinedTreeOf.empty()) return fmt::format("it has no rows in any input of {}", treeName);
     joinedChain->SetTreeIndex(new RowIndex(joinedChain.get(), join.indexColumn, std::move(joinedTreeOf)));  // owned by the chain
@@ -3980,15 +3979,11 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     for (const auto& key : join.keys) {
       for (const auto* tree : {static_cast<const TTree*>(firstTree), firstJoinedTree}) {
         // keys are top-level columns with a single value, the join filter addresses the first one as alias.key
-        auto* branch = (tree) ? const_cast<TTree*>(tree)->GetBranch(key.data()) : nullptr;
-        auto* leaf = (branch && branch->GetNleaves() == 1) ? static_cast<TLeaf*>(branch->GetListOfLeaves()->At(0)) : nullptr;
+        auto* leaf = columnLeaf(tree, key);
         const string treeDescription = (tree == firstTree) ? treeName : join.tree;
         if (!leaf) return fmt::format("{} has no column {}", treeDescription, key);
         // the values are compared as integers
-        const string type = leaf->GetTypeName();
-        if (str_contains(type, "Float") || str_contains(type, "Double") || str_contains(type, "float") || str_contains(type, "double")) {
-          return fmt::format("key column {} of {} is of type {}, but keys must be integers", key, treeDescription, type);
-        }
+        if (isFloating(leaf)) return fmt::format("key column {} of {} is of type {}, but keys must be integers", key, treeDescription, leaf->GetTypeName());
       }
     }
     auto index = [&]() {
@@ -4100,7 +4095,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   // errors that only show up while reading may come from inputs of a chained tree with a different structure
   const string chainHint = (inputsDescription.empty()) ? "" : fmt::format(" (the tree is chained from {}: do all inputs of the data source have the same columns?)", inputsDescription);
   optional<ULong64_t> nEntries;
-  optional<ULong64_t> nUnmatched;  // rows skipped since a tree joined by key has no matching row
+  optional<ULong64_t> nUnmatched;  // rows skipped since a joined tree has no matching row
   uint32_t nPasses{};
   uint32_t nRequests{};
   vector<std::pair<const data_info_t*, std::pair<optional<ULong64_t>, ULong64_t>>> entryCounts;  // (entries before filter, after filter)
@@ -4157,17 +4152,18 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       auto nEntriesTotal = df->Count();
       auto passGuard = make_scope_guard([&]() { nPasses += df->GetNRuns(); });
 
-      // rows without a matching row in a tree joined by key are skipped (its columns have no values for them)
-      vector<string> joinKeyColumns;
+      // rows without a matching row in a joined tree are skipped (its columns have no values for them): a column of each tree joined by
+      // key or by an index column whose value is missing for those rows
+      vector<string> matchColumns;
       if (joins) {
         for (const auto& join : *joins) {
-          if (!join.keys.empty()) joinKeyColumns.push_back(join.GetAlias() + "." + join.keys[0]);
+          if (!join.keys.empty()) matchColumns.push_back(join.GetAlias() + "." + join.keys[0]);
           // joined by an index column: any column of the joined tree has no value without a match
           if (!join.indexColumn.empty()) {
             const string prefix = join.GetAlias() + ".";
             for (const auto& column : df->GetColumnNames()) {
               if (str_starts_with(column, prefix)) {
-                joinKeyColumns.push_back(column);
+                matchColumns.push_back(column);
                 break;
               }
             }
@@ -4181,8 +4177,8 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       }
       ROOT::RDF::RNode matched = base;
       optional<ROOT::RDF::RResultPtr<ULong64_t>> nMatched;
-      if (!joinKeyColumns.empty()) {
-        for (const auto& column : joinKeyColumns) {
+      if (!matchColumns.empty()) {
+        for (const auto& column : matchColumns) {
           matched = matched.FilterAvailable(column);
         }
         nMatched = matched.Count();
@@ -4195,7 +4191,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           // the requests share the filter on the matching rows (evaluated once per row), except those with an entry range:
           // their range refers to all rows of the tree, so they apply the filter after it
           const bool hasEntryRange = info->entries.max.has_value();
-          if (request.Prepare((hasEntryRange) ? base : matched, (hasEntryRange) ? joinKeyColumns : vector<string>{})) {
+          if (request.Prepare((hasEntryRange) ? base : matched, (hasEntryRange) ? matchColumns : vector<string>{})) {
             requests.push_back(std::move(request));
           } else {
             rejected.push_back(info);
