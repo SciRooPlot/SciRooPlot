@@ -303,57 +303,9 @@ int RunCommand(const string& command, const string& project, const string& prope
     row("screenscale", fmt::format("{}", config.ScreenScale()));
     row("bitmapscale", fmt::format("{}", config.BitmapScale()));
     row("current project", config.CurrentProject().empty() ? "none" : config.CurrentProject());
-  } else if (command == "color") {
-    if (auto colorMode = Config::ParseColorMode(project)) {
-      Config::GetMutable().SetColor(*colorMode);
-    } else {
-      logger::error("Invalid color '{}' (bright | dark | off).", project);
-      return 1;
-    }
-  } else if (command == "verbosity") {
-    if (auto logLevel = Config::ParseLogLevel(project)) {
-      Config::GetMutable().SetVerbosity(*logLevel);
-    } else {
-      logger::error("Invalid verbosity '{}' (debug | log | info | warning | error | silent).", project);
-      return 1;
-    }
-  } else if (command == "plotmode") {
-    if (project != "list" && !is_valid_plot_mode(project)) {
-      logger::error("Invalid plotmode '{}' (srp help lists the modes).", project);
-      return 1;
-    }
-    Config::GetMutable().SetPlotMode(project);
-  } else if (command == "matchmode") {
-    string matchMode = project;
-    if (matchMode == "exact") {
-      Config::GetMutable().SetMatchContains(false);
-    } else if (matchMode == "contains") {
-      Config::GetMutable().SetMatchContains(true);
-    } else {
-      logger::error("Invalid matchmode '{}' (exact | contains).", matchMode);
-      return 1;
-    }
-  } else if (command == "matchcase") {
-    string matchCase = project;
-    if (matchCase == "sensitive") {
-      Config::GetMutable().SetMatchCaseInsensitive(false);
-    } else if (matchCase == "insensitive") {
-      Config::GetMutable().SetMatchCaseInsensitive(true);
-    } else {
-      logger::error("Invalid matchcase '{}' (sensitive | insensitive).", matchCase);
-      return 1;
-    }
-  } else if (command == "screenscale" || command == "bitmapscale") {
-    const auto scale = Config::ParseScale(project);
-    if (!scale) {
-      logger::error("Invalid {} '{}' (positive number, e.g. 1.5).", command, project);
-      return 1;
-    }
-    if (command == "screenscale") {
-      Config::GetMutable().SetScreenScale(*scale);
-    } else {
-      Config::GetMutable().SetBitmapScale(*scale);
-    }
+  } else if (command == "color" || command == "verbosity" || command == "plotmode" || command == "matchmode" || command == "matchcase" || command == "screenscale" ||
+             command == "bitmapscale") {
+    if (!Config::GetMutable().SetSetting(command, project)) return 1;
   } else if (command == "info") {
     auto getenv = [](const char* name) {
       const char* value = std::getenv(name);

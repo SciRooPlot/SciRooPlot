@@ -41,14 +41,9 @@ class Config
 
   using LogLevel = logger::detail::level;
   static std::string LogLevelName(int level);
-  static std::optional<int> ParseLogLevel(const std::string& name);
 
   using ColorMode = logger::detail::color_mode;
   static std::string ColorModeName(int mode);
-  static std::optional<int> ParseColorMode(const std::string& name);
-
-  // a screen or bitmap scale: a finite positive number
-  static std::optional<double> ParseScale(const std::string& value);
 
   int Verbosity() const { return mLogLevel; }
   int Color() const { return mColorMode; }
@@ -76,14 +71,8 @@ class Config
   const std::string& CurrentProject() const { return mCurrentProject; }
   bool ProjectsFileUnreadable() const { return mProjectsUnreadable; }  // projects.info exists but could not be read
 
-  void SetVerbosity(int logLevel);
-  void SetColor(int colorMode);
-  void SetPlotMode(const std::string& plotMode);
+  bool SetSetting(const std::string& key, const std::string& value);  // as the srp command of its name (false for a bad value, which is reported)
   bool SetProperty(const std::string& projectName, const std::string& property, const std::string& value);
-  void SetMatchCaseInsensitive(bool matchCaseInsensitive);
-  void SetMatchContains(bool matchContains);
-  void SetScreenScale(double screenScale);
-  void SetBitmapScale(double bitmapScale);
 
   bool Reset();  // false if a project could not be removed
   bool Clean();
@@ -98,6 +87,9 @@ class Config
   Config();
   static Config& Instance();
   void LoadConfig();
+  static std::optional<int> ParseLogLevel(const std::string& name);
+  static std::optional<int> ParseColorMode(const std::string& name);
+  static std::optional<double> ParseScale(const std::string& value);  // a screen or bitmap scale: a finite positive number
   std::optional<bool> ApplySetting(const std::string& key, const std::string& value);
   bool CheckProjectDir(const std::string& projectName) const;  // true if the project's directory is inside the config path
   bool DeleteProjectDir(const std::string& projectName) const;

@@ -880,46 +880,22 @@ ptree Config::Project::GetTree() const
   return tree;
 }
 
-void Config::SetVerbosity(int logLevel)
+// sets a setting as the srp command of its name does; a bad value is reported and changes nothing
+bool Config::SetSetting(const string& key, const string& value)
 {
-  mLogLevel = logLevel;
-  mChangedSettings.insert("verbosity");
-}
-
-void Config::SetColor(int colorMode)
-{
-  mColorMode = colorMode;
-  mChangedSettings.insert("color");
-}
-
-void Config::SetPlotMode(const string& plotMode)
-{
-  mPlotMode = plotMode;
-  mChangedSettings.insert("plotmode");
-}
-
-void Config::SetMatchCaseInsensitive(bool matchCaseInsensitive)
-{
-  mMatchCaseInsensitive = matchCaseInsensitive;
-  mChangedSettings.insert("matchcase");
-}
-
-void Config::SetMatchContains(bool matchContains)
-{
-  mMatchContains = matchContains;
-  mChangedSettings.insert("matchmode");
-}
-
-void Config::SetScreenScale(double screenScale)
-{
-  mScreenScale = screenScale;
-  mChangedSettings.insert("screenscale");
-}
-
-void Config::SetBitmapScale(double bitmapScale)
-{
-  mBitmapScale = bitmapScale;
-  mChangedSettings.insert("bitmapscale");
+  static const std::map<string, string> hints{{"verbosity", "debug | log | info | warning | error | silent"},
+                                              {"color", "bright | dark | off"},
+                                              {"plotmode", "srp help lists the modes"},
+                                              {"matchmode", "exact | contains"},
+                                              {"matchcase", "sensitive | insensitive"},
+                                              {"screenscale", "positive number, e.g. 1.5"},
+                                              {"bitmapscale", "positive number, e.g. 1.5"}};
+  if (!ApplySetting(key, value).value_or(false)) {
+    logger::error("Invalid {} '{}' ({}).", key, value, hints.at(key));
+    return false;
+  }
+  mChangedSettings.insert(key);
+  return true;
 }
 
 // the settings the logger of the public headers needs, without exposing the configuration itself
