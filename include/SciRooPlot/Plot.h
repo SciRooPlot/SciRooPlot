@@ -649,9 +649,13 @@ class Plot::Pad : public FillSetters<Pad>
   auto& GetData() { return mData; }
   const auto& GetData() const { return mData; }
   auto& GetLegendBoxes() { return mLegendBoxes; }
+  const auto& GetLegendBoxes() const { return mLegendBoxes; }
   auto& GetTextBoxes() { return mTextBoxes; }
+  const auto& GetTextBoxes() const { return mTextBoxes; }
   auto& GetShapes() { return mShapes; }
+  const auto& GetShapes() const { return mShapes; }
   auto& GetImageBoxes() { return mImageBoxes; }
+  const auto& GetImageBoxes() const { return mImageBoxes; }
   static std::vector<std::tuple<float_t, float_t, float_t, float_t>> GradientEndpoints(const std::vector<std::pair<color_t, float_t>>& gradient);
   static bool CheckGradient(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<int32_t> nColors, const std::string& setter);
   uint16_t GetDataCount() const { return mData.size(); }

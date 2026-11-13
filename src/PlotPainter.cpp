@@ -5430,7 +5430,7 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
   const double_t nan = std::numeric_limits<double_t>::quiet_NaN();
   uint8_t shapeIndex{};
   std::map<kind_t, uint16_t> numberOfKind;  // over all layers: the nth shape of a kind is the nth call that added one
-  for (const auto& shape : const_cast<Plot::Pad&>(pad).GetShapes()) {
+  for (const auto& shape : pad.GetShapes()) {
     ++shapeIndex;
     const kind_t kind = shape->GetKind();
     const uint16_t number = ++numberOfKind[kind];
