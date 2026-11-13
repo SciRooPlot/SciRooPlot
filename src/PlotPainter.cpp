@@ -7065,9 +7065,17 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       return nullopt;
     }
   }
-  if (projInfo.dims.size() == 3 && !obj->InheritsFrom(THnBase::Class())) {
-    logger::error("Cannot project {} onto three axes: it is a 3d histogram (draw it without Project).", obj->GetName());
+  const bool isTHn = obj->InheritsFrom(THnBase::Class());
+  if (!isTHn && nDims > 1 && static_cast<int32_t>(projInfo.dims.size()) == nDims) {
+    logger::error("Cannot {} {} onto {} axes: it is a {}d histogram (draw it without {}).", (isProfile) ? "profile" : "project", obj->GetName(), (nDims == 3) ? "three" : "two", nDims,
+                  (isProfile) ? "Profile" : "Project");
     return nullopt;
+  }
+  for (const auto& range : projInfo.ranges) {
+    if (std::get<0>(range) >= nDims) {
+      logger::error("Cannot restrict axis {} of {}: it only has {}.", std::get<0>(range), obj->GetName(), plural(nDims, "dimension"));
+      return nullopt;
+    }
   }
   // the axis a profile averages: the named one, or else the only axis besides the kept ones (TH2 and TH3 profile it themselves below)
   std::optional<uint8_t> averagedAxis = projInfo.averagedAxis;
@@ -7080,7 +7088,6 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     logger::error("Cannot average axis {} of {}: it only has {}.", *averagedAxis, obj->GetName(), plural(nDims, "dimension"));
     return nullopt;
   }
-  const bool isTHn = obj->InheritsFrom(THnBase::Class());
   if (isProfile && !averagedAxis && isTHn) {
     const int32_t nLeft = nDims - static_cast<int32_t>(projInfo.dims.size());
     if (nLeft != 1) {
@@ -7169,10 +7176,6 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     vector<std::tuple<uint8_t, double_t, double_t>> averagedRanges;
     for (const auto& rangeTuple : projInfo.ranges) {
       const uint8_t rangeDim = std::get<0>(rangeTuple);
-      if (rangeDim >= nDims) {
-        logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
-        return nullopt;
-      }
       if (rangeDim == *averagedAxis) {
         averagedRanges.push_back(rangeTuple);
       } else if (!setRange(axes[rangeDim], std::get<1>(rangeTuple), std::get<2>(rangeTuple))) {
@@ -7201,13 +7204,8 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
 
   if (isTHn && !isProfile) {
     THnBase* histPtr = static_cast<THnBase*>(obj);
-    for (const auto& rangeTuple : projInfo.ranges) {
-      int32_t rangeDim = std::get<0>(rangeTuple);
-      if (rangeDim >= histPtr->GetNdimensions()) {
-        logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
-        return nullopt;
-      }
-      if (!setRange(histPtr->GetAxis(rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple))) return nullopt;
+    for (const auto& [rangeDim, start, end] : projInfo.ranges) {
+      if (!setRange(histPtr->GetAxis(rangeDim), start, end)) return nullopt;
     }
     if (projInfo.dims.size() == 3) {
       return histPtr->Projection(projInfo.dims[0], projInfo.dims[1], projInfo.dims[2]);
@@ -7218,13 +7216,8 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     }
   } else if (obj->InheritsFrom(TH3::Class())) {
     TH3* histPtr = static_cast<TH3*>(obj);
-    for (const auto& rangeTuple : projInfo.ranges) {
-      int32_t rangeDim = std::get<0>(rangeTuple);
-      if (rangeDim >= 3) {
-        logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
-        return nullopt;
-      }
-      if (!setRange(GetAxis(histPtr, rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple))) return nullopt;
+    for (const auto& [rangeDim, start, end] : projInfo.ranges) {
+      if (!setRange(GetAxis(histPtr, rangeDim), start, end)) return nullopt;
     }
     if (auto* profile = dynamic_cast<TProfile3D*>(histPtr)) {
       // a projection of a profile is the profile of the merged bins (TH3::Project3D would add up their means); Profile alike
@@ -7233,10 +7226,9 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
       const string other = (projInfo.dims[0] == 0) ? "y" : "x";
       std::unique_ptr<TProfile2D> merged(profile->Project3DProfile((other + target).data()));  // target horizontal
       merged->SetDirectory(nullptr);
-      return withTitles(merged->ProfileX((string(profile->GetName()) + "_p" + target).data()));
+      return withTitles(merged->ProfileX(("_p" + target).data()));
     }
-    if (projInfo.dims.size() == 2) {
-      // get string if it is "xy" or "yx" or "zx"...
+    if (projInfo.dims.size() == 2) {  // ROOT's order: y first
       if (isProfile) {
         return histPtr->Project3DProfile((GetAxisStr(projInfo.dims[1]) + GetAxisStr(projInfo.dims[0])).data());
       } else {
@@ -7255,38 +7247,20 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
     return nullopt;
   } else if (obj->InheritsFrom(TH2::Class())) {
     TH2* histPtr = static_cast<TH2*>(obj);
-    if (projInfo.dims.size() > 1) {
-      logger::error("Invalid dimension specified for projecting histogram {}.", obj->GetName());
-      return nullopt;
+    for (const auto& [rangeDim, start, end] : projInfo.ranges) {
+      if (!setRange(GetAxis(histPtr, rangeDim), start, end)) return nullopt;
     }
-    for (const auto& rangeTuple : projInfo.ranges) {
-      int32_t rangeDim = std::get<0>(rangeTuple);
-      if (rangeDim >= 2) {
-        logger::error("Invalid dimension specified for setting ranges of histogram {}.", obj->GetName());
-        return nullopt;
-      }
-      if (!setRange(GetAxis(histPtr, rangeDim), std::get<1>(rangeTuple), std::get<2>(rangeTuple))) return nullopt;
-    }
+    // one axis kept (two are refused above)
     if (auto* profile = dynamic_cast<TProfile2D*>(histPtr)) {
       // a projection of a profile is the profile of the merged bins (TH2::ProjectionX would add up their means); Profile alike
-      if (projInfo.dims[0] == 0) return withTitles(profile->ProfileX("_px"));
-      if (projInfo.dims[0] == 1) return withTitles(profile->ProfileY("_py"));
+      return withTitles((projInfo.dims[0] == 0) ? profile->ProfileX("_px") : profile->ProfileY("_py"));
     }
-    if (projInfo.dims[0] == 0) {
-      if (isProfile) {
-        return histPtr->ProfileX("_px");
-      } else {
-        return histPtr->ProjectionX("_px");
-      }
-    } else if (projInfo.dims[0] == 1) {
-      if (isProfile) {
-        return histPtr->ProfileY("_py");
-      } else {
-        return histPtr->ProjectionY("_py");
-      }
-    } else {
-      logger::error("Invalid dimension specified for {} from {} ({}).", (isProfile) ? "profile" : "projection", obj->GetName(), obj->ClassName());
+    if (isProfile) {
+      if (projInfo.dims[0] == 0) return histPtr->ProfileX("_px");
+      return histPtr->ProfileY("_py");
     }
+    if (projInfo.dims[0] == 0) return histPtr->ProjectionX("_px");
+    return histPtr->ProjectionY("_py");
   } else {
     logger::error("Cannot do {} for type {} ({}).", (isProfile) ? "profiles" : "projections", obj->ClassName(), obj->GetName());
   }
