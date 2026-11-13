@@ -165,7 +165,7 @@ using util::str_starts_with;
  */
 //**************************************************************************************************
 PlotManager::PlotManager(const string& projectName)
-  : mProjectName(projectName), mUserDataFile((Config::Get().Path().empty()) ? string{} : (((mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName)) / (mProjectName.empty() ? "UserData_" + std::to_string(gSystem->GetPid()) + "_" + std::to_string(reinterpret_cast<std::uintptr_t>(this)) + ".root" : string{"UserData.root"})).string())
+  : mProjectName(projectName), mUserDataFile(UserDataFile(projectName, this))
 {
   // the name is a folder of the config path, as for srp add
   if (auto illegal = find_illegal_name_char(projectName)) logger::throw_invalid_argument("Project name '{}' contains illegal character '{}'.", projectName, *illegal);
@@ -176,6 +176,20 @@ PlotManager::PlotManager(const string& projectName)
   if (!projectName.empty() && Config::Get().Exists(projectName)) {
     mOutputDirectory = Config::Get().OutputDir(projectName);
   }
+}
+
+//**************************************************************************************************
+/**
+ * The file keeping the in-memory inputs of AddDataSource: UserData.root of the project, without a project a file of this manager in the
+ * config path (removed with it); empty without a valid config path.
+ */
+//**************************************************************************************************
+string PlotManager::UserDataFile(const string& projectName, const PlotManager* manager)
+{
+  const auto& configPath = Config::Get().Path();
+  if (configPath.empty()) return "";
+  if (!projectName.empty()) return (Config::Get().ProjectPath(projectName) / "UserData.root").string();
+  return (configPath / fmt::format("UserData_{}_{}.root", gSystem->GetPid(), reinterpret_cast<std::uintptr_t>(manager))).string();
 }
 
 //**************************************************************************************************
@@ -456,7 +470,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
   }
   // started fresh once per process: a second PlotManager of the same project keeps the data the first one stored
   static std::set<string> startedFiles;
-  string mode = (mUserDataFileInitialized || startedFiles.count(mUserDataFile)) ? "UPDATE" : "RECREATE";
+  const string mode = (startedFiles.count(mUserDataFile)) ? "UPDATE" : "RECREATE";
   // the folder of the file: the project's folder, or without a project the config path, which does not exist before srp first ran
   std::error_code dirError;
   std::filesystem::create_directories(std::filesystem::path(mUserDataFile).parent_path(), dirError);
@@ -467,7 +481,6 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     logger::error("Could not save ROOT data to data source {}.", dataSource);
     return;
   }
-  mUserDataFileInitialized = true;
   startedFiles.insert(mUserDataFile);
 
   TDirectory* dir = file.GetDirectory(dataSource.data());

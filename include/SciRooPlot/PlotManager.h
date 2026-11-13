@@ -164,6 +164,7 @@ class PlotManager
   static void WriteInfoFile(const boost::property_tree::ptree& tree, const std::string& path, const std::string& content);
   static std::function<bool(const std::string&, const std::string&)> PlotMatcher(const std::string& name, const std::string& group);
   static std::string WildcardHint(const std::string& name, const std::string& group);
+  static std::string UserDataFile(const std::string& projectName, const PlotManager* manager);
   static bool IsValidDataSourceName(const std::string& dataSource);
   static std::string InputFileName(const std::string& filePart);
   static std::unique_ptr<TFile> OpenInputFile(const std::string& fileName);
@@ -174,7 +175,6 @@ class PlotManager
   std::string mPlotsRootFile{"Plots.root"};
   std::string mDataRootFile{"Data.root"};
   const std::string mUserDataFile;
-  bool mUserDataFileInitialized{false};
   std::map<std::string, std::shared_ptr<TCanvas>> mCanvasRegistry;
   std::string mOutputDirectory;
   std::vector<Plot> mPlots;
