@@ -68,14 +68,12 @@ inline bool is_user_defined(const std::string& dataSource)
 using data_ptr_t = std::variant<TH1*, TH2*, TH3*, TGraph*, TGraph2D*, TProfile*, TProfile2D*, TF3*, TF2*, TF1*>;
 
 // ROOT drawing options behind the aliases, per data type (an alias missing here cannot be drawn for that type)
-inline const std::map<draw_option_t, std::string> defaultDrawOptions_Hist2d{
+// the colour maps, 3d views and contours of 2d histograms, which 2d graphs and 2d functions have as well (drawn from a histogram)
+inline const std::map<draw_option_t, std::string> defaultDrawOptions_Map2d{
   {col, "COL"},
   {colz, "COLZ"},
   {col_clamped, "COL0"},  // contents below the minimum of the colour scale in its lowest colour, not left out (as above the maximum)
   {colz_clamped, "COLZ0"},
-  {colz_text, "COLZ TEXT"},  // the value written into each cell
-  {box, "BOX"},
-  {text, "TEXT"},
   {lego, "LEGO1 0"},
   {lego_col, "LEGO2 0"},
   {lego_colz, "LEGO2Z 0"},
@@ -100,6 +98,18 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Hist2d{
   {cont_fillz, "CONTZ"},
   {cont_smooth, "CONT4"},
   {cont_smoothz, "CONT4Z"},
+};
+// the aliases of a 2d type: those of the maps and its own
+inline std::map<draw_option_t, std::string> with_maps_2d(std::map<draw_option_t, std::string> own)
+{
+  own.insert(defaultDrawOptions_Map2d.begin(), defaultDrawOptions_Map2d.end());
+  return own;
+}
+
+inline const std::map<draw_option_t, std::string> defaultDrawOptions_Hist2d = with_maps_2d({
+  {colz_text, "COLZ TEXT"},  // the value written into each cell
+  {box, "BOX"},
+  {text, "TEXT"},
   {candle, "CANDLEX2"},                  // box, median, whiskers up to 1.5 IQR, outliers
   {candle_minmax, "CANDLEX1"},           // whiskers up to the extreme values, mean as circle
   {candle_mean, "CANDLEX3"},             // candle with the mean as circle
@@ -109,7 +119,7 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Hist2d{
   {candle_meanline, "CANDLEX(111101)"},  // box, mean as line (no median), whiskers up to the extreme values, outliers
   {violin, "VIOLINX2"},
   {violin_minmax, "VIOLINX1"},
-};
+});
 
 // 3d histograms are drawn in 3d: a box per cell with a volume following the content (box), all cells as equal boxes coloured by the
 // content (col, colz), or the iso surface at the mean content of the cells (iso)
@@ -180,35 +190,7 @@ inline const std::set<draw_option_t> aliasesFilling{hist, hist_open, hist_clippe
 // the grid instead of the data, candles and violins a distribution that does not exist. Only graphs have their points and triangles:
 // the Delaunay triangles as a filled surface (with the data's fill colour), as wire frame, or coloured by z, and the points as markers
 // (points_col: coloured by z), all in 3d
-inline const std::map<draw_option_t, std::string> defaultDrawOptions_Graph2d{
-  {col, "COL"},
-  {colz, "COLZ"},
-  {col_clamped, "COL0"},
-  {colz_clamped, "COLZ0"},
-  {lego, "LEGO1 0"},
-  {lego_col, "LEGO2 0"},
-  {lego_colz, "LEGO2Z 0"},
-  {lego_noborders, "LEGO3 0"},
-  {surf, "SURF"},
-  {surf_col, "SURF1"},
-  {surf_colz, "SURF1Z"},
-  {surf_fill, "SURF2"},
-  {surf_fillz, "SURF2Z"},
-  {surf_contours, "SURF3"},
-  {surf_shaded, "SURF4"},
-  {col_polar, "COL POL"},
-  {colz_polar, "COLZ POL"},
-  {lego_polar, "LEGO1 0 POL"},
-  {lego_col_polar, "LEGO2 0 POL"},
-  {surf_polar, "SURF POL"},
-  {surf_col_polar, "SURF1 POL"},
-  {cont, "CONT3"},
-  {cont_col, "CONT1"},
-  {cont_colz, "CONT1Z"},
-  {cont_fill, "CONT0"},
-  {cont_fillz, "CONTZ"},
-  {cont_smooth, "CONT4"},
-  {cont_smoothz, "CONT4Z"},
+inline const std::map<draw_option_t, std::string> defaultDrawOptions_Graph2d = with_maps_2d({
   {triangles, "TRI"},
   {triangles_wire, "TRIW"},
   {triangles_col, "TRI1"},
@@ -221,38 +203,9 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Graph2d{
   {points_col, "PCOL AXIS"},
   {points_colz, "PCOLZ AXIS"},
   {line, "LINE AXIS"},
-};
+});
 
-inline const std::map<draw_option_t, std::string> defaultDrawOptions_Func2d{
-  {col, "COL"},
-  {colz, "COLZ"},
-  {col_clamped, "COL0"},
-  {colz_clamped, "COLZ0"},
-  {lego, "LEGO1 0"},
-  {lego_col, "LEGO2 0"},
-  {lego_colz, "LEGO2Z 0"},
-  {lego_noborders, "LEGO3 0"},
-  {surf, "SURF"},
-  {surf_col, "SURF1"},
-  {surf_colz, "SURF1Z"},
-  {surf_fill, "SURF2"},
-  {surf_fillz, "SURF2Z"},
-  {surf_contours, "SURF3"},
-  {surf_shaded, "SURF4"},
-  {col_polar, "COL POL"},
-  {colz_polar, "COLZ POL"},
-  {lego_polar, "LEGO1 0 POL"},
-  {lego_col_polar, "LEGO2 0 POL"},
-  {surf_polar, "SURF POL"},
-  {surf_col_polar, "SURF1 POL"},
-  {cont, "CONT3"},
-  {cont_col, "CONT1"},
-  {cont_colz, "CONT1Z"},
-  {cont_fill, "CONT0"},
-  {cont_fillz, "CONTZ"},
-  {cont_smooth, "CONT4"},
-  {cont_smoothz, "CONT4Z"},
-};
+inline const std::map<draw_option_t, std::string> defaultDrawOptions_Func2d = with_maps_2d({});
 
 // 3d functions are drawn as the surface f(x, y, z) = 0, ROOT's only drawing of them (TF3::Paint), as the iso surface of 3d histograms
 inline const std::map<draw_option_t, std::string> defaultDrawOptions_Func3d{

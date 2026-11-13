@@ -211,10 +211,12 @@ def drawing_options(aliases):
     """alias -> ROOT option string per data type, from the maps in src/PlotPainter.h"""
     text = (ROOT / "src/PlotPainter.h").read_text()
     maps = {}
-    for name in ("Hist", "Graph", "Func", "Hist2d", "Graph2d", "Func2d", "Hist3d", "Func3d"):
-        block = text[text.index(f"defaultDrawOptions_{name}{{") :]
-        block = block[: block.index("};")]
+    for name in ("Map2d", "Hist", "Graph", "Func", "Hist2d", "Graph2d", "Func2d", "Hist3d", "Func3d"):
+        block = text[re.search(rf"defaultDrawOptions_{name}(\{{| = )", text).start() :]
+        block = block[: re.search(r"\}\)?;", block).start()]
         maps[name] = {alias: option for alias, option in re.findall(r"\{(\w+), \"([^\"]*)\"\}", block)}
+        if name.endswith("2d") and name != "Map2d":  # 2d types: the aliases of the maps and their own
+            maps[name] = {**maps["Map2d"], **maps[name]}
     out = [
         "# SciRooPlot drawing option aliases",
         "",
