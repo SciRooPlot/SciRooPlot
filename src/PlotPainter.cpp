@@ -1516,14 +1516,10 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   auto& pad = padState.pad;
   auto& pad_ptr = padState.pad_ptr;
   auto& padSetup = padState.padSetup;
-  auto& textFont = padState.textFont;
-  auto& textSize = padState.textSize;
   auto& activeTextFormat = padState.activeTextFormat;
   auto& hasRefFunc = padState.hasRefFunc;
   auto& axisHist_ptr = padState.axisHist_ptr;
-  auto& polargram = padState.polargram;
   auto& padProjection = padState.padProjection;
-  auto& statsBoxes = padState.statsBoxes;
   auto& drawOption = padState.drawOption;
   auto& dataIndex = padState.dataIndex;
   auto& mapDrawn = padState.mapDrawn;
@@ -2018,106 +2014,8 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     } else {
       data_ptr->Draw(drawOption.data());
     }
-    if (showStats) {
-      // ROOT makes the box when painting a histogram: one drawn as graph is drawn for this paint only
-      if constexpr (!is_hist<data_type>()) statsHist->Draw("HIST SAMES");
-      // ROOT fills the box with the global setting when painting the histogram: the requested one is set for this paint only
-      // (with gPad hidden, since TStyle::SetOptStat would otherwise make all stats boxes of the pad follow the global setting and repaint the pad)
-      auto setOptStat = [](auto mode) {
-        TVirtualPad::TContext noPad(nullptr);
-        gStyle->SetOptStat(mode);
-      };
-      const Int_t userOptStat = gStyle->GetOptStat();
-      setOptStat((*data->GetStatsFormat() + ((data->GetStatsTitle()) ? "n" : "")).data());
-      statsHist->SetStats(true);
-      pad_ptr->Modified();
-      pad_ptr->Update();
-      setOptStat(userOptStat);
-      if constexpr (!is_hist<data_type>()) pad_ptr->GetListOfPrimitives()->Remove(statsHist);
-      // the box becomes a plain object of the pad with fixed content: so it does not depend on the global setting when painted again
-      // and is not refilled from another histogram (the web canvas does so for boxes called "stats")
-      if (auto* stats = dynamic_cast<TPaveStats*>(statsHist->GetListOfFunctions()->FindObject("stats"))) {
-        statsHist->GetListOfFunctions()->Remove(stats);
-        stats->SetParent(nullptr);
-        statsHist->SetStats(false);
-        stats->SetName(("stats_" + std::to_string(dataIndex - hasRefFunc)).data());
-        if (const auto& title = data->GetStatsTitle()) {
-          string titleText = *title;
-          ReplacePlaceholders(titleText, statsHist);
-          DropEmptyGroups(titleText);
-          static_cast<TText*>(stats->GetListOfLines()->First())->SetTitle(titleText.data());  // instead of the name of the histogram
-        }
-        // without settings for the box: placed automatically, framed in the line colour of the data
-        auto statsBox = (data->GetStatsBox()) ? data->GetStatsBox() : std::make_shared<const Plot::Pad::StatsBox>();
-        stats->SetTextFont(statsBox->GetTextFont().value_or(textFont.value_or(43)));
-        stats->SetTextSize(statsBox->GetTextSize().value_or(textSize.value_or(24.f)));
-        if (statsBox->GetTextColor()) stats->SetTextColor(statsBox->GetTextColor()->ToIndex());
-        if (statsBox->GetTextAlpha()) stats->SetTextColor(TColor::GetColorTransparent(stats->GetTextColor(), *statsBox->GetTextAlpha()));
-        stats->SetLineColor(data_ptr->GetLineColor());
-        stats->SetLineWidth(1);
-        stats->SetBorderSize(1);
-        stats->SetFillStyle(0);
-        ApplyBoxStyle(*statsBox, stats);
-        statsBoxes.emplace_back(stats, statsBox);
-      } else {
-        logger::warning("ROOT did not create a statistics box for {}.", DataName(*data));
-      }
-    }
-    if (alias == points_text) {
-      // the values are written above the error bars (ROOT draws the bin contents of a histogram only when its errors are not drawn)
-      TLatex label;
-      // tilted as the values ROOT writes with TEXTnn (THistPainter::PaintText): from the point upwards, centred above it when upright
-      const float_t textAngle = std::clamp(data->GetTextAngle().value_or(0.f), 0.f, 90.f);
-      label.SetTextAngle(textAngle);
-      label.SetTextAlign((textAngle == 0.f) ? 21 : ((textAngle == 90.f) ? 12 : 11));
-      label.SetTextColor(data_ptr->GetMarkerColor());
-      if (textFont) label.SetTextFont(*textFont);
-      if (textSize) label.SetTextSize(*textSize);
-      const string format = "%" + data->GetTextFormat().value_or("g");
-      // a small gap between the end of the error bar and the value, so the text does not sit on the bar
-      const double_t gapY = 0.015 * (pad_ptr->GetUymax() - pad_ptr->GetUymin());
-      auto drawLabel = [&](double_t x, double_t y, double_t value) {
-        const bool logY = pad_ptr->GetLogy();
-        if (!logY || y > 0.) y = FromPad(((logY) ? std::log10(y) : y) + gapY, logY);
-        label.DrawLatex(x, y, TString::Format(format.data(), value).Data());
-      };
-      // only drawn points get a value: the labels, unlike the markers, are not clipped at the frame
-      const double_t frameMinX = FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx());
-      const double_t frameMaxX = FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx());
-      const double_t frameMinY = FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy());
-      const double_t frameMaxY = FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy());
-      auto inFrame = [&](double_t x, double_t y) { return x >= frameMinX && x <= frameMaxX && y >= frameMinY && y <= frameMaxY; };
-      if constexpr (is_hist_1d<data_type>()) {
-        // the drawn bins (data range, cut at the frame) and the y range of the data (its minimum and maximum)
-        const double_t minY = (data_ptr->GetMinimumStored() != -1111) ? data_ptr->GetMinimumStored() : -std::numeric_limits<double_t>::infinity();
-        const double_t maxY = (data_ptr->GetMaximumStored() != -1111) ? data_ptr->GetMaximumStored() : std::numeric_limits<double_t>::infinity();
-        for (int32_t bin = data_ptr->GetXaxis()->GetFirst(); bin <= data_ptr->GetXaxis()->GetLast(); ++bin) {
-          const double_t content = data_ptr->GetBinContent(bin);
-          if ((content == 0. && data_ptr->GetBinError(bin) == 0.) || content < minY || content > maxY || !inFrame(data_ptr->GetBinCenter(bin), content)) continue;
-          drawLabel(data_ptr->GetBinCenter(bin), content + data_ptr->GetBinError(bin), content);
-        }
-      } else if constexpr (is_graph_1d<data_type>()) {
-        if (polargram && data_ptr->InheritsFrom(TGraphPolar::Class())) {
-          // the points where TGraphPainter::PaintGraphPolar puts them: the radial range from the centre to the edge of the grid, the
-          // range of angles over a full turn, the points beyond the edge not drawn
-          const double_t unit = (polargram->IsDegree()) ? 180. / TMath::Pi() : ((polargram->IsGrad()) ? 100. / TMath::Pi() : 1.);
-          const double_t radialRange = polargram->GetRMax() - polargram->GetRMin();
-          const double_t turn = (polargram->GetTMax() - polargram->GetTMin()) / TMath::TwoPi();
-          for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
-            const double_t radius = (data_ptr->GetPointY(i) - polargram->GetRMin()) / radialRange;
-            if (!(radius >= 0. && radius <= 1.)) continue;
-            const double_t angle = unit * (data_ptr->GetPointX(i) - polargram->GetTMin()) / turn;
-            drawLabel(radius * std::cos(angle), radius * std::sin(angle), data_ptr->GetPointY(i));
-          }
-        } else {
-          // points outside the data range are removed already
-          for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
-            if (!inFrame(data_ptr->GetPointX(i), data_ptr->GetPointY(i))) continue;
-            drawLabel(data_ptr->GetPointX(i), data_ptr->GetPointY(i) + std::max(data_ptr->GetErrorYhigh(i), 0.), data_ptr->GetPointY(i));  // -1 for graphs without errors
-          }
-        }
-      }
-    }
+    if (showStats) DrawStatsBox(state, data_ptr, statsHist);
+    if (alias == points_text) DrawPointValues(state, data_ptr);
 
     // in case a label was specified for the data, add it to corresponding legend
     const auto& legendBoxVector = pad.GetLegendBoxes();
@@ -2141,6 +2039,141 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   }
   ++dataIndex;
   drawOption = "SAME ";  // next data should be drawn to same pad
+}
+
+//**************************************************************************************************
+/**
+ * Draws the statistics box of data (statsHist: the drawn histogram, or the one a graph was converted from): made by ROOT when painting,
+ * then kept as a plain object of the pad and placed once all data of the pad are drawn (see FinishPad).
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::DrawStatsBox(item_state_t& state, T data_ptr, TH1* statsHist)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& textFont = padState.textFont;
+  auto& textSize = padState.textSize;
+  auto& hasRefFunc = padState.hasRefFunc;
+  auto& statsBoxes = padState.statsBoxes;
+  auto& dataIndex = padState.dataIndex;
+
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  // ROOT makes the box when painting a histogram: one drawn as graph is drawn for this paint only
+  if constexpr (!is_hist<data_type>()) statsHist->Draw("HIST SAMES");
+  // ROOT fills the box with the global setting when painting the histogram: the requested one is set for this paint only
+  // (with gPad hidden, since TStyle::SetOptStat would otherwise make all stats boxes of the pad follow the global setting and repaint the pad)
+  auto setOptStat = [](auto mode) {
+    TVirtualPad::TContext noPad(nullptr);
+    gStyle->SetOptStat(mode);
+  };
+  const Int_t userOptStat = gStyle->GetOptStat();
+  setOptStat((*data->GetStatsFormat() + ((data->GetStatsTitle()) ? "n" : "")).data());
+  statsHist->SetStats(true);
+  pad_ptr->Modified();
+  pad_ptr->Update();
+  setOptStat(userOptStat);
+  if constexpr (!is_hist<data_type>()) pad_ptr->GetListOfPrimitives()->Remove(statsHist);
+  // the box becomes a plain object of the pad with fixed content: so it does not depend on the global setting when painted again
+  // and is not refilled from another histogram (the web canvas does so for boxes called "stats")
+  if (auto* stats = dynamic_cast<TPaveStats*>(statsHist->GetListOfFunctions()->FindObject("stats"))) {
+    statsHist->GetListOfFunctions()->Remove(stats);
+    stats->SetParent(nullptr);
+    statsHist->SetStats(false);
+    stats->SetName(("stats_" + std::to_string(dataIndex - hasRefFunc)).data());
+    if (const auto& title = data->GetStatsTitle()) {
+      string titleText = *title;
+      ReplacePlaceholders(titleText, statsHist);
+      DropEmptyGroups(titleText);
+      static_cast<TText*>(stats->GetListOfLines()->First())->SetTitle(titleText.data());  // instead of the name of the histogram
+    }
+    // without settings for the box: placed automatically, framed in the line colour of the data
+    auto statsBox = (data->GetStatsBox()) ? data->GetStatsBox() : std::make_shared<const Plot::Pad::StatsBox>();
+    stats->SetTextFont(statsBox->GetTextFont().value_or(textFont.value_or(43)));
+    stats->SetTextSize(statsBox->GetTextSize().value_or(textSize.value_or(24.f)));
+    if (statsBox->GetTextColor()) stats->SetTextColor(statsBox->GetTextColor()->ToIndex());
+    if (statsBox->GetTextAlpha()) stats->SetTextColor(TColor::GetColorTransparent(stats->GetTextColor(), *statsBox->GetTextAlpha()));
+    stats->SetLineColor(data_ptr->GetLineColor());
+    stats->SetLineWidth(1);
+    stats->SetBorderSize(1);
+    stats->SetFillStyle(0);
+    ApplyBoxStyle(*statsBox, stats);
+    statsBoxes.emplace_back(stats, statsBox);
+  } else {
+    logger::warning("ROOT did not create a statistics box for {}.", DataName(*data));
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Writes the values of 1d data drawn with points_text above its points (above the error bars).
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::DrawPointValues(item_state_t& state, T data_ptr)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& textFont = padState.textFont;
+  auto& textSize = padState.textSize;
+  auto& polargram = padState.polargram;
+
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  // the values are written above the error bars (ROOT draws the bin contents of a histogram only when its errors are not drawn)
+  TLatex label;
+  // tilted as the values ROOT writes with TEXTnn (THistPainter::PaintText): from the point upwards, centred above it when upright
+  const float_t textAngle = std::clamp(data->GetTextAngle().value_or(0.f), 0.f, 90.f);
+  label.SetTextAngle(textAngle);
+  label.SetTextAlign((textAngle == 0.f) ? 21 : ((textAngle == 90.f) ? 12 : 11));
+  label.SetTextColor(data_ptr->GetMarkerColor());
+  if (textFont) label.SetTextFont(*textFont);
+  if (textSize) label.SetTextSize(*textSize);
+  const string format = "%" + data->GetTextFormat().value_or("g");
+  // a small gap between the end of the error bar and the value, so the text does not sit on the bar
+  const double_t gapY = 0.015 * (pad_ptr->GetUymax() - pad_ptr->GetUymin());
+  auto drawLabel = [&](double_t x, double_t y, double_t value) {
+    const bool logY = pad_ptr->GetLogy();
+    if (!logY || y > 0.) y = FromPad(((logY) ? std::log10(y) : y) + gapY, logY);
+    label.DrawLatex(x, y, TString::Format(format.data(), value).Data());
+  };
+  // only drawn points get a value: the labels, unlike the markers, are not clipped at the frame
+  const double_t frameMinX = FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx());
+  const double_t frameMaxX = FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx());
+  const double_t frameMinY = FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy());
+  const double_t frameMaxY = FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy());
+  auto inFrame = [&](double_t x, double_t y) { return x >= frameMinX && x <= frameMaxX && y >= frameMinY && y <= frameMaxY; };
+  if constexpr (is_hist_1d<data_type>()) {
+    // the drawn bins (data range, cut at the frame) and the y range of the data (its minimum and maximum)
+    const double_t minY = (data_ptr->GetMinimumStored() != -1111) ? data_ptr->GetMinimumStored() : -std::numeric_limits<double_t>::infinity();
+    const double_t maxY = (data_ptr->GetMaximumStored() != -1111) ? data_ptr->GetMaximumStored() : std::numeric_limits<double_t>::infinity();
+    for (int32_t bin = data_ptr->GetXaxis()->GetFirst(); bin <= data_ptr->GetXaxis()->GetLast(); ++bin) {
+      const double_t content = data_ptr->GetBinContent(bin);
+      if ((content == 0. && data_ptr->GetBinError(bin) == 0.) || content < minY || content > maxY || !inFrame(data_ptr->GetBinCenter(bin), content)) continue;
+      drawLabel(data_ptr->GetBinCenter(bin), content + data_ptr->GetBinError(bin), content);
+    }
+  } else if constexpr (is_graph_1d<data_type>()) {
+    if (polargram && data_ptr->InheritsFrom(TGraphPolar::Class())) {
+      // the points where TGraphPainter::PaintGraphPolar puts them: the radial range from the centre to the edge of the grid, the
+      // range of angles over a full turn, the points beyond the edge not drawn
+      const double_t unit = (polargram->IsDegree()) ? 180. / TMath::Pi() : ((polargram->IsGrad()) ? 100. / TMath::Pi() : 1.);
+      const double_t radialRange = polargram->GetRMax() - polargram->GetRMin();
+      const double_t turn = (polargram->GetTMax() - polargram->GetTMin()) / TMath::TwoPi();
+      for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
+        const double_t radius = (data_ptr->GetPointY(i) - polargram->GetRMin()) / radialRange;
+        if (!(radius >= 0. && radius <= 1.)) continue;
+        const double_t angle = unit * (data_ptr->GetPointX(i) - polargram->GetTMin()) / turn;
+        drawLabel(radius * std::cos(angle), radius * std::sin(angle), data_ptr->GetPointY(i));
+      }
+    } else {
+      // points outside the data range are removed already
+      for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
+        if (!inFrame(data_ptr->GetPointX(i), data_ptr->GetPointY(i))) continue;
+        drawLabel(data_ptr->GetPointX(i), data_ptr->GetPointY(i) + std::max(data_ptr->GetErrorYhigh(i), 0.), data_ptr->GetPointY(i));  // -1 for graphs without errors
+      }
+    }
+  }
 }
 
 //**************************************************************************************************

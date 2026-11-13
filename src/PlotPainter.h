@@ -311,6 +311,10 @@ class PlotPainter
   template <typename T>
   void DrawItem(item_state_t& state, T data_ptr, std::optional<draw_option_t> optionAlias);
   template <typename T>
+  void DrawStatsBox(item_state_t& state, T data_ptr, TH1* statsHist);
+  template <typename T>
+  void DrawPointValues(item_state_t& state, T data_ptr);
+  template <typename T>
   void DataRanges(item_state_t& state, T& data_ptr, draw_option_t alias, bool projected);
   template <typename T>
   void ApplyDataStyle(item_state_t& state, T data_ptr, draw_option_t alias);
