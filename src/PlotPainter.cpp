@@ -1781,7 +1781,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     // data ranges
     const bool hasRangeX = data->GetMinRangeX() || data->GetMaxRangeX();
     const bool hasRangeY = data->GetMinRangeY() || data->GetMaxRangeY();
-    DataRanges(state, data_ptr, alias, projected, hasRangeX, hasRangeY);
+    DataRanges(state, data_ptr, alias, projected);
     // colour levels: the frame, whose colour scale is drawn (and from which COL drawn SAME takes its colours), takes those of the first
     // map of the pad (a 2d or 3d histogram, a 2d graph or a 2d function), the one it is made from, also fewer than ROOT's 20, so that the
     // scale shows the levels of the map; levels of later data (e.g. contour lines over a map) are their own, the frame takes them only if they are more
@@ -2149,10 +2149,12 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
  */
 //**************************************************************************************************
 template <typename T>
-void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, draw_option_t alias, bool projected, bool hasRangeX, bool hasRangeY)
+void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, draw_option_t alias, bool projected)
 {
   pad_state_t& padState = state.padState;
   auto& data = state.data;
+  const bool hasRangeX = data->GetMinRangeX() || data->GetMaxRangeX();
+  const bool hasRangeY = data->GetMinRangeY() || data->GetMaxRangeY();
   auto& pad_ptr = padState.pad_ptr;
   auto& frameSource = padState.frameSource;
   auto& axisHist_ptr = padState.axisHist_ptr;

@@ -307,10 +307,26 @@ class PlotPainter
  private:
   struct pad_state_t;   // the locals of GeneratePlot for one pad (PlotPainter.cpp)
   struct item_state_t;  // and those for the data item drawn
+  void FinishPad(pad_state_t& padState);
   template <typename T>
   void DrawItem(item_state_t& state, T data_ptr, std::optional<draw_option_t> optionAlias);
+  template <typename T>
+  void DataRanges(item_state_t& state, T& data_ptr, draw_option_t alias, bool projected);
+  template <typename T>
+  void ApplyDataStyle(item_state_t& state, T data_ptr, draw_option_t alias);
+  template <typename T>
+  void SetUpFrame(item_state_t& state, T data_ptr, const std::string& polarGridOption);
+  static void Paints3dGraph(const std::string& option, bool& triangles, bool& points);
+  static bool IsFlatPolar(const std::string& option);
+  static bool IsColorBoxes3d(const std::string& option);
+  static bool IsView3d(const std::string& option);
+  static std::pair<double_t, double_t> FuncRange(const item_state_t& state, char axisLabel, double_t frameMin, double_t frameMax, double_t funcMin, double_t funcMax,
+                                                 const std::optional<double_t>& userMin, const std::optional<double_t>& userMax);
+  static std::pair<double_t, double_t> FiniteRange(const item_state_t& state, TF1* func, double_t min, double_t max, bool forFrame);
   template <typename... Args>
   static void Warn(const item_state_t& state, Args&&... args);
+  static std::string DataName(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = std::nullopt);
+  static std::string DataName(const Plot::Pad::Data& data) { return DataName(data.GetName(), data.GetDataSource(), data.GetLegendLabel()); }
   template <typename ObjT>
   void DropStoredFunctions(item_state_t& state, ObjT* ptr, const char* reason);
   template <typename PtrT>
@@ -321,22 +337,6 @@ class PlotPainter
   bool PrepareRatioNumerator(item_state_t& state, data_ptr_t& numerator);
   template <typename T>
   void ProcessData(item_state_t& state, T&& data_ptr);
-  static void Paints3dGraph(const std::string& option, bool& triangles, bool& points);
-  static bool IsFlatPolar(const std::string& option);
-  static bool IsColorBoxes3d(const std::string& option);
-  static bool IsView3d(const std::string& option);
-  static std::string DataName(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = std::nullopt);
-  static std::string DataName(const Plot::Pad::Data& data) { return DataName(data.GetName(), data.GetDataSource(), data.GetLegendLabel()); }
-  static std::pair<double_t, double_t> FuncRange(const item_state_t& state, char axisLabel, double_t frameMin, double_t frameMax, double_t funcMin, double_t funcMax,
-                                                 const std::optional<double_t>& userMin, const std::optional<double_t>& userMax);
-  static std::pair<double_t, double_t> FiniteRange(const item_state_t& state, TF1* func, double_t min, double_t max, bool forFrame);
-  template <typename T>
-  void SetUpFrame(item_state_t& state, T data_ptr, const std::string& polarGridOption);
-  template <typename T>
-  void ApplyDataStyle(item_state_t& state, T data_ptr, draw_option_t alias);
-  template <typename T>
-  void DataRanges(item_state_t& state, T& data_ptr, draw_option_t alias, bool projected, bool hasRangeX, bool hasRangeY);
-  void FinishPad(pad_state_t& padState);
   static size_t FrameDataIndex(const std::vector<std::shared_ptr<Plot::Pad::Data>>& data, const data_buffer_t& dataBuffer);
   static TObject* Input(const std::string& source, const std::string& key, const data_buffer_t& dataBuffer);
   static TObject* Input(const Plot::Pad::Data& data, const data_buffer_t& dataBuffer) { return Input(data.GetDataSource(), data.GetName() + data.GetDataInfo().GetNameSuffix(), dataBuffer); }
