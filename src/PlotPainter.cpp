@@ -411,8 +411,8 @@ const vector<color_t>& PlotPainter::DefaultColors()
 
 //**************************************************************************************************
 /**
- * The locals of GeneratePlot for one pad that the steps drawing its data and finishing it share: references to them (they live in GeneratePlot),
- * bound to their names at the start of each step.
+ * The state of one pad that GeneratePlot, the steps drawing its data and FinishPad share (bound to local names at the start of each step):
+ * what GeneratePlot sets up for the pad, and what drawing its data builds up. Made with the first five members, the others start empty.
  */
 //**************************************************************************************************
 struct PlotPainter::pad_state_t {
@@ -421,50 +421,52 @@ struct PlotPainter::pad_state_t {
     uint16_t color, markerStyle, lineStyle, fillStyle;  // one colour entry per data item for marker, line and fill alike
   };
   Plot::Pad& padDefaults;
-  const fill_defaults_t& fillDefaults;
+  const fill_defaults_t& fillDefaults;  // the fill colours a data item takes when it sets none (see GeneratePlot)
   const data_buffer_t& dataBuffer;
-  bool& fail;
-  bool& anyView;
   Plot::Pad& pad;
   const uint8_t padID;
-  TPad*& pad_ptr;
-  vector<shared_ptr<Plot::Pad::Data>>& drawData;
-  string& padSetup;
-  optional<int16_t>& textFont;
-  optional<float_t>& textSize;
-  optional<color_t>& textColor;
-  optional<float_t>& textAlpha;
-  string& activeTextFormat;
-  bool& hasRefFunc;
-  const Plot::Pad::Data*& frameSource;
-  TH1*& axisHist_ptr;
-  bool& polarFrame;
-  TGraphPolargram*& polargram;
-  unique_ptr<TH1>& polarAxisHist;
-  string& padProjection;
-  bool& contentFrame;
-  vector<std::pair<unique_ptr<TPaveStats>, std::shared_ptr<const Plot::Pad::StatsBox>>>& statsBoxes;
-  vector<std::pair<TGraph*, bool>>& clippedSteps;
-  string& drawOption;
-  uint16_t& dataIndex;
-  bool& mapDrawn;
-  std::pair<bool, bool>& storedRangeZ;
-  optional<array<double_t, 4>>& frameFuncRange;
-  used_defaults_t& usedDefaults;
+  TPad* pad_ptr{};
+  vector<shared_ptr<Plot::Pad::Data>> drawData;  // the frame copy, the reference function (hasRefFunc) and the data of the pad
+  string padSetup;                               // run before anything of the pad is painted (palette, candle ranges, text format)
+  optional<int16_t> textFont;                    // the default text attributes of the pad, else of pad 0
+  optional<float_t> textSize;
+  optional<color_t> textColor;
+  optional<float_t> textAlpha;
+  string activeTextFormat{"g"};  // set by the pad's setup; changed by TExec primitives in front of items with another format
+  bool hasRefFunc{};
+  const Plot::Pad::Data* frameSource{};  // the data whose copy gives the frame
+  bool fail{};                           // a data item could not be drawn (reported): the plot is not made
+  bool view{};                           // the pad draws in 3d: the viewing angles of pad 0 have a meaning
+  TH1* axisHist_ptr{};
+  bool polarFrame{};  // the frame of a flat polar drawing: a disc in a square frame without cartesian axes, measured by a radial axis
+  // the polar grid of a pad with polar graphs, drawn instead of a cartesian frame, and the axis settings of such a pad (not drawn)
+  TGraphPolargram* polargram{};
+  unique_ptr<TH1> polarAxisHist;
+  string padProjection;  // the map projection the frame is drawn with (AITOFF, MERCATOR, SINUSOIDAL, PARABOLIC, MOLLWEIDE), empty if none
+  bool contentFrame{};   // the frame is a 3d histogram: its colour scale shows the contents (the C axis), not the binned z axis
+  // filled by ROOT while drawing the data, placed after all data are drawn
+  vector<std::pair<unique_ptr<TPaveStats>, std::shared_ptr<const Plot::Pad::StatsBox>>> statsBoxes;
+  vector<std::pair<TGraph*, bool>> clippedSteps;  // drawn hist_clipped (false) or hist_open_clipped (true): ROOT's steps cut at the frame once it is final
+  string drawOption;
+  uint16_t dataIndex{};
+  bool mapDrawn{};                       // a 2d or 3d histogram of the pad is drawn (the first one gives the frame its colour levels)
+  std::pair<bool, bool> storedRangeZ{};  // minimum, maximum stored with the 2d data defining the frame: kept like a range set by the user
+  // the range a function giving the frame is sampled over for it (x and y): it is drawn with the same samples
+  optional<array<double_t, 4>> frameFuncRange;
+  used_defaults_t usedDefaults{};  // entries of the pad's default lists taken so far
 };
 
 //**************************************************************************************************
 /**
- * The locals of GeneratePlot for the data item drawn, with those of its pad.
+ * The state of the data item drawn, with that of its pad. Made with the first two members, the others start false.
  */
 //**************************************************************************************************
 struct PlotPainter::item_state_t {
   pad_state_t& padState;
   const shared_ptr<Plot::Pad::Data>& data;
-  bool& isSampledFunc;
-  bool& repeated;
-  bool& numeratorMeans;
-  bool& denominatorMeans;
+  bool isSampledFunc{};   // a function given by C++ code is written as values sampled over its range: it has no values outside of it
+  bool repeated{};        // an input prepared a second time (the denominator of a function numerator): reported only once
+  bool numeratorMeans{};  // the numerator of the ratio was a profile, divided as its means (see PrepareOperand)
 };
 
 //**************************************************************************************************
@@ -474,7 +476,6 @@ struct PlotPainter::item_state_t {
 //**************************************************************************************************
 unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& dataBuffer)
 {
-  bool fail = false;
   auto sourceHistsGuard = make_scope_guard([this]() {  // needed until the boxes of the plot are made
     mSourceHists.clear();
     mDataDefinitions.clear();
@@ -559,7 +560,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     if (!inGroup) mScalesInCells.insert(shown);
   }
   vector<std::pair<TPad*, string>> padSetups;  // the setup of each pad painted (see below)
-  bool anyView{};                              // a pad draws in 3d: the viewing angles of pad 0 have a meaning
+  bool anyView{};                              // a pad draws in 3d (pad_state_t::view)
   // the web canvas (TWebCanvas) paints data in the browser with one gStyle for the whole canvas: these give its values (see below)
   optional<uint8_t> webPalettePad;                          // the first pad drawing a map: its palette
   optional<string> webTextFormat;                           // the format of the first data setting one
@@ -573,6 +574,16 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       if (!pad.GetData().empty() || pad.GetFrame()) logger::warning("Pad {} is the cell of a colour scale: its data is not drawn.", padID);
       continue;
     }
+    pad_state_t padState{padDefaults, fillDefaults, dataBuffer, pad, padID};
+    auto& pad_ptr = padState.pad_ptr;
+    auto& drawData = padState.drawData;
+    auto& padSetup = padState.padSetup;
+    auto& hasRefFunc = padState.hasRefFunc;
+    auto& frameSource = padState.frameSource;
+    auto& fail = padState.fail;
+    auto& axisHist_ptr = padState.axisHist_ptr;
+    auto& drawOption = padState.drawOption;
+    auto& dataIndex = padState.dataIndex;
 
     // Pad placing
     array<double_t, 4> padPos = {0., 0., 1., 1.};
@@ -602,15 +613,15 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     }
 
     // get the settings for this pad
-    auto textFont = get_first(pad.GetDefaultTextFont(), padDefaults.GetDefaultTextFont());
-    auto textSize = get_first(pad.GetDefaultTextSize(), padDefaults.GetDefaultTextSize());
-    auto textColor = get_first(pad.GetDefaultTextColor(), padDefaults.GetDefaultTextColor());
-    auto textAlpha = get_first(pad.GetDefaultTextAlpha(), padDefaults.GetDefaultTextAlpha());
+    padState.textFont = get_first(pad.GetDefaultTextFont(), padDefaults.GetDefaultTextFont());
+    padState.textSize = get_first(pad.GetDefaultTextSize(), padDefaults.GetDefaultTextSize());
+    padState.textColor = get_first(pad.GetDefaultTextColor(), padDefaults.GetDefaultTextColor());
+    padState.textAlpha = get_first(pad.GetDefaultTextAlpha(), padDefaults.GetDefaultTextAlpha());
 
     canvas_ptr->cd();
     string padName = "Pad_" + std::to_string(padID);
 
-    TPad* pad_ptr = new TPad(padName.data(), "", padPos[0], padPos[1], padPos[2], padPos[3]);
+    pad_ptr = new TPad(padName.data(), "", padPos[0], padPos[1], padPos[2], padPos[3]);
 
     // TAttPad drops a margin that leaves no room for the frame with the opposite margin as it is at that moment, without a word: each pair
     // is checked as a whole and set starting from zero, so that a valid pair does not depend on the order of setting (top 0.9, bottom 0.05)
@@ -649,7 +660,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     const double_t candleBoxRange = get_first_or(0.5, pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange());
     const double_t candleWhiskerRange = get_first_or(1., pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange());
     if (!webCandleRanges && (candleBoxRange != 0.5 || candleWhiskerRange != 1.)) webCandleRanges = {candleBoxRange, candleWhiskerRange};
-    string padSetup = fmt::format("gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange({}); TCandle::SetWhiskerRange({});", candleBoxRange, candleWhiskerRange);
+    padSetup = fmt::format("gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange({}); TCandle::SetWhiskerRange({});", candleBoxRange, candleWhiskerRange);
 
     // a colour gradient gets one colour per data item that will actually take a colour from the defaults: the marker, line and fill
     // lists share one index (a data item taking any of the three moves it on), so all three are as long as the number of such items
@@ -697,13 +708,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     pad_ptr->SetNumber(padID);
     pad_ptr->Draw();
     pad_ptr->cd();
-    bool hasRefFunc = false;
-    string activeTextFormat = "g";  // set by the pad's setup; changed by TExec primitives in front of items with another format
-    auto drawData = pad.GetData();
+    drawData = pad.GetData();
     const bool hasData = !drawData.empty();
     unique_ptr<TH1> emptyFrame;  // frame made from the axis ranges of a pad without data and frame input
-    // the data whose copy gives the frame
-    const Plot::Pad::Data* frameSource{nullptr};
 
     if (pad.GetFrame()) {
       // the frame input of the pad is drawn only as frame (in front of the data, with the ranges stored with it, like data that defines the frame)
@@ -762,28 +769,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       }
     }
 
-    TH1* axisHist_ptr{nullptr};
-    // the frame of a flat polar drawing: a disc in a square frame without cartesian axes, measured by a radial axis
-    bool polarFrame{};
-    // the polar grid of a pad with polar graphs, drawn instead of a cartesian frame, and the axis settings of such a pad (not drawn)
-    TGraphPolargram* polargram{nullptr};
-    unique_ptr<TH1> polarAxisHist;
-    // the map projection the frame is drawn with (AITOFF, MERCATOR, SINUSOIDAL, PARABOLIC, MOLLWEIDE), empty if none
-    string padProjection;
-    // the frame is a 3d histogram: its colour scale shows the contents (the C axis), not the binned z axis
-    bool contentFrame{};
-    vector<std::pair<unique_ptr<TPaveStats>, std::shared_ptr<const Plot::Pad::StatsBox>>> statsBoxes;  // filled by ROOT while drawing the data, placed after all data are drawn
-    string drawOption;
-    uint16_t dataIndex{};
-    // steps drawn with hist_clipped (false) or hist_open_clipped (true): ROOT's steps cut at the frame once it is final
-    vector<std::pair<TGraph*, bool>> clippedSteps;
-    bool mapDrawn{};  // a 2d or 3d histogram of the pad is drawn (the first one gives the frame its colour levels)
-    // minimum, maximum stored with the 2d data defining the frame: kept like a range set by the user
-    std::pair<bool, bool> storedRangeZ{};
-    // the range a function giving the frame is sampled over for it (x and y): it is drawn with the same samples
-    optional<array<double_t, 4>> frameFuncRange;
-    pad_state_t::used_defaults_t usedDefaults{};  // entries of the pad's default lists taken so far
-    pad_state_t padState{padDefaults, fillDefaults, dataBuffer, fail, anyView, pad, padID, pad_ptr, drawData, padSetup, textFont, textSize, textColor, textAlpha, activeTextFormat, hasRefFunc, frameSource, axisHist_ptr, polarFrame, polargram, polarAxisHist, padProjection, contentFrame, statsBoxes, clippedSteps, drawOption, dataIndex, mapDrawn, storedRangeZ, frameFuncRange, usedDefaults};
     for (const auto& data : drawData) {
       if (fail) break;
       // data 0 is the copy of the first data that gives the frame: ROOT's messages about it come again with the data itself
@@ -829,11 +814,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         }
         drawOption += option;
       }
-      bool isSampledFunc{};  // a function given by C++ code is written as values sampled over its range: it has no values outside of it
-      bool repeated{};       // an input prepared a second time (the denominator of a function numerator): reported only once
-      // the inputs of the ratio were profiles, divided as their means (see PrepareOperand)
-      bool numeratorMeans{}, denominatorMeans{};
-      item_state_t state{padState, data, isSampledFunc, repeated, numeratorMeans, denominatorMeans};
+      item_state_t state{padState, data};
 
       optional<data_ptr_t> rawData;
       try {
@@ -854,7 +835,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         if (data->GetType() == "ratio") {
           std::visit([&](auto* ptr) { DropStoredFunctions(state, ptr, "division"); }, *rawData);
           auto ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          numeratorMeans = PrepareOperand(state, *rawData, ratio->GetNumModify(), DataName(*data));
+          state.numeratorMeans = PrepareOperand(state, *rawData, ratio->GetNumModify(), DataName(*data));
           // a function as numerator (e.g. model / data) is sampled where the denominator has its values (the points of a graph, the bin
           // centres of a histogram, after the modifiers of the denominator): the division is then that of a graph without errors, which
           // takes the errors of the denominator; a function of the inputs only within its range, a formula of the plot definition everywhere
@@ -869,9 +850,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
               denom = nullopt;
             }
             if (denom) {
-              repeated = true;  // reported when it is divided by
+              state.repeated = true;  // reported when it is divided by
               PrepareOperand(state, *denom, ratio->GetDenomModify(), DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()));
-              repeated = false;
+              state.repeated = false;
               const bool fullRange = (data->GetDataSource() == kUserFunctions);
               auto* sampled = new TGraph();
               sampled->SetBit(kCanDelete);  // owned by the pad, as the clone it replaces
@@ -957,8 +938,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       return nullptr;
     }
     FinishPad(padState);
+    anyView = anyView || padState.view;
 
-    if (!webPalettePad && mapDrawn) webPalettePad = padID;
+    if (!webPalettePad && padState.mapDrawn) webPalettePad = padID;
     for (const auto& data : drawData) {
       if (webTextFormat) break;
       webTextFormat = data->GetTextFormat();
@@ -1193,7 +1175,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
 void PlotPainter::FinishPad(pad_state_t& padState)
 {
   auto& padDefaults = padState.padDefaults;
-  auto& anyView = padState.anyView;
   auto& pad = padState.pad;
   auto& padID = padState.padID;
   auto& pad_ptr = padState.pad_ptr;
@@ -1575,7 +1556,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
     pad_ptr->SetPhi(*phi);
   }
   if (pad_ptr->GetView()) {
-    anyView = true;
+    padState.view = true;
   } else if (pad.GetViewTheta() || pad.GetViewPhi()) {
     ReportIgnored(fmt::format("The view of pad {}", padID), "it draws nothing in 3d");
   }
@@ -4195,7 +4176,6 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
   auto& data = state.data;
   auto& isSampledFunc = state.isSampledFunc;
   auto& numeratorMeans = state.numeratorMeans;
-  auto& denominatorMeans = state.denominatorMeans;
   auto& padDefaults = padState.padDefaults;
   auto& fillDefaults = padState.fillDefaults;
   auto& dataBuffer = padState.dataBuffer;
@@ -4296,7 +4276,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
     }
 
     if (rawDenomData) {
-      denominatorMeans = PrepareOperand(state, *rawDenomData, data_as_ratio->GetDenomModify(), DataName(data_as_ratio->GetDenomName(), data_as_ratio->GetDenomDataSource()));
+      const bool denominatorMeans = PrepareOperand(state, *rawDenomData, data_as_ratio->GetDenomModify(), DataName(data_as_ratio->GetDenomName(), data_as_ratio->GetDenomDataSource()));
       if (binomialErrors && (numeratorMeans || denominatorMeans)) {
         ReportIgnored(state, fmt::format("SetCorrelated of ratio {}", DataName(*data)), "binomial errors are not defined for the mean values of a profile");
         binomialErrors = false;
