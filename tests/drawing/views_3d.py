@@ -107,19 +107,24 @@ for i, case in enumerate(looks):
 # the points and lines of a 2d graph alone in its 3d view, also when its z range goes below zero: ROOT then paints the cells of the empty
 # histogram they are drawn from as well, at their coordinates in the view (seen for x and y from 0 to 1)
 below = {}
-for name, cls in (("below", ROOT.TGraph2D), ("below_errors", ROOT.TGraph2DErrors)):
+for name, cls in (("below", ROOT.TGraph2D), ("below_errors", ROOT.TGraph2DErrors), ("below_asymm", ROOT.TGraph2DAsymmErrors)):
     graph = cls(36)
     graph.SetName(name)
     for n in range(36):
         graph.SetPoint(n, n % 6, n // 6, (n % 6) * (n // 6) - 3.0)
         if cls == ROOT.TGraph2DErrors:
             graph.SetPointError(n, 0.1, 0.1, 1.0)
+        elif cls == ROOT.TGraph2DAsymmErrors:
+            graph.SetPointError(n, 0.1, 0.1, 0.1, 0.1, 0.5, 1.5)
     below[name] = graph
 p.source("below", below)
 lows = cases(
     {"graph": list(below), "alias": ["points", "points_col", "line"]},
     always=lambda c: True,
-    named=[{"graph": "below_errors", "alias": "points_col", "why": "coloured points of a 2d graph reaching below zero"}],
+    named=[
+        {"graph": "below_errors", "alias": "points_col", "why": "coloured points of a 2d graph reaching below zero"},
+        {"graph": "below_asymm", "alias": "points_col", "why": "coloured points of a 2d graph with asymmetric errors reaching below zero"},
+    ],
 )
 for i, case in enumerate(lows):
     plot = S.Plot(f"z{i}", "lows", "2d")

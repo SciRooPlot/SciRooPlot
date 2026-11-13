@@ -48,7 +48,7 @@ def expected(kind, alias):
     data = no_scale(opt)
     if alias.startswith("points") and DATA_KINDS[kind][1] == "TGraphPolar":
         data += " E"
-    if alias in ("points", "points_col", "points_colz") and DATA_KINDS[kind][1] == "TGraph2DErrors":
+    if alias in ("points", "points_col", "points_colz") and DATA_KINDS[kind][1] in ("TGraph2DErrors", "TGraph2DAsymmErrors"):
         data += " ERR"
     return drawnType, data, opt != no_scale(opt), warnings
 
@@ -164,7 +164,7 @@ check(
     " | ".join(repeatedWarnings),
 )
 # a graph with asymmetric errors drawn as a histogram is drawn with their mean, with a warning
-ASYMMETRIC = {k for k, (_, cls, _) in DATA_KINDS.items() if cls in ("TGraphAsymmErrors", "TEfficiency")}
+ASYMMETRIC = {k for k, (_, cls, _) in DATA_KINDS.items() if cls in ("TGraphAsymmErrors", "TGraphBentErrors", "TEfficiency")}
 asymmetric = run.warnings("has asymmetric y errors")
 check("asymmetric errors drawn as their mean only for graphs that have them", all(any(f"Graph {k}:" in w for k in ASYMMETRIC) for w in asymmetric), " | ".join(asymmetric))
 asText = next(i for i, c in enumerate(todo) if c["kind"] == "graph_asymm" and c["alias"] == "text")

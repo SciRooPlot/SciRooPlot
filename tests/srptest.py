@@ -136,7 +136,8 @@ def describe(case):
 # projected (an n-dimensional histogram, drawn as its projection onto the first axis, or the first two), polygons (bins that are
 # polygons: the axes have no bins, a frame ends where it is asked to as for graphs).
 # hist_noerrors is a histogram whose errors are all zero, hist_counts one filled without weights (no Sumw2: its errors are the square
-# roots of the contents).
+# roots of the contents), profile_spread a profile whose errors are the spread of its entries (error option s), efficiency_weighted an
+# efficiency of weighted events (SetUseWeightedEvents).
 # A test takes its kinds from these tables, so a kind added here is covered everywhere.
 DATA_KINDS = {
     "hist": (1, "TH1D", {"binned"}),
@@ -144,12 +145,15 @@ DATA_KINDS = {
     "hist_noerrors": (1, "TH1D", {"binned"}),
     "hist_counts": (1, "TH1D", {"binned"}),
     "profile": (1, "TProfile", {"binned"}),
+    "profile_spread": (1, "TProfile", {"binned"}),
     "efficiency": (1, "TEfficiency", {"binned"}),
+    "efficiency_weighted": (1, "TEfficiency", {"binned"}),
     "thn": (1, "THnD", {"binned", "projected"}),
     "thn_sparse": (1, "THnSparseD", {"binned", "projected"}),
     "graph": (1, "TGraph", set()),
     "graph_errors": (1, "TGraphErrors", set()),
     "graph_asymm": (1, "TGraphAsymmErrors", set()),
+    "graph_bent": (1, "TGraphBentErrors", set()),
     "graph_multi": (1, "TGraphMultiErrors", set()),
     "graph_polar": (1, "TGraphPolar", {"polar"}),
     "tf1": (1, "TF1", set()),
@@ -162,6 +166,7 @@ DATA_KINDS = {
     "thn_sparse2d": (2, "THnSparseD", {"binned", "projected"}),
     "graph2d": (2, "TGraph2D", set()),
     "graph2d_errors": (2, "TGraph2DErrors", set()),
+    "graph2d_asymm": (2, "TGraph2DAsymmErrors", set()),
     "tf2": (2, "TF2", set()),
     "tf2_cpp": (2, "TF2", {"cpp"}),
     "function2d": (2, "TF2", {"formula"}),
@@ -313,6 +318,8 @@ def data_objects(variant="normal"):
     edges = ROOT.std.vector("double")([e + d for e in (1.0, 1.2, 1.5, 2.0, 2.7, 3.5, 4.5, 6.0, 7.5, 9.0, 10.0)])
     hv = ROOT.TH1D("hist_var", "", edges.size() - 1, edges.data())
     p = ROOT.TProfile("profile", "", 18, lo, hi)
+    ps = ROOT.TProfile("profile_spread", "", 18, lo, hi)
+    ps.SetErrorOption("s")
     for hist in (h, hv):
         for b in range(1, hist.GetNbinsX() + 1):
             if keep(b - 1):
@@ -328,14 +335,15 @@ def data_objects(variant="normal"):
                 hist.SetBinContent(b, value(b - 1, hist.GetBinCenter(b)))
         hist.SetBinContent(0, outside)
         hist.SetBinContent(hist.GetNbinsX() + 1, outside)
-    for b in range(1, p.GetNbinsX() + 1):
-        if keep(b - 1):
-            x = p.GetBinCenter(b)
-            p.Fill(x, 0.9 * value(b - 1, x))
-            p.Fill(x, 1.1 * value(b - 1, x))
-    if outside:
-        p.Fill(0.0, outside)
-        p.Fill(11.0, outside)
+    for prof in (p, ps):
+        for b in range(1, prof.GetNbinsX() + 1):
+            if keep(b - 1):
+                x = prof.GetBinCenter(b)
+                prof.Fill(x, 0.9 * value(b - 1, x))
+                prof.Fill(x, 1.1 * value(b - 1, x))
+        if outside:
+            prof.Fill(0.0, outside)
+            prof.Fill(11.0, outside)
     nBins = np.array([18, 3, 3], dtype=np.int32)
     low, high = np.array([lo, 0.0, 0.0]), np.array([hi, 3.0, 3.0])
     thn = ROOT.THnD("thn", "", 2, nBins[:2], low[:2], high[:2])
@@ -356,14 +364,15 @@ def data_objects(variant="normal"):
                 nd.Fill(np.array(c), outside)
     xs = [lo + 0.5 * i for i in range(19)]
     kept = order([(i, x) for i, x in enumerate(xs) if keep(i)])
-    g, ge, ga, gp = (sized(cls, len(kept)) for cls in (ROOT.TGraph, ROOT.TGraphErrors, ROOT.TGraphAsymmErrors, ROOT.TGraphPolar))
+    g, ge, ga, gb, gp = (sized(cls, len(kept)) for cls in (ROOT.TGraph, ROOT.TGraphErrors, ROOT.TGraphAsymmErrors, ROOT.TGraphBentErrors, ROOT.TGraphPolar))
     gm = ROOT.TGraphMultiErrors("graph_multi", "", len(kept), 2)
     for n, (i, x) in enumerate(kept):
         y = value(i, x)
-        for graph in (g, ge, ga, gm):
+        for graph in (g, ge, ga, gb, gm):
             graph.SetPoint(n, x, y)
         ge.SetPointError(n, 0.2, abs(0.1 * y))
         ga.SetPointError(n, 0.2, 0.2, abs(0.05 * y), abs(0.15 * y))
+        gb.SetPointError(n, 0.1, 0.3, abs(0.15 * y), abs(0.05 * y), 0.0, 0.0, -0.05, 0.05)  # the ends of the y errors bent in x
         gm.SetPointEX(n, 0.2, 0.2)
         gm.SetPointEY(n, 0, abs(0.05 * y), abs(0.05 * y))
         gm.SetPointEY(n, 1, abs(0.1 * y), abs(0.1 * y))
@@ -383,6 +392,22 @@ def data_objects(variant="normal"):
                 passed2.SetBinContent(i, j, {"zeros": 0, "constant": 30}.get(variant, round(4 * (_value(i + 0.5) + _value(j + 0.5)))))
     eff = ROOT.TEfficiency(passed, total)
     eff2 = ROOT.TEfficiency(passed2, total2)
+    # weighted events: each bin of total holds 20 events of weights 0.5 to 2.4, passed those of them a fraction of the normal efficiency
+    totalW, passedW = ROOT.TH1D("total_w", "", 18, lo, hi), ROOT.TH1D("passed_w", "", 18, lo, hi)
+    totalW.Sumw2()
+    passedW.Sumw2()
+    for b in range(1, 19):
+        if keep(b - 1):
+            x = totalW.GetBinCenter(b)
+            fraction = {"zeros": 0.0, "constant": 0.3}.get(variant, 0.08 * _value(x - d))
+            for k in range(20):
+                totalW.Fill(x, 0.5 + 0.1 * k)
+                if k < round(20 * fraction):
+                    passedW.Fill(x, 0.5 + 0.1 * k)
+    level, ROOT.gErrorIgnoreLevel = ROOT.gErrorIgnoreLevel, ROOT.kWarning  # ROOT's info that the histograms hold weights
+    effW = ROOT.TEfficiency(passedW, totalW)
+    effW.SetUseWeightedEvents()
+    ROOT.gErrorIgnoreLevel = level
     h2 = ROOT.TH2D("hist2d", "", 18, lo, hi, 18, lo, hi)
     p2 = ROOT.TProfile2D("profile2d", "", 18, lo, hi, 18, lo, hi)
     for i in range(1, 19):
@@ -418,16 +443,18 @@ def data_objects(variant="normal"):
             hist.Fill(0.0, 5.0, 5.0, outside)
             hist.Fill(11.0, 5.0, 5.0, outside)
     points = order([(n, lo + (n % 10), lo + (n // 10)) for n in range(100) if keep(n)])
-    g2, g2e = sized(ROOT.TGraph2D, len(points)), sized(ROOT.TGraph2DErrors, len(points))
+    g2, g2e, g2a = sized(ROOT.TGraph2D, len(points)), sized(ROOT.TGraph2DErrors, len(points)), sized(ROOT.TGraph2DAsymmErrors, len(points))
     for m, (n, x, y) in enumerate(points):
-        for graph in (g2, g2e):
+        for graph in (g2, g2e, g2a):
             graph.SetPoint(m, x, y, value(n, x, y))
         g2e.SetPointError(m, 0.1, 0.1, abs(0.1 * value(n, x, y)))
-    for graph, name in ((g2, "graph2d"), (g2e, "graph2d_errors")):
+        g2a.SetPointError(m, 0.1, 0.2, 0.2, 0.1, abs(0.05 * value(n, x, y)), abs(0.15 * value(n, x, y)))
+    for graph, name in ((g2, "graph2d"), (g2e, "graph2d_errors"), (g2a, "graph2d_asymm")):
         graph.SetName(name)
-    objects = {"hist": h, "hist_noerrors": hn, "hist_counts": hc, "hist_var": hv, "profile": p, "efficiency": eff, "thn": thn, "thn_sparse": sparse, "graph": g, "graph_errors": ge}
-    objects.update({"graph_asymm": ga, "graph_multi": gm, "graph_polar": gp, "hist2d": h2, "profile2d": p2, "hist2poly": poly})
-    objects.update({"efficiency2d": eff2, "thn_sparse2d": sparse2, "graph2d": g2, "graph2d_errors": g2e, "hist3d": h3, "profile3d": p3})
+    objects = {"hist": h, "hist_noerrors": hn, "hist_counts": hc, "hist_var": hv, "profile": p, "profile_spread": ps, "efficiency": eff, "efficiency_weighted": effW}
+    objects.update({"thn": thn, "thn_sparse": sparse, "graph": g, "graph_errors": ge, "graph_asymm": ga, "graph_bent": gb, "graph_multi": gm, "graph_polar": gp})
+    objects.update({"hist2d": h2, "profile2d": p2, "hist2poly": poly, "efficiency2d": eff2, "thn_sparse2d": sparse2, "graph2d": g2, "graph2d_errors": g2e})
+    objects.update({"graph2d_asymm": g2a, "hist3d": h3, "profile3d": p3})
     if variant in FUNCTION_VARIANTS:
         npx = NPX.get(variant, NPX["normal"])
         cpp = variant if variant in ("negative", "zeros", "crossing", "constant", "undefined") else "normal"
@@ -1002,6 +1029,8 @@ def graph_values(graph):
         values = {k: [getattr(graph, f"Get{k.upper()}")()[i] for i in range(n)] for k in "xyz"} if n else {k: [] for k in "xyz"}
         if graph.InheritsFrom("TGraph2DErrors"):
             values.update({f"e{k}": [getattr(graph, f"GetError{k.upper()}")(i) for i in range(n)] for k in "xyz"})
+        elif graph.InheritsFrom("TGraph2DAsymmErrors"):
+            values.update({f"e{k}{side}": [getattr(graph, f"GetError{k.upper()}{side}")(i) for i in range(n)] for k in "xyz" for side in ("low", "high")})
         return values
     values = {"x": [graph.GetPointX(i) for i in range(n)], "y": [graph.GetPointY(i) for i in range(n)]}
     if graph.GetEY() or graph.GetEYlow():  # a TGraph has no errors (its getters give -1)
@@ -1394,9 +1423,8 @@ def reference_graph2d(base, mods, exp):
         exp.unsupported("Normalize", cls)
     for axis in "xy":
         if f"scale_{axis}" in mods:
-            for key in (axis, f"e{axis}"):
-                if key in v:
-                    v[key] = [value * AXIS_FACTOR for value in v[key]]
+            for key in [k for k in v if k == axis or k.startswith(f"e{axis}")]:
+                v[key] = [value * AXIS_FACTOR for value in v[key]]
     factor = None
     if "norm_max" in mods or "norm_max_range" in mods:
         inside = [z for x, z in zip(v["x"], v["z"]) if "norm_max_range" not in mods or RANGE[0] <= x <= RANGE[1]]
@@ -1437,7 +1465,7 @@ def reference_func(base, mods, exp):
     return lambda *c: content * base.Eval(*[x / f for x, f in zip(c, domain)])
 
 
-GRAPHS = ("TGraph", "TGraphErrors", "TGraphAsymmErrors", "TGraphMultiErrors", "TGraphPolar", "TGraph2D", "TGraph2DErrors")
+GRAPHS = ("TGraph", "TGraphErrors", "TGraphAsymmErrors", "TGraphBentErrors", "TGraphMultiErrors", "TGraphPolar", "TGraph2D", "TGraph2DErrors", "TGraph2DAsymmErrors")
 
 
 def modifier_reference(base, mods, exp):

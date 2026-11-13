@@ -60,7 +60,7 @@ VIEWS_3D = {
     "hist3d": ("box", "iso"),
     "function3d": ("default", "iso"),
 }
-ASYMMETRIC = ("TGraphAsymmErrors", "TGraphMultiErrors", "TEfficiency")  # graphs drawn with asymmetric errors
+ASYMMETRIC = ("TGraphAsymmErrors", "TGraphBentErrors", "TGraphMultiErrors", "TEfficiency")  # graphs drawn with asymmetric errors
 
 
 def has_errors(kind):

@@ -46,6 +46,7 @@ converted = cases(
         {"kind": "hist", "alias": "points_line", "variant": "normal", "why": "statistics box and placeholders of a histogram drawn as graph"},
         {"kind": "graph", "alias": "hist", "variant": "unsorted", "why": "a graph in no order of x drawn as a histogram"},
         {"kind": "graph_errors", "alias": "area_smooth", "variant": "normal", "why": "no empty bins in the gaps between x errors under a smooth curve"},
+        {"kind": "graph_bent", "alias": "area_smooth", "variant": "normal", "why": "no empty bins in the gaps between asymmetric x errors under a smooth curve"},
     ],
 )
 
@@ -248,7 +249,7 @@ for i, case in enumerate(pairs):
         check(f"plots made: {what}", False, " | ".join(run.errors()[:2]))
         continue
     both, first, second = ((h.GetMinimum(), h.GetMaximum()) for h in ranges)
-    if DATA_KINDS[case["second"]][1] == "TGraph2DErrors":  # its values, not the z errors ROOT's frame of it covers
+    if DATA_KINDS[case["second"]][1] in ("TGraph2DErrors", "TGraph2DAsymmErrors"):  # its values, not the z errors ROOT's frame of it covers
         graph = run.drawn(f"z{i}_second", "colours")[0][0]
         second = (graph.GetZmin(), graph.GetZmax())
     userMin, userMax = USER_Z[case["user"]]
