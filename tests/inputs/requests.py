@@ -10,7 +10,8 @@ floating point, integer and bool type and an expression). The automatic range ta
 in the order of their filters give the same. C strings also as members of a leaf list are strings, an array of Char_t stays numbers.
 Weighted profiles read in parallel, where some inputs hold weights of 1 only, have the errors of the profile filled directly. An invalid request (a column that is a string, unknown columns, an expression throwing while
 the rows are read, a scatter in 3d of a collection, a profile with too many axes, a tree without request) loses only its own plot, with
-the reason; the others of the same tree are read as usual. The reading summary names the entries, the inputs a tree is chained from and
+the reason; the others of the same tree are read as usual. A binning ROOT cannot make (an end or edge that is not finite, edges
+not increasing, an inverted range) is refused where it is defined, with the reason. The reading summary names the entries, the inputs a tree is chained from and
 the passes over the data (at most two per group of requests: the automatic ranges, then the results).
 Covers: typed requests: the column types, 'return' in identifiers, function bodies, C-string columns in filters,
 Scatter in 3d, the weighted profiles merged by ROOT (TProfile::Merge, ROOT's merge of profiles) and the axis titles of function bodies
@@ -492,6 +493,21 @@ for source in ("tree", "csv", "rntuple", "table"):
     plot[1].AddData("t", source).Project1D(("x", 20, [-3.0, 3.0])).Filter("y > 5").SetShowOverflowBins()
     p.pm.AddPlot(plot)
     valids[plotName] = source
+
+# a binning ROOT cannot make is refused where it is defined, saying why
+for what, dim, text in (
+    ("an infinite end of the range", ("x", 10, [0.0, math.inf]), "The bin range of x must be finite numbers."),
+    ("a NaN bin edge", ("x", [0.0, math.nan, 10.0]), "The bin edges of x must be finite numbers."),
+    ("a repeated bin edge", ("x", [0.0, 2.0, 2.0, 10.0]), "The bin edges of x must increase (2 is followed by 2)."),
+    ("decreasing bin edges", ("x", [0.0, 5.0, 2.0]), "The bin edges of x must increase (5 is followed by 2)."),
+    ("an inverted range", ("x", 10, [10.0, 0.0]), "The range of x is inverted ([10, 0])."),
+    ("a number of bins with three values", ("x", 10, [0.0, 1.0, 2.0]), "A number of bins for x takes a range of two values (got 3)."),
+):
+    try:
+        S.Plot("refused", "refused", "1d")[1].AddData("t", "tree").Project1D(dim)
+        check(f"a binning ROOT cannot make is refused where it is defined: {what}", False, "accepted")
+    except ValueError as e:
+        check(f"a binning ROOT cannot make is refused where it is defined: {what}", text in str(e), str(e))
 
 # ---------------------------------------------------------------------------------------------
 chunks.plot(p)

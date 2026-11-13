@@ -6,12 +6,13 @@ the same object. A name that is not there is reported missing, and its plot is n
 the same object read from the top level of a file. The rule is the one documented in the skill (Data sources).
 Special containers: a map gives its values under the names of their keys, a clones array its objects, an object in two lists is found in
 both, of several cycles of a key only the latest counts, an item of the same name as a list is found as data with the bare name and the
-list's items through the path, a list written after a directory of its name hides the directory (reported once), keys of classes that are no TObject and data that is no named object are not drawn.
+list's items through the path, a list written after a directory of its name hides the directory (reported once), keys of classes that are no TObject and data that is no named object are not drawn,
+a list holding itself (in a file or handed over in memory) is searched once, the repeated one left out with a warning.
 Covers: a stored THStack or TMultiGraph read like a list, also inside a TList and in memory, lists and directories
 handed over in memory become folders.
 """
 
-from srptest import DATA_KINDS, ROOT, Project, S, add_data, base_of, cases, check, collection, data_objects, describe, drawn_diff, finish, missing, own, put
+from srptest import DATA_KINDS, ROOT, Project, S, add_data, base_of, captured, cases, check, collection, data_objects, describe, drawn_diff, finish, missing, own, put
 
 LEAVES = ("THStack", "TMultiGraph")  # hold only histograms or graphs: the last level of a chain
 COLLECTIONS = ("TList", "THashList", "TObjArray", "TOrdCollection", "TSortedList", "THashTable", "TFolder", "TMap")
@@ -301,6 +302,15 @@ special["a list hiding a directory of its name: the directory not read"] = [("hi
 lst("empty").Write("empty", ROOT.TObject.kSingleKey)
 stored.mkdir("dempty")
 special["empty containers"] = [("empty/x", "S", None), ("dempty/x", "S", None)]
+looped = lst("loop", ident_object("hist", "hl", 9110))  # a list holding itself: searched once, the repeated one left out
+looped.Add(looped)
+looped.Write("loop", ROOT.TObject.kSingleKey)
+special["a list holding itself"] = [("loop/hl", "S", 9110), ("hl", "S:loop", 9110)]
+special["a list holding itself: a name not in it"] = [("loop/x", "S", None)]
+memoryLoop = lst("mloop", ident_object("hist", "hm", 9111))
+memoryLoop.Add(memoryLoop)
+_, added = captured(lambda: p.pm.AddDataSource("M", memoryLoop))
+special["a list holding itself, in memory"] = [("mloop/hm", "M", 9111)]
 for j, (what, items) in enumerate(special.items()):
     plot = S.Plot(f"s{j}", "special", "1d")
     for dataName, source, _ in items:
@@ -335,6 +345,8 @@ for name, (what, items) in expected.items():
     check(f"found: {what}", not wrong, "; ".join(wrong[:4]))
 hiding = run.warnings("hidden cannot be read")
 check("a directory hidden by a list of its name is reported once", len(hiding) == 1 and "TList" in hiding[0], " | ".join(hiding))
+check("a list holding itself is reported when read", bool(run.warnings("loop (data source S) contains itself")), " | ".join(run.warnings()[:3]))
+check("a list holding itself in memory is reported when added", "the list mloop/mloop contains itself" in added, added)
 errors = run.errors()
 expectedErrors = ("cannot be created", "could not be created", "strings/s (data source S) is of unsupported type")
 check("no errors but the missing data", all(any(e in line for e in expectedErrors) for line in errors), " | ".join(errors[:5]))

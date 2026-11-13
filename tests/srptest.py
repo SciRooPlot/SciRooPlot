@@ -1238,6 +1238,8 @@ def reference_hist(base, mods, exp):
     if profile and smooth and dim < 3:
         h = profile_means(h)  # the means are smoothed
     if smooth:
+        if dim == 2 and not poly and smooth > 1:
+            exp.warn(f"Smooth({smooth}) smooths 2d histogram {exp.name} once")  # ROOT smooths 2d histograms only once
         if dim == 3 or poly:
             exp.unsupported("Smooth", cls)
         elif profile:

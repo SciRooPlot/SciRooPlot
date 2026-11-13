@@ -3,7 +3,8 @@ near the largest float, one value everywhere, a function NaN over part of its ra
 on linear and log scales of its value axis: a log axis keeps a positive range (or is switched off with a warning when there is nothing
 positive), the colour scale of a map has two different ends unless every content is zero. Data with a NaN or infinite value is reported
 with a warning naming it, as data with contents beyond the largest float (ROOT finds axis ranges only below it) and a function NaN in
-part of its range. A plot that ROOT throws an exception on while painting is reported and loses only itself.
+part of its range. A plot that ROOT throws an exception on while painting is reported and loses only itself (an axis too narrow for ROOT
+with that reason). A TGraphMultiErrors without y error sets (ROOT crashes on it) is drawn as a TGraph, with a warning.
 Covers: crashes on NaN points of TGraphMultiErrors and on empty 2d graphs, misplaced errors of
 2d graphs after removing NaN points, the whole run lost to one plot ROOT could not paint, a map of one value painted in the lowest
 colour (its scale had equal ends), a function NaN in part of its range drawn as an empty plot (NaN frame), a function NaN at one point
@@ -41,6 +42,18 @@ plot = S.Plot("a_removable", "robust", "1d")
 plot[1].AddFunction("sin(x)/x").SetRangeX(-10.0, 10.0)
 p.pm.AddPlot(plot)
 
+# an axis spanning less than about 1e-196 (ROOT's axis throws) and a TGraphMultiErrors without y error sets (ROOT crashes making its histogram)
+tiny = ROOT.TH1D("tiny", "", 10, 1e-300, 2e-300)
+tiny.Fill(1.5e-300)
+noErrorSets = ROOT.TGraphMultiErrors("noy", "", 4, 0)
+for i in range(4):
+    noErrorSets.SetPoint(i, i, 2.0 * i)
+p.source("rootbugs", {"tiny": tiny, "noy": noErrorSets})
+for name in ("tiny", "noy"):
+    plot = S.Plot(f"a_{name}", "robust", "1d")
+    plot[1].AddData(name, "rootbugs")
+    p.pm.AddPlot(plot)
+
 for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "robust", base_of(case["kind"]))
     add_data(plot[1], case["kind"], source_of(case["variant"]), case["variant"])
@@ -72,7 +85,12 @@ for i, case in enumerate(todo):
 unpaintableErrors = [line for line in run.errors() if "a_unpaintable" in line]
 check("a plot ROOT cannot paint is made or reported", bool(run.pad("a_unpaintable", "robust")) or any("could not be painted" in line for line in unpaintableErrors), str(unpaintableErrors))
 check("contents beyond the largest float are reported by name", any(line.split("]", 1)[-1].split()[0] == "unpaintable" and "beyond the largest float" in line for line in run.warnings()), " | ".join(run.warnings()[:3]))
-errors = [line for line in run.errors() if "a_unpaintable" not in line]
+tinyErrors = [line for line in run.errors() if "a_tiny" in line]
+check("an axis too narrow for ROOT: the plot is lost with the reason", not run.pad("a_tiny", "robust") and any("ROOT cannot draw one of its axes" in line for line in tinyErrors), str(tinyErrors))
+noErrorSetsDrawn = run.objects("a_noy", "robust")
+check("a TGraphMultiErrors without y error sets is drawn as a TGraph", [o.ClassName() for o in noErrorSetsDrawn] == ["TGraph"], str([o.ClassName() for o in noErrorSetsDrawn]))
+check("a TGraphMultiErrors without y error sets is reported", bool(run.warnings("rootbugs:noy is a TGraphMultiErrors without y errors")), " | ".join(run.warnings()[:3]))
+errors = [line for line in run.errors() if "a_unpaintable" not in line and "a_tiny" not in line]
 check("no ROOT errors", not errors, " | ".join(errors[:5]))
 undefined = sorted({case["kind"] for case in todo if case["variant"] == "undefined"})
 unreportedUndefined = [kind for kind in undefined if not any("is NaN in parts of" in line and (f"Function {kind} " in line or formula(kind, "undefined") in line) for line in run.warnings())]

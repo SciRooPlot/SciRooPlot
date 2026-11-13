@@ -6,7 +6,8 @@ Smooth (1d and 2d), Integral, GetCumulative (1d), GetMaximum; profiles: their me
 1d): the integral is the sum of the values, the maximum the largest value, smoothing sorts the points (TGraphSmooth::SmoothSuper); 2d graphs:
 NormalizeToMaximum and the scale factors; functions: the scale factors (of the arguments or of the value). Normalize and
 NormalizeToMaximum within a range in x take the bins reaching into it, the points inside it. Each warning names its data, and every
-warning is expected.
+warning is expected. A rebinning group larger than its axis leaves that axis as it is, with a warning; contents a modifier brings beyond
+the largest float or to infinity are reported as those of the input.
 Covers: TGraphMultiErrors scaled: both error dimensions follow; the Normalize range of a TH2Poly; graphs scaled by a negative
 factor (Normalize of values summing up below zero) keep positive errors, low and high swapped; a TGraphMultiErrors sorted for Smooth keeps
 each error with its point; messages after Cumulative name the data.
@@ -16,6 +17,7 @@ import re
 
 from srptest import (
     COMBINATIONS,
+    ROOT,
     DATA_KINDS,
     GRAPHS,
     MODIFIERS,
@@ -125,4 +127,32 @@ for line in run.warnings():
 check("every warning expected", not unexpected, " | ".join(unexpected[:5]) + (f" (+{len(unexpected) - 5})" if len(unexpected) > 5 else ""))
 check("every expected warning given", not unmatched, " | ".join(f"{n}: {w}" for n, w in unmatched[:5]) + (f" (+{len(unmatched) - 5})" if len(unmatched) > 5 else ""))
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
+
+# the limits of the modifiers: a group larger than its axis, contents brought beyond the largest float or to infinity
+q = Project("modifier_limits")
+limits = {"h1": ROOT.TH1D("h1", "", 10, 0.0, 10.0), "h2": ROOT.TH2D("h2", "", 10, 0.0, 10.0, 8, 0.0, 8.0)}
+limits["h3"] = ROOT.TH3D("h3", "", 4, 0.0, 4.0, 4, 0.0, 4.0, 4, 0.0, 4.0)
+for h in limits.values():
+    for c in range(h.GetNcells()):
+        h.SetBinContent(c, 1.0 + c % 7)
+q.source("lim", limits)
+limitCases = {  # plot: (data, base, modifier, expected warning, expected bins along x, y, z)
+    "x1": ("h1", "1d", lambda d: d.RebinX(11), "RebinX(11) needs at least as many bins, h1:lim has 10", (10,)),
+    "x2": ("h2", "2d", lambda d: d.RebinX(11), "RebinX(11) needs at least as many bins, h2:lim has 10", (10, 8)),
+    "xy2": ("h2", "2d", lambda d: d.RebinXY(11, 2), "RebinX(11) needs at least as many bins, h2:lim has 10", (10, 4)),
+    "z3": ("h3", "2d", lambda d: d.RebinXYZ(2, 2, 5), "RebinZ(5) needs at least as many bins, h3:lim has 4", (2, 2, 4)),
+    "float": ("h1", "1d", lambda d: d.Scale(1e40), "h1 has 12 bins with contents beyond the largest float", (10,)),
+    "inf": ("h1", "1d", lambda d: d.Scale(1e300), "h1 has 12 bins with NaN or infinite values", (10,)),
+}
+for name, (data, base, modify, _, _) in limitCases.items():
+    plot = S.Plot(name, "limits", base)
+    modify(plot[1].AddData(data, "lim"))
+    q.pm.AddPlot(plot)
+limitRun = q.plot("limits")
+for name, (_, _, _, warning, bins) in limitCases.items():
+    obs = limitRun.objects(name, "limits")
+    got = tuple(getattr(obs[0], f"GetNbins{axis}")() for axis in "XYZ"[: len(bins)]) if obs else None
+    check(f"limits of the modifiers, {name}: the warning", bool(limitRun.warnings(warning)), " | ".join(limitRun.warnings()[:3]))
+    check(f"limits of the modifiers, {name}: the bins", got == bins, f"{got}, expected {bins}")
+check("limits of the modifiers: no errors", not limitRun.errors(), " | ".join(limitRun.errors()[:3]))
 finish()

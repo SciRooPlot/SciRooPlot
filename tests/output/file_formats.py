@@ -11,7 +11,8 @@ json hold it in its sub-pad; pdf only from ROOT 6.42 on, before which one warnin
 The same for multi-panel plots (srptest's LAYOUTS: a grid, ratio panels, a gap with an explicit group, a legend strip with the rows of
 other pads, a flat panel beside a 3D view): as pdf of every data kind, in every mode of a 1d and a 2d histogram (normal variant; the
 variants of the data are the single-pad plots' part).
-No mode gives errors, or warnings mode file does not give for the same data.
+No mode gives errors, or warnings mode file does not give for the same data. Texts with characters beyond ASCII, which ROOT's png, jpg and
+gif output draws wrongly, are warned about there, once per text and run, not in the vector formats.
 Mode html needs ROOT 6.42 (before, ROOT writes PostScript under that name): with an older ROOT it is refused with an error and writes
 nothing."""
 
@@ -218,4 +219,20 @@ for mode in (*MODES, "gif"):
             problem = image_problem(mode, path)
             check(f"{mode} file holds the image: {name}", not problem, problem)
     shutil.rmtree(p.path("out"), ignore_errors=True)
+
+# texts beyond ASCII: ROOT's bitmaps draw them wrongly (one warning per text and run), vector formats draw them
+q = Project("non_ascii", bases=("1d",))
+counts = ROOT.TH1D("counts", ";Z\u00e4hlrate;#Delta#phi", 10, 0.0, 10.0)
+counts.Fill(3.0)
+q.source("texts", {"counts": counts})
+for name in ("first", "second"):  # the same texts in two plots
+    plot = S.Plot(name, "texts", "1d")
+    plot[1].AddData("counts", "texts", "\u03c0\u2070 data")
+    plot[1].AddLegend()
+    q.pm.AddPlot(plot)
+for mode in ("png", "jpg", "pdf", "svg"):
+    run = q.plot("texts", ".+", mode)
+    warned = sorted(re.findall(r'The text "(.*?)" has characters beyond ASCII', "\n".join(run.warnings())))
+    expected = sorted(["Z\u00e4hlrate", "\u03c0\u2070 data"]) if mode in ("png", "jpg") else []
+    check(f"{mode}: texts beyond ASCII warned about once each in bitmaps only", warned == expected, str(warned))
 finish()
