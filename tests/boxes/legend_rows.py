@@ -1,6 +1,7 @@
 """A legend can hold the rows of data drawn in other pads (LegendBox::AddDataEntry(pad, data)): such a row is the row the data has in a
 legend of its own pad (its label with the placeholders of that data replaced, its symbol as the data is drawn), or carries its own label;
-a row of data or a pad that does not exist is warned about and left out. A legend in a cell without frame (an empty cell of a layout)
+a row of data or a pad that does not exist is warned about and left out, data of the legend's own pad that has its own row there as well
+keeps both rows, with a warning. A legend in a cell without frame (an empty cell of a layout)
 takes such rows as well.
 Cases: every data kind in the panel of a two-panel layout, its row in a legend of the other panel and in an empty strip above both.
 Reference: the legend of the data's own pad.
@@ -42,6 +43,12 @@ legend = plot[1].AddLegend()
 legend.AddDataEntry(2, 5)
 legend.AddDataEntry(9, 1)
 p.pm.AddPlot(plot)
+plot = S.Plot("own_row_twice", "named", "1d_2x1_gap")
+plot[2].AddData("hist", "inputs")
+plot[1].AddData("hist", "inputs", "one")
+plot[1].AddData("hist", "inputs", "two")
+plot[1].AddLegend().AddDataEntry(1, 2)
+p.pm.AddPlot(plot)
 
 run = p.plot()
 check("the plots are made without errors", not run.errors(), " | ".join(run.errors()[:3]))
@@ -72,4 +79,8 @@ legendRows = rows(run.pad("missing", "named", 1))
 messages = run.messages("missing", "named")
 check("rows of data or pads that do not exist are left out", not legendRows, f"{legendRows}")
 check("rows of data or pads that do not exist are warned about", any("data 5" in m and "pad 2" in m for m in messages) and any("pad 9" in m for m in messages), " | ".join(messages))
+labels = [row[0] for row in rows(run.pad("own_row_twice", "named", 1))]
+messages = run.messages("own_row_twice", "named")
+check("data of the legend's own pad added with AddDataEntry keeps both rows", labels == ["one", "two", "two"], f"{labels}")
+check("data of the legend's own pad added with AddDataEntry is warned about", sum("data 2 has two rows" in m for m in messages) == 1, " | ".join(messages))
 finish()

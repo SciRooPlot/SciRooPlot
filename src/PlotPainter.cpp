@@ -1007,6 +1007,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
           row = rows.erase(row);
           continue;
         }
+        const bool ownRowToo = refPad == padID && std::any_of(rows.begin(), rows.end(), [refData](const auto& other) { return !other.GetRefPadID() && other.GetRefDataID() == refData; });
+        if (ownRowToo) {
+          logger::warning("Legend {} of pad {}: data {} has two rows, its own (its legend label) and the one of AddDataEntry.", legendIndex, padID, refData);
+        }
         const auto& data = *source->second.GetData()[refData - 1];
         Plot::Pad::LegendEntry merged = data.GetLegendEntryIfSet().value_or(Plot::Pad::LegendEntry{});
         merged += *row;
