@@ -316,6 +316,9 @@ class PlotPainter
   void ApplyDataStyle(item_state_t& state, T data_ptr, draw_option_t alias);
   template <typename T>
   void SetUpFrame(item_state_t& state, T data_ptr, const std::string& polarGridOption);
+  template <typename T>
+  void ApplyAxisSettings(pad_state_t& padState, char axisLabel, bool hbarFrame, const std::optional<std::vector<std::array<double_t, 3>>>& graphPositivePoints,
+                         const std::optional<std::vector<std::array<double_t, 5>>>& polyPositiveBins, const std::optional<double_t>& graphPositiveMinimumX);
   static void Paints3dGraph(const std::string& option, bool& triangles, bool& points);
   static bool IsFlatPolar(const std::string& option);
   static bool IsColorBoxes3d(const std::string& option);

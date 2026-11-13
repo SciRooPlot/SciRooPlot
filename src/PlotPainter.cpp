@@ -2484,10 +2484,6 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
   auto& padID = padState.padID;
   auto& pad_ptr = padState.pad_ptr;
   auto& padSetup = padState.padSetup;
-  auto& textFont = padState.textFont;
-  auto& textSize = padState.textSize;
-  auto& textColor = padState.textColor;
-  auto& textAlpha = padState.textAlpha;
   auto& axisHist_ptr = padState.axisHist_ptr;
   auto& polarFrame = padState.polarFrame;
   auto& polargram = padState.polargram;
@@ -2842,371 +2838,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
   }
   // the binned axes first: the positive minimum for a log value axis is taken from the bins in their range (with HBAR the value axis is the pad's X)
   for (auto axisLabel : (hbarFrame) ? array<char, 3>{'Y', 'X', 'Z'} : array<char, 3>{'X', 'Y', 'Z'}) {
-    // axisLabel: the axis of the pad (X horizontal, Y vertical); histLabel: the axis of the frame histogram drawn there
-    const char histLabel = (hbarFrame && axisLabel != 'Z') ? ((axisLabel == 'X') ? 'Y' : 'X') : axisLabel;
-    TAxis* axis_ptr = nullptr;
-    if (histLabel == 'X')
-      axis_ptr = axisHist_ptr->GetXaxis();
-    else if (histLabel == 'Y')
-      axis_ptr = axisHist_ptr->GetYaxis();
-    else if (axisLabel == 'Z')
-      axis_ptr = axisHist_ptr->GetZaxis();
-    if (!axis_ptr) continue;
-
-    auto textFontTitle = textFont;
-    auto textSizeTitle = textSize;
-    auto textColorTitle = textColor;
-    auto textAlphaTitle = textAlpha;
-    auto textFontLabel = textFont;
-    auto textSizeLabel = textSize;
-    auto textColorLabel = textColor;
-    auto textAlphaLabel = textAlpha;
-    optional<float_t> labelAngle;
-
-    optional<double_t> userRangeMin;
-    optional<double_t> userRangeMax;
-    bool userTitleOffset{};
-    bool userTitleCenter{};
-
-    // first apply default pad values and then settings for this specific pad
-    for (const auto* axisSettings : AxisSettings(pad, padDefaults, axisLabel)) {
-      const auto& axisLayout = *axisSettings;
-      if (axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).data());
-
-      if (axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
-      if (axisLayout.GetLabelFont()) textFontLabel = axisLayout.GetLabelFont();
-
-      if (axisLayout.GetTitleColor()) textColorTitle = axisLayout.GetTitleColor();
-      if (axisLayout.GetLabelColor()) textColorLabel = axisLayout.GetLabelColor();
-
-      if (axisLayout.GetTitleAlpha()) textAlphaTitle = axisLayout.GetTitleAlpha();
-      if (axisLayout.GetLabelAlpha()) textAlphaLabel = axisLayout.GetLabelAlpha();
-
-      if (axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
-      if (axisLayout.GetLabelSize()) textSizeLabel = axisLayout.GetLabelSize();
-      if (axisLayout.GetLabelAngle()) labelAngle = axisLayout.GetLabelAngle();
-
-      if (axisLayout.GetTitleCenter()) {
-        axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
-        userTitleCenter = true;
-      }
-      if (axisLayout.GetLabelCenter()) axis_ptr->CenterLabels(*axisLayout.GetLabelCenter());
-
-      if (axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(axisLayout.GetAxisColor()->ToIndex());
-      if (axisLayout.GetAxisAlpha()) axis_ptr->SetAxisColor(TColor::GetColorTransparent(axis_ptr->GetAxisColor(), *axisLayout.GetAxisAlpha()));
-
-      if (axisLayout.GetTitleOffset()) {
-        axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
-        userTitleOffset = true;
-      }
-      if (axisLayout.GetLabelOffset()) axis_ptr->SetLabelOffset(*axisLayout.GetLabelOffset());
-
-      if (axisLayout.GetTickLength()) axis_ptr->SetTickLength(*axisLayout.GetTickLength());
-      if (axisLayout.GetMaxDigits()) axis_ptr->SetMaxDigits(*axisLayout.GetMaxDigits());
-
-      if (axisLayout.GetNumDivisions()) axis_ptr->SetNdivisions(*axisLayout.GetNumDivisions());
-
-      if (axisLayout.GetOppositeTicks()) {
-        if (axisLabel == 'X') {
-          pad_ptr->SetTickx(*axisLayout.GetOppositeTicks());
-        } else if (axisLabel == 'Y') {
-          pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
-        }
-      }
-      if (axisLayout.GetNoExponent()) {
-        axis_ptr->SetNoExponent(*axisLayout.GetNoExponent());
-      }
-      if (axisLayout.GetTimeFormat()) {
-        axis_ptr->SetTimeDisplay(1);
-        axis_ptr->SetTimeFormat((*axisLayout.GetTimeFormat()).data());
-      }
-      if (axisLayout.GetTickOrientation()) {
-        axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).data());
-      }
-
-      // the ranges are applied below, once the default and pad-specific settings are merged
-      if (axisLayout.GetMinRange()) userRangeMin = axisLayout.GetMinRange();
-      if (axisLayout.GetMaxRange()) userRangeMax = axisLayout.GetMaxRange();
-
-      if (axisLayout.GetLog()) {
-        if (axisLabel == 'X') {
-          pad_ptr->SetLogx(*axisLayout.GetLog());
-        } else if (axisLabel == 'Y') {
-          pad_ptr->SetLogy(*axisLayout.GetLog());
-        } else if (axisLabel == 'Z') {
-          pad_ptr->SetLogz(*axisLayout.GetLog());
-        }
-      }
-      if (axisLabel != 'Z' && (axisLayout.GetColorScaleOffset() || axisLayout.GetColorScaleWidth())) {
-        ReportIgnored(fmt::format("The colour scale offset or width of the {} axis", axisLabel), "only the Z axis (C of a 3d histogram) has a colour scale");
-      }
-      if (axisLabel == 'Z' && (axisLayout.GetGrid() || axisLayout.GetOppositeTicks())) {
-        ReportIgnored("A grid or opposite ticks of the Z axis", "ROOT draws them on X and Y only", true);
-      }
-      if (axisLayout.GetGrid()) {
-        if (axisLabel == 'X') {
-          pad_ptr->SetGridx(*axisLayout.GetGrid());
-        } else if (axisLabel == 'Y') {
-          pad_ptr->SetGridy(*axisLayout.GetGrid());
-        }
-      }
-    }
-    // the title set above or stored with the input
-    if (string title = axis_ptr->GetTitle(); title.find('\\') != string::npos) {
-      DropEmptyGroups(title);
-      axis_ptr->SetTitle(title.data());
-    }
-
-    // labels and title a layout hides towards touching panels (see PanelLayout::ApplyTo): in a flat frame (known from an earlier paint, see
-    // SetFlatPads; a 3D view or a polar drawing keeps its own, it shares no axis), unless the pad sets their size itself
-    if (pad.GetHiddenNextTo().count(axisLabel)) {
-      const bool hide = !mFlatPads || mFlatPads->count(padID);
-      const auto own = pad.GetAxes().find(axisLabel);
-      const bool ownTitleSize = own != pad.GetAxes().end() && own->second.GetTitleSize();
-      const bool ownLabelSize = own != pad.GetAxes().end() && own->second.GetLabelSize();
-      if (hide) {
-        if (!ownTitleSize) textSizeTitle = 0.f;
-        if (!ownLabelSize) textSizeLabel = 0.f;
-      } else if (auto titleSize = LayoutValue(pad, padDefaults, "title_size"); titleSize && !ownTitleSize) {
-        textSizeTitle = titleSize;
-      }
-    }
-
-    // a lower end at or below zero cannot be shown on a log scale: the axis is drawn as without it (as in ROOT), with a warning below
-    optional<double_t> ignoredRangeMin;
-    if (userRangeMin && !MinRange(pad, padDefaults, axisLabel)) ignoredRangeMin = std::exchange(userRangeMin, nullopt);
-
-    // the title offsets of a layout panel are those of a flat frame; a 3D view draws its axes in perspective (THistPainter::PaintLegoAxis):
-    // x and y titles 1.5 title heights from the axis (ROOT's own value for y) and centred (at the end of the axis they run into the next
-    // pad or the colour scale), the z title next to its labels (offset 0, see PlaceZTitle)
-    const bool viewFrame = IsViewFrame(pad_ptr, axisHist_ptr);
-    if (viewFrame && axisLabel != 'Z' && !userTitleCenter) axis_ptr->CenterTitle();
-    if (!userTitleOffset) {
-      if (viewFrame) {
-        axis_ptr->SetTitleOffset((axisLabel == 'Z') ? 0.f : 1.5f);
-      } else if (auto layoutOffset = LayoutValue(pad, padDefaults, string("title_offset_") + static_cast<char>(std::tolower(axisLabel)))) {
-        axis_ptr->SetTitleOffset(*layoutOffset);
-      }
-    }
-
-    // THistPainter::PaintAxis scales the primary divisions of the horizontal axis with the width of the pad relative to the canvas
-    // when the setting carries a max digits part (ROOT bug: the same axis without max digits is not scaled), so a narrow pad
-    // would get fewer labels: the primary divisions are raised so that ROOT's scaling gives back the ones set
-    // (3D views paint their axes without that scaling)
-    if (const int32_t nDiv = axis_ptr->GetNdivisions(); axisLabel == 'X' && nDiv > 1000 && pad_ptr->GetAbsWNDC() > 0. && !IsViewFrame(pad_ptr, axisHist_ptr)) {
-      const double_t padWidth = pad_ptr->GetAbsWNDC();
-      const int32_t primary = std::max(1, nDiv % 100);
-      // ROOT: Int_t(Float_t(primary) * pad->GetAbsWNDC())
-      const auto scaled = [padWidth](int32_t divisions) { return static_cast<int32_t>(static_cast<float>(divisions) * padWidth); };
-      int32_t compensated = std::min(99, static_cast<int32_t>(std::ceil(primary / padWidth)));
-      while (compensated < 99 && scaled(compensated) < primary)
-        ++compensated;
-      if (compensated > primary) axis_ptr->SetNdivisions(nDiv - nDiv % 100 + compensated);
-    }
-
-    // ranges are only touched if the user set one: ROOT's bin edges are not exactly reproducible (e.g. 4.000000000000001 instead of 4),
-    // so feeding the drawn range back in through SetRangeUser would add the overflow bin
-    if (userRangeMin || userRangeMax) {
-      const bool isBinnedAxis = (histLabel == 'X') || (frameDim > 1 && histLabel == 'Y') || (frameDim == 3 && histLabel == 'Z');
-      const bool isPolygonAxis = histLabel != 'Z' && axisHist_ptr->InheritsFrom(TH2Poly::Class());
-      if ((is_graph_1d<data_type>() && histLabel == 'X') || (is_graph_2d<data_type>() && histLabel != 'Z') || isPolygonAxis) {
-        // the frame of a graph is an empty histogram whose bins mean nothing (for a 2d graph the grid it is interpolated on, for a
-        // TH2Poly the grid it finds its polygons with): its x (and y) axis is set to the user values instead of the edges of the bins
-        // containing them (the dependent axis has no bins)
-        const double_t min = userRangeMin.value_or(axis_ptr->GetBinLowEdge(std::max(axis_ptr->GetFirst(), 1)));
-        const double_t max = userRangeMax.value_or(axis_ptr->GetBinUpEdge(std::min(axis_ptr->GetLast(), axis_ptr->GetNbins())));
-        if (min < max) {
-          axis_ptr->Set(axis_ptr->GetNbins(), min, max);
-          axis_ptr->SetRange();
-        } else {
-          // one side set beyond the other end of the data (SetMinRange(20) for points up to 10)
-          logger::warning("The range {} to {} of the {} axis in pad {} is empty: the whole axis is shown.", min, max, axisLabel, padID);
-        }
-      } else if (isBinnedAxis) {
-        // bin selection as in TAxis::SetRangeUser, but a side the user did not set keeps its current bin
-        const auto [first, last] = BinRange(axis_ptr, userRangeMin, userRangeMax);
-        if (std::max(first, 1) > std::min(last, axis_ptr->GetNbins())) {
-          // ROOT shows the whole axis for an empty bin range (one side set beyond the other end of the data, SetMinRange(20) for bins up to 10)
-          logger::warning("The range {} to {} of the {} axis in pad {} contains no bins of the data ({} to {}): the whole axis is shown.",
-                          userRangeMin ? fmt::format("{}", *userRangeMin) : "its start", userRangeMax ? fmt::format("{}", *userRangeMax) : "its end", axisLabel, padID, axis_ptr->GetXmin(), axis_ptr->GetXmax());
-        }
-        // never the underflow or overflow bin: a range ending at the edge of the axis (e.g. one extended above) gives the overflow bin,
-        // whose low edge ROOT computes as for equal bins, which for variable bins can lie just below the edge (14.999999999999998 for 15)
-        axis_ptr->SetRange(std::max(first, 1), std::min(last, axis_ptr->GetNbins()));
-      } else {
-        // the dependent axis (y of 1d, z of 2d) has no bins: its range is the minimum and maximum of the histogram
-        if (userRangeMin) axisHist_ptr->SetMinimum(*userRangeMin);
-        if (userRangeMax) axisHist_ptr->SetMaximum(*userRangeMax);
-        // one side set beyond the other end of the data (SetMinRange(50) for contents up to 10): ROOT would draw an inverted range
-        if (userRangeMin.has_value() != userRangeMax.has_value()) {
-          const double_t min = userRangeMin.value_or(axisHist_ptr->GetMinimum());
-          const double_t max = userRangeMax.value_or(axisHist_ptr->GetMaximum());
-          if (min >= max) {
-            logger::warning("The range {} to {} of the {} axis in pad {} is empty: the automatic range is used.", min, max, axisLabel, padID);
-            (userRangeMin) ? axisHist_ptr->SetMinimum() : axisHist_ptr->SetMaximum();
-          }
-        }
-      }
-    }
-
-    // a log scale needs a positive range: ROOT otherwise complains and draws nothing (or the data outside of the frame);
-    // in a 3D view only the binned axes (the height of a lego or surface is ROOT's)
-    const bool isDependentAxis = (frameDim < 3) && (histLabel == ((frameDim == 2) ? 'Z' : 'Y'));  // the z axis of 3d data is binned
-    if (!pad_ptr->GetView() || !isDependentAxis) {
-      const bool isLog = (axisLabel == 'X') ? pad_ptr->GetLogx() : ((axisLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
-      auto disableLog = [&]() {
-        if (axisLabel == 'X')
-          pad_ptr->SetLogx(false);
-        else if (axisLabel == 'Y')
-          pad_ptr->SetLogy(false);
-        else
-          pad_ptr->SetLogz(false);
-      };
-      if (isLog && isDependentAxis) {
-        // the smallest positive value is taken from the data drawn inside the frame's ranges (the binned axes are set before):
-        // GetMinimum(0.) would return the stored minimum (which every graph frame has)
-        double_t positiveMinimum = std::numeric_limits<double_t>::infinity();
-        const TAxis* xAxis = axisHist_ptr->GetXaxis();
-        const TAxis* yAxis = axisHist_ptr->GetYaxis();
-        const auto binRange = [](const TAxis* axis) { return std::make_pair(std::max(axis->GetFirst(), 1), std::min(axis->GetLast(), axis->GetNbins())); };
-        if (graphPositivePoints) {
-          // the frame of a 1d graph has its x axis set to the range (a point counts where its x error bar reaches into it), that of a
-          // 2d graph its bins selected
-          const auto inRange = [&](const TAxis* axis, double_t low, double_t high) {
-            const auto [first, last] = binRange(axis);
-            return high >= axis->GetBinLowEdge(first) && low <= axis->GetBinUpEdge(last);
-          };
-          for (const auto& [a, b, value] : *graphPositivePoints) {
-            const bool shown = (frameDim == 1) ? inRange(xAxis, a, b) : inRange(xAxis, a, a) && inRange(yAxis, b, b);
-            if (shown) positiveMinimum = std::min(positiveMinimum, value);
-          }
-        } else if (polyPositiveBins) {
-          // the polygons reaching into the x and y ranges of the frame
-          const auto [firstX, lastX] = binRange(xAxis);
-          const auto [firstY, lastY] = binRange(yAxis);
-          for (const auto& [x0, x1, y0, y1, content] : *polyPositiveBins) {
-            const bool shownX = x1 >= xAxis->GetBinLowEdge(firstX) && x0 <= xAxis->GetBinUpEdge(lastX);
-            if (shownX && y1 >= yAxis->GetBinLowEdge(firstY) && y0 <= yAxis->GetBinUpEdge(lastY)) positiveMinimum = std::min(positiveMinimum, content);
-          }
-        } else {
-          const auto [firstX, lastX] = binRange(xAxis);
-          const auto [firstY, lastY] = (frameDim > 1) ? binRange(yAxis) : std::make_pair(0, 0);
-          const auto [firstZ, lastZ] = (frameDim > 2) ? binRange(axisHist_ptr->GetZaxis()) : std::make_pair(0, 0);
-          for (int32_t binZ = firstZ; binZ <= lastZ; ++binZ) {
-            for (int32_t binY = firstY; binY <= lastY; ++binY) {
-              for (int32_t binX = firstX; binX <= lastX; ++binX) {
-                const double_t content = axisHist_ptr->GetBinContent(binX, binY, binZ);
-                if (content > 0.) positiveMinimum = std::min(positiveMinimum, content);
-              }
-            }
-          }
-        }
-        if (std::isinf(positiveMinimum)) {
-          // a positive user range is enough for ROOT (e.g. an empty histogram as frame), as is a positive minimum stored with a histogram
-          // that defines the frame (graph frames always have a stored minimum, computed from the points)
-          const bool hasPositiveMinimum = (userRangeMin && *userRangeMin > 0.) || (!graphPositivePoints && axisHist_ptr->GetMinimumStored() > 0.);
-          if (!hasPositiveMinimum) {
-            ReportIgnored(fmt::format("The log scale of the {} axis of pad {}", axisLabel, padID), "the data has no positive values");
-            disableLog();
-          }
-        } else if (frameDim == 1 && ((axisHist_ptr->GetMinimumStored() != -1111) ? (axisHist_ptr->GetMinimumStored() <= 0.) : (axisHist_ptr->GetMinimum() < 0.))) {
-          // ROOT cannot draw a log axis from a stored minimum at or below zero or from negative contents (zero contents it skips itself);
-          // a 2d frame gets ROOT's floor for log z below, whether its minimum is stored or not
-          axisHist_ptr->SetMinimum(0.5 * positiveMinimum);
-        }
-      } else if (isLog && !isDependentAxis) {
-        const int32_t firstBin = std::max(axis_ptr->GetFirst(), 1);
-        const int32_t lastBin = std::min(axis_ptr->GetLast(), axis_ptr->GetNbins());
-        const bool isGraphFrame = (axisLabel == 'X') && graphPositiveMinimumX && !std::isinf(*graphPositiveMinimumX);
-        if (isGraphFrame && axis_ptr->GetBinLowEdge(firstBin) <= 0. && axis_ptr->GetBinUpEdge(lastBin) > 0.) {
-          // the frame of a graph is an empty histogram with linear bins, whose first positive edge can lie above the smallest points:
-          // its axis is redefined to start just below them, as ROOT does for a graph drawn on a log x axis (or at a positive minimum set by the user)
-          const double_t newMin = (userRangeMin && *userRangeMin > 0.) ? *userRangeMin : 0.9 * *graphPositiveMinimumX;
-          axis_ptr->Set(axis_ptr->GetNbins(), newMin, axis_ptr->GetBinUpEdge(lastBin));
-          axis_ptr->SetRange();
-        } else if (axis_ptr->GetBinLowEdge(firstBin) < 0.) {  // ROOT itself copes with a range starting at zero
-          if (axis_ptr->GetBinUpEdge(lastBin) <= 0.) {
-            ReportIgnored(fmt::format("The log scale of the {} axis of pad {}", axisLabel, padID), "the axis range has no positive values");
-            disableLog();
-          } else {
-            int32_t bin = firstBin;
-            while (axis_ptr->GetBinLowEdge(bin) <= 0.) {
-              ++bin;
-            }
-            // start at the first positive bin edge (ROOT would otherwise draw the bins with negative edges left of the frame); set as bins:
-            // SetRangeUser up to the last upper edge would add the overflow bin. The empty frame of a 3d function (whose bins mean nothing)
-            // gets an axis starting there instead: ROOT paints an empty 3d histogram on a log axis from its first bin (ROOT bug)
-            if constexpr (is_func_3d<data_type>()) {
-              axis_ptr->Set(axis_ptr->GetNbins(), axis_ptr->GetBinLowEdge(std::min(bin, lastBin)), axis_ptr->GetBinUpEdge(lastBin));
-              axis_ptr->SetRange();
-            } else {
-              axis_ptr->SetRange(std::min(bin, lastBin), lastBin);
-            }
-          }
-        }
-      }
-    }
-    const bool stillLog = (axisLabel == 'X') ? pad_ptr->GetLogx() : ((axisLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
-    if (stillLog && ignoredRangeMin && !(axisLabel == 'Z' && frameDim == 1)) {
-      ReportIgnored(fmt::format("The lower range ({:g}) of the {} axis of pad {}", *ignoredRangeMin, axisLabel, padID), "a log scale shows only positive values, the axis starts at its automatic minimum");
-    }
-
-    if (textFontTitle) axis_ptr->SetTitleFont(*textFontTitle);
-    if (textSizeTitle) axis_ptr->SetTitleSize(*textSizeTitle);
-    if (textColorTitle) axis_ptr->SetTitleColor(textColorTitle->ToIndex());
-    if (textAlphaTitle) axis_ptr->SetTitleColor(TColor::GetColorTransparent(axis_ptr->GetTitleColor(), *textAlphaTitle));
-    if (textFontLabel) axis_ptr->SetLabelFont(*textFontLabel);
-    if (textSizeLabel) {
-      // TGaxis::PaintAxis draws the alphanumeric bin labels of an x or y axis with a relative font at 0.66666 of the label size:
-      // compensate, so the size set is the size drawn (the z labels of a palette are painted without this factor)
-      const bool shrunkByRoot = axisLabel != 'Z' && axis_ptr->GetLabels() && axis_ptr->GetLabelFont() % 10 != 3;
-      axis_ptr->SetLabelSize(shrunkByRoot ? *textSizeLabel / 0.66666f : *textSizeLabel);
-    }
-    // TGaxis::PaintAxis moves the numbers below a horizontal axis down by a multiple of the label size taken as a fraction of the pad
-    // height, while ROOT sizes text by the shorter side of the pad: in a pad taller than wide they would sit too far from the axis
-    if (axisLabel == 'X' && !axis_ptr->GetLabels() && axis_ptr->GetLabelFont() % 10 != 3 && !IsViewFrame(pad_ptr, axisHist_ptr)) {
-      const double_t width = pad_ptr->GetWw() * pad_ptr->GetAbsWNDC();
-      const double_t height = pad_ptr->GetWh() * pad_ptr->GetAbsHNDC();
-      if (height > width) {
-        const double_t drop = (pad_ptr->GetLogx()) ? (axis_ptr->GetNoExponent() ? 0.82 : 1.15) : 0.8;
-        axis_ptr->SetLabelOffset(static_cast<float_t>(axis_ptr->GetLabelOffset() - drop * axis_ptr->GetLabelSize() * (1. - width / height)));
-      }
-    }
-    if (textColorLabel) axis_ptr->SetLabelColor(textColorLabel->ToIndex());
-    if (textAlphaLabel) axis_ptr->SetLabelColor(TColor::GetColorTransparent(axis_ptr->GetLabelColor(), *textAlphaLabel));
-    if (labelAngle) {
-      // with horizontal bars the bin labels are on the vertical axis, where TGaxis paints them horizontally (angle 0, as on a y axis)
-      if (axisLabel == 'X' && !hbarFrame && axis_ptr->GetLabels()) {
-        // TGaxis::PaintAxis knows four orientations of the bin labels (the bits LabelsOption sets), each with the alignment that fits
-        // it; another angle is given to every label (ChangeLabel numbers them by bin, takes only angles >= 0) with the alignment
-        // ROOT uses for its tilted ones: a label rising to the right ends at its tick, a falling one starts there
-        const float_t angle = *labelAngle;
-        const std::array<std::pair<float_t, TAxis::EStatusBits>, 4> orientations{
-          {{0.f, TAxis::kLabelsHori}, {90.f, TAxis::kLabelsVert}, {20.f, TAxis::kLabelsUp}, {-20.f, TAxis::kLabelsDown}}};
-        bool fixed{};
-        for (const auto& [fixedAngle, bit] : orientations) {
-          axis_ptr->SetBit(bit, angle == fixedAngle);
-          fixed = fixed || angle == fixedAngle;
-        }
-        if (!fixed) {
-          const float_t positive = std::fmod(std::fmod(angle, 360.f) + 360.f, 360.f);
-          for (int32_t bin = 1; bin <= axis_ptr->GetNbins(); ++bin) {
-            axis_ptr->ChangeLabel(bin, positive, -1., (positive < 180.f) ? 32 : 12);
-          }
-        }
-      } else {
-        logger::warning("The label angle of the {} axis of pad {} is not applied: ROOT tilts only the bin labels of an x axis drawn horizontally.", axisLabel, padID);
-      }
-    }
-    // ROOT places a y title with offset 0 automatically next to the widest label, but the gap it leaves is the title size
-    // read as a fraction of the pad width (see TGaxis::PaintAxis), i.e. it grows for pads that are wider than high.
-    // With a pixel font the gap is the title height in every pad, so relative fonts are converted for the automatic placement.
-    // Pixel sizes are stored unscaled (ApplyScale multiplies them by mScale), while the canvas already has its scaled size.
-    if (axisLabel == 'Y' && axis_ptr->GetTitleOffset() == 0.f && axis_ptr->GetTitleFont() % 10 <= 2 && axis_ptr->GetTitleSize() > 0.f && axis_ptr->GetTitleSize() < 1.f) {
-      const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad_ptr);
-      axis_ptr->SetTitleFont(axis_ptr->GetTitleFont() / 10 * 10 + 3);
-      axis_ptr->SetTitleSize(static_cast<float_t>(axis_ptr->GetTitleSize() * std::min(padWidthPixel, padHeightPixel) / mScale));
-    }
+    ApplyAxisSettings<data_type>(padState, axisLabel, hbarFrame, graphPositivePoints, polyPositiveBins, graphPositiveMinimumX);
   }
 
   if (polargram) {
@@ -3336,6 +2968,396 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
     }
   }
   pad_ptr->Update();
+}
+
+//**************************************************************************************************
+/**
+ * Applies the settings of one axis of the pad (X horizontal, Y vertical; with HBAR the y and x axis of the frame histogram) to the frame
+ * of data of type T: title and labels, range, log scale; the positive values of graphs and polygons (see SetUpFrame) give the smallest
+ * value a log value axis shows.
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, bool hbarFrame, const optional<vector<array<double_t, 3>>>& graphPositivePoints,
+                                    const optional<vector<array<double_t, 5>>>& polyPositiveBins, const optional<double_t>& graphPositiveMinimumX)
+{
+  using data_type = T;
+  auto& padDefaults = padState.padDefaults;
+  auto& pad = padState.pad;
+  auto& padID = padState.padID;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& textFont = padState.textFont;
+  auto& textSize = padState.textSize;
+  auto& textColor = padState.textColor;
+  auto& textAlpha = padState.textAlpha;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  const int32_t frameDim = axisHist_ptr->GetDimension();
+
+  // axisLabel: the axis of the pad (X horizontal, Y vertical); histLabel: the axis of the frame histogram drawn there
+  const char histLabel = (hbarFrame && axisLabel != 'Z') ? ((axisLabel == 'X') ? 'Y' : 'X') : axisLabel;
+  TAxis* axis_ptr = nullptr;
+  if (histLabel == 'X')
+    axis_ptr = axisHist_ptr->GetXaxis();
+  else if (histLabel == 'Y')
+    axis_ptr = axisHist_ptr->GetYaxis();
+  else if (axisLabel == 'Z')
+    axis_ptr = axisHist_ptr->GetZaxis();
+  if (!axis_ptr) return;
+
+  auto textFontTitle = textFont;
+  auto textSizeTitle = textSize;
+  auto textColorTitle = textColor;
+  auto textAlphaTitle = textAlpha;
+  auto textFontLabel = textFont;
+  auto textSizeLabel = textSize;
+  auto textColorLabel = textColor;
+  auto textAlphaLabel = textAlpha;
+  optional<float_t> labelAngle;
+
+  optional<double_t> userRangeMin;
+  optional<double_t> userRangeMax;
+  bool userTitleOffset{};
+  bool userTitleCenter{};
+
+  // first apply default pad values and then settings for this specific pad
+  for (const auto* axisSettings : AxisSettings(pad, padDefaults, axisLabel)) {
+    const auto& axisLayout = *axisSettings;
+    if (axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).data());
+
+    if (axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
+    if (axisLayout.GetLabelFont()) textFontLabel = axisLayout.GetLabelFont();
+
+    if (axisLayout.GetTitleColor()) textColorTitle = axisLayout.GetTitleColor();
+    if (axisLayout.GetLabelColor()) textColorLabel = axisLayout.GetLabelColor();
+
+    if (axisLayout.GetTitleAlpha()) textAlphaTitle = axisLayout.GetTitleAlpha();
+    if (axisLayout.GetLabelAlpha()) textAlphaLabel = axisLayout.GetLabelAlpha();
+
+    if (axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
+    if (axisLayout.GetLabelSize()) textSizeLabel = axisLayout.GetLabelSize();
+    if (axisLayout.GetLabelAngle()) labelAngle = axisLayout.GetLabelAngle();
+
+    if (axisLayout.GetTitleCenter()) {
+      axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
+      userTitleCenter = true;
+    }
+    if (axisLayout.GetLabelCenter()) axis_ptr->CenterLabels(*axisLayout.GetLabelCenter());
+
+    if (axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(axisLayout.GetAxisColor()->ToIndex());
+    if (axisLayout.GetAxisAlpha()) axis_ptr->SetAxisColor(TColor::GetColorTransparent(axis_ptr->GetAxisColor(), *axisLayout.GetAxisAlpha()));
+
+    if (axisLayout.GetTitleOffset()) {
+      axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
+      userTitleOffset = true;
+    }
+    if (axisLayout.GetLabelOffset()) axis_ptr->SetLabelOffset(*axisLayout.GetLabelOffset());
+
+    if (axisLayout.GetTickLength()) axis_ptr->SetTickLength(*axisLayout.GetTickLength());
+    if (axisLayout.GetMaxDigits()) axis_ptr->SetMaxDigits(*axisLayout.GetMaxDigits());
+
+    if (axisLayout.GetNumDivisions()) axis_ptr->SetNdivisions(*axisLayout.GetNumDivisions());
+
+    if (axisLayout.GetOppositeTicks()) {
+      if (axisLabel == 'X') {
+        pad_ptr->SetTickx(*axisLayout.GetOppositeTicks());
+      } else if (axisLabel == 'Y') {
+        pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
+      }
+    }
+    if (axisLayout.GetNoExponent()) {
+      axis_ptr->SetNoExponent(*axisLayout.GetNoExponent());
+    }
+    if (axisLayout.GetTimeFormat()) {
+      axis_ptr->SetTimeDisplay(1);
+      axis_ptr->SetTimeFormat((*axisLayout.GetTimeFormat()).data());
+    }
+    if (axisLayout.GetTickOrientation()) {
+      axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).data());
+    }
+
+    // the ranges are applied below, once the default and pad-specific settings are merged
+    if (axisLayout.GetMinRange()) userRangeMin = axisLayout.GetMinRange();
+    if (axisLayout.GetMaxRange()) userRangeMax = axisLayout.GetMaxRange();
+
+    if (axisLayout.GetLog()) {
+      if (axisLabel == 'X') {
+        pad_ptr->SetLogx(*axisLayout.GetLog());
+      } else if (axisLabel == 'Y') {
+        pad_ptr->SetLogy(*axisLayout.GetLog());
+      } else if (axisLabel == 'Z') {
+        pad_ptr->SetLogz(*axisLayout.GetLog());
+      }
+    }
+    if (axisLabel != 'Z' && (axisLayout.GetColorScaleOffset() || axisLayout.GetColorScaleWidth())) {
+      ReportIgnored(fmt::format("The colour scale offset or width of the {} axis", axisLabel), "only the Z axis (C of a 3d histogram) has a colour scale");
+    }
+    if (axisLabel == 'Z' && (axisLayout.GetGrid() || axisLayout.GetOppositeTicks())) {
+      ReportIgnored("A grid or opposite ticks of the Z axis", "ROOT draws them on X and Y only", true);
+    }
+    if (axisLayout.GetGrid()) {
+      if (axisLabel == 'X') {
+        pad_ptr->SetGridx(*axisLayout.GetGrid());
+      } else if (axisLabel == 'Y') {
+        pad_ptr->SetGridy(*axisLayout.GetGrid());
+      }
+    }
+  }
+  // the title set above or stored with the input
+  if (string title = axis_ptr->GetTitle(); title.find('\\') != string::npos) {
+    DropEmptyGroups(title);
+    axis_ptr->SetTitle(title.data());
+  }
+
+  // labels and title a layout hides towards touching panels (see PanelLayout::ApplyTo): in a flat frame (known from an earlier paint, see
+  // SetFlatPads; a 3D view or a polar drawing keeps its own, it shares no axis), unless the pad sets their size itself
+  if (pad.GetHiddenNextTo().count(axisLabel)) {
+    const bool hide = !mFlatPads || mFlatPads->count(padID);
+    const auto own = pad.GetAxes().find(axisLabel);
+    const bool ownTitleSize = own != pad.GetAxes().end() && own->second.GetTitleSize();
+    const bool ownLabelSize = own != pad.GetAxes().end() && own->second.GetLabelSize();
+    if (hide) {
+      if (!ownTitleSize) textSizeTitle = 0.f;
+      if (!ownLabelSize) textSizeLabel = 0.f;
+    } else if (auto titleSize = LayoutValue(pad, padDefaults, "title_size"); titleSize && !ownTitleSize) {
+      textSizeTitle = titleSize;
+    }
+  }
+
+  // a lower end at or below zero cannot be shown on a log scale: the axis is drawn as without it (as in ROOT), with a warning below
+  optional<double_t> ignoredRangeMin;
+  if (userRangeMin && !MinRange(pad, padDefaults, axisLabel)) ignoredRangeMin = std::exchange(userRangeMin, nullopt);
+
+  // the title offsets of a layout panel are those of a flat frame; a 3D view draws its axes in perspective (THistPainter::PaintLegoAxis):
+  // x and y titles 1.5 title heights from the axis (ROOT's own value for y) and centred (at the end of the axis they run into the next
+  // pad or the colour scale), the z title next to its labels (offset 0, see PlaceZTitle)
+  const bool viewFrame = IsViewFrame(pad_ptr, axisHist_ptr);
+  if (viewFrame && axisLabel != 'Z' && !userTitleCenter) axis_ptr->CenterTitle();
+  if (!userTitleOffset) {
+    if (viewFrame) {
+      axis_ptr->SetTitleOffset((axisLabel == 'Z') ? 0.f : 1.5f);
+    } else if (auto layoutOffset = LayoutValue(pad, padDefaults, string("title_offset_") + static_cast<char>(std::tolower(axisLabel)))) {
+      axis_ptr->SetTitleOffset(*layoutOffset);
+    }
+  }
+
+  // THistPainter::PaintAxis scales the primary divisions of the horizontal axis with the width of the pad relative to the canvas
+  // when the setting carries a max digits part (ROOT bug: the same axis without max digits is not scaled), so a narrow pad
+  // would get fewer labels: the primary divisions are raised so that ROOT's scaling gives back the ones set
+  // (3D views paint their axes without that scaling)
+  if (const int32_t nDiv = axis_ptr->GetNdivisions(); axisLabel == 'X' && nDiv > 1000 && pad_ptr->GetAbsWNDC() > 0. && !IsViewFrame(pad_ptr, axisHist_ptr)) {
+    const double_t padWidth = pad_ptr->GetAbsWNDC();
+    const int32_t primary = std::max(1, nDiv % 100);
+    // ROOT: Int_t(Float_t(primary) * pad->GetAbsWNDC())
+    const auto scaled = [padWidth](int32_t divisions) { return static_cast<int32_t>(static_cast<float>(divisions) * padWidth); };
+    int32_t compensated = std::min(99, static_cast<int32_t>(std::ceil(primary / padWidth)));
+    while (compensated < 99 && scaled(compensated) < primary)
+      ++compensated;
+    if (compensated > primary) axis_ptr->SetNdivisions(nDiv - nDiv % 100 + compensated);
+  }
+
+  // ranges are only touched if the user set one: ROOT's bin edges are not exactly reproducible (e.g. 4.000000000000001 instead of 4),
+  // so feeding the drawn range back in through SetRangeUser would add the overflow bin
+  if (userRangeMin || userRangeMax) {
+    const bool isBinnedAxis = (histLabel == 'X') || (frameDim > 1 && histLabel == 'Y') || (frameDim == 3 && histLabel == 'Z');
+    const bool isPolygonAxis = histLabel != 'Z' && axisHist_ptr->InheritsFrom(TH2Poly::Class());
+    if ((is_graph_1d<data_type>() && histLabel == 'X') || (is_graph_2d<data_type>() && histLabel != 'Z') || isPolygonAxis) {
+      // the frame of a graph is an empty histogram whose bins mean nothing (for a 2d graph the grid it is interpolated on, for a
+      // TH2Poly the grid it finds its polygons with): its x (and y) axis is set to the user values instead of the edges of the bins
+      // containing them (the dependent axis has no bins)
+      const double_t min = userRangeMin.value_or(axis_ptr->GetBinLowEdge(std::max(axis_ptr->GetFirst(), 1)));
+      const double_t max = userRangeMax.value_or(axis_ptr->GetBinUpEdge(std::min(axis_ptr->GetLast(), axis_ptr->GetNbins())));
+      if (min < max) {
+        axis_ptr->Set(axis_ptr->GetNbins(), min, max);
+        axis_ptr->SetRange();
+      } else {
+        // one side set beyond the other end of the data (SetMinRange(20) for points up to 10)
+        logger::warning("The range {} to {} of the {} axis in pad {} is empty: the whole axis is shown.", min, max, axisLabel, padID);
+      }
+    } else if (isBinnedAxis) {
+      // bin selection as in TAxis::SetRangeUser, but a side the user did not set keeps its current bin
+      const auto [first, last] = BinRange(axis_ptr, userRangeMin, userRangeMax);
+      if (std::max(first, 1) > std::min(last, axis_ptr->GetNbins())) {
+        // ROOT shows the whole axis for an empty bin range (one side set beyond the other end of the data, SetMinRange(20) for bins up to 10)
+        logger::warning("The range {} to {} of the {} axis in pad {} contains no bins of the data ({} to {}): the whole axis is shown.",
+                        userRangeMin ? fmt::format("{}", *userRangeMin) : "its start", userRangeMax ? fmt::format("{}", *userRangeMax) : "its end", axisLabel, padID, axis_ptr->GetXmin(), axis_ptr->GetXmax());
+      }
+      // never the underflow or overflow bin: a range ending at the edge of the axis (e.g. one extended above) gives the overflow bin,
+      // whose low edge ROOT computes as for equal bins, which for variable bins can lie just below the edge (14.999999999999998 for 15)
+      axis_ptr->SetRange(std::max(first, 1), std::min(last, axis_ptr->GetNbins()));
+    } else {
+      // the dependent axis (y of 1d, z of 2d) has no bins: its range is the minimum and maximum of the histogram
+      if (userRangeMin) axisHist_ptr->SetMinimum(*userRangeMin);
+      if (userRangeMax) axisHist_ptr->SetMaximum(*userRangeMax);
+      // one side set beyond the other end of the data (SetMinRange(50) for contents up to 10): ROOT would draw an inverted range
+      if (userRangeMin.has_value() != userRangeMax.has_value()) {
+        const double_t min = userRangeMin.value_or(axisHist_ptr->GetMinimum());
+        const double_t max = userRangeMax.value_or(axisHist_ptr->GetMaximum());
+        if (min >= max) {
+          logger::warning("The range {} to {} of the {} axis in pad {} is empty: the automatic range is used.", min, max, axisLabel, padID);
+          (userRangeMin) ? axisHist_ptr->SetMinimum() : axisHist_ptr->SetMaximum();
+        }
+      }
+    }
+  }
+
+  // a log scale needs a positive range: ROOT otherwise complains and draws nothing (or the data outside of the frame);
+  // in a 3D view only the binned axes (the height of a lego or surface is ROOT's)
+  const bool isDependentAxis = (frameDim < 3) && (histLabel == ((frameDim == 2) ? 'Z' : 'Y'));  // the z axis of 3d data is binned
+  if (!pad_ptr->GetView() || !isDependentAxis) {
+    const bool isLog = (axisLabel == 'X') ? pad_ptr->GetLogx() : ((axisLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
+    auto disableLog = [&]() {
+      if (axisLabel == 'X')
+        pad_ptr->SetLogx(false);
+      else if (axisLabel == 'Y')
+        pad_ptr->SetLogy(false);
+      else
+        pad_ptr->SetLogz(false);
+    };
+    if (isLog && isDependentAxis) {
+      // the smallest positive value is taken from the data drawn inside the frame's ranges (the binned axes are set before):
+      // GetMinimum(0.) would return the stored minimum (which every graph frame has)
+      double_t positiveMinimum = std::numeric_limits<double_t>::infinity();
+      const TAxis* xAxis = axisHist_ptr->GetXaxis();
+      const TAxis* yAxis = axisHist_ptr->GetYaxis();
+      const auto binRange = [](const TAxis* axis) { return std::make_pair(std::max(axis->GetFirst(), 1), std::min(axis->GetLast(), axis->GetNbins())); };
+      if (graphPositivePoints) {
+        // the frame of a 1d graph has its x axis set to the range (a point counts where its x error bar reaches into it), that of a
+        // 2d graph its bins selected
+        const auto inRange = [&](const TAxis* axis, double_t low, double_t high) {
+          const auto [first, last] = binRange(axis);
+          return high >= axis->GetBinLowEdge(first) && low <= axis->GetBinUpEdge(last);
+        };
+        for (const auto& [a, b, value] : *graphPositivePoints) {
+          const bool shown = (frameDim == 1) ? inRange(xAxis, a, b) : inRange(xAxis, a, a) && inRange(yAxis, b, b);
+          if (shown) positiveMinimum = std::min(positiveMinimum, value);
+        }
+      } else if (polyPositiveBins) {
+        // the polygons reaching into the x and y ranges of the frame
+        const auto [firstX, lastX] = binRange(xAxis);
+        const auto [firstY, lastY] = binRange(yAxis);
+        for (const auto& [x0, x1, y0, y1, content] : *polyPositiveBins) {
+          const bool shownX = x1 >= xAxis->GetBinLowEdge(firstX) && x0 <= xAxis->GetBinUpEdge(lastX);
+          if (shownX && y1 >= yAxis->GetBinLowEdge(firstY) && y0 <= yAxis->GetBinUpEdge(lastY)) positiveMinimum = std::min(positiveMinimum, content);
+        }
+      } else {
+        const auto [firstX, lastX] = binRange(xAxis);
+        const auto [firstY, lastY] = (frameDim > 1) ? binRange(yAxis) : std::make_pair(0, 0);
+        const auto [firstZ, lastZ] = (frameDim > 2) ? binRange(axisHist_ptr->GetZaxis()) : std::make_pair(0, 0);
+        for (int32_t binZ = firstZ; binZ <= lastZ; ++binZ) {
+          for (int32_t binY = firstY; binY <= lastY; ++binY) {
+            for (int32_t binX = firstX; binX <= lastX; ++binX) {
+              const double_t content = axisHist_ptr->GetBinContent(binX, binY, binZ);
+              if (content > 0.) positiveMinimum = std::min(positiveMinimum, content);
+            }
+          }
+        }
+      }
+      if (std::isinf(positiveMinimum)) {
+        // a positive user range is enough for ROOT (e.g. an empty histogram as frame), as is a positive minimum stored with a histogram
+        // that defines the frame (graph frames always have a stored minimum, computed from the points)
+        const bool hasPositiveMinimum = (userRangeMin && *userRangeMin > 0.) || (!graphPositivePoints && axisHist_ptr->GetMinimumStored() > 0.);
+        if (!hasPositiveMinimum) {
+          ReportIgnored(fmt::format("The log scale of the {} axis of pad {}", axisLabel, padID), "the data has no positive values");
+          disableLog();
+        }
+      } else if (frameDim == 1 && ((axisHist_ptr->GetMinimumStored() != -1111) ? (axisHist_ptr->GetMinimumStored() <= 0.) : (axisHist_ptr->GetMinimum() < 0.))) {
+        // ROOT cannot draw a log axis from a stored minimum at or below zero or from negative contents (zero contents it skips itself);
+        // a 2d frame gets ROOT's floor for log z below, whether its minimum is stored or not
+        axisHist_ptr->SetMinimum(0.5 * positiveMinimum);
+      }
+    } else if (isLog && !isDependentAxis) {
+      const int32_t firstBin = std::max(axis_ptr->GetFirst(), 1);
+      const int32_t lastBin = std::min(axis_ptr->GetLast(), axis_ptr->GetNbins());
+      const bool isGraphFrame = (axisLabel == 'X') && graphPositiveMinimumX && !std::isinf(*graphPositiveMinimumX);
+      if (isGraphFrame && axis_ptr->GetBinLowEdge(firstBin) <= 0. && axis_ptr->GetBinUpEdge(lastBin) > 0.) {
+        // the frame of a graph is an empty histogram with linear bins, whose first positive edge can lie above the smallest points:
+        // its axis is redefined to start just below them, as ROOT does for a graph drawn on a log x axis (or at a positive minimum set by the user)
+        const double_t newMin = (userRangeMin && *userRangeMin > 0.) ? *userRangeMin : 0.9 * *graphPositiveMinimumX;
+        axis_ptr->Set(axis_ptr->GetNbins(), newMin, axis_ptr->GetBinUpEdge(lastBin));
+        axis_ptr->SetRange();
+      } else if (axis_ptr->GetBinLowEdge(firstBin) < 0.) {  // ROOT itself copes with a range starting at zero
+        if (axis_ptr->GetBinUpEdge(lastBin) <= 0.) {
+          ReportIgnored(fmt::format("The log scale of the {} axis of pad {}", axisLabel, padID), "the axis range has no positive values");
+          disableLog();
+        } else {
+          int32_t bin = firstBin;
+          while (axis_ptr->GetBinLowEdge(bin) <= 0.) {
+            ++bin;
+          }
+          // start at the first positive bin edge (ROOT would otherwise draw the bins with negative edges left of the frame); set as bins:
+          // SetRangeUser up to the last upper edge would add the overflow bin. The empty frame of a 3d function (whose bins mean nothing)
+          // gets an axis starting there instead: ROOT paints an empty 3d histogram on a log axis from its first bin (ROOT bug)
+          if constexpr (is_func_3d<data_type>()) {
+            axis_ptr->Set(axis_ptr->GetNbins(), axis_ptr->GetBinLowEdge(std::min(bin, lastBin)), axis_ptr->GetBinUpEdge(lastBin));
+            axis_ptr->SetRange();
+          } else {
+            axis_ptr->SetRange(std::min(bin, lastBin), lastBin);
+          }
+        }
+      }
+    }
+  }
+  const bool stillLog = (axisLabel == 'X') ? pad_ptr->GetLogx() : ((axisLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
+  if (stillLog && ignoredRangeMin && !(axisLabel == 'Z' && frameDim == 1)) {
+    ReportIgnored(fmt::format("The lower range ({:g}) of the {} axis of pad {}", *ignoredRangeMin, axisLabel, padID), "a log scale shows only positive values, the axis starts at its automatic minimum");
+  }
+
+  if (textFontTitle) axis_ptr->SetTitleFont(*textFontTitle);
+  if (textSizeTitle) axis_ptr->SetTitleSize(*textSizeTitle);
+  if (textColorTitle) axis_ptr->SetTitleColor(textColorTitle->ToIndex());
+  if (textAlphaTitle) axis_ptr->SetTitleColor(TColor::GetColorTransparent(axis_ptr->GetTitleColor(), *textAlphaTitle));
+  if (textFontLabel) axis_ptr->SetLabelFont(*textFontLabel);
+  if (textSizeLabel) {
+    // TGaxis::PaintAxis draws the alphanumeric bin labels of an x or y axis with a relative font at 0.66666 of the label size:
+    // compensate, so the size set is the size drawn (the z labels of a palette are painted without this factor)
+    const bool shrunkByRoot = axisLabel != 'Z' && axis_ptr->GetLabels() && axis_ptr->GetLabelFont() % 10 != 3;
+    axis_ptr->SetLabelSize(shrunkByRoot ? *textSizeLabel / 0.66666f : *textSizeLabel);
+  }
+  // TGaxis::PaintAxis moves the numbers below a horizontal axis down by a multiple of the label size taken as a fraction of the pad
+  // height, while ROOT sizes text by the shorter side of the pad: in a pad taller than wide they would sit too far from the axis
+  if (axisLabel == 'X' && !axis_ptr->GetLabels() && axis_ptr->GetLabelFont() % 10 != 3 && !IsViewFrame(pad_ptr, axisHist_ptr)) {
+    const double_t width = pad_ptr->GetWw() * pad_ptr->GetAbsWNDC();
+    const double_t height = pad_ptr->GetWh() * pad_ptr->GetAbsHNDC();
+    if (height > width) {
+      const double_t drop = (pad_ptr->GetLogx()) ? (axis_ptr->GetNoExponent() ? 0.82 : 1.15) : 0.8;
+      axis_ptr->SetLabelOffset(static_cast<float_t>(axis_ptr->GetLabelOffset() - drop * axis_ptr->GetLabelSize() * (1. - width / height)));
+    }
+  }
+  if (textColorLabel) axis_ptr->SetLabelColor(textColorLabel->ToIndex());
+  if (textAlphaLabel) axis_ptr->SetLabelColor(TColor::GetColorTransparent(axis_ptr->GetLabelColor(), *textAlphaLabel));
+  if (labelAngle) {
+    // with horizontal bars the bin labels are on the vertical axis, where TGaxis paints them horizontally (angle 0, as on a y axis)
+    if (axisLabel == 'X' && !hbarFrame && axis_ptr->GetLabels()) {
+      // TGaxis::PaintAxis knows four orientations of the bin labels (the bits LabelsOption sets), each with the alignment that fits
+      // it; another angle is given to every label (ChangeLabel numbers them by bin, takes only angles >= 0) with the alignment
+      // ROOT uses for its tilted ones: a label rising to the right ends at its tick, a falling one starts there
+      const float_t angle = *labelAngle;
+      const std::array<std::pair<float_t, TAxis::EStatusBits>, 4> orientations{
+        {{0.f, TAxis::kLabelsHori}, {90.f, TAxis::kLabelsVert}, {20.f, TAxis::kLabelsUp}, {-20.f, TAxis::kLabelsDown}}};
+      bool fixed{};
+      for (const auto& [fixedAngle, bit] : orientations) {
+        axis_ptr->SetBit(bit, angle == fixedAngle);
+        fixed = fixed || angle == fixedAngle;
+      }
+      if (!fixed) {
+        const float_t positive = std::fmod(std::fmod(angle, 360.f) + 360.f, 360.f);
+        for (int32_t bin = 1; bin <= axis_ptr->GetNbins(); ++bin) {
+          axis_ptr->ChangeLabel(bin, positive, -1., (positive < 180.f) ? 32 : 12);
+        }
+      }
+    } else {
+      logger::warning("The label angle of the {} axis of pad {} is not applied: ROOT tilts only the bin labels of an x axis drawn horizontally.", axisLabel, padID);
+    }
+  }
+  // ROOT places a y title with offset 0 automatically next to the widest label, but the gap it leaves is the title size
+  // read as a fraction of the pad width (see TGaxis::PaintAxis), i.e. it grows for pads that are wider than high.
+  // With a pixel font the gap is the title height in every pad, so relative fonts are converted for the automatic placement.
+  // Pixel sizes are stored unscaled (ApplyScale multiplies them by mScale), while the canvas already has its scaled size.
+  if (axisLabel == 'Y' && axis_ptr->GetTitleOffset() == 0.f && axis_ptr->GetTitleFont() % 10 <= 2 && axis_ptr->GetTitleSize() > 0.f && axis_ptr->GetTitleSize() < 1.f) {
+    const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad_ptr);
+    axis_ptr->SetTitleFont(axis_ptr->GetTitleFont() / 10 * 10 + 3);
+    axis_ptr->SetTitleSize(static_cast<float_t>(axis_ptr->GetTitleSize() * std::min(padWidthPixel, padHeightPixel) / mScale));
+  }
 }
 
 //**************************************************************************************************
