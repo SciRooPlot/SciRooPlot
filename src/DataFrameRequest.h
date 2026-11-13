@@ -138,27 +138,10 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
   }
   bool isProjection = (!mIsProfile && !mIsScatter);
 
-  mDims = dataInfo.dataDims;  // copy since it will be modified
+  mDims = dataInfo.dataDims;  // copy since it will be modified (the binning is checked where it is defined)
   if (mIsProfile && mDims.size() > 3) {
     logger::error("Too many dimensions specified for profile of {} ({}).", mContext, dataInfo.GetDescription());
     return false;
-  }
-  size_t axisID = 1;
-  for (auto& dataDim : mDims) {
-    if (isProjection || (mIsProfile && axisID < mDims.size())) {
-      // sanity check for binned axes
-      if ((dataDim.nBins && dataDim.edges.size() != 2) || (!dataDim.nBins && dataDim.edges.size() <= 1)) {
-        logger::error("Ill defined binning for {} in {} ({}).", dataDim.var, mContext, dataInfo.GetDescription());
-        return false;
-      }
-      if (!std::is_sorted(dataDim.edges.begin(), dataDim.edges.end())) {
-        if (!(dataDim.edges.size() == 2 && !dataDim.edges[0] && !dataDim.edges[1])) {
-          logger::error("Ill defined binning for {} in {} ({}).", dataDim.var, mContext, dataInfo.GetDescription());
-          return false;
-        }
-      }
-    }
-    ++axisID;
   }
 
   // ROOT takes any code containing "return" as the body of a function instead of an expression to be returned: an expression
@@ -235,7 +218,7 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
   }
   mEntriesPostFilter = node.Count();
 
-  axisID = 1;
+  size_t axisID = 1;
   mAutoRanges.resize(mDims.size());
   mIsIntegerAxis.resize(mDims.size());
   auto isIntegerType = [](std::string type) {

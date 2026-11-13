@@ -3086,6 +3086,19 @@ void Plot::Pad::Data::data_info_t::set(const data_info_t& other)
     if (dim.nBins < 0 || (dim.nBins == 0 && dim.edges.size() <= 2)) {
       logger::throw_invalid_argument("Number of bins for {} must be positive (or give at least two different bin edges).", dim.var);
     }
+    if (dim.nBins > 0 && dim.edges.size() != 2) {
+      logger::throw_invalid_argument("A number of bins for {} takes a range of two values (got {}).", dim.var, dim.edges.size());
+    }
+    const bool finite = std::all_of(dim.edges.begin(), dim.edges.end(), [](double_t edge) { return std::isfinite(edge); });
+    if (!finite) {
+      logger::throw_invalid_argument("The bin {} of {} must be finite numbers.", dim.nBins ? "range" : "edges", dim.var);
+    }
+    if (dim.nBins > 0 && dim.edges[0] > dim.edges[1]) {
+      logger::throw_invalid_argument("The range of {} is inverted ([{}, {}]).", dim.var, dim.edges[0], dim.edges[1]);
+    }
+    if (const auto edge = std::adjacent_find(dim.edges.begin(), dim.edges.end(), std::greater_equal<>()); !dim.nBins && edge != dim.edges.end()) {
+      logger::throw_invalid_argument("The bin edges of {} must increase ({} is followed by {}).", dim.var, *edge, *(edge + 1));
+    }
   }
   dataDims = other.dataDims;
   weight = other.weight;
