@@ -4484,11 +4484,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
     }
     // error bands, boxes and brackets draw nothing for a graph without errors (ROOT draws a histogram without them as steps)
     if (optionAlias && (*optionAlias == band || *optionAlias == band_smooth || *optionAlias == boxes_nomarkers || *optionAlias == brackets)) {
-      bool anyError{};
-      for (int32_t i = 0; i < data_ptr->GetN() && !anyError; ++i) {
-        anyError = data_ptr->GetErrorXlow(i) > 0. || data_ptr->GetErrorXhigh(i) > 0. || data_ptr->GetErrorYlow(i) > 0. || data_ptr->GetErrorYhigh(i) > 0.;
-      }
-      if (!anyError && data_ptr->GetN() > 0) {
+      if (!HasErrors(data_ptr, false, true) && data_ptr->GetN() > 0) {
         const draw_option_t withErrors = *optionAlias;
         optionAlias = defaultAlias(data_ptr);
         if (dataIndex != 0) logger::warning("Graph {} has no errors to draw with drawing option {}: it is drawn as {}.", DataName(*data), draw_option_name(withErrors), draw_option_name(*optionAlias));
@@ -5226,11 +5222,11 @@ void PlotPainter::CheckFontSizes(TList* list)
 /**
  * Whether data has errors as ROOT draws them by default: a histogram with stored errors of which at least one is not zero
  * (a profile always computes them), a graph with a y error that is not zero. With countErrors, also a histogram without stored
- * errors whose contents give it errors (the square roots of the contents, which ROOT draws only when asked to).
- * Histograms are 1d (the bins 1 to NbinsX are looked at).
+ * errors whose contents give it errors (the square roots of the contents, which ROOT draws only when asked to). With xErrors, also a
+ * graph with only x errors. Histograms are 1d (the bins 1 to NbinsX are looked at).
  */
 //**************************************************************************************************
-bool PlotPainter::HasErrors(const TObject* obj, bool countErrors)
+bool PlotPainter::HasErrors(const TObject* obj, bool countErrors, bool xErrors)
 {
   if (auto hist = dynamic_cast<const TH1*>(obj)) {
     if (hist->GetSumw2N() == 0 && !hist->InheritsFrom(TProfile::Class()) && !countErrors) return false;
@@ -5242,6 +5238,7 @@ bool PlotPainter::HasErrors(const TObject* obj, bool countErrors)
   if (auto graph = dynamic_cast<const TGraph*>(obj)) {
     for (int32_t i = 0; i < graph->GetN(); ++i) {
       if (graph->GetErrorYlow(i) > 0. || graph->GetErrorYhigh(i) > 0.) return true;
+      if (xErrors && (graph->GetErrorXlow(i) > 0. || graph->GetErrorXhigh(i) > 0.)) return true;
     }
   }
   return false;
@@ -5392,12 +5389,7 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
     const bool lineDrawn = has('L') || has('C');
     LegendSymbol symbol;
     if (str_contains(option, "[]")) {  // brackets at the ends of the x and y errors
-      for (int32_t i = 0; i < graph->GetN(); ++i) {
-        if (graph->GetErrorXlow(i) > 0. || graph->GetErrorXhigh(i) > 0. || graph->GetErrorYlow(i) > 0. || graph->GetErrorYhigh(i) > 0.) {
-          symbol.elements = E;
-          break;
-        }
-      }
+      if (HasErrors(graph, false, true)) symbol.elements = E;
       return symbol;
     }
     if (has('2') || has('3') || has('4') || has('5')) {  // error boxes and bands, drawn only with errors
@@ -5423,9 +5415,7 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
     for (size_t pos = option.find('E'); pos != string::npos; pos = option.find('E', pos + 1)) {
       if (pos + 1 < option.size() && std::isdigit(static_cast<unsigned char>(option[pos + 1]))) errorType = option[pos + 1];
     }
-    bool nonZeroErrors = false;
-    for (int32_t bin = 1; bin <= hist->GetNbinsX() && !nonZeroErrors; ++bin)
-      nonZeroErrors = hist->GetBinError(bin) > 0.;
+    const bool nonZeroErrors = HasErrors(hist, true);
     const bool markers = has('P') || has('*');
     const bool lineDrawn = has('L') || has('C');
     // ROOT draws the errors with Sumw2 (a profile has them) or E; if all are zero it drops them and draws steps unless P, L, C or * is given
@@ -6562,13 +6552,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     }
     // an error option without any error to draw (all zero, as ROOT computes them: the square root of the content without Sumw2): ROOT
     // draws the steps instead (or the markers)
-    auto anyError = [hist, axis]() {
-      for (int32_t bin = 1; bin <= axis->GetNbins(); ++bin) {
-        if (hist->GetBinError(bin) != 0.) return true;
-      }
-      return false;
-    };
-    const bool hasErrors = (option.Contains("E") || (!option.Contains("HIST") && HasErrors(hist))) && anyError();
+    const bool hasErrors = (option.Contains("E") || (!option.Contains("HIST") && HasErrors(hist))) && HasErrors(hist, true);
     const bool hasErrorBand = hasErrors && (option.Contains("E3") || option.Contains("E4") || option.Contains("E5") || option.Contains("E6"));  // through the bin centres
     const bool hasErrorArea = hasErrorBand || (hasErrors && option.Contains("E2"));
     const bool hasLine = !hasErrors && (option.Contains("L") || option.Contains("C"));  // a line or curve through the bin centres instead of steps
