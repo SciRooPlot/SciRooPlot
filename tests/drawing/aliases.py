@@ -1,25 +1,33 @@
 """Every drawing option alias on every data kind is drawn with the ROOT option of the documented alias table (docs/skill: drawing-options.md),
-without ROOT errors: the colour scale (the Z of COLZ, LEGO2Z, ...) is drawn by the frame, not by the data; an alias marked as drawn as the
-other type converts histograms to graphs and graphs to histograms; an alias neither 1d type can draw gives one
+without ROOT errors, and the drawn data paints something: the colour scale (the Z of COLZ, LEGO2Z, ...) is drawn by the frame, not by the data;
+an alias marked as drawn as the other type converts histograms to graphs and graphs to histograms; an alias neither 1d type can draw gives one
 warning and draws histograms and graphs as without a drawing option (other types with ROOT's default), as do a graph that cannot be made a
 histogram (points at one x) and error bands, boxes and brackets of a graph without errors.
 Documented adjustments: polar graphs draw the error bars of the points aliases with E, 2d graphs with errors add ERR, a TH2Poly is drawn
 flat (col, colz) with a warning instead of lego, surf, polar, boxes, contours, candles and violins, and the frame of a 3d view is an empty lego plot
-(no surface), keeping POL. The drawn data carries the name of the input.
+(no surface), keeping POL. area without a fill paints what line paints. The drawn data carries the name of the input.
 Covers: colz_text, clamped maps, 3d histograms, functions, 2d functions, 2d graphs, TH2Poly drawn flat,
 frame of 3d views, error bars of polar graphs, frame of 2d graphs drawn in 3d, and a TEfficiency drawn
-under the name ROOT gives the graph or histogram it makes.
+under the name ROOT gives the graph or histogram it makes; data that painted nothing: a graph or a histogram without stored errors drawn
+with a 2d alias, a graph with points at one x drawn as a histogram, error bands and brackets of a graph without errors, boxes, contours and
+candles of a TH2Poly; lines down to zero at both ends of area of a graph.
 """
 
 import re
 
-from srptest import ALIASES, DATA_KINDS, ROOT, Project, S, add_data, alias_table, base_of, cases, check, data_name, data_objects, describe, drawn_type, finish, no_scale, per_error_set
+from srptest import ALIASES, DATA_KINDS, ROOT, Project, S, add_data, alias_table, base_of, cases, check, data_name, data_objects, describe, drawn_type, finish, in_chunks, is_data, no_scale, per_error_set, pixels
 
 TABLE = alias_table()
 REPRESENTATIVE = ("hist", "graph_errors", "hist2d", "graph2d_errors")  # every alias in the fast run
 FLAT_ONLY = ("lego", "surf", "polar", "box", "cont", "candle", "violin")  # aliases a TH2Poly is drawn flat (and cartesian) for
 NEED_ERRORS = ("band", "band_smooth", "boxes_nomarkers", "brackets")  # aliases that draw only the errors of a graph
 WITHOUT_ERRORS = tuple(k for k, obj in data_objects().items() if obj.InheritsFrom("TGraph") and not any(obj.GetErrorX(i) > 0 or obj.GetErrorY(i) > 0 for i in range(obj.GetN())))
+
+
+def area_1d(case):
+    """a case of area of cartesian 1d data, which is also drawn as area and as line in one frame (that of area spans zero, without the x errors);
+    area of a polar graph is drawn in cartesian coordinates"""
+    return case["alias"] == "area" and DATA_KINDS[case["kind"]][0] == 1 and "polar" not in DATA_KINDS[case["kind"]][2]
 
 
 def expected(kind, alias):
@@ -58,6 +66,14 @@ todo = cases(
         {"kind": "graph2d", "alias": "triangles", "why": "the frame of a 2d graph drawn as triangles is an empty lego"},
         {"kind": "efficiency", "alias": "points", "why": "drawn as eff_graph"},
         {"kind": "efficiency2d", "alias": "colz", "why": "drawn as eff_histo"},
+        {"kind": "hist_counts", "alias": "col", "why": "a histogram without stored errors drawn with a 2d alias"},
+        {"kind": "graph", "alias": "colz", "why": "a graph drawn with a 2d alias"},
+        {"kind": "graph", "alias": "band", "why": "an error band of a graph without errors"},
+        {"kind": "graph", "alias": "brackets", "why": "brackets of a graph without errors"},
+        {"kind": "graph", "alias": "area", "why": "area of a graph without a fill"},
+        {"kind": "hist2poly", "alias": "box", "why": "boxes of a TH2Poly drawn flat"},
+        {"kind": "hist2poly", "alias": "candle", "why": "candles of a TH2Poly drawn flat"},
+        {"kind": "hist2poly", "alias": "cont_colz", "why": "contours of a TH2Poly drawn flat"},
     ],
 )
 
@@ -67,6 +83,13 @@ for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "aliases", base_of(case["kind"]))
     add_data(plot[1], case["kind"]).SetDrawOption(getattr(S, case["alias"]))
     p.pm.AddPlot(plot)
+    if area_1d(case):
+        for alias in ("area", "line"):
+            plot = S.Plot(f"c{i}_{alias}", "aliases", base_of(case["kind"]))
+            add_data(plot[1], case["kind"]).SetDrawOption(getattr(S, alias))
+            plot[1]["X"].SetRange(0.0, 11.0)
+            plot[1]["Y"].SetRange(-1.0, 10.0)
+            p.pm.AddPlot(plot)
 for kind in {c["kind"] for c in todo if expected(c["kind"], c["alias"])[0] == "default"}:  # the data drawn without a drawing option
     plot = S.Plot(f"default_{kind}", "aliases", base_of(kind))
     add_data(plot[1], kind)
@@ -138,4 +161,26 @@ check("asymmetric errors drawn as their mean only for graphs that have them", al
 expectedWarnings = sum(expected(c["kind"], c["alias"])[3] for c in todo) + len(asymmetric) + len(REPEATED)
 check("no other warnings", len(run.warnings()) == expectedWarnings, " | ".join(w for w in run.warnings() if "is not available" not in w)[:500])
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
+
+
+def compare(_, item):
+    """the data of a plot paints something (the plot differs from it painted without the data), and area without a fill paints what line
+    paints; not checked where the plot cannot be painted here: a canvas read back with CONT4 (cont_smooth, drawn in projected coordinates)
+    crashes when painted from Python"""
+    name, what, case = item
+    drawn = run.drawn(name, "aliases")
+    if not drawn or any("CONT4" in opt for _, opt in drawn):
+        return []
+    painted, _ = pixels(run.canvas(name, "aliases"), lambda obj: True)
+    background, _ = pixels(run.canvas(name, "aliases"), lambda obj: not is_data(obj))
+    checks = [(f"the data paints: {what}", (painted != background).any(), "the plot looks the same without it")]
+    if case and area_1d(case):
+        area, _ = pixels(run.canvas(f"{name}_area", "aliases"), lambda obj: True)
+        line, _ = pixels(run.canvas(f"{name}_line", "aliases"), lambda obj: True)
+        checks.append((f"area without a fill paints what line paints: {what}", (area == line).all(), f"{int((area != line).sum())} pixels differ"))
+    return checks
+
+
+plots = [(f"c{i}", describe(case), case) for i, case in enumerate(todo)] + [(f"repeated_{alias}", f"a graph with points at one x drawn {alias}", None) for alias in REPEATED]
+in_chunks(plots, compare, size=150)  # up to four paints per plot
 finish()
