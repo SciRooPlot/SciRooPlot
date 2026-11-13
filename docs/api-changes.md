@@ -114,6 +114,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A 2d graph whose points lie on one line drawn as a map (`colz`, `cont`, `surf` ...) gave an empty frame without a word | The same, with a warning (ROOT finds no triangles to interpolate between) | behaviour | Draw such a graph with `points`. |
 | A program that set a locale with a decimal comma (Python's `locale.setlocale`) and plotted itself (`GeneratePlots`) read numbers with a decimal point in tables as text, and its plots had decimal commas (axis labels, `0,` at the axis ends, drawn values) beside the points of labels | Plots are made with the C locale (decimal points); the program keeps its locale | behaviour | Nothing. |
 | The reference function of a pad (`SetRefFunc`, also from pad 0) was not drawn in a pad with only a frame (`SetFrame`, or the empty frame of its axis ranges) | It is drawn there as well | behaviour | Nothing. |
+| `area_smooth` of a graph whose x errors leave gaps between the points dipped to zero in every gap | The curve goes through the points (the bins meet in the middle of each gap) | behaviour | Nothing. |
 
 ### Files
 

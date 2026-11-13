@@ -3,13 +3,14 @@
   range, not empty) with the content, half the bin width as x error and the bin error as y error, and keeps the statistics box and the
   placeholders of the histogram; its clipped steps have the frame of the steps they clip;
 - a graph drawn as a histogram (hist, bars, text ...) has a bin per point holding its value and the mean of its y errors, the bins
-  touching where the x errors of neighbouring points meet, else half way between the points (documented rule);
+  touching where the x errors of neighbouring points meet, an empty bin in a gap between them (for area_smooth, whose curve goes
+  through every bin, the two bins meeting in its middle), else half way between the points (documented rule);
 - points_text writes the value of every point that is drawn and of no other: the bins and points inside the frame and the ranges of the
   data, polar graphs at their points on the polar grid;
 - the colours of the 2d data of a flat pad span the values of all of it: the colour axis covers the range each data item has alone (for
   2d graphs with errors the range of their values, which ROOT's frame of such a graph widens by the errors), at each end the user did not
   set (Z SetMinRange or SetMaxRange alone).
-Covers: converted histograms losing their statistics box and placeholders, points_text writing values of points outside the frame and
+Covers: the smooth curve of a graph with gaps between its x errors dipping to zero in each gap, converted histograms losing their statistics box and placeholders, points_text writing values of points outside the frame and
 ranges, and a single value at the wrong place for polar graphs, 2d functions drawn after other data cut at the colour axis of the frame.
 """
 
@@ -44,6 +45,7 @@ converted = cases(
     named=[
         {"kind": "hist", "alias": "points_line", "variant": "normal", "why": "statistics box and placeholders of a histogram drawn as graph"},
         {"kind": "graph", "alias": "hist", "variant": "unsorted", "why": "a graph in no order of x drawn as a histogram"},
+        {"kind": "graph_errors", "alias": "area_smooth", "variant": "normal", "why": "no empty bins in the gaps between x errors under a smooth curve"},
     ],
 )
 
@@ -130,7 +132,7 @@ def as_graph(h, xErrors):
     return {"x": [h.GetBinCenter(b) for b in found], "y": [h.GetBinContent(b) for b in found], "ErrorXlow": half, "ErrorXhigh": half, "ErrorYlow": errors, "ErrorYhigh": errors}
 
 
-def as_hist(g):
+def as_hist(g, alias):
     """the bins a graph drawn as a histogram must have: (edges, contents, errors), by the documented rule"""
     points = sorted(zip(*(graph_values(g)[k] for k in ("x", "y")), range(g.GetN())))
     xs = [x for x, _, _ in points]
@@ -139,7 +141,9 @@ def as_hist(g):
     edges, contents, errors = [], [], []
     if all(lo + hi > 0 for lo, hi in ex) and all(xs[j] + ex[j][1] <= xs[j + 1] - ex[j + 1][0] + 1e-6 * (ex[j][0] + ex[j][1]) for j in range(len(xs) - 1)):
         for j, (x, (lo, hi)) in enumerate(zip(xs, ex)):
-            if not edges or abs(x - lo - edges[-1]) > 1e-6 * (lo + hi):
+            if edges and abs(x - lo - edges[-1]) > 1e-6 * (lo + hi) and alias == "area_smooth":
+                edges[-1] = 0.5 * (edges[-1] + x - lo)  # a gap: the bins meet in its middle
+            elif not edges or abs(x - lo - edges[-1]) > 1e-6 * (lo + hi):
                 if edges:  # a gap: an empty bin
                     contents.append(0.0)
                     errors.append(0.0)
@@ -186,7 +190,7 @@ for i, case in enumerate(converted):
             check(f"drawn as a histogram: {what}", False, obj.ClassName() if obj else "not drawn")
             continue
         given = INPUTS[case["variant"]][case["kind"]]
-        edges, contents, errors = as_hist(given.CreateGraph() if given.InheritsFrom("TEfficiency") else given)
+        edges, contents, errors = as_hist(given.CreateGraph() if given.InheritsFrom("TEfficiency") else given, case["alias"])
         axis = obj.GetXaxis()
         found = ([axis.GetBinLowEdge(b) for b in range(1, axis.GetNbins() + 2)], [obj.GetBinContent(b) for b in range(1, axis.GetNbins() + 1)], [obj.GetBinError(b) for b in range(1, axis.GetNbins() + 1)])
         same = all(len(a) == len(b) and all(close(x, y, 1e-9) or abs(x - y) < 1e-12 for x, y in zip(a, b)) for a, b in zip((edges, contents, errors), found))

@@ -322,7 +322,9 @@ TH1* PlotPainter::ToHist(TGraph* graph, draw_option_t option, bool warn, bool wa
     return nullptr;
   }
   // bin edges from the x errors (if the graph has them): the bins of neighbouring points must touch (within precision),
-  // gaps between them become empty bins and overlaps are split in the middle; without x errors the edges are half way between the points
+  // gaps between them become empty bins and overlaps are split in the middle; without x errors the edges are half way between the points;
+  // a smooth curve goes through every bin, so for it gaps are split in the middle too (an empty bin would pull the curve down to zero)
+  const bool splitGaps = (option == area_smooth);
   vector<double_t> edges;
   vector<int32_t> binOfPoint(n);
   bool hasErrorsX = false;
@@ -340,6 +342,8 @@ TH1* PlotPainter::ToHist(TGraph* graph, draw_option_t option, bool warn, bool wa
         edges.push_back(low);
       } else if (const double_t previousHigh = edges.back(); std::abs(low - previousHigh) <= 1e-6 * (high - low)) {
         // touching the previous bin
+      } else if (low > previousHigh && splitGaps) {
+        edges.back() = 0.5 * (low + previousHigh);  // gap, for a smooth curve: the neighbouring bins meet in its middle
       } else if (low > previousHigh) {
         edges.push_back(low);  // gap: an empty bin in between
       } else if (const double_t middle = 0.5 * (low + previousHigh);
