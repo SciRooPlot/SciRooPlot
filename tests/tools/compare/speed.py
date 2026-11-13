@@ -1,10 +1,12 @@
 """How fast builds or installations make the same plots: the plot program timed on benchmark projects, the prefixes taking turns, each run
 repeated; prints the median time per project and prefix. Projects: many histograms in one pad with a legend (--items histograms of --bins
-bins), large 2d histograms (one per plot, --bins x --bins / 10), random plot definitions (srptest.random_definition, --seeds).
-Runs on a 2-core machine vary by about 10 %: compare medians of several repeats, with nothing else running.
+bins), large 2d histograms (one per plot, --bins x --bins / 10), random plot definitions (srptest.random_definition, --seeds), many plots
+of one histogram each (--many plots), one pad crowded with data (--crowded histograms in one plot).
+Runs on a 2-core machine vary by about 10 %: compare medians of several repeats, with nothing else running. For reference, on the 2-core
+container (2026-11-12, mode file): 3000 plots of one project 55 s, 300 data in one pad 1.2 s.
 
 usage: PYTHONPATH=tests python3 tests/tools/compare/speed.py <prefix> [<prefix> ...] [--repeat 3] [--mode file] [--items 50] [--bins 1000]
-       [--plots 20] [--seeds 1] [--out compare-speed]
+       [--plots 20] [--seeds 1] [--many 3000] [--crowded 300] [--out compare-speed]
 """
 
 import argparse
@@ -22,6 +24,8 @@ args.add_argument("--items", type=int, default=50)
 args.add_argument("--bins", type=int, default=1000)
 args.add_argument("--plots", type=int, default=20)
 args.add_argument("--seeds", type=int, nargs="*", default=[1])
+args.add_argument("--many", type=int, default=3000)
+args.add_argument("--crowded", type=int, default=300)
 args.add_argument("--out", default="compare-speed")
 args = args.parse_args()
 out = os.path.abspath(args.out)
@@ -66,7 +70,28 @@ for n in range({args.plots}):
     pm.AddPlot(p)
 pm.SaveProject()
 ''',
+    "many_plots": f'''from SciRooPlot import *
+pm = PlotManager("many_plots")
+pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
+pm.AddDataSource("s", {inputs!r})
+for n in range({args.many}):
+    p = Plot(f"p{{n}}", "g", "1d")
+    p[1].AddData(f"h{{n % {args.items}}}", "s")
+    pm.AddPlot(p)
+pm.SaveProject()
+''',
+    "crowded": f'''from SciRooPlot import *
+pm = PlotManager("crowded")
+pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
+pm.AddDataSource("s", {inputs!r})
+p = Plot("p", "g", "1d")
+for i in range({args.crowded}):
+    p[1].AddData(f"h{{i % {args.items}}}", "s")
+pm.AddPlot(p)
+pm.SaveProject()
+''',
 }
+nPlots = {"many_plots": args.many, "crowded": 1}  # the others make --plots plots
 sources = S.random_inputs(S.WORK) if args.seeds else {}
 for seed in args.seeds:
     programs[f"random{seed}"] = S.random_definition(seed, args.plots, sources, f"random{seed}")[0]
@@ -91,8 +116,8 @@ for _ in range(args.repeat):
             start = time.time()
             done = subprocess.run([os.path.join(prefix, "bin", "plot"), ".+", ".+", args.mode], env=env, capture_output=True, text=True, check=False)
             times.setdefault((project, prefix), []).append(time.time() - start)
-            if done.stdout.count("Created plot") != args.plots:
-                print(f"   {project} with {prefix}: {done.stdout.count('Created plot')} of {args.plots} plots made")
+            if done.stdout.count("Created plot") != nPlots.get(project, args.plots):
+                print(f"   {project} with {prefix}: {done.stdout.count('Created plot')} of {nPlots.get(project, args.plots)} plots made")
 width = max(len(p) for p in prefixes)
 for project in programs:
     print(f"== {project} (mode {args.mode}, median of {args.repeat})")
