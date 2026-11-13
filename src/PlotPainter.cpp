@@ -1070,11 +1070,73 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   // the web canvas (TWebCanvas) paints data in the browser: with its default it sends one palette for the whole canvas, the one left after
   // the last primitive of the canvas; a palette per pad, taken after the primitives of the pad, needs palette delivery 3 set before the pads;
   // it also fits the canvas into the browser window, stretching the plot: a fixed canvas size keeps the plot as painted (set once, so a
-  // size the user chooses in the browser stays)
+  // size the user chooses in the browser stays);
+  // the browser (JSROOT) draws some things unlike ROOT, which the canvas is adapted to once (the TExec renames itself):
+  // - a transparent canvas shows the grey of the page behind it: white as in the pictures ROOT writes
+  // - it draws one colour scale for each copy of the frame drawn with Z
+  // - ROOT scales the primary divisions of an x axis by the width of the pad when the number exceeds 1000 (as with max digits),
+  //   JSROOT takes them as they are (this also keeps the labels hidden by number the ones drawn); it divides a colour scale as its
+  //   own axis says (ROOT as the z axis of the histogram)
+  // - it leaves out the x errors of a histogram only for X0 written right after the E option (ROOT: anywhere)
+  // - it colours 2d data drawn SAME with the levels of the first histogram of the pad (the frame), also data with levels of its own
+  //   (ROOT: each its own), unless drawn SAME0
+  // - it evaluates a formula function itself, but not all that ROOT can (TMath::DegToRad): the values of a function sampled by ROOT
+  //   are used instead (the web canvas only samples functions it has compiled, which one read from a file is not before its first use)
+  const string webOnce =
+    " if (auto* self = gPad->GetListOfPrimitives()->FindObject(\"web_canvas\")) { static_cast<TNamed*>(self)->SetName(\"web_canvas_adapted\");"
+    " if (gPad->GetFillStyle() == 0 || gPad->GetFillStyle() == 4000) { gPad->SetFillStyle(1001); gPad->SetFillColor(0); }"
+    " auto save = [](TObject* obj) { if (auto* func = dynamic_cast<TF1*>(obj); func && func->GetNdim() == 1 && !func->HasSave()) func->Save(func->GetXmin(), func->GetXmax(), 0, 0, 0, 0); };"
+    " for (auto* padLink = gPad->GetListOfPrimitives()->FirstLink(); padLink; padLink = padLink->Next()) { auto* pad = dynamic_cast<TPad*>(padLink->GetObject());"
+    " if (!pad) continue; for (auto* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) { auto* hist = dynamic_cast<TH1*>(link->GetObject());"
+    " save(link->GetObject()); auto* graph = dynamic_cast<TGraph*>(link->GetObject()); if (TList* funcs = hist ? hist->GetListOfFunctions() : graph ? graph->GetListOfFunctions() : nullptr) for (auto* func : *funcs) save(func);"
+    " if (!hist) continue; TString option = link->GetOption(); option.ToUpper();"
+    R"code( TPRegexp x0("(^|\\s)X0(\\s|$)"); if (hist->GetDimension() == 1 && x0.Match(option)) { x0.Substitute(option, " ", "g");)code"
+    R"code( TPRegexp("(^|\\s)(E[0-6]?)(\\s|$)").Substitute(option, "$1$2X0$3"); link->SetOption(option); })code"
+    R"code( TPRegexp same("(^|\\s)SAME(\\s|$)"); if (hist->GetDimension() == 2 && hist->TestBit(TH1::kUserContour) && same.Match(option)) { same.Substitute(option, "$1SAME0$2"); link->SetOption(option); })code"
+    " if (!(TString(hist->GetName()).BeginsWith(\"axis_hist_pad_\") || TString(hist->GetName()).BeginsWith(\"color_scale_pad_\"))) continue;"
+    " if (const Int_t n = hist->GetXaxis()->GetNdivisions(); n > 1000) hist->GetXaxis()->SetNdivisions(n % 1000000 - n % 100 + Int_t(std::max(1, n % 100) * pad->GetAbsWNDC()), kTRUE);"
+    " if (hist->GetDimension() != 2) continue; if (option.Contains(\"AXIG\") || option.Contains(\"AXIS\")) { option.ReplaceAll(\"Z\", \"\"); link->SetOption(option); }"
+    " if (auto* palette = dynamic_cast<TPaletteAxis*>(hist->GetListOfFunctions()->FindObject(\"palette\"))) palette->GetAxis()->SetNdivisions(hist->GetZaxis()->GetNdivisions() % 1000000); } } }";
+  // and at every paint (the browser reports back the options it drew with, and the z range it found):
+  // - it colours the data of a pad by the z range of its frame only if the option of the frame gives it (HMIN, HMAX: JSROOT only),
+  //   since the frame of 2d data is an empty histogram, and draws no colour scale for one without it
+  // - it writes the labels of all axes with one number of digits before switching to x10^n (ROOT: per axis), the first frame's,
+  //   and counts the minus sign as a digit (one more where a negative label has as many digits as allowed)
+  // - a polar graph paints its title unless the setup of its pad switches titles off, but the web canvas decides about the titles of
+  //   a pad before running its setup, and has one setting for all pads
+  string webEachPaint;
+  optional<int32_t> webMaxDigits;
+  bool webNegativeLabels{};
+  for (auto* padLink = canvas_ptr->GetListOfPrimitives()->FirstLink(); padLink; padLink = padLink->Next()) {
+    auto* pad = dynamic_cast<TPad*>(padLink->GetObject());
+    if (!pad) continue;
+    std::set<TObject*> frames;
+    for (auto* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+      auto* frame = dynamic_cast<TH1*>(link->GetObject());
+      const TString name = frame ? frame->GetName() : "";
+      if ((!name.BeginsWith("axis_hist_pad_") && !name.BeginsWith("color_scale_pad_")) || !frames.insert(frame).second) continue;  // the first drawing of each
+      for (const TAxis* axis : {frame->GetYaxis(), frame->GetXaxis()}) {
+        if (!webMaxDigits && axis->GetNdivisions() / 1000000 > 0) webMaxDigits = axis->GetNdivisions() / 1000000;
+      }
+      for (const auto& [axis, low] : {std::pair{frame->GetXaxis(), pad->GetLogx() ? 0. : pad->GetUxmin()}, std::pair{frame->GetYaxis(), pad->GetLogy() ? 0. : pad->GetUymin()}}) {
+        const int32_t maxDigits = axis->GetNdivisions() / 1000000;
+        webNegativeLabels |= (maxDigits > 0 && -low >= std::pow(10., maxDigits - 1));
+      }
+      auto* hist = dynamic_cast<TH2*>(frame);
+      if (hist && hist->GetMinimumStored() != -1111 && hist->GetMaximumStored() != -1111) {
+        webEachPaint += fmt::format(
+          " if (auto* pad = dynamic_cast<TPad*>(gPad->GetPrimitive(\"{}\"))) for (auto* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next())"
+          " if (link->GetObject()->GetName() == TString(\"{}\")) {{ if (!TString(link->GetOption()).Contains(\"HMIN:\")) link->SetOption(Form(\"%s;HMIN:{:.17g};HMAX:{:.17g}\", link->GetOption())); break; }}",
+          pad->GetName(), name.Data(), hist->GetMinimumStored(), hist->GetMaximumStored());
+      }
+    }
+  }
+  const bool webTitles = std::none_of(padSetups.begin(), padSetups.end(), [](const auto& padSetup) { return padSetup.second.find("SetOptTitle(0)") != string::npos; });
+  if (webMaxDigits) webEachPaint += fmt::format(" gStyle->SetAxisMaxDigits({});", *webMaxDigits + (webNegativeLabels ? 1 : 0));
   TExec* webExec = new TExec(
     "web_canvas",
-    fmt::format("if (gPad->GetCanvas()->IsWeb()) gROOT->ProcessLine(Form(\"{{ auto* w = (TWebCanvas*)%p; w->SetPaletteDelivery(3); if (!w->IsFixedSize()) w->SetCanvasSize({}, {}); }}\", (void*)gPad->GetCanvas()->GetCanvasImp()));",
-                static_cast<uint32_t>(canvasWidth), static_cast<uint32_t>(canvasHeight))
+    fmt::format("if (gPad->GetCanvas()->IsWeb()) {{ gROOT->ProcessLine(Form(\"{{ auto* w = (TWebCanvas*)%p; w->SetPaletteDelivery(3); if (!w->IsFixedSize()) w->SetCanvasSize({}, {}); }}\", (void*)gPad->GetCanvas()->GetCanvasImp())); gStyle->SetOptTitle({});{}{} }}",
+                static_cast<uint32_t>(canvasWidth), static_cast<uint32_t>(canvasHeight), webTitles ? 1 : 0, webOnce, webEachPaint)
       .data());
   webExec->SetBit(kCanDelete);
   canvas_ptr->GetListOfPrimitives()->AddFirst(webExec);
@@ -1105,11 +1167,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     if (c == '"' || c == '\\') quotedFormat += '\\';
     quotedFormat += c;
   }
+  webGlobals += fmt::format(" gStyle->SetOptTitle({});", webTitles ? 1 : 0);
   const auto [webBoxRange, webWhiskerRange] = webCandleRanges.value_or(std::pair{0.5, 1.});
   webGlobals += fmt::format(" gStyle->SetPaintTextFormat(\"{}\"); TCandle::SetBoxRange({}); TCandle::SetWhiskerRange({});", quotedFormat, webBoxRange, webWhiskerRange);
   TExec* resetExec = new TExec(
     "reset_globals",
-    fmt::format("gStyle->SetOptTitle(1); if (gPad->GetCanvas()->IsWeb()) {{{} }} else {{ gStyle->SetPalette({}); gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange(0.5); TCandle::SetWhiskerRange(1.); }}",
+    fmt::format("if (gPad->GetCanvas()->IsWeb()) {{{} }} else {{ gStyle->SetOptTitle(1); gStyle->SetPalette({}); gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange(0.5); TCandle::SetWhiskerRange(1.); }}",
                 webGlobals, static_cast<int32_t>(kBird))
       .data());
   resetExec->SetBit(kCanDelete);
