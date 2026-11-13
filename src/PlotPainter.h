@@ -324,7 +324,7 @@ class PlotPainter
   template <typename T>
   void SetUpFrame(item_state_t& state, T data_ptr, const std::string& polarGridOption);
   template <typename T>
-  void ApplyAxisSettings(pad_state_t& padState, char axisLabel, bool hbarFrame, const std::optional<std::vector<std::array<double_t, 3>>>& graphPositivePoints,
+  void ApplyAxisSettings(pad_state_t& padState, char axisLabel, const std::optional<std::vector<std::array<double_t, 3>>>& graphPositivePoints,
                          const std::optional<std::vector<std::array<double_t, 5>>>& polyPositiveBins, const std::optional<double_t>& graphPositiveMinimumX);
   static void Paints3dGraph(const std::string& option, bool& triangles, bool& points);
   static bool IsFlatPolar(const std::string& option);
@@ -419,6 +419,9 @@ class PlotPainter
   void DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID);
   static bool IsHBarFrame(TPad* pad, const TH1* frame);
   static bool IsViewFrame(TPad* pad, const TH1* frame);
+  static std::string FrameOption(TPad* pad, const TH1* frame);
+  // the axis of the pad showing an axis of a frame drawn with HBAR (hbar), and back: x and y swapped
+  static char HBarAxis(char axisLabel, bool hbar) { return (hbar && axisLabel != 'Z') ? ((axisLabel == 'X') ? 'Y' : 'X') : axisLabel; }
   void DrawCommonTitle(TCanvas* canvas, char axisLabel, const std::vector<uint8_t>& pads, size_t index);
   // rowData: the data of a legend row; findData (for texts): the data a placeholder names (<mean:2>, <mean:1@4>), by number and pad
   void ReplacePlaceholders(std::string& str, TNamed* rowData, const std::function<TNamed*(uint16_t, const std::optional<uint8_t>&)>& findData = {});

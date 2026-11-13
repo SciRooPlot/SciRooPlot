@@ -438,6 +438,7 @@ struct PlotPainter::pad_state_t {
   bool fail{};                           // a data item could not be drawn (reported): the plot is not made
   bool view{};                           // the pad draws in 3d: the viewing angles of pad 0 have a meaning
   TH1* axisHist_ptr{};
+  bool hbarFrame{};   // the frame is drawn with HBAR: the X and Y of the pad are the y and x axis of the histogram
   bool polarFrame{};  // the frame of a flat polar drawing: a disc in a square frame without cartesian axes, measured by a radial axis
   // the polar grid of a pad with polar graphs, drawn instead of a cartesian frame, and the axis settings of such a pad (not drawn)
   TGraphPolargram* polargram{};
@@ -1081,6 +1082,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
   auto& polargram = padState.polargram;
   auto& padProjection = padState.padProjection;
   auto& contentFrame = padState.contentFrame;
+  auto& hbarFrame = padState.hbarFrame;
   auto& statsBoxes = padState.statsBoxes;
   auto& clippedSteps = padState.clippedSteps;
 
@@ -1239,7 +1241,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
     TObject* palette = axisHist_ptr->GetListOfFunctions()->FindObject("palette");
     // a frame drawn with HBAR shows its x axis vertically, but ROOT repaints it horizontally (THistPainter::PaintAxis swaps the axes only for
     // alphanumeric labels): the copy gets the look of the axis drawn at each place
-    const bool swapAxes = IsHBarFrame(pad_ptr, axisHist_ptr) && !axisHist_ptr->GetXaxis()->GetLabels() && !axisHist_ptr->GetYaxis()->GetLabels();
+    const bool swapAxes = hbarFrame && !axisHist_ptr->GetXaxis()->GetLabels() && !axisHist_ptr->GetYaxis()->GetLabels();
     TH1* axes = axisHist_ptr;
     if (palette || swapAxes) {
       axes = static_cast<TH1*>(axisHist_ptr->Clone());
@@ -1321,7 +1323,6 @@ void PlotPainter::FinishPad(pad_state_t& padState)
     ReportIgnored(fmt::format("The view of pad {}", padID), "it draws nothing in 3d");
   }
 
-  const bool hbarFrame = axisHist_ptr && IsHBarFrame(pad_ptr, axisHist_ptr);
   for (auto axisLabel : {'X', 'Y'}) {
     bool hide{};
     for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
@@ -2551,6 +2552,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
   auto& polarAxisHist = padState.polarAxisHist;
   auto& padProjection = padState.padProjection;
   auto& contentFrame = padState.contentFrame;
+  auto& hbarFrame = padState.hbarFrame;
   auto& drawOption = padState.drawOption;
   auto& storedRangeZ = padState.storedRangeZ;
   auto& frameFuncRange = padState.frameFuncRange;
@@ -2819,15 +2821,15 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
   }
   const int32_t frameDim = axisHist_ptr->GetDimension();
   if constexpr (is_hist_3d<data_type>()) contentFrame = true;
-  const bool hbarFrame = IsHBarFrame(pad_ptr, axisHist_ptr);  // with HBAR the X and Y of the pad are the y and x axis of the histogram
+  hbarFrame = IsHBarFrame(pad_ptr, axisHist_ptr);
 
   // a user range beyond the axes of the frame histogram needs a wider frame, since ROOT shows at most the axis of a histogram:
   // the frame is replaced by a histogram with extended axes (changing the axis alone would break the bin storage of the histogram)
   if (!pad_ptr->GetView() && !polargram) {
     for (auto axisLabel : {'X', 'Y'}) {  // the axis of the frame histogram
       if (axisLabel == 'Y' && frameDim == 1) continue;
-      const char padLabel = (hbarFrame) ? ((axisLabel == 'X') ? 'Y' : 'X') : axisLabel;  // where it is drawn
-      const char valueLabel = (hbarFrame) ? 'X' : 'Y';                                   // the pad axis of the contents of a 1d frame
+      const char padLabel = HBarAxis(axisLabel, hbarFrame);  // where it is drawn
+      const char valueLabel = (hbarFrame) ? 'X' : 'Y';       // the pad axis of the contents of a 1d frame
       optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
       optional<double_t> userMax = MaxRange(pad, padDefaults, padLabel);
       optional<bool> logY;
@@ -2840,8 +2842,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
       // a log axis shows the bins from the first positive edge on: a positive minimum below it is beyond the shown axis as well
       // (ExtendFrameAxis drops the bins up to it), whether the bins start at 0.5, 0 or -0.5
       optional<bool> logAxis;
-      const char logLabel = (IsHBarFrame(pad_ptr, axisHist_ptr)) ? ((axisLabel == 'X') ? 'Y' : 'X') : axisLabel;  // the pad axis showing it
-      for (const auto* settings : AxisSettings(pad, padDefaults, logLabel)) {
+      for (const auto* settings : AxisSettings(pad, padDefaults, padLabel)) {
         if (settings->GetLog()) logAxis = settings->GetLog();
       }
       double_t shownMin = axis->GetXmin();
@@ -2899,7 +2900,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
   }
   // the binned axes first: the positive minimum for a log value axis is taken from the bins in their range (with HBAR the value axis is the pad's X)
   for (auto axisLabel : (hbarFrame) ? array<char, 3>{'Y', 'X', 'Z'} : array<char, 3>{'X', 'Y', 'Z'}) {
-    ApplyAxisSettings<data_type>(padState, axisLabel, hbarFrame, graphPositivePoints, polyPositiveBins, graphPositiveMinimumX);
+    ApplyAxisSettings<data_type>(padState, axisLabel, graphPositivePoints, polyPositiveBins, graphPositiveMinimumX);
   }
 
   if (polargram) {
@@ -3039,7 +3040,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
  */
 //**************************************************************************************************
 template <typename T>
-void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, bool hbarFrame, const optional<vector<array<double_t, 3>>>& graphPositivePoints,
+void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const optional<vector<array<double_t, 3>>>& graphPositivePoints,
                                     const optional<vector<array<double_t, 5>>>& polyPositiveBins, const optional<double_t>& graphPositiveMinimumX)
 {
   using data_type = T;
@@ -3052,10 +3053,11 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, bool 
   auto& textColor = padState.textColor;
   auto& textAlpha = padState.textAlpha;
   auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& hbarFrame = padState.hbarFrame;
   const int32_t frameDim = axisHist_ptr->GetDimension();
 
   // axisLabel: the axis of the pad (X horizontal, Y vertical); histLabel: the axis of the frame histogram drawn there
-  const char histLabel = (hbarFrame && axisLabel != 'Z') ? ((axisLabel == 'X') ? 'Y' : 'X') : axisLabel;
+  const char histLabel = HBarAxis(axisLabel, hbarFrame);
   TAxis* axis_ptr = nullptr;
   if (histLabel == 'X')
     axis_ptr = axisHist_ptr->GetXaxis();
@@ -3205,7 +3207,7 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, bool 
   // when the setting carries a max digits part (ROOT bug: the same axis without max digits is not scaled), so a narrow pad
   // would get fewer labels: the primary divisions are raised so that ROOT's scaling gives back the ones set
   // (3D views paint their axes without that scaling)
-  if (const int32_t nDiv = axis_ptr->GetNdivisions(); axisLabel == 'X' && nDiv > 1000 && pad_ptr->GetAbsWNDC() > 0. && !IsViewFrame(pad_ptr, axisHist_ptr)) {
+  if (const int32_t nDiv = axis_ptr->GetNdivisions(); axisLabel == 'X' && nDiv > 1000 && pad_ptr->GetAbsWNDC() > 0. && !viewFrame) {
     const double_t padWidth = pad_ptr->GetAbsWNDC();
     const int32_t primary = std::max(1, nDiv % 100);
     // ROOT: Int_t(Float_t(primary) * pad->GetAbsWNDC())
@@ -3376,7 +3378,7 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, bool 
   }
   // TGaxis::PaintAxis moves the numbers below a horizontal axis down by a multiple of the label size taken as a fraction of the pad
   // height, while ROOT sizes text by the shorter side of the pad: in a pad taller than wide they would sit too far from the axis
-  if (axisLabel == 'X' && !axis_ptr->GetLabels() && axis_ptr->GetLabelFont() % 10 != 3 && !IsViewFrame(pad_ptr, axisHist_ptr)) {
+  if (axisLabel == 'X' && !axis_ptr->GetLabels() && axis_ptr->GetLabelFont() % 10 != 3 && !viewFrame) {
     const double_t width = pad_ptr->GetWw() * pad_ptr->GetAbsWNDC();
     const double_t height = pad_ptr->GetWh() * pad_ptr->GetAbsHNDC();
     if (height > width) {
@@ -4504,11 +4506,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
 //**************************************************************************************************
 bool PlotPainter::IsHBarFrame(TPad* pad, const TH1* frame)
 {
-  if (frame->GetDimension() != 1) return false;
-  for (TObjLink* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
-    if (link->GetObject() == frame) return TString(link->GetOption()).Contains("HBAR", TString::kIgnoreCase);
-  }
-  return false;
+  return frame->GetDimension() == 1 && TString(FrameOption(pad, frame)).Contains("HBAR", TString::kIgnoreCase);
 }
 
 //**************************************************************************************************
@@ -4518,14 +4516,20 @@ bool PlotPainter::IsHBarFrame(TPad* pad, const TH1* frame)
 //**************************************************************************************************
 bool PlotPainter::IsViewFrame(TPad* pad, const TH1* frame)
 {
-  if (frame->GetDimension() == 3) return true;
+  return frame->GetDimension() == 3 || IsView3d(FrameOption(pad, frame));
+}
+
+//**************************************************************************************************
+/**
+ * The option the frame histogram is drawn with in its pad (its first link), empty if it is not drawn there.
+ */
+//**************************************************************************************************
+string PlotPainter::FrameOption(TPad* pad, const TH1* frame)
+{
   for (TObjLink* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
-    if (link->GetObject() != frame) continue;
-    TString option(link->GetOption());
-    option.ToUpper();
-    return option.Contains("LEGO") || option.Contains("SURF") || option.Contains("TRI");
+    if (link->GetObject() == frame) return link->GetOption();
   }
-  return false;
+  return {};
 }
 
 //**************************************************************************************************
@@ -4547,7 +4551,7 @@ void PlotPainter::AddAxisRoom(const Plot::Pad& pad, const Plot::Pad& padDefaults
   // a frame drawn with HBAR shows the histogram's x axis vertically: the room set for an axis of the pad (X horizontal, Y vertical)
   // is applied to the axis of the histogram drawn there, and everything below works on the axes of the histogram
   const bool hbar = IsHBarFrame(pad_ptr, frame);
-  auto histLabel = [hbar](char padLabel) { return (hbar && padLabel != 'Z') ? ((padLabel == 'X') ? 'Y' : 'X') : padLabel; };
+  auto histLabel = [hbar](char padLabel) { return HBarAxis(padLabel, hbar); };
   struct room_t {
     char axisLabel;
     optional<double_t> below;
