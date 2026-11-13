@@ -316,7 +316,7 @@ class PlotPainter
   template <typename PtrT>
   void ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad::Data& mods);
   template <typename ObjT>
-  void RemoveInvalid(item_state_t& state, ObjT* ptr, const std::string& name);
+  void RemoveInvalid(item_state_t& state, ObjT* ptr, const std::string& name, bool checkFloatRange = true);
   bool PrepareOperand(item_state_t& state, data_ptr_t& operand, const Plot::Pad::Data::modify_t& operandModify, const std::string& name);
   template <typename T>
   void ProcessData(item_state_t& state, T&& data_ptr);

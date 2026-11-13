@@ -4082,11 +4082,11 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
 /**
  * NaN or infinite values (from the input or a division by zero) spoil the axis ranges and ROOT then draws nothing; removed before
  * the modifiers, which would spread them (Normalize divides by a NaN integral, Cumulative carries one into every later bin), and
- * before a division (a spline through one gives NaN everywhere).
+ * before a division (a spline through one gives NaN everywhere); contents beyond the float range are reported (checkFloatRange).
  */
 //**************************************************************************************************
 template <typename ObjT>
-void PlotPainter::RemoveInvalid(item_state_t& state, ObjT* ptr, const string& name)
+void PlotPainter::RemoveInvalid(item_state_t& state, ObjT* ptr, const string& name, bool checkFloatRange)
 {
   auto warn = [&](auto&&... args) { return Warn(state, std::forward<decltype(args)>(args)...); };
 
@@ -4103,9 +4103,9 @@ void PlotPainter::RemoveInvalid(item_state_t& state, ObjT* ptr, const string& na
     if constexpr (is_hist_3d<ptr_type>()) profile3d = dynamic_cast<TProfile3D*>(ptr);
     int32_t nInvalid{}, nBeyondFloat{};
     for (int32_t bin = 0; bin < ptr->GetNcells(); ++bin) {
-      // ROOT finds minima and maxima (axis ranges, colour scales) only below the largest float
-      if (std::abs(ptr->GetBinContent(bin)) > std::numeric_limits<float>::max() && std::isfinite(ptr->GetBinContent(bin))) ++nBeyondFloat;
-      if (!std::isfinite(ptr->GetBinContent(bin)) || !std::isfinite(ptr->GetBinError(bin))) {
+      const double_t content = ptr->GetBinContent(bin);
+      const double_t error = ptr->GetBinError(bin);
+      if (!std::isfinite(content) || !std::isfinite(error)) {
         if constexpr (is_one_of_v<ptr_type, TProfile*, TProfile2D*>()) {
           clearProfileBin(ptr, bin);
         } else {
@@ -4117,6 +4117,8 @@ void PlotPainter::RemoveInvalid(item_state_t& state, ObjT* ptr, const string& na
           }
         }
         ++nInvalid;
+      } else if (checkFloatRange && std::abs(content) > std::numeric_limits<float>::max()) {
+        ++nBeyondFloat;  // ROOT finds minima and maxima (axis ranges, colour scales) only below the largest float
       }
     }
     if (nInvalid) warn("{} has {} with NaN or infinite values, which are drawn as zero.", name, plural(nInvalid, "bin"));
@@ -4312,9 +4314,16 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
     }
   }  // end ratio code
 
-  removeInvalid(data_ptr, DataName(*data));
+  // modifiers that change the contents can push them beyond the float range or to infinity: the contents are checked again after them
+  const auto& m = data->Modify();
+  const bool changesContents = m.scaleBinWidthNorm || m.normMaximum || m.cumulative || m.showOverflowBins.value_or(false) ||
+                               m.divideBinWidth.value_or(false) || (m.scaleFactor && *m.scaleFactor > 0. && *m.scaleFactor != 1.) ||
+                               m.rebinGroupX.value_or(1) > 1 || m.rebinGroupY.value_or(1) > 1 || m.rebinGroupZ.value_or(1) > 1 ||
+                               (m.scaleAxisY && *m.scaleAxisY != 1.) || (m.scaleAxisZ && *m.scaleAxisZ != 1.);
+  removeInvalid(data_ptr, DataName(*data), !changesContents);
 
   applyModifiers(data_ptr, *data);
+  if (changesContents) removeInvalid(data_ptr, DataName(*data));
   // the axis histogram of the graph (stored with the input or made before the modifiers changed the points) is fitted to the final points
   if constexpr (is_graph_1d<data_type>()) data_ptr->SetBit(TGraph::kResetHisto);
 
