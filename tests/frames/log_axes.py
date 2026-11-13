@@ -247,7 +247,7 @@ for i, case in enumerate(todo):
     values = [v for v in shown_values(obj.GetHistogram() if obj.InheritsFrom("TF2") else obj, frame) if math.isfinite(v)]
     positive = [v for v in values if v > 0]
     if dim_of(obj) == 2 and "Z" in logs and not positive:  # nothing to show on log z: off, with a warning
-        warned = any("Log scale of Z axis in pad 1 ignored: the data has no positive values." in m for m in run.messages(f"c{i}", "log"))
+        warned = any("The log scale of the Z axis of pad 1 is ignored: the data has no positive values." in m for m in run.messages(f"c{i}", "log"))
         check(f"log z of 2d data without positive values shown is off with a warning: {what}", not flags["Z"] and warned, f"log z {flags['Z']}, warned {warned}")
         logs = logs.replace("Z", "")
     check(f"log scale kept: {what}", all(flags[a] for a in logs), str(flags))
@@ -321,7 +321,7 @@ for i, case in enumerate(todo):
 
 fh = run.frame_hist("ones", "log")
 check("log z colours the ones next to a maximum of 2e4", bool(fh) and 0 < fh.GetMinimum() <= 1.0, f"z from {fh.GetMinimum()}" if fh else "plot not made")
-warned = run.warnings("is not positive and cannot be shown on a log scale")
+warned = run.warnings("is ignored: a log scale shows only positive values")
 check("each lower range at or below zero on log x is reported", len(warned) == nIgnored, f"{len(warned)} warnings for {nIgnored} cases")
 errors = run.errors()
 check("no errors from the run", not errors, " | ".join(errors[:3]))

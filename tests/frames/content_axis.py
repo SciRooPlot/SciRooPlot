@@ -67,7 +67,7 @@ for i, case in enumerate(todo):
         check(f"{what}: the title of the colour scale", "content title" in title and (palette is None or palette.GetAxis().GetTitle() == "content title"), f"{title!r}")
     elif setting == "log":
         padObj = run.pad(f"c{i}", "content")
-        check(f"{what}: a log scale warned about, not applied", not padObj.GetLogz() and any("Log scale of the C axis in pad 1 ignored" in m for m in run.messages(f"c{i}", "content")), " | ".join(run.messages(f"c{i}", "content")))
+        check(f"{what}: a log scale warned about, not applied", not padObj.GetLogz() and any("The log scale of the C axis of pad 1 is ignored" in m for m in run.messages(f"c{i}", "content")), " | ".join(run.messages(f"c{i}", "content")))
     else:
         z = frame.GetZaxis()
         shown = (z.GetBinLowEdge(z.GetFirst()), z.GetBinUpEdge(z.GetLast()))

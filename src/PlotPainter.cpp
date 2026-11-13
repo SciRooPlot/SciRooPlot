@@ -623,14 +623,14 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       pad_ptr->SetTopMargin(marginTop);
       pad_ptr->SetBottomMargin(marginBottom);
     } else {
-      logger::warning("The top and bottom margins of pad {} ({:g} and {:g}) leave no room for the frame: ignored.", padID, marginTop, marginBottom);
+      ReportIgnored(fmt::format("The top and bottom margins of pad {} ({:g} and {:g})", padID, marginTop, marginBottom), "they leave no room for the frame", true);
     }
     if (marginLeft + marginRight < 1.f) {
       pad_ptr->SetLeftMargin(0.);
       pad_ptr->SetRightMargin(marginRight);
       pad_ptr->SetLeftMargin(marginLeft);
     } else {
-      logger::warning("The left and right margins of pad {} ({:g} and {:g}) leave no room for the frame: ignored.", padID, marginLeft, marginRight);
+      ReportIgnored(fmt::format("The left and right margins of pad {} ({:g} and {:g})", padID, marginLeft, marginRight), "they leave no room for the frame", true);
     }
     if (auto padFillColor = get_first(pad.GetFillColor(), padDefaults.GetFillColor())) pad_ptr->SetFillColor(padFillColor->ToIndex());
     if (auto padFillStyle = get_first(pad.GetFillStyle(), padDefaults.GetFillStyle())) pad_ptr->SetFillStyle(*padFillStyle);
@@ -1913,7 +1913,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     // map of the pad (a 2d or 3d histogram, a 2d graph or a 2d function), the one it is made from, also fewer than ROOT's 20, so that the
     // scale shows the levels of the map; levels of later data (e.g. contour lines over a map) are their own, the frame takes them only if they are more
     if constexpr (!is_2d<data_type>() && !is_3d<data_type>()) {
-      if (data->GetContours() || data->GetNContours()) ReportIgnored(fmt::format("The contours of {}", DataName(*data)), "only 2d and 3d data has colour levels");
+      if (data->GetContours() || data->GetNContours()) ReportIgnored(fmt::format("The contours of {}", DataName(*data)), "only 2d and 3d data has colour levels", true);
     }
     if constexpr (is_2d<data_type>() || is_hist_3d<data_type>()) {
       const bool firstMap = !mapDrawn;
@@ -2963,7 +2963,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
 
   // apply axis settings
   if (frameDim != 3 && pad.GetAxes().count('C')) {
-    logger::warning("The C axis of pad {} is ignored: it is the content of a 3d histogram (for other data the Y or Z axis is the value axis).", padID);
+    ReportIgnored(fmt::format("The C axis of pad {}", padID), "it is the content of a 3d histogram (for other data the Y or Z axis is the value axis)");
   }
   // the binned axes first: the positive minimum for a log value axis is taken from the bins in their range (with HBAR the value axis is the pad's X)
   for (auto axisLabel : (hbarFrame) ? array<char, 3>{'Y', 'X', 'Z'} : array<char, 3>{'X', 'Y', 'Z'}) {
@@ -3066,7 +3066,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
         ReportIgnored(fmt::format("The colour scale offset or width of the {} axis", axisLabel), "only the Z axis (C of a 3d histogram) has a colour scale");
       }
       if (axisLabel == 'Z' && (axisLayout.GetGrid() || axisLayout.GetOppositeTicks())) {
-        ReportIgnored("A grid or opposite ticks of the Z axis", "ROOT draws them on X and Y only");
+        ReportIgnored("A grid or opposite ticks of the Z axis", "ROOT draws them on X and Y only", true);
       }
       if (axisLayout.GetGrid()) {
         if (axisLabel == 'X') {
@@ -3231,7 +3231,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
           // that defines the frame (graph frames always have a stored minimum, computed from the points)
           const bool hasPositiveMinimum = (userRangeMin && *userRangeMin > 0.) || (!graphPositivePoints && axisHist_ptr->GetMinimumStored() > 0.);
           if (!hasPositiveMinimum) {
-            logger::warning("Log scale of {} axis in pad {} ignored: the data has no positive values.", axisLabel, padID);
+            ReportIgnored(fmt::format("The log scale of the {} axis of pad {}", axisLabel, padID), "the data has no positive values");
             disableLog();
           }
         } else if (frameDim == 1 && ((axisHist_ptr->GetMinimumStored() != -1111) ? (axisHist_ptr->GetMinimumStored() <= 0.) : (axisHist_ptr->GetMinimum() < 0.))) {
@@ -3251,7 +3251,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
           axis_ptr->SetRange();
         } else if (axis_ptr->GetBinLowEdge(firstBin) < 0.) {  // ROOT itself copes with a range starting at zero
           if (axis_ptr->GetBinUpEdge(lastBin) <= 0.) {
-            logger::warning("Log scale of {} axis in pad {} ignored: the axis range has no positive values.", axisLabel, padID);
+            ReportIgnored(fmt::format("The log scale of the {} axis of pad {}", axisLabel, padID), "the axis range has no positive values");
             disableLog();
           } else {
             int32_t bin = firstBin;
@@ -3273,7 +3273,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
     }
     const bool stillLog = (axisLabel == 'X') ? pad_ptr->GetLogx() : ((axisLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
     if (stillLog && ignoredRangeMin && !(axisLabel == 'Z' && frameDim == 1)) {
-      logger::warning("The lower range {} of the {} axis in pad {} is not positive and cannot be shown on a log scale: the axis starts at its automatic minimum.", *ignoredRangeMin, axisLabel, padID);
+      ReportIgnored(fmt::format("The lower range ({:g}) of the {} axis of pad {}", *ignoredRangeMin, axisLabel, padID), "a log scale shows only positive values, the axis starts at its automatic minimum");
     }
 
     if (textFontTitle) axis_ptr->SetTitleFont(*textFontTitle);
@@ -3411,10 +3411,10 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
           ReportIgnored("Room above or below the C axis", "the boxes of a 3d histogram are coloured over the range of the C axis, which leaves no room");
         }
         if (content.GetNumDivisions() || content.GetMaxDigits()) {
-          ReportIgnored("The divisions or max digits of the C axis", "ROOT takes them for the colour scale of a 3d histogram from its Z axis");
+          ReportIgnored("The divisions or max digits of the C axis", "ROOT takes them for the colour scale of a 3d histogram from its Z axis", true);
         }
       }
-      if (isLog) logger::warning("Log scale of the C axis in pad {} ignored: ROOT colours the boxes of a 3d histogram linearly.", padID);
+      if (isLog) ReportIgnored(fmt::format("The log scale of the C axis of pad {}", padID), "ROOT colours the boxes of a 3d histogram linearly");
       if (title) {
         DropEmptyGroups(*title);
         TAxis* zAxis = axisHist_ptr->GetZaxis();
@@ -3657,8 +3657,9 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
   auto dropStoredFunctions = [&](auto&&... args) { return DropStoredFunctions(state, std::forward<decltype(args)>(args)...); };
 
   using ptr_type = std::decay_t<decltype(ptr)>;
+  auto ignored = [&](const string& setting, const string& reason) { ReportIgnored(state, setting + " of " + ptr->GetName(), reason); };
   auto warnUnsupported = [&](bool requested, const char* what) {
-    if (requested) warn("{} is not supported for {} ({}), ignoring.", what, ptr->GetName(), ptr->ClassName());
+    if (requested) ignored(what, fmt::format("it is not supported for a {}", ptr->ClassName()));
   };
   const auto& m = mods.Modify();
   // only modifiers that change something keep the stored fits (not DivideBinWidth(false), Scale(1), Rebin(1), Smooth(0), nor a
@@ -3673,11 +3674,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
   auto multiplyFactor = [&](optional<double_t>& product, const optional<double_t>& factor, char axis = 0) {
     if (!factor) return;
     if (*factor <= 0.) {
-      if (axis) {
-        warn("Scale factor for {} axis of {} must be positive, ignoring.", axis, ptr->GetName());
-      } else {
-        warn("Scale factor for {} must be positive, ignoring.", ptr->GetName());
-      }
+      ignored(fmt::format("Scale{}({:g})", (axis) ? string(1, axis) : "", *factor), "the factor must be positive");
       return;
     }
     product = product.value_or(1.) * *factor;
@@ -3698,7 +3695,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     }
     string axisLetter = GetAxisStr(axisIndex);
     if (*factor <= 0.) {
-      warn("Scale factor for {} axis of {} must be positive, ignoring.", axisLetter, ptr->GetName());
+      ignored(fmt::format("Scale{}({:g})", axisLetter, *factor), "the factor must be positive");
       return;
     }
     if constexpr (is_hist_1d<ptr_type>()) {
@@ -3757,7 +3754,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     // ROOT refuses a group larger than the axis with an error: said here, that axis is left as it is
     auto rebinFits = [&](const TAxis* axis, const optional<uint16_t>& group, const char* what) {
       if (!group || *group <= axis->GetNbins()) return group.has_value();
-      warn("{}({}) needs at least as many bins, {} has {}, ignoring.", what, *group, ptr->GetName(), axis->GetNbins());
+      ignored(fmt::format("{}({})", what, *group), fmt::format("it needs at least as many bins, the axis has {}", axis->GetNbins()));
       return false;
     };
     {  // ROOT's warnings silenced for the rebinning only
@@ -3848,7 +3845,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
             means.push_back(ptr->GetBinContent(bin));
           }
           if (means.size() < 3) {
-            warn("Smooth needs at least three filled bins in profile histogram {}, ignoring.", ptr->GetName());
+            ignored("Smooth", "a profile needs at least 3 filled bins");
           } else {
             TH1::SmoothArray(static_cast<int32_t>(means.size()), means.data(), *mods.GetNiterSmooth());
             for (size_t i = 0; i < bins.size(); ++i) {
@@ -3873,7 +3870,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
           }
         }
       } else if (ptr->GetDimension() == 1 && ptr->GetNbinsX() < 3) {
-        warn("Smooth needs at least three bins in histogram {}, ignoring.", ptr->GetName());
+        ignored("Smooth", "it needs at least 3 bins");
       } else if (ptr->GetDimension() == 2) {
         ptr->Smooth(1);  // once, see above
       } else {
@@ -3896,7 +3893,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
             const double_t content = poly->GetBinContent(polyBin->GetBinNumber()) * ((!maximum && isDensity) ? polyBin->GetArea() : 1.);
             result = (maximum) ? std::max(result.value_or(content), content) : result.value_or(0.) + content;
           }
-          if (!result) warn("The range of {} for {} contains no bins, ignoring.", modifier, ptr->GetName());
+          if (!result) ignored(modifier, "its range contains no bins");
           return result;
         }
       }
@@ -3905,7 +3902,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       first = std::max(first, 1);
       last = std::min(last, axis->GetNbins());
       if (first > last) {
-        warn("The range of {} for {} contains no bins, ignoring.", modifier, ptr->GetName());
+        ignored(modifier, "its range contains no bins");
         return nullopt;
       }
       const int32_t oldFirst = axis->GetFirst();
@@ -3934,7 +3931,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     if constexpr (is_hist_1d<ptr_type>()) {
       if (mods.GetCumulative()) {
         if constexpr (is_one_of_v<ptr_type, TProfile*>()) {
-          warn("Cumulative is not supported for profile histogram {} (bin content would become invalid), ignoring.", ptr->GetName());
+          ignored("Cumulative", "it is not supported for a profile, whose contents are means");
         } else {
           if (isDensity) {
             // the running sum of a density has to be weighted with the bin widths to yield its integral
@@ -3983,7 +3980,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     warnUnsupported(mods.GetCumulative().has_value(), "Cumulative");
     if (mods.GetNiterSmooth()) {
       if (ptr->GetN() < 4) {
-        warn("Smooth needs at least 4 points, {} has {}; ignoring.", ptr->GetName(), ptr->GetN());
+        ignored("Smooth", fmt::format("it needs at least 4 points, the graph has {}", ptr->GetN()));
       } else {
         SortGraph(ptr);
         TGraphSmooth smoother;
@@ -4011,7 +4008,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       const vector<double_t> values = valuesInRangeX(mods.GetNormMin(), mods.GetNormMax());
       const double_t integral = std::accumulate(values.begin(), values.end(), 0.);
       if (values.empty() && ptr->GetN() > 0) {
-        warn("The range of Normalize for {} contains no points, ignoring.", ptr->GetName());
+        ignored("Normalize", "its range contains no points");
       } else if (integral == 0.) {
         warn("Cannot normalize graph {} because the sum of its values is zero.", ptr->GetName());
       } else {
@@ -4026,7 +4023,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       if (ptr->GetN() == 0) {
         warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
       } else if (values.empty()) {
-        warn("The range of NormalizeToMaximum for {} contains no points, ignoring.", ptr->GetName());
+        ignored("NormalizeToMaximum", "its range contains no points");
       } else if (double_t maxY = *std::max_element(values.begin(), values.end()); maxY == 0.) {
         warn("Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
       } else {
@@ -4058,7 +4055,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       if (ptr->GetN() == 0) {
         warn("Cannot normalize graph {} to maximum because it has no points.", ptr->GetName());
       } else if (!maxZ) {
-        warn("The range of NormalizeToMaximum for {} contains no points, ignoring.", ptr->GetName());
+        ignored("NormalizeToMaximum", "its range contains no points");
       } else if (*maxZ == 0.) {
         warn("Cannot normalize graph {} to maximum because it is zero.", ptr->GetName());
       } else {
@@ -4318,7 +4315,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
     if (rawDenomData) {
       denominatorMeans = prepareOperand(*rawDenomData, data_as_ratio->GetDenomModify(), DataName(data_as_ratio->GetDenomName(), data_as_ratio->GetDenomDataSource()));
       if (binomialErrors && (numeratorMeans || denominatorMeans)) {
-        warn("Ratio {}: binomial errors (SetCorrelated) are not defined for the mean values of a profile, ignoring.", DataName(*data));
+        ReportIgnored(state, fmt::format("SetCorrelated of ratio {}", DataName(*data)), "binomial errors are not defined for the mean values of a profile");
         binomialErrors = false;
       }
       std::visit(processDenominator, *rawDenomData);
@@ -4537,24 +4534,24 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
     }
     if (!room.below && !room.above) continue;
     if (axisLabel == 'Z' && !is2d) {
-      logger::warning("Room on the Z axis of pad {} ignored: the pad has no z axis.", padID);
+      ReportIgnored(fmt::format("The room on the Z axis of pad {}", padID), "the pad has no z axis");
       continue;
     }
     if (room.below && userMin) {
-      logger::warning("Room below the minimum of the {} axis of pad {} ignored: its minimum is set explicitly.", axisLabel, padID);
+      ReportIgnored(fmt::format("The room below the minimum ({:g}) of the {} axis of pad {}", *room.below, axisLabel, padID), "its minimum is set explicitly");
       room.below.reset();
     }
     if (room.above && userMax) {
-      logger::warning("Room above the maximum of the {} axis of pad {} ignored: its maximum is set explicitly.", axisLabel, padID);
+      ReportIgnored(fmt::format("The room above the maximum ({:g}) of the {} axis of pad {}", *room.above, axisLabel, padID), "its maximum is set explicitly");
       room.above.reset();
     }
     if (!room.below && !room.above) continue;
     if (room.below.value_or(0.) + room.above.value_or(0.) >= 1.) {
-      logger::warning("Room on the {} axis of pad {} ignored: room below and above add up to {:g} of the frame.", axisLabel, padID, room.below.value_or(0.) + room.above.value_or(0.));
+      ReportIgnored(fmt::format("The room on the {} axis of pad {}", axisLabel, padID), fmt::format("room below and above add up to {:g} of the frame", room.below.value_or(0.) + room.above.value_or(0.)));
       continue;
     }
     if (histLabel(axisLabel) != valueAxis && ((histLabel(axisLabel) == 'X') ? frame->GetXaxis() : frame->GetYaxis())->GetLabels()) {
-      logger::warning("Room on the {} axis of pad {} ignored: an axis with bin labels cannot be widened.", axisLabel, padID);
+      ReportIgnored(fmt::format("The room on the {} axis of pad {}", axisLabel, padID), "an axis with bin labels cannot be widened");
       continue;
     }
     room.axisLabel = histLabel(axisLabel);
@@ -4819,7 +4816,7 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
       frameMin = (dataMin - *room.below * frameMax) / (1. - *room.below);
     }
     if (!(frameMin < frameMax)) {
-      logger::warning("Room on the {} axis of pad {} ignored: the drawn data leave no valid range.", histLabel(axisLabel), padID);
+      ReportIgnored(fmt::format("The room on the {} axis of pad {}", histLabel(axisLabel), padID), "the drawn data leave no valid range");
       continue;
     }
     const double_t newMin = FromPad(frameMin, isLog);
@@ -5777,7 +5774,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           if (TNamed* data_ptr = findPlaceholderData(*entry.GetRefDataID(), entry.GetRefPadID())) {
             ReplacePlaceholders(line, data_ptr);
           } else {
-            logger::warning("Legend entry '{}' refers to data {}, which is not drawn in {}.", line, *entry.GetRefDataID(), (entry.GetRefPadID()) ? "pad " + std::to_string(*entry.GetRefPadID()) : "this pad");
+            logger::warning("Legend entry '{}': there is no data {} drawn in {}.", line, *entry.GetRefDataID(), (entry.GetRefPadID()) ? "pad " + std::to_string(*entry.GetRefPadID()) : "this pad");
           }
         }
       } else if (line.find('<') != string::npos) {
@@ -5988,7 +5985,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         for (uint16_t dataID : entry.GetSymbolOf()) {
           const auto [other_ptr, otherDrawnWith] = findDrawn(dataID, entry.GetRefPadID());
           if (!other_ptr) {
-            logger::warning("Legend row \"{}\": there is no data {} whose symbol could be added.", label, dataID);
+            logger::warning("Legend row '{}': there is no data {} drawn in {}.", label, dataID, (entry.GetRefPadID()) ? "pad " + std::to_string(*entry.GetRefPadID()) : "this pad");
             continue;
           }
           parts.push_back(symbolPart(dataID, other_ptr, otherDrawnWith, ""));
@@ -8786,9 +8783,14 @@ void PlotPainter::DropEmptyGroups(string& text)
  * Reports a setting that has no meaning where it is set, once per plot.
  */
 //**************************************************************************************************
-void PlotPainter::ReportIgnored(const string& setting, const char* reason)
+void PlotPainter::ReportIgnored(const string& setting, const string& reason, bool plural)
 {
-  if (mReportedIgnored.insert(setting).second) logger::warning("{} is ignored: {}.", setting, reason);
+  if (mReportedIgnored.insert(setting).second) logger::warning("{} {} ignored: {}.", setting, (plural) ? "are" : "is", reason);
+}
+// of the data drawn: not for its copy that draws the frame, nor for an input prepared again (see Warn)
+void PlotPainter::ReportIgnored(const item_state_t& state, const string& setting, const string& reason)
+{
+  if (state.padState.dataIndex != 0 && !state.repeated) ReportIgnored(setting, reason);
 }
 
 //**************************************************************************************************

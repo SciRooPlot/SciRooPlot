@@ -80,7 +80,7 @@ for i, case in enumerate(todo):
         if pad.GetLogz():
             check(f"positive range on the log scale: {what}", 0 < frame.GetMinimum() < frame.GetMaximum(), f"{frame.GetMinimum()} to {frame.GetMaximum()}")
         else:
-            ignored = [line for line in log if "Log scale of Z axis in pad 1 ignored" in line]
+            ignored = [line for line in log if "The log scale of the Z axis of pad 1 is ignored" in line]
             check(f"log scale without positive values ignored with a warning: {what}", bool(ignored), "log scale off without warning")
 unpaintableErrors = [line for line in run.errors() if "a_unpaintable" in line]
 check("a plot ROOT cannot paint is made or reported", bool(run.pad("a_unpaintable", "robust")) or any("could not be painted" in line for line in unpaintableErrors), str(unpaintableErrors))

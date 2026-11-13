@@ -411,7 +411,8 @@ class PlotPainter
   // a text with a backslash is drawn by ROOT's TMathText, which crashes on an empty group ({}, { }): such groups are dropped, warned once per text
   void DropEmptyGroups(std::string& text);
   // a setting that has no meaning where it is set: said once per plot (settings of pad 0 reach every pad)
-  void ReportIgnored(const std::string& setting, const char* reason);
+  void ReportIgnored(const std::string& setting, const std::string& reason, bool plural = false);
+  void ReportIgnored(const item_state_t& state, const std::string& setting, const std::string& reason);
   // 1d histograms and graphs of a flat pad that lie entirely beyond one edge of its frame (the first data decides the frame): warned
   void WarnIfOutsideFrame(TPad* pad) const;
   // the outline of a fill symbol: the line of the data (as TLegend draws it), none, or thin and solid in the line colour (boxes)

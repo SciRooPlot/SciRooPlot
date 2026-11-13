@@ -137,10 +137,10 @@ for h in limits.values():
         h.SetBinContent(c, 1.0 + c % 7)
 q.source("lim", limits)
 limitCases = {  # plot: (data, base, modifier, expected warning, expected bins along x, y, z)
-    "x1": ("h1", "1d", lambda d: d.RebinX(11), "RebinX(11) needs at least as many bins, h1:lim has 10", (10,)),
-    "x2": ("h2", "2d", lambda d: d.RebinX(11), "RebinX(11) needs at least as many bins, h2:lim has 10", (10, 8)),
-    "xy2": ("h2", "2d", lambda d: d.RebinXY(11, 2), "RebinX(11) needs at least as many bins, h2:lim has 10", (10, 4)),
-    "z3": ("h3", "2d", lambda d: d.RebinXYZ(2, 2, 5), "RebinZ(5) needs at least as many bins, h3:lim has 4", (2, 2, 4)),
+    "x1": ("h1", "1d", lambda d: d.RebinX(11), "RebinX(11) of h1:lim is ignored: it needs at least as many bins, the axis has 10", (10,)),
+    "x2": ("h2", "2d", lambda d: d.RebinX(11), "RebinX(11) of h2:lim is ignored: it needs at least as many bins, the axis has 10", (10, 8)),
+    "xy2": ("h2", "2d", lambda d: d.RebinXY(11, 2), "RebinX(11) of h2:lim is ignored: it needs at least as many bins, the axis has 10", (10, 4)),
+    "z3": ("h3", "2d", lambda d: d.RebinXYZ(2, 2, 5), "RebinZ(5) of h3:lim is ignored: it needs at least as many bins, the axis has 4", (2, 2, 4)),
     "float": ("h1", "1d", lambda d: d.Scale(1e40), "h1:lim has 12 bins with contents beyond the largest float", (10,)),
     "inf": ("h1", "1d", lambda d: d.Scale(1e300), "h1:lim has 12 bins with NaN or infinite values", (10,)),
 }

@@ -1121,7 +1121,7 @@ class ModifierExpected:
         self.warnings = []
 
     def unsupported(self, what, cls):
-        self.warnings.append(f"{what} is not supported for {self.name} ({cls})")
+        self.warnings.append(f"{what} of {self.name} is ignored: it is not supported for a {cls}")
 
     def warn(self, text):
         self.warnings.append(text)
@@ -1247,7 +1247,7 @@ def reference_hist(base, mods, exp):
             filled = [c for c in inner_cells(base) if base.GetBinEntries(c) > 0]
             if dim == 1:
                 if len(filled) < 3:
-                    exp.warn(f"Smooth needs at least three filled bins in profile histogram {exp.name}")
+                    exp.warn(f"Smooth of {exp.name} is ignored: a profile needs at least 3 filled bins")
                 else:
                     values = ROOT.std.vector("double")([h.GetBinContent(c) for c in filled])
                     ROOT.TH1.SmoothArray(len(filled), values.data(), smooth)
@@ -1264,21 +1264,21 @@ def reference_hist(base, mods, exp):
                 for c in filled:
                     h.SetBinContent(c, total.GetBinContent(c) / weight.GetBinContent(c))
         elif dim == 1 and h.GetNbinsX() < 3:
-            exp.warn(f"Smooth needs at least three bins in histogram {exp.name}")
+            exp.warn(f"Smooth of {exp.name} is ignored: it needs at least 3 bins")
         else:
             h.Smooth(smooth)
     if any(m.startswith("normalize") for m in mods) or "density" in mods:
         cells = bins_in_range_x(h) if "normalize_range" in mods else inner_cells(h)
         integral = sum_in_order(h.GetBinContent(c) * (cell_width(h, c) if density else 1.0) for c in cells)
         if not cells:
-            exp.warn(f"The range of Normalize for {exp.name} contains no bins")
+            exp.warn(f"Normalize of {exp.name} is ignored: its range contains no bins")
         elif integral == 0:
             exp.warn(f"Cannot normalize {exp.name} because its integral is zero")
         else:
             h.Scale(1.0 / integral)
     if "cumulative" in mods or "cumulative_backward" in mods:
         if profile and dim == 1:
-            exp.warn(f"Cumulative is not supported for profile histogram {exp.name}")
+            exp.warn(f"Cumulative of {exp.name} is ignored: it is not supported for a profile")
         elif dim > 1:
             exp.unsupported("Cumulative", cls)
         else:
@@ -1329,7 +1329,7 @@ def reference_graph(base, mods, exp):
     smooth = 3 if "smooth_3" in mods else (1 if "smooth" in mods else 0)
     if smooth:
         if n < 4:
-            exp.warn(f"Smooth needs at least 4 points, {exp.name} has {n}")
+            exp.warn(f"Smooth of {exp.name} is ignored: it needs at least 4 points, the graph has {n}")
         else:
             order = sorted(range(n), key=lambda i: v["x"][i])
             v = {k: [values[i] for i in order] for k, values in v.items()}
@@ -1346,7 +1346,7 @@ def reference_graph(base, mods, exp):
     if any(m.startswith("normalize") for m in mods) or "density" in mods:
         inside = [y for x, y in zip(v["x"], v["y"]) if "normalize_range" not in mods or RANGE[0] <= x <= RANGE[1]]
         if not inside and n:
-            exp.warn(f"The range of Normalize for {exp.name} contains no points")
+            exp.warn(f"Normalize of {exp.name} is ignored: its range contains no points")
         elif sum_in_order(inside) == 0:
             exp.warn(f"Cannot normalize graph {exp.name} because the sum of its values is zero")
         else:
@@ -1358,7 +1358,7 @@ def reference_graph(base, mods, exp):
         if not n:
             exp.warn(f"Cannot normalize graph {exp.name} to maximum because it has no points")
         elif not inside:
-            exp.warn(f"The range of NormalizeToMaximum for {exp.name} contains no points")
+            exp.warn(f"NormalizeToMaximum of {exp.name} is ignored: its range contains no points")
         elif max(inside) == 0:
             exp.warn(f"Cannot normalize graph {exp.name} to maximum because it is zero")
         else:
@@ -1403,7 +1403,7 @@ def reference_graph2d(base, mods, exp):
         if not v["z"]:
             exp.warn(f"Cannot normalize graph {exp.name} to maximum because it has no points")
         elif not inside:
-            exp.warn(f"The range of NormalizeToMaximum for {exp.name} contains no points")
+            exp.warn(f"NormalizeToMaximum of {exp.name} is ignored: its range contains no points")
         elif max(inside) == 0:
             exp.warn(f"Cannot normalize graph {exp.name} to maximum because it is zero")
         else:
