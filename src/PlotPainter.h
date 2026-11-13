@@ -318,6 +318,7 @@ class PlotPainter
   template <typename ObjT>
   void RemoveInvalid(item_state_t& state, ObjT* ptr, const std::string& name, bool checkFloatRange = true);
   bool PrepareOperand(item_state_t& state, data_ptr_t& operand, const Plot::Pad::Data::modify_t& operandModify, const std::string& name);
+  bool PrepareRatioNumerator(item_state_t& state, data_ptr_t& numerator);
   template <typename T>
   void ProcessData(item_state_t& state, T&& data_ptr);
   static void Paints3dGraph(const std::string& option, bool& triangles, bool& points);

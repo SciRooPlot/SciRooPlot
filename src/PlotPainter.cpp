@@ -581,7 +581,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     auto& hasRefFunc = padState.hasRefFunc;
     auto& frameSource = padState.frameSource;
     auto& fail = padState.fail;
-    auto& axisHist_ptr = padState.axisHist_ptr;
     auto& drawOption = padState.drawOption;
     auto& dataIndex = padState.dataIndex;
 
@@ -821,98 +820,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       TObject* input = (dataIndex == 0 && emptyFrame) ? emptyFrame.get() : Input(*data, dataBuffer);
       optional<data_ptr_t> rawData = InputClone(input, DataName(*data), data->GetProjInfo(), keepStoredRanges);
 
-      if (rawData) {
-        bool numeratorFailed{};  // a function numerator that could not be sampled (reported)
-        if (data->GetType() == "ratio") {
-          std::visit([&](auto* ptr) { DropStoredFunctions(state, ptr, "division"); }, *rawData);
-          auto ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          state.numeratorMeans = PrepareOperand(state, *rawData, ratio->GetNumModify(), DataName(*data));
-          // a function as numerator (e.g. model / data) is sampled where the denominator has its values (the points of a graph, the bin
-          // centres of a histogram, after the modifiers of the denominator): the division is then that of a graph without errors, which
-          // takes the errors of the denominator; a function of the inputs only within its range, a formula of the plot definition everywhere
-          if (auto* func = std::get_if<TF1*>(&*rawData)) {
-            if (optional<data_ptr_t> denom = DenominatorClone(*ratio, dataBuffer)) {
-              state.repeated = true;  // reported when it is divided by
-              PrepareOperand(state, *denom, ratio->GetDenomModify(), DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()));
-              state.repeated = false;
-              const bool fullRange = (data->GetDataSource() == kUserFunctions);
-              auto* sampled = new TGraph();
-              sampled->SetBit(kCanDelete);  // owned by the pad, as the clone it replaces
-              // the function at the n positions of a 1d graph or histogram (the points, the bin centres)
-              auto sampleAt = [&](const char* positions, int32_t n, auto position) {
-                for (int32_t i = 0; i < n; ++i) {
-                  const double_t x = position(i);
-                  if (fullRange || ((*func)->GetXmin() <= x && x <= (*func)->GetXmax())) sampled->AddPoint(x, (*func)->Eval(x));
-                }
-                const string denomName = DataName(ratio->GetDenomName(), ratio->GetDenomDataSource());
-                if (n == 0) {
-                  logger::error("Ratio {}: {} has no {} to take the function at.", DataName(*data), denomName, positions);
-                  numeratorFailed = true;
-                } else if (sampled->GetN() == 0) {
-                  logger::error("Ratio {}: none of the {} of {} is within the range [{:g}, {:g}] of the function.", DataName(*data), positions, denomName, (*func)->GetXmin(), (*func)->GetXmax());
-                  numeratorFailed = true;
-                }
-              };
-              std::visit(
-                [&](auto* ptr) {
-                  using denom_type = std::decay_t<decltype(ptr)>;
-                  if constexpr (is_graph_1d<denom_type>()) {
-                    sampleAt("points", ptr->GetN(), [&](int32_t i) { return ptr->GetX()[i]; });
-                  } else if constexpr (is_hist_1d<denom_type>()) {
-                    sampleAt("bin centres", ptr->GetNbinsX(), [&](int32_t i) { return ptr->GetXaxis()->GetBinCenter(i + 1); });
-                  } else if constexpr (is_func_1d<denom_type>()) {
-                    // function / function: sampled at the numerator's SetNpx points where both are defined (a formula of the plot
-                    // definition everywhere: then the range of the other function, of the ratio data or of the frame)
-                    const bool denomFullRange = (ratio->GetDenomDataSource() == kUserFunctions);
-                    double_t lo = -std::numeric_limits<double_t>::infinity(), hi = std::numeric_limits<double_t>::infinity();
-                    if (!fullRange) {
-                      lo = (*func)->GetXmin();
-                      hi = (*func)->GetXmax();
-                    }
-                    if (!denomFullRange) {
-                      lo = std::max(lo, ptr->GetXmin());
-                      hi = std::min(hi, ptr->GetXmax());
-                    }
-                    if (data->GetMinRangeX()) lo = std::max(lo, *data->GetMinRangeX());
-                    if (data->GetMaxRangeX()) hi = std::min(hi, *data->GetMaxRangeX());
-                    // the frame, or for the ratio giving the frame the x range of the pad
-                    if (!std::isfinite(lo)) lo = (axisHist_ptr) ? axisHist_ptr->GetXaxis()->GetXmin() : MinRange(pad, padDefaults, 'X').value_or(lo);
-                    if (!std::isfinite(hi)) hi = (axisHist_ptr) ? axisHist_ptr->GetXaxis()->GetXmax() : MaxRange(pad, padDefaults, 'X').value_or(hi);
-                    if (!std::isfinite(lo) || !std::isfinite(hi)) {
-                      logger::error("Ratio {}: two formulas of the plot definition have no range to be divided in: set one with SetRangeX (or a range of the X axis of the pad).", DataName(*data));
-                      numeratorFailed = true;
-                    } else if (lo >= hi) {
-                      logger::error("Ratio {}: the ranges of the functions do not overlap.", DataName(*data));
-                      numeratorFailed = true;
-                    } else {
-                      const int32_t npx = std::max((*func)->GetNpx(), 2);
-                      for (int32_t i = 0; i < npx; ++i) {
-                        const double_t x = lo + (hi - lo) * i / (npx - 1);
-                        sampled->AddPoint(x, (*func)->Eval(x));
-                      }
-                    }
-                  }
-                  delete ptr;
-                },
-                *denom);
-              if (sampled->GetN() > 0) {
-                sampled->SetName((*func)->GetName());
-                sampled->SetTitle((*func)->GetTitle());
-                delete *func;
-                rawData = sampled;
-              } else {
-                delete sampled;  // reported above, or a denominator of another kind: reported as unsupported division below
-              }
-            }
-          }
-        }
-        if (numeratorFailed) {
-          fail = true;  // reported above: not again as an unsupported division
-        } else {
-          std::visit([&](auto*& ptr) { ProcessData(state, ptr); }, *rawData);
-        }
-      } else {
+      if (!rawData) {
         fail = true;
+      } else if (data->GetType() == "ratio" && !PrepareRatioNumerator(state, *rawData)) {
+        fail = true;  // reported: not again as an unsupported division
+      } else {
+        std::visit([&](auto*& ptr) { ProcessData(state, ptr); }, *rawData);
       }
     }  // end data code
 
@@ -4144,6 +4057,105 @@ bool PlotPainter::PrepareOperand(item_state_t& state, data_ptr_t& operand, const
     },
     operand);
   return ProfileMeans(operand);
+}
+
+//**************************************************************************************************
+/**
+ * Prepares the numerator of a ratio (see PrepareOperand); a function as numerator (e.g. model / data) is sampled where the denominator
+ * has its values (the points of a graph, the bin centres of a histogram, after the modifiers of the denominator): the division is then
+ * that of a graph without errors, which takes the errors of the denominator; a function of the inputs only within its range, a formula
+ * of the plot definition everywhere. Returns false if the function could not be sampled (reported).
+ */
+//**************************************************************************************************
+bool PlotPainter::PrepareRatioNumerator(item_state_t& state, data_ptr_t& numerator)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& padDefaults = padState.padDefaults;
+  auto& dataBuffer = padState.dataBuffer;
+  auto& pad = padState.pad;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+
+  bool failed{};
+  std::visit([&](auto* ptr) { DropStoredFunctions(state, ptr, "division"); }, numerator);
+  auto ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
+  state.numeratorMeans = PrepareOperand(state, numerator, ratio->GetNumModify(), DataName(*data));
+  if (auto* func = std::get_if<TF1*>(&numerator)) {
+    if (optional<data_ptr_t> denom = DenominatorClone(*ratio, dataBuffer)) {
+      state.repeated = true;  // reported when it is divided by
+      PrepareOperand(state, *denom, ratio->GetDenomModify(), DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()));
+      state.repeated = false;
+      const bool fullRange = (data->GetDataSource() == kUserFunctions);
+      auto* sampled = new TGraph();
+      sampled->SetBit(kCanDelete);  // owned by the pad, as the clone it replaces
+      // the function at the n positions of a 1d graph or histogram (the points, the bin centres)
+      auto sampleAt = [&](const char* positions, int32_t n, auto position) {
+        for (int32_t i = 0; i < n; ++i) {
+          const double_t x = position(i);
+          if (fullRange || ((*func)->GetXmin() <= x && x <= (*func)->GetXmax())) sampled->AddPoint(x, (*func)->Eval(x));
+        }
+        const string denomName = DataName(ratio->GetDenomName(), ratio->GetDenomDataSource());
+        if (n == 0) {
+          logger::error("Ratio {}: {} has no {} to take the function at.", DataName(*data), denomName, positions);
+          failed = true;
+        } else if (sampled->GetN() == 0) {
+          logger::error("Ratio {}: none of the {} of {} is within the range [{:g}, {:g}] of the function.", DataName(*data), positions, denomName, (*func)->GetXmin(), (*func)->GetXmax());
+          failed = true;
+        }
+      };
+      std::visit(
+        [&](auto* ptr) {
+          using denom_type = std::decay_t<decltype(ptr)>;
+          if constexpr (is_graph_1d<denom_type>()) {
+            sampleAt("points", ptr->GetN(), [&](int32_t i) { return ptr->GetX()[i]; });
+          } else if constexpr (is_hist_1d<denom_type>()) {
+            sampleAt("bin centres", ptr->GetNbinsX(), [&](int32_t i) { return ptr->GetXaxis()->GetBinCenter(i + 1); });
+          } else if constexpr (is_func_1d<denom_type>()) {
+            // function / function: sampled at the numerator's SetNpx points where both are defined (a formula of the plot
+            // definition everywhere: then the range of the other function, of the ratio data or of the frame)
+            const bool denomFullRange = (ratio->GetDenomDataSource() == kUserFunctions);
+            double_t lo = -std::numeric_limits<double_t>::infinity(), hi = std::numeric_limits<double_t>::infinity();
+            if (!fullRange) {
+              lo = (*func)->GetXmin();
+              hi = (*func)->GetXmax();
+            }
+            if (!denomFullRange) {
+              lo = std::max(lo, ptr->GetXmin());
+              hi = std::min(hi, ptr->GetXmax());
+            }
+            if (data->GetMinRangeX()) lo = std::max(lo, *data->GetMinRangeX());
+            if (data->GetMaxRangeX()) hi = std::min(hi, *data->GetMaxRangeX());
+            // the frame, or for the ratio giving the frame the x range of the pad
+            if (!std::isfinite(lo)) lo = (axisHist_ptr) ? axisHist_ptr->GetXaxis()->GetXmin() : MinRange(pad, padDefaults, 'X').value_or(lo);
+            if (!std::isfinite(hi)) hi = (axisHist_ptr) ? axisHist_ptr->GetXaxis()->GetXmax() : MaxRange(pad, padDefaults, 'X').value_or(hi);
+            if (!std::isfinite(lo) || !std::isfinite(hi)) {
+              logger::error("Ratio {}: two formulas of the plot definition have no range to be divided in: set one with SetRangeX (or a range of the X axis of the pad).", DataName(*data));
+              failed = true;
+            } else if (lo >= hi) {
+              logger::error("Ratio {}: the ranges of the functions do not overlap.", DataName(*data));
+              failed = true;
+            } else {
+              const int32_t npx = std::max((*func)->GetNpx(), 2);
+              for (int32_t i = 0; i < npx; ++i) {
+                const double_t x = lo + (hi - lo) * i / (npx - 1);
+                sampled->AddPoint(x, (*func)->Eval(x));
+              }
+            }
+          }
+          delete ptr;
+        },
+        *denom);
+      if (sampled->GetN() > 0) {
+        sampled->SetName((*func)->GetName());
+        sampled->SetTitle((*func)->GetTitle());
+        delete *func;
+        numerator = sampled;
+      } else {
+        delete sampled;  // reported above, or a denominator of another kind: reported as unsupported division below
+      }
+    }
+  }
+  return !failed;
 }
 
 //**************************************************************************************************
