@@ -228,7 +228,7 @@ bool PlotManager::SavePlotsToRootFile() const
         keyName += "_plot";
       }
       if (keyName != plotName) {
-        logger::warning("Plot {} of group {} is stored as {} in {}, since the group has a subgroup of the same name.", plotName, subfolder, keyName, mPlotsRootFile);
+        logger::warning("Plot {} is stored as {} in {}, since the group has a subgroup of the same name.", Plot::Label(plotName, subfolder), keyName, mPlotsRootFile);
       }
       if (!outputFile.GetDirectory(subfolder.data(), kFALSE, "cd")) {
         outputFile.mkdir(subfolder.data());
@@ -961,13 +961,13 @@ void PlotManager::AddPlot(Plot plot)
   }
   // pad 0 only holds the defaults for all pads, nothing added to it is drawn
   if (auto pad0 = plot.GetPads().find(0); pad0 != plot.GetPads().end() && (!pad0->second.GetData().empty() || pad0->second.GetFrame() || !pad0->second.GetLegendBoxes().empty() || !pad0->second.GetTextBoxes().empty() || !pad0->second.GetImageBoxes().empty())) {
-    logger::warning("Plot {} in {}: data, frames, legends, texts and images added to pad 0 are not drawn (pad 0 holds the defaults for all pads, the pads are counted from 1).", plot.GetName(), plot.GetGroup());
+    logger::warning("Plot {}: data, frames, legends, texts and images added to pad 0 are not drawn (pad 0 holds the defaults for all pads, the pads are counted from 1).", Plot::Label(plot));
   }
   // Filter, Define, Join and Entries select the rows of a tree or table: without Project*, Profile* or Scatter nothing is requested from it
   auto warnUnusedRequest = [&plot](const Plot::Pad::Data::data_info_t& info, const string& name) {
     if (!info.dataDims.empty()) return;
     if (info.filters || info.definitions.keys || info.joins || info.entries.min || info.entries.max) {
-      logger::warning("Plot {} in {}: Filter, Define, Join and Entries of {} have no effect without Project, Profile or Scatter.", plot.GetName(), plot.GetGroup(), name);
+      logger::warning("Plot {}: Filter, Define, Join and Entries of {} have no effect without Project, Profile or Scatter.", Plot::Label(plot), name);
     }
   };
   for (auto& [padID, pad] : plot.GetPads()) {
@@ -979,7 +979,7 @@ void PlotManager::AddPlot(Plot plot)
   mPlots.erase(std::remove_if(mPlots.begin(), mPlots.end(),
                               [&plot](const Plot& curPlot) {
                                 bool removePlot = curPlot.GetUniqueName() == plot.GetUniqueName();
-                                if (removePlot) logger::warning("Plot {} in {} already exists and will be replaced.", curPlot.GetName(), curPlot.GetGroup());
+                                if (removePlot) logger::warning("Plot {} already exists and will be replaced.", Plot::Label(curPlot));
                                 return removePlot;
                               }),
                mPlots.end());
@@ -1332,7 +1332,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
     };
     compare(read, plot.GetPropertyTree(), "");
     if (unknown.empty()) return;
-    const string what = (plot.GetGroup() == "BASE_PLOTS") ? fmt::format("Base plot {}", plot.GetName()) : fmt::format("Plot {} from group {}", plot.GetName(), plot.GetGroup());
+    const string what = (plot.GetGroup() == "BASE_PLOTS") ? fmt::format("Base plot {}", plot.GetName()) : "Plot " + Plot::Label(plot);
     logger::warning("{} ignores what it does not know in {}: {}.", what, plotsFile, util::join_strings(unknown, ", "));
   };
 
@@ -1357,7 +1357,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
         AddBasePlot(std::move(basePlot));
         ++nBasePlotsLoaded;
       } catch (const std::exception& e) {
-        logger::error("Could not load base plot {} from file: {}.", plotTree.first, util::without_final_period(e.what()));
+        logger::error("Could not load base plot {} from file: {}.", *curNameValue, util::without_final_period(e.what()));
       }
       continue;
     }
@@ -1371,7 +1371,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
       AddPlot(std::move(plot));
       ++nLoaded;
     } catch (const std::exception& e) {
-      logger::error("Could not load plot {} from file: {}.", plotTree.first, util::without_final_period(e.what()));
+      logger::error("Could not load plot {} from file: {}.", Plot::Label(*curNameValue, curGroup), util::without_final_period(e.what()));
     }
   }
   if (nPlotsInFile == 0 && nBasePlotsLoaded > 0) {
@@ -1645,7 +1645,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     bool allCreated = true;
     auto reportFailure = [&](Plot* plot) {
       auto missingData = GetMissingData(*plot);
-      string message = fmt::format("Plot {}{}{} from group {}{}{} could not be created.", logger::begin_color(logger::Color::Green), plot->GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot->GetGroup(), logger::end_color());
+      string message = fmt::format("Plot {} could not be created.", Plot::Label(*plot));
       for (const auto& [dataSource, name, dataInfo] : missingData) {
         message += "\n         - missing " + DataLocation(dataSource, name);
         if (!dataInfo.dataDims.empty()) message += " [" + dataInfo.GetDescription() + "]";
@@ -2175,7 +2175,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   }
   fullPlot += plot;
   if (mode == "print") {
-    logger::print("Settings of plot {}{}{} from group {}{}{}:", logger::begin_color(logger::Color::Green), fullPlot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), fullPlot.GetGroup(), logger::end_color());
+    logger::print("Settings of plot {}:", Plot::Label(fullPlot));
     Plot::Print(fullPlot.GetPropertyTree(), "");
     return true;
   }
@@ -2192,7 +2192,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     for (auto& group : axisGroups) {
       auto undefined = [&, axisLabel = axisLabel](uint8_t padID) {
         if (fullPlot.GetPads().count(padID)) return false;
-        logger::warning("Plot {}: pad {} is left out of the pads sharing the {} axis: the plot has no pad {}.", fullPlot.GetName(), padID, axisLabel, padID);
+        logger::warning("Plot {}: pad {} is left out of the pads sharing the {} axis: the plot has no pad {}.", Plot::Label(fullPlot), padID, axisLabel, padID);
         return true;
       };
       group.pads.erase(std::remove_if(group.pads.begin(), group.pads.end(), undefined), group.pads.end());
@@ -2244,7 +2244,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 //**************************************************************************************************
 void PlotManager::LogCreated(const Plot& plot)
 {
-  logger::log("Created plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), plot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot.GetGroup(), logger::end_color());
+  logger::log("Created plot {}.", Plot::Label(plot));
 }
 
 //**************************************************************************************************
@@ -2338,7 +2338,7 @@ bool PlotManager::BrowseInteractively(const Plot& fullPlot, const string& mode, 
       mBrowsePosition = std::make_pair(browseX, browseY);
       const string uniqueName = canvas->GetTitle();  // <name>:<group>
       const size_t separator = uniqueName.rfind(':');
-      logger::log("Detached plot {}{}{} from group {}{}{}.", logger::begin_color(logger::Color::Green), uniqueName.substr(0, separator), logger::end_color(), logger::begin_color(logger::Color::Yellow), uniqueName.substr(separator + 1), logger::end_color());
+      logger::log("Detached plot {}.", Plot::Label(uniqueName.substr(0, separator), uniqueName.substr(separator + 1)));
       mBrowseSkip[current] = true;  // no longer browsed
       mBrowseCanvases[current] = nullptr;
       mShownIndex.reset();
@@ -2444,7 +2444,7 @@ bool PlotManager::WriteOutput(const Plot& plot, const Plot& fullPlot, const stri
       }
       mGifSize = size;
     } else if (size != *mGifSize && !mGifSizeReported) {
-      logger::warning("The frames of {} differ in size: plot {} of group {} is {}x{}, the first frame {}x{}. Viewers show every frame in the size of the first.", mGifName, plot.GetName(), plot.GetGroup(), size.first, size.second, mGifSize->first, mGifSize->second);
+      logger::warning("The frames of {} differ in size: plot {} is {}x{}, the first frame {}x{}. Viewers show every frame in the size of the first.", mGifName, Plot::Label(plot), size.first, size.second, mGifSize->first, mGifSize->second);
       mGifSizeReported = true;
     }
     // the frame before is written now that this one is painted; this one waits for the next (or closes the gif at the end)
@@ -2496,7 +2496,7 @@ bool PlotManager::WriteOutput(const Plot& plot, const Plot& fullPlot, const stri
   string fullName = folderName + "/" + fileName + fileEnding;
   // names that would give the same file, as the sanitised macro names (eff-pi and eff_pi) or names differing only in case on a
   // case-insensitive file system (Eff and eff, the default of macOS): the later plot gets a number, so it does not replace the earlier one
-  const string plotID = plot.GetGroup() + ":" + plot.GetName();
+  const string plotID = Plot::Label(plot);
   auto fileKey = [&](const string& name) {
     string key = folderName + "/" + name + fileEnding;
     std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
@@ -2507,7 +2507,7 @@ bool PlotManager::WriteOutput(const Plot& plot, const Plot& fullPlot, const stri
     uniqueName = fileName + "_" + std::to_string(n);
   }
   if (uniqueName != fileName) {
-    logger::warning("Plot {} of group {} is saved as {}{}, since {} has the same file name.", plot.GetName(), plot.GetGroup(), uniqueName, fileEnding, mWrittenFiles[fileKey(fileName)]);
+    logger::warning("Plot {} is saved as {}{}, since plot {} has the same file name.", plotID, uniqueName, fileEnding, mWrittenFiles[fileKey(fileName)]);
     fileName = uniqueName;
     fullName = folderName + "/" + fileName + fileEnding;
   }
@@ -2566,11 +2566,11 @@ std::unique_ptr<TCanvas> PlotManager::Paint(PlotPainter& painter, Plot& toPaint)
     return painter.GeneratePlot(toPaint, mDataBuffer);
   } catch (const std::length_error& e) {
     // ROOT's axis painter reserves room for a number of ticks that overflows for an axis spanning less than about 1e-196, or too many decades of a log scale
-    logger::error("Plot {} could not be painted: ROOT cannot draw one of its axes, spanning less than about 1e-196 or too many decades on a log scale ({}).", toPaint.GetName(),
+    logger::error("Plot {} could not be painted: ROOT cannot draw one of its axes, spanning less than about 1e-196 or too many decades on a log scale ({}).", Plot::Label(toPaint),
                   util::without_final_period(e.what()));
     return nullptr;
   } catch (const std::exception& e) {
-    logger::error("Plot {} could not be painted: {}.", toPaint.GetName(), util::without_final_period(e.what()));
+    logger::error("Plot {} could not be painted: {}.", Plot::Label(toPaint), util::without_final_period(e.what()));
     return nullptr;
   }
 }
@@ -2611,7 +2611,7 @@ bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map
             value = get(axis->second);
             valuePad = padID;
           } else if (*value != *get(axis->second)) {
-            logger::warning("Plot {}: the pads sharing the {} axis with pad {} set different {}: the one of pad {} is used.", fullPlot.GetName(), axisLabel, padID, what, valuePad);
+            logger::warning("Plot {}: the pads sharing the {} axis with pad {} set different {}: the one of pad {} is used.", Plot::Label(fullPlot), axisLabel, padID, what, valuePad);
           }
         }
         if (!value) return;
@@ -2630,7 +2630,7 @@ bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map
         };
         auto content = std::find_if(group.pads.begin(), group.pads.end(), [&](uint8_t padID) { return contentPads.count(padID) > 0; });
         if (content != group.pads.end() && std::any_of(group.pads.begin(), group.pads.end(), isLog)) {
-          logger::warning("Plot {}: pad {} draws a 3d histogram, whose boxes ROOT colours linearly: they do not follow the log scale of its z group.", fullPlot.GetName(), *content);
+          logger::warning("Plot {}: pad {} draws a 3d histogram, whose boxes ROOT colours linearly: they do not follow the log scale of its z group.", Plot::Label(fullPlot), *content);
         }
         // one colour scale for the group, but each pad is painted with its own palette: the scale fits only some of them
         const auto& pads = fullPlot.GetPads();
@@ -2654,7 +2654,7 @@ bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map
             firstPad = padID;
           } else if (palette(*first) != palette(*used)) {
             // named: the pad that sets its own palette (the first one painted differently from the others may take pad 0's)
-            logger::warning("Plot {}: pad {} sets another palette than the pads it shares one colour scale with; separate the panels with a gap for own scales.", fullPlot.GetName(), (own) ? padID : firstPad);
+            logger::warning("Plot {}: pad {} sets another palette than the pads it shares one colour scale with; separate the panels with a gap for own scales.", Plot::Label(fullPlot), (own) ? padID : firstPad);
             break;
           }
         }
@@ -2693,7 +2693,7 @@ bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map
           if (!group.fromLayout && fullPlot.GetPads().count(padID)) {
             auto& pad = fullPlot.GetPads().at(padID);
             const bool drawsNothing = pad.GetData().empty() && !pad.GetFrame() && !pad.GetRefFunc();
-            logger::warning("Plot {}: pad {} is left out of the pads sharing the {} axis: {}.", fullPlot.GetName(), padID, axisLabel,
+            logger::warning("Plot {}: pad {} is left out of the pads sharing the {} axis: {}.", Plot::Label(fullPlot), padID, axisLabel,
                             (drawsNothing) ? "it draws nothing" : ((axisLabel == 'Z') ? "it draws no 2d histogram, graph or function and no 3d histogram (or a polar drawing)" : "it has no flat axis frame (a 3d view or a polar drawing)"));
           }
           continue;
@@ -2737,7 +2737,7 @@ bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map
       const bool ownLabels = axis != pad.GetAxes().end() && axis->second.GetLabelSize();
       if (unshared != touching.end() && !ownLabels) {
         logger::warning("Plot {}: the {} labels and title of pad {} are hidden beside pad {}, which shares no axis with it (a 3D view or a polar drawing); separate them with a Gap() to show them.",
-                        fullPlot.GetName(), static_cast<char>(std::tolower(axisLabel)), padID, *unshared);
+                        Plot::Label(fullPlot), static_cast<char>(std::tolower(axisLabel)), padID, *unshared);
       }
     }
   }
@@ -3184,7 +3184,7 @@ char PlotManager::TerminalKey()
 void PlotManager::ListPlots() const
 {
   for (const auto& plot : mPlots) {
-    logger::print(" - {}{}{} in group {}{}{}", logger::begin_color(logger::Color::Green), plot.GetName(), logger::end_color(), logger::begin_color(logger::Color::Yellow), plot.GetGroup(), logger::end_color());
+    logger::print(" - {}", Plot::Label(plot));
   }
 }
 

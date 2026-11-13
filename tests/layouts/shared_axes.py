@@ -219,7 +219,7 @@ for prefix, todo, axisOf in (("p", pairs, lambda c: c["axis"]), ("z", zpairs, la
 linear = run.warnings("whose boxes ROOT colours linearly")
 for i, c in enumerate(zpairs):
     expected = c["log"] and c["first"] not in DATA_3D and c["second"] in DATA_3D
-    warned = [line for line in linear if f"Plot z{i}_True:" in line]
+    warned = [line for line in linear if f"Plot z{i}_True from group " in line]
     check(f"a log scale not reaching the 3d histogram is warned about{'' if expected else ' only there'}: {describe(c)}", len(warned) == (1 if expected else 0) and (not expected or "pad 2" in warned[0]), str(warned))
 leftOut = run.warnings("is left out of the pads sharing")
 besides = run.warnings("are hidden beside pad")
@@ -231,14 +231,14 @@ for i, c in enumerate(views):
         check(f"plots made: {what}", False, " | ".join(line for line in run.errors() if f"v{i}_" in line)[:300])
         continue
     check(f"the flat pad keeps its own {c['axis']} range beside a drawing without flat frame: {what}", same(shared[1][c["axis"]], alone[1][c["axis"]]), f"{shared[1]}, alone {alone[1]}")
-    warned = [line for line in leftOut if f"Plot v{i}_True:" in line]
+    warned = [line for line in leftOut if f"Plot v{i}_True from group " in line]
     if c["group"] == "explicit":
         check(f"an explicit group warns that it leaves out the pad without flat frame: {what}", len(warned) == 1 and "pad 1" in warned[0], str(warned))
     else:
         check(f"the layout leaves it out silently: {what}", not warned, str(warned))
     # the flat pad right of the drawing keeps its y labels hidden (no room for them), with a warning; below it (x) the drawing shows its own
     for shared in (True, False):
-        warned = [line for line in besides if f"Plot v{i}_{shared}:" in line]
+        warned = [line for line in besides if f"Plot v{i}_{shared} from group " in line]
         expected = c["group"] == "layout" and c["axis"] == "Y"
         check(
             f"a flat pad beside the drawing warns that its hidden {c['axis'].lower()} axis is not shared{'' if expected else ' only where it touches'}: {what} shared={shared}",
@@ -254,7 +254,7 @@ def ranges(what, axis="Y", pads=(1, 2, 3)):
 
 
 def warned(what, text):
-    return [line for line in run.warnings(text) if f"Plot {names[what]}:" in line]
+    return [line for line in run.warnings(text) if f"Plot {names[what]} from group " in line]
 
 
 check("a range set in one pad holds for the whole group", all(same(r, (0.5, 2000.0)) for r in ranges("range in one pad")), str(ranges("range in one pad")))

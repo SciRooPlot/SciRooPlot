@@ -754,13 +754,13 @@ ptree Plot::GetPropertyTree() const
 auto Plot::ShareAxis(char axis, const vector<uint8_t>& pads) -> decltype(*this)
 {
   if (axis != 'X' && axis != 'Y' && axis != 'Z') {
-    logger::warning("Plot {}: ShareAxis needs the axis 'X', 'Y' or 'Z' (got '{}'{}).", mName, axis, (axis == 'C') ? "; the colour scale of a 3d histogram is shared with 'Z'" : "");
+    logger::warning("Plot {}: ShareAxis needs the axis 'X', 'Y' or 'Z' (got '{}'{}).", Label(mName, mGroup), axis, (axis == 'C') ? "; the colour scale of a 3d histogram is shared with 'Z'" : "");
     return *this;
   }
   vector<uint8_t> group;
   for (uint8_t padID : pads) {
     if (padID == 0) {
-      logger::warning("Plot {}: pad 0 cannot share the {} axis (it holds the defaults of all pads, the pads are counted from 1).", mName, axis);
+      logger::warning("Plot {}: pad 0 cannot share the {} axis (it holds the defaults of all pads, the pads are counted from 1).", Label(mName, mGroup), axis);
     } else if (std::find(group.begin(), group.end(), padID) == group.end()) {
       group.push_back(padID);
     }
@@ -791,7 +791,7 @@ std::map<char, vector<Plot::shared_group_t>> Plot::GetSharedAxes() const
         auto member = std::find(members.begin(), members.end(), padID);
         if (member == members.end()) continue;
         if (!layoutGroup && !fromLayout && members.size() > 1 && pads.size() > 1) {
-          logger::warning("Plot {}: pad {} is listed in two groups sharing the {} axis, the later one is used.", mName, padID, axis);
+          logger::warning("Plot {}: pad {} is listed in two groups sharing the {} axis, the later one is used.", Label(mName, mGroup), padID, axis);
         }
         members.erase(member);
       }
@@ -821,7 +821,7 @@ std::map<char, vector<Plot::shared_group_t>> Plot::GetSharedAxes() const
     for (uint8_t padID : pads)
       padNames.push_back(std::to_string(padID));
     logger::warning("Plot {}: the layout shows the {} axis of pads {} once, but ShareAxis no longer lets them share it: their ranges can differ unnoticed. Give them the same range, or use a layout with gaps.",
-                    mName, axis, join_strings(padNames, ", "));
+                    Label(mName, mGroup), axis, join_strings(padNames, ", "));
   }
   return result;
 }
@@ -858,6 +858,12 @@ void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
   };
   print_pt(print_pt, pt, 0);
   if (!message.empty()) logger::print("{}", message);
+}
+
+string Plot::Label(const string& name, const string& group)
+{
+  const string coloured = fmt::format("{}{}{}", logger::begin_color(logger::Color::Green), name, logger::end_color());
+  return (group.empty()) ? coloured : fmt::format("{} from group {}{}{}", coloured, logger::begin_color(logger::Color::Yellow), group, logger::end_color());
 }
 
 auto Plot::SetName(const string& name) -> decltype(*this)

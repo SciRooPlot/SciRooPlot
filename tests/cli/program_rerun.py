@@ -75,8 +75,8 @@ for i, case in enumerate(todo):
     stamp = os.stat(os.path.join(config, "proj", "plots.info")).st_mtime
     out = shell("plot g p list", case["shell"], config=config)
     stamp2, text = plots_info(config, "proj")
-    check(f"first plot runs the program: {what}", first.rc == 0 and stamp is not None and " - p in group g" in first.stdout, first.tail())
-    check(f"program run {'again' if reruns else 'not again'}: {what}", (stamp2 != stamp) == reruns and out.rc == 0 and " - p in group g" in out.stdout and not out.warnings(), out.tail())
+    check(f"first plot runs the program: {what}", first.rc == 0 and stamp is not None and " - p from group g" in first.stdout, first.tail())
+    check(f"program run {'again' if reruns else 'not again'}: {what}", (stamp2 != stamp) == reruns and out.rc == 0 and " - p from group g" in out.stdout and not out.warnings(), out.tail())
     if case["change"] == "module":
         check(f"plots what the re-run program saved: {what}", "second" in text, text[-200:])
 
@@ -88,7 +88,7 @@ for sh in SHELLS:
     with open(os.path.join(folder, "def.py"), "a") as f:
         f.write("raise SystemExit(3)\n")
     out = shell("plot g p list; echo status $?", sh, config=config)
-    check(f"{sh}: a failing program stops plot, non-zero exit status", "status 0" not in out.stdout and " - p in group g" not in out.stdout and not out.warnings(), out.tail())
+    check(f"{sh}: a failing program stops plot, non-zero exit status", "status 0" not in out.stdout and " - p from group g" not in out.stdout and not out.warnings(), out.tail())
     # a program that saves another project's definitions
     config = config_folder(f"config_{sh}_foreign")
     python_project(config, os.path.join(config, "..", f"own_{sh}"), "own")
@@ -102,7 +102,7 @@ for sh in SHELLS:
     # a missing program
     os.remove(os.path.join(config, "..", f"own_{sh}", "def.py"))
     out = shell("plot g p list", sh, config=config)
-    check(f"{sh}: a missing program is named, the stored definitions are used", out.rc == 0 and " - p in group g" in out.stdout and any("does not exist" in w for w in out.warnings()), out.tail())
+    check(f"{sh}: a missing program is named, the stored definitions are used", out.rc == 0 and " - p from group g" in out.stdout and any("does not exist" in w for w in out.warnings()), out.tail())
 
 # C++: programs in a CMake build folder are rebuilt first, also in a folder not named build (#17)
 if not (shutil.which("cmake") and (shutil.which("c++") or shutil.which("g++") or shutil.which("clang++"))):

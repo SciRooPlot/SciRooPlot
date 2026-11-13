@@ -457,6 +457,9 @@ class Plot : public FillSetters<Plot>
   // helpers (also used by the nested classes and the setter groups)
   static std::optional<std::string> NameError(const std::string& name, bool isGroup = false);
   static std::string NormalizeGroup(const std::string& group);
+  // a plot in messages, after "plot": "<name> from group <group>" (coloured)
+  static std::string Label(const std::string& name, const std::string& group);
+  static std::string Label(const Plot& plot) { return Label(plot.mName, plot.mGroup); }
   static float_t RoundWidth(float_t width, const char* what);
   // a value that cannot mean anything is reported where it is set and ignored, so that what was set before stays (false: ignored)
   static bool CheckAlpha(float_t alpha, const std::string& what);

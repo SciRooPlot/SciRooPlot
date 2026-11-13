@@ -153,7 +153,7 @@ for i, case in enumerate(todo):
             for axisName, touching in (("x", below), ("y", onLeft)):
                 unshared = sorted(o for o in touching if not flat(o))
                 if not ownView and unshared:
-                    unsharedWanted.add(f"Plot c{i}: the {axisName} labels and title of pad {padID} are hidden beside pad {unshared[0]},")
+                    unsharedWanted.add(f"Plot c{i} from group look: the {axisName} labels and title of pad {padID} are hidden beside pad {unshared[0]},")
             hbars = case["layout"] == "projections" and padID == 3 and DATA_KINDS[case["kind"]][0] > 1  # the histogram's x axis is vertical
             horizontal, vertical = (frame.GetYaxis(), frame.GetXaxis()) if hbars else (frame.GetXaxis(), frame.GetYaxis())
             for axisName, axis, hidden in (("x", horizontal, hideX), ("y", vertical, hideY)):
@@ -186,7 +186,7 @@ for i, case in enumerate(todo):
             if frame:
                 axis = frame.GetYaxis()
                 check(f"few y divisions and a centred title in pad {padID}: {what}", axis.GetNdivisions() % 1000000 == 305 and axis.TestBit(ROOT.TAxis.kCenterTitle), f"divisions {axis.GetNdivisions()}, centred {axis.TestBit(ROOT.TAxis.kCenterTitle)}")
-unsharedWanted.add("Plot beside_a_3D_view: the y labels and title of pad 2 are hidden beside pad 1,")  # own sizes: no warning
+unsharedWanted.add("Plot beside_a_3D_view from group look: the y labels and title of pad 2 are hidden beside pad 1,")  # own sizes: no warning
 unsharedGot = {line[line.index("Plot ") : line.index(", which") + 1] for line in run.warnings("are hidden beside pad")}
 check("a flat panel beside a 3D view or polar drawing warns that its hidden axis is not shared (each such axis once)", unsharedGot == unsharedWanted, f"missing {sorted(unsharedWanted - unsharedGot)[:3]}, not expected {sorted(unsharedGot - unsharedWanted)[:3]}")
 for name, (kind, place, label, title, want) in OWN_SIZES.items():

@@ -2476,7 +2476,7 @@ def config_files(config):
 
 def listed(output):
     """the plots plot ... list prints, as (group, name)"""
-    return {(group, name) for name, group in re.findall(r"^ - (.*) in group (.*)$", output.stdout, re.M)}
+    return {(group, name) for name, group in re.findall(r"^ - (.*) from group (.*)$", output.stdout, re.M)}
 
 
 # ---------------------------------------------------------------------------------------------

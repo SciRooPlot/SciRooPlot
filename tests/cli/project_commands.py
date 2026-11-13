@@ -276,7 +276,7 @@ confdir = run(SRP, "confdir", "early", config=config)
 check("a program before srp add registers nothing, its folder is known", project_names(config) == [] and confdir.rc == 0 and os.path.isfile(os.path.join(confdir.stdout.strip(), "plots.info")), out.tail() + confdir.tail())
 run(SRP, "add", "early", program("early"), config=config)
 listing = run(os.path.join(os.path.dirname(SRP), "plot"), "g", "p", "list", config=config)
-check("srp add afterwards uses the saved definitions", listing.rc == 0 and " - p in group g" in listing.stdout, listing.tail())
+check("srp add afterwards uses the saved definitions", listing.rc == 0 and " - p from group g" in listing.stdout, listing.tail())
 
 # rename moves the in-memory data with the project, also when the program reached the configuration through a symlink
 config = config_folder("config_memory")

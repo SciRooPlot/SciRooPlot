@@ -500,7 +500,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   double_t canvasWidth = std::round(mScale * plot.GetWidth().value_or(gStyle->GetCanvasDefW()));
   double_t canvasHeight = std::round(mScale * plot.GetHeight().value_or(gStyle->GetCanvasDefH()));
   if (canvasWidth <= 0 || canvasHeight <= 0) {
-    logger::error("Plot {} has invalid dimensions {}x{}.", plot.GetName(), canvasWidth, canvasHeight);
+    logger::error("Plot {} has invalid dimensions {}x{}.", Plot::Label(plot), canvasWidth, canvasHeight);
     return nullptr;
   }
   // generate canvas with 'invisible' dummy size to avoid annoying popup window

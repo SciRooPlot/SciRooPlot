@@ -33,7 +33,7 @@ for sh in SHELLS:
     out = run(sh, ENV_SCRIPT)
     check(f"{sh}: env.sh run instead of sourced fails with a message", out.rc != 0 and "must be sourced" in out.text, out.tail())
     out = shell("plot g '.+' list; echo status $?; srp help >/dev/null; echo status $?", sh, config=config)
-    check(f"{sh}: sourced in a script, plot and srp work", out.stdout.count("status 0") == 2 and " - p in group g" in out.stdout, out.tail())
+    check(f"{sh}: sourced in a script, plot and srp work", out.stdout.count("status 0") == 2 and " - p from group g" in out.stdout, out.tail())
 
     # typed at the prompt
     typed = """cd {folder}
@@ -49,8 +49,8 @@ echo glob *.txt
     lines = out.stdout.splitlines()
     plotted = [line for line in lines if line.startswith(" - ")]
     globs = [line for line in lines if line.startswith("glob ")]
-    check(f"{sh}: plot .* .* at the prompt gets the patterns unexpanded", plotted[:2] == [" - p in group g", " - q in group g"], out.tail())
-    check(f"{sh}: plot after && and in braces after || gets the patterns unexpanded", plotted[2:5] == [" - p in group g", " - q in group g", " - q in group g"], f"{plotted}")
+    check(f"{sh}: plot .* .* at the prompt gets the patterns unexpanded", plotted[:2] == [" - p from group g", " - q from group g"], out.tail())
+    check(f"{sh}: plot after && and in braces after || gets the patterns unexpanded", plotted[2:5] == [" - p from group g", " - q from group g", " - q from group g"], f"{plotted}")
     check(f"{sh}: plot keeps its exit status", "status 1" in lines, out.tail())
     check(f"{sh}: globbing works after plot, also after plot in a pipeline", globs == ["glob a.txt b.txt"] * 2, f"{globs}")
     check(f"{sh}: no errors at the prompt", not [line for line in out.stderr.splitlines() if "rror" in line or "not found" in line or "read-only" in line], out.stderr[-300:])

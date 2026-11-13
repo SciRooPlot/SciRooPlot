@@ -112,7 +112,7 @@ for name in CELL:
 
 warned = run.warnings("another palette than the pads it shares one colour scale with")
 for name, (*_, warns) in SHARED.items():
-    count = sum(f"Plot shared_{name}:" in line for line in warned)
+    count = sum(f"Plot shared_{name} from group " in line for line in warned)
     check(f"shared colour scale {name}: {'one warning' if warns else 'no warning'}", count == int(warns), f"{count} warnings")
 others = [line for line in run.warnings() if line not in warned]
 check("no other warnings", not others, " | ".join(others[:5]))
