@@ -1548,6 +1548,8 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
   auto& storedRangeZ = padState.storedRangeZ;
 
   using data_type = std::decay_t<decltype(data_ptr)>;
+  // the drawing option in messages: the alias, else the option as given
+  auto optionName = [&]() { return (optionAlias) ? draw_option_name(*optionAlias) : data->GetDrawOption().value_or(""); };
   // data that cannot be drawn: reported, kept until the plot is done, and the next data keeps its number
   auto notDrawn = [&](auto&&... args) {
     logger::warning(std::forward<decltype(args)>(args)...);
@@ -1668,7 +1670,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
       if (reason) {
         const char* scale = (upper.Contains("Z")) ? "Z" : "";
-        Warn(state, "Drawing option {} is not available for TH2Poly {} ({}), drawing it as col{}.", (optionAlias) ? draw_option_name(*optionAlias) : data->GetDrawOption().value_or(""), DataName(*data), reason, (*scale) ? "z" : "");
+        Warn(state, "Drawing option {} is not available for TH2Poly {} ({}), drawing it as col{}.", optionName(), DataName(*data), reason, (*scale) ? "z" : "");
         drawOption = ((dataIndex != 0) ? "SAME COL" : "COL") + string(scale);
         alias = (*scale) ? colz : col;
         upper = drawOption;
@@ -1747,12 +1749,10 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         drawn3d |= triangles || points;
       }
       if (drawn3d != (pad_ptr->GetView() != nullptr)) {
-        TString option = (optionAlias) ? TString(draw_option_name(*optionAlias).data()) : TString(drawOption).ReplaceAll("SAME", "");
-        option = option.Strip(TString::kBoth);
         if (drawn3d) {
-          return notDrawn("Data {} is drawn in 3d ({}) and needs a 3d frame: the first data of the pad drawn in 3d (e.g. lego, surf, triangles or points). It is not drawn.", DataName(*data), option.Data());
+          return notDrawn("Data {} is drawn in 3d ({}) and needs a 3d frame: the first data of the pad drawn in 3d (e.g. lego, surf, triangles or points). It is not drawn.", DataName(*data), optionName());
         }
-        return notDrawn("Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the first data of the pad is drawn in 3d). It is not drawn.", DataName(*data), option.Data());
+        return notDrawn("Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the first data of the pad is drawn in 3d). It is not drawn.", DataName(*data), optionName());
       }
       if constexpr (is_graph_2d<data_type>()) {
         // ROOT interpolates a 2d graph (maps, surfaces, triangles) over the Delaunay triangles of its points: points on one line have none
@@ -1770,8 +1770,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
           onLine = std::abs(ax * by - ay * bx) <= 1e-12 * std::hypot(ax, ay) * std::hypot(bx, by);
         }
         if (other < n && !points && onLine) {  // (points at one place are painted as one cell)
-          Warn(state, "The points of 2d graph {} lie on one line: ROOT finds no triangles to interpolate between, nothing is drawn with drawing option {} (points draw them).", DataName(*data),
-               (optionAlias) ? draw_option_name(*optionAlias) : TString(drawOption).ReplaceAll("SAME", "").Strip(TString::kBoth).Data());
+          Warn(state, "The points of 2d graph {} lie on one line: ROOT finds no triangles to interpolate between, nothing is drawn with drawing option {} (points draw them).", DataName(*data), optionName());
         }
       }
       if (projection != padProjection) {
