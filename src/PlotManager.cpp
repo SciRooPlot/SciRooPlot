@@ -655,7 +655,7 @@ void PlotManager::LoadDataSources(const optional<string>& file, bool replace)
     using boost::property_tree::read_info;
     read_info(expand_path(*path).value_or(""), dataSourcesTree);
   } catch (const std::exception& e) {
-    logger::error("Cannot load dataSources file: {}.", util::without_final_period(e.what()));
+    logger::error("Cannot load the data sources: {}.", util::without_final_period(e.what()));
     return;
   }
   for (const auto& [dataSource, inputsTree] : dataSourcesTree) {
@@ -1297,13 +1297,12 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
     using boost::property_tree::read_info;
     read_info(plotsFile, fileTree);
   } catch (const std::exception& e) {
-    logger::error("Cannot open plots file: {}.", util::without_final_period(e.what()));
+    logger::error("Cannot load the plots: {}.", util::without_final_period(e.what()));
     return false;
   }
 
   // keys of the file that a plot does not read (misspelt, a part without its number, renamed in another version) are named: those the plot
   // written again does not hold (a file written by SciRooPlot holds no others)
-  const string fileName = (file) ? *file : Config::Get().PlotsFile(mProjectName);
   auto reportUnknownKeys = [&](const Plot& plot, const ptree& read) {
     vector<string> unknown;
     std::function<void(const ptree&, const ptree&, const string&)> compare = [&](const ptree& readNode, const ptree& writtenNode, const string& path) {
@@ -1322,7 +1321,7 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
     compare(read, plot.GetPropertyTree(), "");
     if (unknown.empty()) return;
     const string what = (plot.GetGroup() == "BASE_PLOTS") ? fmt::format("Base plot {}", plot.GetName()) : fmt::format("Plot {} from group {}", plot.GetName(), plot.GetGroup());
-    logger::warning("{} ignores what it does not know in {}: {}.", what, fileName, util::join_strings(unknown, ", "));
+    logger::warning("{} ignores what it does not know in {}: {}.", what, plotsFile, util::join_strings(unknown, ", "));
   };
 
   uint32_t nPlotsInFile{};
