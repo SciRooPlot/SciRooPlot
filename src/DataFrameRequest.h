@@ -487,6 +487,15 @@ bool DataFrameRequest<DataInfo>::Book()
     dataDim.edges = std::move(edges);
     dataDim.nBins = 0;
   };
+  // a 2d histogram or profile model for fixed or variable bins on either axis
+  auto model2d = [title](auto model, const auto& dim1, const auto& dim2) {
+    using Model = decltype(model);
+    auto nEdges = [](const auto& dim) { return static_cast<int32_t>(dim.edges.size()) - 1; };
+    if (dim1.nBins && dim2.nBins) return Model("tmp", title, dim1.nBins, dim1.edges[0], dim1.edges[1], dim2.nBins, dim2.edges[0], dim2.edges[1]);
+    if (dim1.nBins) return Model("tmp", title, dim1.nBins, dim1.edges[0], dim1.edges[1], nEdges(dim2), dim2.edges.data());
+    if (dim2.nBins) return Model("tmp", title, nEdges(dim1), dim1.edges.data(), dim2.nBins, dim2.edges[0], dim2.edges[1]);
+    return Model("tmp", title, nEdges(dim1), dim1.edges.data(), nEdges(dim2), dim2.edges.data());
+  };
   if (dataDims.size() == 1) {
     auto histModel = ROOT::RDF::TH1DModel();
     auto& dataDim1 = dataDims.at(0);
@@ -517,16 +526,7 @@ bool DataFrameRequest<DataInfo>::Book()
         SetResult((typed) ? node.Profile1D<D, D>(profileModel, "SRP_AXIS_1", "SRP_AXIS_2") : node.Profile1D(profileModel, "SRP_AXIS_1", "SRP_AXIS_2"));
       }
     } else {
-      auto histModel = ROOT::RDF::TH2DModel();
-      if (!dataDim1.nBins && !dataDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
-      } else if (dataDim1.nBins && dataDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
-      } else if (dataDim1.nBins && !dataDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
-      } else if (!dataDim1.nBins && dataDim2.nBins) {
-        histModel = ROOT::RDF::TH2DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
-      }
+      auto histModel = model2d(ROOT::RDF::TH2DModel(), dataDim1, dataDim2);
       if (hasWeights) {
         SetResult((typed) ? node.Histo2D<D, D, D>(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W") : node.Histo2D(histModel, "SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_W"));
       } else {
@@ -539,16 +539,7 @@ bool DataFrameRequest<DataInfo>::Book()
     auto& dataDim3 = dataDims.at(2);
 
     if (mIsProfile) {
-      auto profileModel = ROOT::RDF::TProfile2DModel();
-      if (!dataDim1.nBins && !dataDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
-      } else if (dataDim1.nBins && dataDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
-      } else if (dataDim1.nBins && !dataDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", title, dataDim1.nBins, dataDim1.edges[0], dataDim1.edges[1], static_cast<int32_t>(dataDim2.edges.size()) - 1, dataDim2.edges.data());
-      } else if (!dataDim1.nBins && dataDim2.nBins) {
-        profileModel = ROOT::RDF::TProfile2DModel("tmp", title, static_cast<int32_t>(dataDim1.edges.size()) - 1, dataDim1.edges.data(), dataDim2.nBins, dataDim2.edges[0], dataDim2.edges[1]);
-      }
+      auto profileModel = model2d(ROOT::RDF::TProfile2DModel(), dataDim1, dataDim2);
       if (hasWeights) {
         SetResult(fillWeighted(*profileModel.GetProfile(), {"SRP_AXIS_1", "SRP_AXIS_2", "SRP_AXIS_3", "SRP_AXIS_W"}));
       } else {
