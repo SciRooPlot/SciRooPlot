@@ -863,24 +863,28 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
               const bool fullRange = (data->GetDataSource() == kUserFunctions);
               auto* sampled = new TGraph();
               sampled->SetBit(kCanDelete);  // owned by the pad, as the clone it replaces
-              // what the function is sampled at (a 1d graph or histogram), and how many
-              optional<string> positions;
-              int32_t nPositions{};
-              auto sample = [&](double_t x) {
-                ++nPositions;
-                if (fullRange || ((*func)->GetXmin() <= x && x <= (*func)->GetXmax())) sampled->AddPoint(x, (*func)->Eval(x));
+              // the function at the n positions of a 1d graph or histogram (the points, the bin centres)
+              auto sampleAt = [&](const char* positions, int32_t n, auto position) {
+                for (int32_t i = 0; i < n; ++i) {
+                  const double_t x = position(i);
+                  if (fullRange || ((*func)->GetXmin() <= x && x <= (*func)->GetXmax())) sampled->AddPoint(x, (*func)->Eval(x));
+                }
+                const string denomName = DataName(ratio->GetDenomName(), ratio->GetDenomDataSource());
+                if (n == 0) {
+                  logger::error("Ratio {}: {} has no {} to take the function at.", DataName(*data), denomName, positions);
+                  numeratorFailed = true;
+                } else if (sampled->GetN() == 0) {
+                  logger::error("Ratio {}: none of the {} of {} is within the range [{:g}, {:g}] of the function.", DataName(*data), positions, denomName, (*func)->GetXmin(), (*func)->GetXmax());
+                  numeratorFailed = true;
+                }
               };
               std::visit(
                 [&](auto* ptr) {
                   using denom_type = std::decay_t<decltype(ptr)>;
                   if constexpr (is_graph_1d<denom_type>()) {
-                    positions = "points";
-                    for (int32_t i = 0; i < ptr->GetN(); ++i)
-                      sample(ptr->GetX()[i]);
+                    sampleAt("points", ptr->GetN(), [&](int32_t i) { return ptr->GetX()[i]; });
                   } else if constexpr (is_hist_1d<denom_type>()) {
-                    positions = "bin centres";
-                    for (int32_t bin = 1; bin <= ptr->GetNbinsX(); ++bin)
-                      sample(ptr->GetXaxis()->GetBinCenter(bin));
+                    sampleAt("bin centres", ptr->GetNbinsX(), [&](int32_t i) { return ptr->GetXaxis()->GetBinCenter(i + 1); });
                   } else if constexpr (is_func_1d<denom_type>()) {
                     // function / function: sampled at the numerator's SetNpx points where both are defined (a formula of the plot
                     // definition everywhere: then the range of the other function, of the ratio data or of the frame)
@@ -922,15 +926,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
                 delete *func;
                 rawData = sampled;
               } else {
-                delete sampled;  // a denominator of another kind: reported as unsupported division below
-                const string denomName = DataName(ratio->GetDenomName(), ratio->GetDenomDataSource());
-                if (positions && nPositions == 0) {
-                  logger::error("Ratio {}: {} has no {} to take the function at.", DataName(*data), denomName, *positions);
-                  numeratorFailed = true;
-                } else if (positions) {
-                  logger::error("Ratio {}: none of the {} of {} is within the range [{:g}, {:g}] of the function.", DataName(*data), *positions, denomName, (*func)->GetXmin(), (*func)->GetXmax());
-                  numeratorFailed = true;
-                }
+                delete sampled;  // reported above, or a denominator of another kind: reported as unsupported division below
               }
             }
           }
