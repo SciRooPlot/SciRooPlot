@@ -184,6 +184,7 @@ class PlotManager
   std::vector<Plot> mPlots;
   std::vector<Plot> mBasePlots;
   std::set<std::string> mMissingBasePlots;                     // reported once each
+  std::set<std::string> mNonAsciiTexts;                        // reported once each (bitmap modes)
   std::map<std::string, std::set<std::string>> mNotFoundData;  // data source -> names not found in any of its inputs (last reading)
   struct open_window_t {
     std::shared_ptr<TCanvas> canvas;
@@ -247,6 +248,7 @@ class PlotManager
   static std::string DataLocation(const std::string& dataSource, const std::string& name);
   static void ReserveColorIndices(TCanvas* canvas);
   static void RepairMacro(const std::string& path);
+  void WarnNonAsciiTexts(TVirtualPad* pad);
   static std::vector<std::string> MatchFolders(TDirectory* topDir, const std::string& pattern);
   void ReadData(TObject* folder, std::set<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource, read_cache_t& readCache);
   static bool PrepareInput(TObject*& obj, const std::string& location);

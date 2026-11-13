@@ -46,6 +46,7 @@
 #include <TFolder.h>
 #include <TFriendElement.h>
 #include <TGClient.h>
+#include <TGaxis.h>
 #include <TGraph2D.h>
 #include <TGraphErrors.h>
 #include <TGraphMultiErrors.h>
@@ -71,6 +72,7 @@
 #include <TRootCanvas.h>
 #include <TStyle.h>
 #include <TSystem.h>
+#include <TText.h>
 #include <TTree.h>
 #include <TTreeFormula.h>
 #include <TTreeIndex.h>
@@ -2209,6 +2211,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     return false;
   }
   if (!canvas) return false;
+  if (isBitmapMode) WarnNonAsciiTexts(canvas.get());
   // ROOT writes images into PDF files only from version 6.42 on: before, they are missing there. Said once per run (a logo is usually
   // on every plot), instead of ROOT's own warning for every image, which is silenced when the file is written
   bool silenceNoPdfImages = false;
@@ -3697,6 +3700,47 @@ void PlotManager::WarnHiddenDirectory(TDirectory* directory, const string& name)
       logger::warning("Directory {} cannot be read: a {} of the same name written after it hides it (rename one of them).", path, latest->GetClassName());
     }
     return;
+  }
+}
+
+//**************************************************************************************************
+/**
+ * ROOT's bitmap output (png, jpg, gif) draws a character beyond ASCII (ü, Δφ, π⁰) as its bytes, one wrong glyph each (vector formats
+ * draw it): each such text drawn on the canvas is reported once per run, pointing to ROOT's # syntax.
+ */
+//**************************************************************************************************
+void PlotManager::WarnNonAsciiTexts(TVirtualPad* pad)
+{
+  auto check = [this](const char* text) {
+    const bool isAscii = !text || std::all_of(text, text + strlen(text), [](char c) { return static_cast<unsigned char>(c) < 0x80; });
+    if (isAscii || !mNonAsciiTexts.insert(text).second) return;
+    logger::warning("The text \"{}\" has characters beyond ASCII, which ROOT draws wrongly in png, jpg and gif files: write them with ROOT's # syntax (#Delta#phi, #pi^{{0}}, #ddot{{u}}).", text);
+  };
+  TIter next(pad->GetListOfPrimitives());
+  while (TObject* obj = next()) {
+    if (auto* subPad = dynamic_cast<TVirtualPad*>(obj)) {
+      WarnNonAsciiTexts(subPad);
+    } else if (auto* legend = dynamic_cast<TLegend*>(obj)) {
+      for (TObject* entry : *legend->GetListOfPrimitives()) {
+        check(static_cast<TLegendEntry*>(entry)->GetLabel());
+      }
+    } else if (auto* pave = dynamic_cast<TPaveText*>(obj)) {
+      for (TObject* line : *pave->GetListOfLines()) {
+        check(line->GetTitle());
+      }
+    } else if (auto* text = dynamic_cast<TText*>(obj)) {
+      check(text->GetTitle());
+    } else if (auto* axis = dynamic_cast<TGaxis*>(obj)) {
+      check(axis->GetTitle());
+    } else if (auto* hist = dynamic_cast<TH1*>(obj); hist && !TString(next.GetOption()).Contains("same", TString::kIgnoreCase)) {
+      // the axes drawn with the frame: titles and alphanumeric labels
+      for (TAxis* histAxis : {hist->GetXaxis(), hist->GetYaxis(), hist->GetZaxis()}) {
+        check(histAxis->GetTitle());
+        for (int32_t bin = 1; histAxis->IsAlphanumeric() && bin <= histAxis->GetNbins(); ++bin) {
+          check(histAxis->GetBinLabel(bin));
+        }
+      }
+    }
   }
 }
 
