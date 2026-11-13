@@ -355,7 +355,7 @@ class PlotPainter
   static void SortGraph(TGraph* graph);
   static void RemoveGraphPoint(TGraph* graph, int32_t i);
   static void RemoveGraphPoint(TGraph2D* graph, int32_t i);
-  static void RemoveGraphPointsOutside(TGraph* graph, std::optional<double_t> minX, std::optional<double_t> maxX, std::optional<double_t> minY, std::optional<double_t> maxY);
+  static bool RemoveGraphPointsOutside(TGraph* graph, std::optional<double_t> minX, std::optional<double_t> maxX, std::optional<double_t> minY, std::optional<double_t> maxY, bool keepAll = false);
   static void ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFactor);
   using multi_error_sums_t = std::pair<std::vector<double_t>, std::vector<double_t>>;
   static std::optional<multi_error_sums_t> MultiErrorSums(TGraph* graph);

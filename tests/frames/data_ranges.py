@@ -1,13 +1,13 @@
 """A range set on data (Data::SetRangeX, SetRangeY) limits what of it is drawn: the bins holding the range and those between them, the
 points inside it (and their y inside a y range), a 2d graph's map inside it, a function over exactly the range; the y range of a 1d
 histogram is its minimum and maximum. It leaves the frame alone: data drawn first gives the frame of all of it (the pad's axis ranges are
-there for the frame), but a function, whose range is where it is drawn at all. A range without any bin of the data is warned about and
-the whole data is drawn. A 2d function in a 3d view is drawn over the range of the frame's axes, in every coordinate system of the view
+there for the frame), but a function, whose range is where it is drawn at all. A range without any bin or point of the data is warned
+about and the whole data is drawn. A 2d function in a 3d view is drawn over the range of the frame's axes, in every coordinate system of the view
 (the view holds the coordinates it paints in: -1 to 1 for polar, cylindrical, spherical and pseudo-rapidity systems, log10 on a log axis).
 Cases: every data kind of a flat frame × a range on x or y (2d data, graphs) inside the data × the data first in its pad or after a
 wider histogram that gives the frame, and the named cases.
 Reference: the input objects (bins holding the range ends, points inside it).
-Covers: a data range without bins, the range of a 2d graph (y ignored, x lost in the saved canvas), the range of functions in 3d
+Covers: a data range without bins or points, the range of a 2d graph (y ignored, x lost in the saved canvas), the range of functions in 3d
 views (cut to the coordinates of the view), and the named cases.
 """
 
@@ -74,6 +74,9 @@ for i, case in enumerate(viewCases):
     p.pm.AddPlot(plot)
 plot = S.Plot("no_bins", "named", "1d")
 plot[1].AddData("hist", "inputs").SetRangeX(20.0, 30.0)
+p.pm.AddPlot(plot)
+plot = S.Plot("no_points", "named", "1d")
+plot[1].AddData("graph", "inputs").SetRangeX(20.0, 30.0)
 p.pm.AddPlot(plot)
 
 run = p.plot()
@@ -154,4 +157,7 @@ warned = [m for m in run.messages("no_bins", "named") if "contains none of its b
 drawn = run.objects("no_bins", "named")
 ax = drawn[0].GetXaxis() if drawn else None
 check("a range without any bin of the data: warned, the whole data drawn", len(warned) == 1 and ax is not None and (ax.GetFirst(), ax.GetLast()) in ((1, ax.GetNbins()), (0, 0)), f"{warned} {(ax.GetFirst(), ax.GetLast()) if ax else None}")
+warned = [m for m in run.messages("no_points", "named") if "contains none of its points" in m]
+drawn = [o for o in run.objects("no_points", "named") if o.InheritsFrom("TGraph")]
+check("a range without any point of a graph: warned, all points drawn", len(warned) == 1 and drawn and drawn[0].GetN() == inputs["graph"].GetN(), f"{warned} {drawn[0].GetN() if drawn else None}")
 finish()

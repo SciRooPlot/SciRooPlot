@@ -33,12 +33,23 @@ for b in range(1, 11):
         m.SetBinContent(b, c, b + c)
 # x ranges whose numbers are long (the shipped look writes x labels without exponent; four digits at ROOT's 510 divisions already touch),
 # and short labels whose 0 the steps miss by rounding (-1 + 5 * 0.2, written as 0): (low, high, exponent wanted, labels run into each other)
-WIDE = {"wide_1e12": (0.0, 1e12, False, True), "wide_ns": (0.0, 1e-9, False, True), "wide_offset": (1e6, 1e6 + 10.0, False, True), "wide_5000": (0.0, 5000.0, False, True), "wide_100": (0.0, 100.0, False, False), "signed_steps": (-1.0, 0.2, False, False), "wide_exponent": (0.0, 1e12, True, False)}
+WIDE = {
+    "wide_1e12": (0.0, 1e12, False, True),
+    "wide_ns": (0.0, 1e-9, False, True),
+    "wide_offset": (1e6, 1e6 + 10.0, False, True),
+    "wide_5000": (0.0, 5000.0, False, True),
+    "wide_100": (0.0, 100.0, False, False),
+    "signed_steps": (-1.0, 0.2, False, False),
+    "wide_exponent": (0.0, 1e12, True, False),
+    "time_day": (0.0, 86400.0, False, False),
+}
 wide = {}
 for name, (low, high, _, _) in WIDE.items():
     wide[name] = ROOT.TH1D(name, "", 20, low, high)
     for b in range(1, 21):
         wide[name].SetBinContent(b, b)
+wide["time_day"].GetXaxis().SetTimeDisplay(1)  # a time axis stored with the input: hourly labels, no power of ten to advise
+wide["time_day"].GetXaxis().SetTimeFormat("%H:%M")
 p.source("s", {"h": h, "lab": lab, "m": m, **wide})
 
 # ---- labels at the edges of touching panels

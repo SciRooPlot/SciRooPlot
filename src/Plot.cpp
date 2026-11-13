@@ -754,7 +754,7 @@ ptree Plot::GetPropertyTree() const
 auto Plot::ShareAxis(char axis, const vector<uint8_t>& pads) -> decltype(*this)
 {
   if (axis != 'X' && axis != 'Y' && axis != 'Z') {
-    logger::warning("Plot {}: ShareAxis needs the axis 'X', 'Y' or 'Z' (got '{}').", mName, axis);
+    logger::warning("Plot {}: ShareAxis needs the axis 'X', 'Y' or 'Z' (got '{}'{}).", mName, axis, (axis == 'C') ? "; the colour scale of a 3d histogram is shared with 'Z'" : "");
     return *this;
   }
   vector<uint8_t> group;

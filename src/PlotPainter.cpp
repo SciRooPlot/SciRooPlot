@@ -1595,7 +1595,8 @@ void PlotPainter::FinishPad(pad_state_t& padState)
   // scale would be) run into each other for wide or offset ranges: said, with the remedy
   if (axisHist_ptr && !polarFrame && !polargram && !pad_ptr->GetView() && !pad_ptr->GetLogx()) {
     TAxis* xAxis = (hbarFrame) ? axisHist_ptr->GetYaxis() : axisHist_ptr->GetXaxis();
-    if (xAxis->GetNoExponent() && !xAxis->GetLabels() && xAxis->GetLabelSize() > 0.f) {
+    // (a time axis has no power of ten, and its labels are not the numbers measured here)
+    if (xAxis->GetNoExponent() && !xAxis->GetLabels() && !xAxis->GetTimeDisplay() && xAxis->GetLabelSize() > 0.f) {
       const vector<double_t> values = LabelValues(pad_ptr, xAxis, 'X');
       const double_t pixelsPerUnit = PadSizePixel(pad_ptr).first * (1. - pad_ptr->GetLeftMargin() - pad_ptr->GetRightMargin()) / (pad_ptr->GetUxmax() - pad_ptr->GetUxmin());
       // the labels drawn (HideClippedLabels hides some with size 0, by value or by number), each pair of neighbours by their own widths
@@ -1806,7 +1807,9 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     } else if (alias == area && data_ptr->GetN() > 0 && dataIndex != 0) {
       // the data range applies to the points, not to the polygon closed at zero below (its corners would be removed with them);
       // not to the copy that draws the frame, as for all other aliases
-      if (!pad_ptr->GetView()) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
+      if (!pad_ptr->GetView() && !RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY(), true)) {
+        logger::warning("The range of {} contains none of its points: all points are drawn.", DataName(*data));
+      }
     }
     if (alias == area && data_ptr->GetN() > 0) {
       // the area below the points needs them in the order of x: points in another order (a closed contour, a trajectory) would change their shape
@@ -2345,7 +2348,10 @@ void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, draw_option_t ali
   } else if constexpr (is_graph_1d<data_type>()) {
     // (histograms converted for a clipped alias got the x range of the data as bins before, the y range does not apply to them)
     const bool isClippedHist = (alias == hist_clipped || alias == hist_open_clipped || alias == curve_clipped) && mSourceHists.count(data_ptr);
-    if (!pad_ptr->GetView() && !isClippedHist && alias != area) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
+    if (!pad_ptr->GetView() && !isClippedHist && alias != area &&
+        !RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY(), true)) {
+      logger::warning("The range of {} contains none of its points: all points are drawn.", DataName(*data));
+    }
     if (axisHist_ptr && dataIndex != 0 && !pad_ptr->GetView()) {
       const TAxis* frameX = axisHist_ptr->GetXaxis();
       mGraphFrameRangeX[data_ptr] = {frameX->GetBinLowEdge(frameX->GetFirst()), frameX->GetBinUpEdge(frameX->GetLast())};
@@ -3740,8 +3746,9 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       // not where rebinning is refused below (TH2Poly, TProfile3D)
       if (group && *group > 0 && *group <= axis->GetNbins() && axis->GetNbins() % *group && !ptr->InheritsFrom(TH2Poly::Class()) &&
           !ptr->InheritsFrom(TProfile3D::Class())) {
-        warn("{}({}): the {} bins of {} are no multiple of it, the last {} are left out (the axis ends at {:g}).", what, *group,
-             axis->GetNbins(), ptr->GetName(), axis->GetNbins() % *group, axis->GetBinUpEdge(axis->GetNbins() / *group * *group));
+        const int32_t left = axis->GetNbins() % *group;
+        warn("{}({}): the {} bins of {} are no multiple of it, the last {} {} left out (the axis ends at {:g}).", what, *group, axis->GetNbins(),
+             ptr->GetName(), (left == 1) ? "bin" : plural(left, "bin"), (left == 1) ? "is" : "are", axis->GetBinUpEdge(axis->GetNbins() / *group * *group));
       }
     };
     warnIncomplete(ptr->GetXaxis(), mods.GetRebinGroupX(), "RebinX");
@@ -7846,17 +7853,28 @@ void PlotPainter::RemoveGraphPoint(TGraph2D* graph, int32_t i)
 
 //**************************************************************************************************
 /**
- * Removes the points of a graph outside of the given x and y limits. The order of the points is kept (it matters for lines).
+ * Removes the points of a graph outside of the given x and y limits. The order of the points is kept (it matters for lines). With keepAll,
+ * a graph without any point inside keeps all of them (as a histogram keeps its bins): false then.
  */
 //**************************************************************************************************
-void PlotPainter::RemoveGraphPointsOutside(TGraph* graph, optional<double_t> minX, optional<double_t> maxX, optional<double_t> minY, optional<double_t> maxY)
+bool PlotPainter::RemoveGraphPointsOutside(TGraph* graph, optional<double_t> minX, optional<double_t> maxX, optional<double_t> minY, optional<double_t> maxY, bool keepAll)
 {
-  if (!minX && !maxX && !minY && !maxY) return;
-  for (int32_t i = graph->GetN() - 1; i >= 0; --i) {  // from the back, so that the indices of the remaining points stay valid
+  if (!minX && !maxX && !minY && !maxY) return true;
+  auto outside = [&](int32_t i) {
     const double_t x = graph->GetPointX(i);
     const double_t y = graph->GetPointY(i);
-    if ((minX && x < *minX) || (maxX && x > *maxX) || (minY && y < *minY) || (maxY && y > *maxY)) RemoveGraphPoint(graph, i);
+    return (minX && x < *minX) || (maxX && x > *maxX) || (minY && y < *minY) || (maxY && y > *maxY);
+  };
+  if (keepAll && graph->GetN() > 0) {
+    int32_t i = 0;
+    while (i < graph->GetN() && outside(i))
+      ++i;
+    if (i == graph->GetN()) return false;
   }
+  for (int32_t i = graph->GetN() - 1; i >= 0; --i) {  // from the back, so that the indices of the remaining points stay valid
+    if (outside(i)) RemoveGraphPoint(graph, i);
+  }
+  return true;
 }
 
 //**************************************************************************************************
