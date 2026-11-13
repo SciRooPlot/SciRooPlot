@@ -2151,8 +2151,6 @@ vector<tuple<string, string, Plot::Pad::Data::data_info_t>> PlotManager::GetMiss
 bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
 {
   const bool isInteractiveMode = (mode == "show" || mode == "spread");
-  const bool isMacroMode = (mode == "macro");
-  const bool isGifMode = str_starts_with(mode, "gif");
 
   if (plot.GetGroup().empty()) {
     logger::error("No group was specified for plot {}.", plot.GetName());
@@ -2182,10 +2180,9 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   if (mode == "data") return true;  // the input data is written as read, nothing is painted
 
   // the personal scale settings only change the number of pixels of plots on screen and of bitmap files, vector files do not depend on them
-  const bool isBitmapMode = (mode == "png") || (mode == "jpg") || isGifMode;
+  const bool isBitmapMode = (mode == "png") || (mode == "jpg") || str_starts_with(mode, "gif");
   PlotPainter painter(isInteractiveMode ? Config::Get().ScreenScale() : (isBitmapMode ? Config::Get().BitmapScale() : 1.), isInteractiveMode);
-  gROOT->SetBatch(!isInteractiveMode && !isMacroMode);
-  shared_ptr<TCanvas> canvas;
+  gROOT->SetBatch(!isInteractiveMode && mode != "macro");
   auto sharedAxes = fullPlot.GetSharedAxes();
   // a pad named by ShareAxis that the plot does not define is left out (it would otherwise be created, covering the whole canvas)
   for (auto& [axisLabel, axisGroups] : sharedAxes) {
@@ -2203,29 +2200,11 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     it = (it->second.empty()) ? sharedAxes.erase(it) : std::next(it);
   }
   // labels and titles a layout hides towards touching panels: shown where a panel has no flat frame, which is known after a first paint
-  const auto& allPads = fullPlot.GetPads();
-  const bool hidesLabels = std::any_of(allPads.begin(), allPads.end(), [](const auto& pad) { return !pad.second.GetHiddenNextTo().empty(); });
-  if (sharedAxes.empty() && !hidesLabels) {
-    canvas.reset(Paint(painter, fullPlot).release());
-  } else if (!ApplySharedAxes(painter, fullPlot, sharedAxes, allPads, canvas)) {
-    return false;
-  }
+  const auto& pads = fullPlot.GetPads();
+  const bool hidesLabels = std::any_of(pads.begin(), pads.end(), [](const auto& pad) { return !pad.second.GetHiddenNextTo().empty(); });
+  shared_ptr<TCanvas> canvas = (sharedAxes.empty() && !hidesLabels) ? Paint(painter, fullPlot) : ApplySharedAxes(painter, fullPlot, sharedAxes);
   if (!canvas) return false;
   if (isBitmapMode) WarnNonAsciiTexts(canvas.get());
-  // ROOT writes images into PDF files only from version 6.42 on: before, they are missing there. Said once per run (a logo is usually
-  // on every plot), instead of ROOT's own warning for every image, which is silenced when the file is written
-  bool silenceNoPdfImages = false;
-  if constexpr (ROOT_VERSION_CODE < ROOT_VERSION(6, 42, 0)) {
-    static bool warnedNoPdfImages = false;
-    auto hasImages = [](auto& pad) {
-      return pad.first != 0 && !pad.second.GetImageBoxes().empty();  // pad 0 is not drawn
-    };
-    silenceNoPdfImages = mode == "pdf" && std::any_of(fullPlot.GetPads().begin(), fullPlot.GetPads().end(), hasImages);
-    if (silenceNoPdfImages && !warnedNoPdfImages) {
-      logger::warning("Images are missing in the pdf files: ROOT {} cannot write them there (from 6.42 on it can). Use eps or png for plots with images.", gROOT->GetVersion());
-      warnedNoPdfImages = true;
-    }
-  }
 
   if (TColor::GetFreeColorIndex() > std::numeric_limits<int16_t>::max()) {
     // ROOT colour indices are of type short, which limits the number of custom colours
@@ -2234,7 +2213,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
   // if interactive mode is specified, open window instead of saving the plot
   if (isInteractiveMode) return BrowseInteractively(fullPlot, mode, canvas);
 
-  return WriteOutput(plot, fullPlot, mode, canvas, isMacroMode, isGifMode, silenceNoPdfImages);
+  return WriteOutput(fullPlot, mode, canvas);
 }
 
 //**************************************************************************************************
@@ -2253,7 +2232,7 @@ void PlotManager::LogCreated(const Plot& plot)
  * the keys move to other plots until the window is closed.
  */
 //**************************************************************************************************
-bool PlotManager::BrowseInteractively(const Plot& fullPlot, const string& mode, shared_ptr<TCanvas>& canvas)
+bool PlotManager::BrowseInteractively(const Plot& fullPlot, const string& mode, shared_ptr<TCanvas> canvas)
 {
   LogCreated(fullPlot);
   if (mode == "spread") {
@@ -2372,10 +2351,11 @@ bool PlotManager::BrowseInteractively(const Plot& fullPlot, const string& mode, 
  * written at the end of the run, mode data writes no file per plot).
  */
 //**************************************************************************************************
-bool PlotManager::WriteOutput(const Plot& plot, const Plot& fullPlot, const string& mode, shared_ptr<TCanvas>& canvas, bool isMacroMode, bool isGifMode,
-                              bool silenceNoPdfImages)
+bool PlotManager::WriteOutput(Plot& fullPlot, const string& mode, const shared_ptr<TCanvas>& canvas)
 {
   if (!CreateOutputDirectory()) return false;
+  const bool isMacroMode = (mode == "macro");
+  const bool isGifMode = str_starts_with(mode, "gif");
 
   // a histogram drawn more than once in a pad (the axis histogram for the axes and again for the grid) is one object with several
   // entries in the pad: where the canvas itself is stored, each entry gets its own copy, since a macro would declare the object twice
@@ -2427,7 +2407,7 @@ bool PlotManager::WriteOutput(const Plot& plot, const Plot& fullPlot, const stri
   }
 
   if (mode == "file") {
-    mCanvasRegistry[plot.GetUniqueName()] = canvas;
+    mCanvasRegistry[fullPlot.GetUniqueName()] = canvas;
     LogCreated(fullPlot);
     return true;
   }
@@ -2444,7 +2424,7 @@ bool PlotManager::WriteOutput(const Plot& plot, const Plot& fullPlot, const stri
       }
       mGifSize = size;
     } else if (size != *mGifSize && !mGifSizeReported) {
-      logger::warning("The frames of {} differ in size: plot {} is {}x{}, the first frame {}x{}. Viewers show every frame in the size of the first.", mGifName, Plot::Label(plot), size.first, size.second, mGifSize->first, mGifSize->second);
+      logger::warning("The frames of {} differ in size: plot {} is {}x{}, the first frame {}x{}. Viewers show every frame in the size of the first.", mGifName, Plot::Label(fullPlot), size.first, size.second, mGifSize->first, mGifSize->second);
       mGifSizeReported = true;
     }
     // the frame before is written now that this one is painted; this one waits for the next (or closes the gif at the end)
@@ -2487,16 +2467,16 @@ bool PlotManager::WriteOutput(const Plot& plot, const Plot& fullPlot, const stri
     return false;
   }
 
-  string fileName = plot.GetName();
+  string fileName = fullPlot.GetName();
   // ROOT names the macro function after the file, so it must be a valid identifier as well
   if (isMacroMode) fileName = sanitize(fileName);
 
   // create output folders and files
-  string folderName = mOutputDirectory + "/" + plot.GetGroup();
+  string folderName = mOutputDirectory + "/" + fullPlot.GetGroup();
   string fullName = folderName + "/" + fileName + fileEnding;
   // names that would give the same file, as the sanitised macro names (eff-pi and eff_pi) or names differing only in case on a
   // case-insensitive file system (Eff and eff, the default of macOS): the later plot gets a number, so it does not replace the earlier one
-  const string plotID = Plot::Label(plot);
+  const string plotID = Plot::Label(fullPlot);
   auto fileKey = [&](const string& name) {
     string key = folderName + "/" + name + fileEnding;
     std::transform(key.begin(), key.end(), key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
@@ -2533,6 +2513,20 @@ bool PlotManager::WriteOutput(const Plot& plot, const Plot& fullPlot, const stri
     gStyle->SetLineScalePS(4. * pageWidthPt / canvasWidthPx);
   }
   if (mode == "root" || mode == "xml") ReserveColorIndices(canvas.get());
+  // ROOT writes images into PDF files only from version 6.42 on: before, they are missing there. Said once per run (a logo is usually
+  // on every plot), instead of ROOT's own warning for every image, which is silenced when the file is written
+  bool silenceNoPdfImages = false;
+  if constexpr (ROOT_VERSION_CODE < ROOT_VERSION(6, 42, 0)) {
+    static bool warnedNoPdfImages = false;
+    auto hasImages = [](auto& pad) {
+      return pad.first != 0 && !pad.second.GetImageBoxes().empty();  // pad 0 is not drawn
+    };
+    silenceNoPdfImages = mode == "pdf" && std::any_of(fullPlot.GetPads().begin(), fullPlot.GetPads().end(), hasImages);
+    if (silenceNoPdfImages && !warnedNoPdfImages) {
+      logger::warning("Images are missing in the pdf files: ROOT {} cannot write them there (from 6.42 on it can). Use eps or png for plots with images.", gROOT->GetVersion());
+      warnedNoPdfImages = true;
+    }
+  }
   // only ROOT's "PDF not implemented yet" of TASImage::Paint is dropped (SciRooPlot warned above), every other message passes
   static ErrorHandlerFunc_t rootErrorHandler = nullptr;
   if (silenceNoPdfImages) {
@@ -2578,17 +2572,17 @@ std::unique_ptr<TCanvas> PlotManager::Paint(PlotPainter& painter, Plot& toPaint)
 //**************************************************************************************************
 /**
  * Paints a plot with shared axes, or with labels a layout hides towards touching panels: a first paint gives the ranges the pads get
- * on their own, the plot is painted again with the common ones if a pad got another range (false: the first paint failed).
+ * on their own, the plot is painted again with the common ones if a pad got another range (null if a paint failed).
  */
 //**************************************************************************************************
-bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map<char, vector<Plot::shared_group_t>>& sharedAxes, const std::map<uint8_t, Plot::Pad>& allPads,
-                                  shared_ptr<TCanvas>& canvas)
+std::unique_ptr<TCanvas> PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, const map<char, vector<Plot::shared_group_t>>& sharedAxes)
 {
+  const auto& pads = fullPlot.GetPads();
   // the colour axis shared by a z group is z, for a 3d histogram its contents (C): its range is shared, a log scale and time format are not
   // (ROOT colours the boxes linearly)
   set<uint8_t> contentPads;
   if (sharedAxes.count('Z')) {
-    for (const auto& [padID, pad] : fullPlot.GetPads()) {
+    for (const auto& [padID, pad] : pads) {
       if (padID != 0 && PlotPainter::IsContentScale(pad, mDataBuffer)) contentPads.insert(padID);
     }
   }
@@ -2633,7 +2627,6 @@ bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map
           logger::warning("Plot {}: pad {} draws a 3d histogram, whose boxes ROOT colours linearly: they do not follow the log scale of its z group.", Plot::Label(fullPlot), *content);
         }
         // one colour scale for the group, but each pad is painted with its own palette: the scale fits only some of them
-        const auto& pads = fullPlot.GetPads();
         auto ownPalette = [](const Plot::Pad& p) { return p.GetPalette() || p.GetPaletteGradient().rgbEndpoints; };
         // the palette the painter makes of the settings: a gradient (255 colours unless given) or a ROOT palette (kBird unless given), alpha 1 unless given
         auto palette = [](const Plot::Pad& p) {
@@ -2678,7 +2671,7 @@ bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map
   // the plot is painted again only if a pad got another range than the union
   Plot firstPlot = fullPlot;  // painting changes the plot (e.g. the legend rows of the data)
   std::unique_ptr<TCanvas> firstCanvas = Paint(painter, firstPlot);
-  if (!firstCanvas) return false;
+  if (!firstCanvas) return nullptr;
   const auto ranges = painter.GetFrameRanges();
   set<std::pair<uint8_t, char>> commonRanges;
   bool paintAgain{};
@@ -2690,8 +2683,8 @@ bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map
       for (uint8_t padID : group.pads) {
         auto range = ranges.find({padID, axisLabel});
         if (range == ranges.end()) {
-          if (!group.fromLayout && fullPlot.GetPads().count(padID)) {
-            auto& pad = fullPlot.GetPads().at(padID);
+          if (!group.fromLayout && pads.count(padID)) {
+            const auto& pad = pads.at(padID);
             const bool drawsNothing = pad.GetData().empty() && !pad.GetFrame() && !pad.GetRefFunc();
             logger::warning("Plot {}: pad {} is left out of the pads sharing the {} axis: {}.", Plot::Label(fullPlot), padID, axisLabel,
                             (drawsNothing) ? "it draws nothing" : ((axisLabel == 'Z') ? "it draws no 2d histogram, graph or function and no 3d histogram (or a polar drawing)" : "it has no flat axis frame (a 3d view or a polar drawing)"));
@@ -2721,7 +2714,7 @@ bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map
   // though the axis is not shared: it has no room for them
   const auto flatPads = painter.GetFlatPads();
   auto isFlat = [&](uint8_t padID) { return flatPads.count(padID) > 0; };
-  for (const auto& [padID, pad] : allPads) {
+  for (const auto& [padID, pad] : pads) {
     for (const auto& [axisLabel, touching] : pad.GetHiddenNextTo()) {
       if (!isFlat(padID)) {
         paintAgain = true;
@@ -2729,8 +2722,8 @@ bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map
       }
       // (a touching panel that draws nothing has no frame either)
       auto drawsView = [&](uint8_t other) {
-        auto found = allPads.find(other);
-        return !isFlat(other) && found != allPads.end() && (!found->second.GetData().empty() || found->second.GetFrame());
+        auto found = pads.find(other);
+        return !isFlat(other) && found != pads.end() && (!found->second.GetData().empty() || found->second.GetFrame());
       };
       auto unshared = std::find_if(touching.begin(), touching.end(), drawsView);
       const auto axis = pad.GetAxes().find(axisLabel);
@@ -2741,20 +2734,16 @@ bool PlotManager::ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, std::map
       }
     }
   }
-  if (paintAgain) painter.SetFlatPads(flatPads);
-  if (!paintAgain) {
-    canvas.reset(firstCanvas.release());
-  } else {
-    // the messages of the first paint are not repeated
-    firstCanvas.reset();
-    painter.SetSharedAxes(groups, commonRanges);
-    auto quiet = ignore_root_messages_below(kError);
-    firstErrors.muteRecorded = true;
-    logger::muted() = true;
-    auto unmute = make_scope_guard([]() { logger::muted() = false; });
-    canvas.reset(Paint(painter, fullPlot).release());
-  }
-  return true;
+  if (!paintAgain) return firstCanvas;
+  // the messages of the first paint are not repeated
+  firstCanvas.reset();
+  painter.SetFlatPads(flatPads);
+  painter.SetSharedAxes(groups, commonRanges);
+  auto quiet = ignore_root_messages_below(kError);
+  firstErrors.muteRecorded = true;
+  logger::muted() = true;
+  auto unmute = make_scope_guard([]() { logger::muted() = false; });
+  return Paint(painter, fullPlot);
 }
 
 //**************************************************************************************************
