@@ -1803,28 +1803,32 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       if (!pad_ptr->GetView()) RemoveGraphPointsOutside(static_cast<TGraph*>(data_ptr), data->GetMinRangeX(), data->GetMaxRangeX(), data->GetMinRangeY(), data->GetMaxRangeY());
     }
     if (alias == area && data_ptr->GetN() > 0) {
-      // the area between the points and zero (F would close the polygon from the last point to the first)
-      auto* polygon = new TGraph(data_ptr->GetN() + 2);
-      polygon->SetName(data_ptr->GetName());
-      polygon->SetTitle(data_ptr->GetTitle());
-      polygon->SetBit(kCanDelete);  // owned by the pad, as the copy it replaces
-      CopyStyle(*data_ptr, *polygon);
       // the area below the points needs them in the order of x: points in another order (a closed contour, a trajectory) would change their shape
       const double_t* x = data_ptr->GetX();
       if (dataIndex != 0 && !std::is_sorted(x, x + data_ptr->GetN())) logger::warning("The points of graph {} are not in the order of x: they are sorted to draw the area below them.", DataName(*data));
       SortGraph(data_ptr);
-      polygon->SetPoint(0, data_ptr->GetPointX(0), 0.);
-      for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
-        polygon->SetPoint(i + 1, data_ptr->GetPointX(i), data_ptr->GetPointY(i));
+      // the frame spans the area between the points and zero; the data is the line through the points, with its fill below (see below).
+      // A polar graph is drawn as the plain graph of its points, as its frame (the area below the points is no area in polar coordinates)
+      if (dataIndex == 0 || data_ptr->InheritsFrom(TGraphPolar::Class())) {
+        const int32_t corners = (dataIndex == 0);
+        auto* polygon = new TGraph(data_ptr->GetN() + 2 * corners);
+        polygon->SetName(data_ptr->GetName());
+        polygon->SetTitle(data_ptr->GetTitle());
+        polygon->SetBit(kCanDelete);  // owned by the pad, as the copy it replaces
+        CopyStyle(*data_ptr, *polygon);
+        if (corners) polygon->SetPoint(0, data_ptr->GetPointX(0), 0.);
+        for (int32_t i = 0; i < data_ptr->GetN(); ++i) {
+          polygon->SetPoint(i + corners, data_ptr->GetPointX(i), data_ptr->GetPointY(i));
+        }
+        if (corners) polygon->SetPoint(data_ptr->GetN() + 1, data_ptr->GetPointX(data_ptr->GetN() - 1), 0.);
+        // the histogram it was made from belongs to the copy now: a later graph at the freed address is another one
+        if (auto source = mSourceHists.extract(data_ptr)) {
+          source.key() = polygon;
+          mSourceHists.insert(std::move(source));
+        }
+        delete data_ptr;
+        data_ptr = polygon;
       }
-      polygon->SetPoint(data_ptr->GetN() + 1, data_ptr->GetPointX(data_ptr->GetN() - 1), 0.);
-      // the histogram it was made from (statistics box, placeholders) belongs to the polygon now: a later graph at the freed address is another one
-      if (auto source = mSourceHists.extract(data_ptr)) {
-        source.key() = polygon;
-        mSourceHists.insert(std::move(source));
-      }
-      delete data_ptr;
-      data_ptr = polygon;
     }
   }
 
@@ -2027,27 +2031,29 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
       if (!keepRange.empty()) padSetup += HistCommand(data_ptr->GetName(), keepRange);
     }
-    bool hasFilledSteps{false};  // a histogram drawn with hist_clipped or hist_open_clipped and a fill: the steps are the outline of the filled areas
+    // a graph drawn with area, hist_clipped or hist_open_clipped and a fill: the line or steps are the outline of the filled area below them
+    bool hasFillBelow{false};
     if constexpr (is_graph_1d<data_type>()) {
-      if ((alias == hist_clipped || alias == hist_open_clipped) && data_ptr->GetFillStyle() != 0 && data_ptr->GetFillColor() != 0 && data_ptr->GetN() > 0) {
-        // the polygon of the steps closed far below the frame (at ROOT's base line once the frame is final): ROOT cuts it at the frame
+      if ((alias == area || alias == hist_clipped || alias == hist_open_clipped) && data_ptr->GetFillStyle() != 0 && data_ptr->GetFillColor() != 0 && data_ptr->GetN() > 0) {
+        // the polygon closed at zero below the points of area (F alone would close it from the last point to the first, LF would draw its
+        // edges down to zero), that of the steps far below the frame (at ROOT's base line once the frame is final): ROOT cuts it at the frame
         vector<double_t> x(data_ptr->GetX(), data_ptr->GetX() + data_ptr->GetN());
         vector<double_t> y(data_ptr->GetY(), data_ptr->GetY() + data_ptr->GetN());
-        if (alias == hist_open_clipped) {  // the steps of hist_clipped already go down there at the outer edges
-          const double_t base = ClippedBase(data_ptr, pad_ptr->GetLogy());
+        if (alias != hist_clipped) {  // the steps of hist_clipped already go down there at the outer edges
+          const double_t base = (alias == area) ? 0. : ClippedBase(data_ptr, pad_ptr->GetLogy());
           x.insert(x.begin(), x.front());
           y.insert(y.begin(), base);
           x.push_back(x.back());
           y.push_back(base);
         }
         auto* polygon = new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data());
-        polygon->SetName((string("fill_") + data_ptr->GetName()).data());  // not "<number>:...", so legend rows refer to the steps
+        polygon->SetName((string("fill_") + data_ptr->GetName()).data());  // not "<number>:...", so legend rows refer to the line or steps
         data_ptr->TAttLine::Copy(*polygon);
         data_ptr->TAttFill::Copy(*polygon);
         polygon->SetEditable(false);
         polygon->SetBit(kCanDelete);
         polygon->Draw("SAME F");
-        hasFilledSteps = true;
+        hasFillBelow = true;
       }
     }
     // ROOT maps the colours of 2d data drawn on top with the range of the frame, which also draws the colour axis:
@@ -2239,7 +2245,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
 
       if (legendID > 0u && legendID <= legendBoxVector.size()) {
         optional<Plot::Pad::LegendEntry> legendEntry = data->GetLegendEntryIfSet();
-        if (hasFilledSteps && !(legendEntry && legendEntry->GetSymbolElements())) {  // the row of filled steps shows the fill, as for hist
+        if (hasFillBelow && !(legendEntry && legendEntry->GetSymbolElements())) {  // the row shows the fill, as for hist and area of histograms
           if (!legendEntry) legendEntry.emplace();
           legendEntry->SetSymbolElements("F");
         }

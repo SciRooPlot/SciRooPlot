@@ -149,7 +149,7 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Func{
 // aliases missing for one of the 1d types are drawn by converting to the other type (bars: graph bars with gaps, text: histogram with the values)
 
 // the x errors of graphs are removed before drawing for all points aliases without _xerr (as for histograms with X0),
-// and area is drawn as the polygon between the points and zero, with its outline (F alone would close the polygon from the last point to the first)
+// and area is drawn as the line through the points, with the polygon between them and zero filled below it (as HIST LF2 of histograms)
 inline const std::map<draw_option_t, std::string> defaultDrawOptions_Graph{
   {points, "P Z"},
   {points_xerr, "P Z"},
@@ -164,7 +164,7 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Graph{
   {hist_clipped, "L"},       // histograms (also graphs converted to histograms) drawn as their steps
   {hist_open_clipped, "L"},  // without the vertical lines at the outer edges
   {bars, "X B"},
-  {area, "LF"},
+  {area, "X L"},
   {band, "3"},
   {band_smooth, "4"},
   {boxes, "P2"},

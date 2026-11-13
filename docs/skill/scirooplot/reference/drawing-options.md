@@ -28,7 +28,7 @@ data with a marker style or size set, with non-zero errors or a graph of a singl
 | `hist_open_clipped` | *as graph* | `L` | – | – | – | – | – | – |
 | `bars` | *as graph* | `X B` | – | – | – | – | – | – |
 | `hbars` | `HIST HBAR` | *as histogram* | – | – | – | – | – | – |
-| `area` | `HIST LF2` | `LF` | `L` | – | – | – | – | – |
+| `area` | `HIST LF2` | `X L` | `L` | – | – | – | – | – |
 | `area_smooth` | `HIST CF` | *as histogram* | `C` | – | – | – | – | – |
 | `band` | `E5` | `3` | – | – | – | – | – | – |
 | `band_smooth` | `E6` | `4` | – | – | – | – | – | – |
@@ -102,7 +102,7 @@ the triangle and points aliases of 2D graphs (and `line`, the polyline through t
 `points` of a graph with errors also draws the error bars. Data drawn in 3D (lego, surf, triangles, the points and lines of 2D graphs, 3D histograms and functions)
 needs the 3D frame of a first data drawn in 3D, flat data (colours, contours, boxes, text) a flat frame: otherwise a WARNING and the data is not drawn (the next data
 keeps its number);
-`area` of graphs is the polygon between the points and zero (points not in the order of x are sorted, with a warning); `candle` is ROOT preset 2 (box, median, whiskers at 1.5 IQR, outliers), `candle_minmax` preset 1 (whiskers to the extremes).
+`area` of graphs is the line through the points with the polygon between them and zero filled below it, as `HIST LF2` of histograms (points not in the order of x are sorted, with a warning); `candle` is ROOT preset 2 (box, median, whiskers at 1.5 IQR, outliers), `candle_minmax` preset 1 (whiskers to the extremes).
 `hist_clipped`, `hist_open_clipped`, `curve_clipped` draw a histogram as a graph, whose lines ROOT cuts at the frame (`HIST`, and `HIST C` on a log axis,
 move bins outside of the frame onto its edge); `hist_clipped` and `hist_open_clipped` are the steps of `hist` and `hist_open` cut at the frame: the outer edges and
 a fill go down to the same base line (0, or the lower frame edge if that is above 0 or on a log axis), and `hist_open_clipped` leaves out the bins at the ends

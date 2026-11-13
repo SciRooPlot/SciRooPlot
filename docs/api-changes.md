@@ -120,6 +120,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A 1d histogram or graph drawn with an alias neither can draw (a 2d alias such as `colz`, `lego`, `cont`) got ROOT's default for an empty option, which paints a graph, or a histogram filled without weights, not at all; a graph that cannot be made a histogram (points at one x) drawn with a histogram alias (`hist`, `hbars`, `area_smooth`, `text`, `hist_clipped` …) painted nothing | Drawn as without a drawing option (`points`, `hist`, `line` or `area` by the default rule); the warning names the alias it is drawn as | behaviour | Nothing. |
 | A graph without errors drawn with `band`, `band_smooth`, `boxes_nomarkers` or `brackets` painted nothing, without a warning | Drawn as without a drawing option, with a warning | behaviour | Nothing. |
 | A TH2Poly drawn with `box` or a `cont…`, `candle…` or `violin…` alias painted nothing (ROOT paints polygon bins with none of them) | Drawn as `col` (`colz`) with a warning, as for `lego` and `surf`; raw options (`"BOX"`) still reach ROOT as given | behaviour | Nothing. |
+| A graph drawn as `area` (also the default for a graph with a fill) was the polygon closed at zero drawn with its outline: lines went down to zero at both ends, also without a fill; its legend row showed the fill without the line | The line through the points with the area between them and zero filled below it, as `area` of histograms (`HIST LF2`), and the same legend row | behaviour | Nothing. |
 
 ### Files
 

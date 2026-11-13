@@ -81,9 +81,7 @@ for i, case in enumerate(todo):
         check(f"drawn as a graph: {what}", False, obj.ClassName())
         continue
     if case["alias"] == "area":
-        polygon = sorted(points(given))
-        polygon = [(polygon[0][0], 0.0), *polygon, (polygon[-1][0], 0.0)]
-        check(f"area below the points sorted by x: {what}", same(points(obj), polygon), f"drawn {points(obj)[:5]}")
+        check(f"area drawn through the points sorted by x: {what}", same(points(obj), sorted(points(given))), f"drawn {points(obj)[:5]}")
     else:
         check(f"drawn through the points as given: {what}", same(points(obj), points(given)), f"drawn {[(round(x, 3), round(y, 3)) for x, y in points(obj)[:6]]}")
 for kind in GRAPHS:  # the warnings name the data, not the plot

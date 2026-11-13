@@ -92,8 +92,9 @@ for i, case in enumerate(todo):
     if alias and obj.InheritsFrom("TGraphMultiErrors"):
         want = per_error_set(want)
     check(f"drawn as {alias or 'the default of ROOT'}: {what}", opt == want, f"drawn with '{opt}', expected '{want}'")
-    if alias == "area":  # the polygon closed at zero
-        check(f"area closed at zero: {what}", obj.GetN() > 2 and close(obj.GetPointY(0), 0.0) and close(obj.GetPointY(obj.GetN() - 1), 0.0), obj.ClassName())
+    if alias == "area":  # the line through the points, filled below by the polygon closed at zero
+        fill = next((o for o, _ in run.links(f"c{i}", "rule") if o.GetName() == f"fill_{obj.GetName()}"), None)
+        check(f"area filled down to zero: {what}", bool(fill) and fill.GetN() == obj.GetN() + 2 and close(fill.GetPointY(0), 0.0) and close(fill.GetPointY(fill.GetN() - 1), 0.0), obj.ClassName())
     if alias == "colz":
         frame = run.frame_option(f"c{i}", "rule") or ""
         check(f"colour scale on the frame: {what}", frame.split()[0].endswith("Z") if frame else False, f"frame '{frame}'")
