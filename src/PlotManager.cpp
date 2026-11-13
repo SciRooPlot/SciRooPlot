@@ -1478,7 +1478,6 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   auto graphicsGuard = make_scope_guard([displayGraphics]() { gVirtualX = displayGraphics; });
   // first determine which data needs to be loaded
   vector<Plot*> selectedPlots;
-  map<int32_t, set<int32_t>> requiredData;
 
   const auto matches = PlotMatcher(name, group);
   if (!matches) return false;
@@ -1504,6 +1503,14 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       it = (it->second) ? std::next(it) : buffer.erase(it);
     }
   }
+  // also requests without projection info are registered: trees and tables then report that they cannot be plotted directly
+  auto request = [this](const string& dataSource, const string& name, const Plot::Pad::Data::data_info_t& info) {
+    mDataBuffer[dataSource][name];
+    auto& dataInfos = mDataInfoBuffer[dataSource][name];
+    const string nameSuffix = info.GetNameSuffix();
+    auto known = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == nameSuffix; });
+    if (known == dataInfos.end()) dataInfos.push_back(info);
+  };
   for (auto& plot : mPlots) {
     if (!matches(plot.GetGroup(), plot.GetName())) continue;
     selectedPlots.push_back(&plot);
@@ -1516,23 +1523,10 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       auto padData = pad.GetData();
       if (pad.GetFrame()) padData.push_back(pad.GetFrame());  // the frame of a pad is read like its data
       for (const auto& data : padData) {
-        mDataBuffer[data->GetDataSource()][data->GetName()];
-        // also register requests without projection info: trees and tables then report that they cannot be plotted directly
-        auto& dataInfos = mDataInfoBuffer[data->GetDataSource()][data->GetName()];
-        const string nameSuffix = data->GetDataInfo().GetNameSuffix();
-        auto iter = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == nameSuffix; });
-        if (iter == dataInfos.end()) {
-          dataInfos.push_back(data->GetDataInfo());
-        }
+        request(data->GetDataSource(), data->GetName(), data->GetDataInfo());
         if (data->GetType() == "ratio") {
           const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          mDataBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()];
-          auto& denomDataInfos = mDataInfoBuffer[ratio->GetDenomDataSource()][ratio->GetDenomName()];
-          const string denomNameSuffix = ratio->GetDenomDataInfo().GetNameSuffix();
-          auto iter = std::find_if(denomDataInfos.begin(), denomDataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == denomNameSuffix; });
-          if (iter == denomDataInfos.end()) {
-            denomDataInfos.push_back(ratio->GetDenomDataInfo());
-          }
+          request(ratio->GetDenomDataSource(), ratio->GetDenomName(), ratio->GetDenomDataInfo());
         }
       }
     }
@@ -1761,104 +1755,15 @@ bool PlotManager::FillBuffer()
 //**************************************************************************************************
 bool PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>& dataSources)
 {
-  map<string, unordered_map<string, set<string>>> requiredData;  // data source -> subdir -> names
+  required_data_t requiredData;
   for (const auto& dataSource : dataSources) {
     for (auto& [dataName, dataPtr] : mDataBuffer[dataSource]) {
       if (IsBuffered(dataSource, dataName)) continue;
 
-      // generate user-defined functions on-the-fly
-      if (dataSource == kUserFunctions) {
-        // a function is given as formula ("[0] * sin(x)") or as C++ lambda ("[](double* x, double* p) { return std::sin(x[0]); }"):
-        // a lambda has no parameters that could be set, its dimension is that of the variables it uses (x[0], x[1], x[2])
-        static const std::regex lambdaStart(R"(^\s*\[[^\]]*\]\s*\()");
-        const bool isLambda = std::regex_search(dataName, lambdaStart);
-        int32_t dim{};
-        if (isLambda) {
-          static const std::regex signature(R"(^\s*\[\s*\]\s*\(\s*(?:const\s+)?(?:double|Double_t)\s*\*\s*(\w+)\s*,\s*(?:const\s+)?(?:double|Double_t)\s*\*\s*(\w*)\s*\))");
-          std::smatch names;
-          if (!std::regex_search(dataName, names, signature)) {
-            logger::error("Function '{}' needs the form [](double* x, double* p) {{ ... }}.", dataName);
-            continue;
-          }
-          const string body = names.suffix();
-          const string var = names[1];
-          const std::regex variableUse("\\b" + var + "\\b(\\s*\\[\\s*([0-9]+)\\s*\\])?");
-          bool isIndexed = true;
-          dim = 1;
-          for (auto use = std::sregex_iterator(body.begin(), body.end(), variableUse); use != std::sregex_iterator(); ++use) {
-            isIndexed = isIndexed && (*use)[2].matched;
-            if ((*use)[2].matched) dim = std::max(dim, std::stoi((*use)[2]) + 1);
-          }
-          if (!isIndexed || dim > 3) {
-            logger::error("Function '{}' has to use its variables as {}[0], {}[1] or {}[2].", dataName, var, var, var);
-            continue;
-          }
-          if (const string par = names[2]; !par.empty() && std::regex_search(body, std::regex("\\b" + par + "\\b"))) {
-            logger::error("Function '{}' uses parameters, which cannot be set: write their values into the function.", dataName);
-            continue;
-          }
-        }
-        bool isValid{};
-        int32_t nParameters{};
-        {
-          auto quiet = ignore_root_messages_below(kFatal);
-          if (isLambda) {
-            isValid = TFormula("tmp", dataName.data(), dim, 0, false).IsValid();
-          } else {
-            TFormula formula("tmp", dataName.data(), false);
-            isValid = formula.IsValid();
-            dim = formula.GetNdim();
-            nParameters = formula.GetNpar();
-          }
-        }
-        if (!isValid) {
-          logger::error("'{}' is not a valid function expression.", dataName);
-          continue;
-        }
-        // parameters ([0], [a], or those of predefined functions like gaus and pol2) cannot be set and would all be 0
-        if (nParameters > 0) {
-          logger::error("Function '{}' uses parameters, which cannot be set: write their values into the function.", dataName);
-          continue;
-        }
-        // the lambda constructors of ROOT take the number of parameters and dimensions
-        constexpr int32_t nPar = 0;
-        if (dim <= 1) {
-          auto* func = (isLambda) ? new TF1(dataName.data(), dataName.data(), 0., 1., nPar, 1) : new TF1(dataName.data(), dataName.data());
-          func->SetNpx(1000);  // drawn across the whole frame, where ROOT's default of 100 points looks angular
-          dataPtr.reset(func);
-        } else if (dim == 2) {
-          dataPtr.reset((isLambda) ? new TF2(dataName.data(), dataName.data(), 0., 1., 0., 1., nPar, 2) : new TF2(dataName.data(), dataName.data()));
-        } else if (dim == 3) {
-          dataPtr.reset((isLambda) ? new TF3(dataName.data(), dataName.data(), 0., 1., 0., 1., 0., 1., nPar, 3) : new TF3(dataName.data(), dataName.data()));
-        } else {
-          logger::error("Cannot create function {}.", dataName);
-        }
-        continue;
-      } else if (dataSource == kUserGraphs) {
-        auto strs = split_string(dataName, ';');
-        if (strs.size() == 2) {
-          auto xStrs = split_string(strs[0], ',');
-          auto yStrs = split_string(strs[1], ',');
-          if (!xStrs.size() || xStrs.size() != yStrs.size()) {
-            logger::error("Incompatible number of points.");
-          } else {
-            vector<double_t> x;
-            vector<double_t> y;
-            try {  // independent of the locale, and subnormal values (1e-310) are numbers, not an error as for std::stod
-              for (size_t i = 0; i < xStrs.size(); ++i) {
-                x.push_back(util::string_to_type<double_t>(xStrs[i]));
-                y.push_back(util::string_to_type<double_t>(yStrs[i]));
-              }
-              dataPtr.reset(new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data()));
-              static_cast<TGraph*>(dataPtr.get())->SetName(dataName.data());
-            } catch (const std::invalid_argument& e) {
-              logger::error("Cannot read the points {}: {}.", dataName, util::without_final_period(e.what()));
-            }
-          }
-        }
+      if (is_user_defined(dataSource)) {
+        MakeUserData(dataSource, dataName, dataPtr);
         continue;
       }
-
       auto [path, name] = split_path(dataName);
       requiredData[dataSource][std::move(path)].insert(std::move(name));
     }
@@ -1974,7 +1879,6 @@ bool PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
     }
   }
   ChainTrees(requiredData);
-  mTreeInputs.clear();
   for (const auto& [dataSource, required] : requiredData) {
     for (const auto& [path, names] : required) {
       for (const auto& name : names) {
@@ -1987,10 +1891,109 @@ bool PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
 
 //**************************************************************************************************
 /**
- * Reads the trees and RNTuples found in the inputs of a data source, each over all inputs that contain it.
+ * Makes the functions and points defined in the plots (AddFunction, AddPoints): nothing is read for them.
  */
 //**************************************************************************************************
-void PlotManager::ChainTrees(map<string, unordered_map<string, set<string>>>& requiredData)
+void PlotManager::MakeUserData(const string& dataSource, const string& dataName, std::unique_ptr<TObject>& dataPtr)
+{
+  if (dataSource == kUserGraphs) {
+    auto strs = split_string(dataName, ';');
+    if (strs.size() == 2) {
+      auto xStrs = split_string(strs[0], ',');
+      auto yStrs = split_string(strs[1], ',');
+      if (!xStrs.size() || xStrs.size() != yStrs.size()) {
+        logger::error("Incompatible number of points.");
+      } else {
+        vector<double_t> x;
+        vector<double_t> y;
+        try {  // independent of the locale, and subnormal values (1e-310) are numbers, not an error as for std::stod
+          for (size_t i = 0; i < xStrs.size(); ++i) {
+            x.push_back(util::string_to_type<double_t>(xStrs[i]));
+            y.push_back(util::string_to_type<double_t>(yStrs[i]));
+          }
+          dataPtr.reset(new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data()));
+          static_cast<TGraph*>(dataPtr.get())->SetName(dataName.data());
+        } catch (const std::invalid_argument& e) {
+          logger::error("Cannot read the points {}: {}.", dataName, util::without_final_period(e.what()));
+        }
+      }
+    }
+    return;
+  }
+  // a function is given as formula ("[0] * sin(x)") or as C++ lambda ("[](double* x, double* p) { return std::sin(x[0]); }"):
+  // a lambda has no parameters that could be set, its dimension is that of the variables it uses (x[0], x[1], x[2])
+  static const std::regex lambdaStart(R"(^\s*\[[^\]]*\]\s*\()");
+  const bool isLambda = std::regex_search(dataName, lambdaStart);
+  int32_t dim{};
+  if (isLambda) {
+    static const std::regex signature(R"(^\s*\[\s*\]\s*\(\s*(?:const\s+)?(?:double|Double_t)\s*\*\s*(\w+)\s*,\s*(?:const\s+)?(?:double|Double_t)\s*\*\s*(\w*)\s*\))");
+    std::smatch names;
+    if (!std::regex_search(dataName, names, signature)) {
+      logger::error("Function '{}' needs the form [](double* x, double* p) {{ ... }}.", dataName);
+      return;
+    }
+    const string body = names.suffix();
+    const string var = names[1];
+    const std::regex variableUse("\\b" + var + "\\b(\\s*\\[\\s*([0-9]+)\\s*\\])?");
+    bool isIndexed = true;
+    dim = 1;
+    for (auto use = std::sregex_iterator(body.begin(), body.end(), variableUse); use != std::sregex_iterator(); ++use) {
+      isIndexed = isIndexed && (*use)[2].matched;
+      if ((*use)[2].matched) dim = std::max(dim, std::stoi((*use)[2]) + 1);
+    }
+    if (!isIndexed || dim > 3) {
+      logger::error("Function '{}' has to use its variables as {}[0], {}[1] or {}[2].", dataName, var, var, var);
+      return;
+    }
+    if (const string par = names[2]; !par.empty() && std::regex_search(body, std::regex("\\b" + par + "\\b"))) {
+      logger::error("Function '{}' uses parameters, which cannot be set: write their values into the function.", dataName);
+      return;
+    }
+  }
+  bool isValid{};
+  int32_t nParameters{};
+  {
+    auto quiet = ignore_root_messages_below(kFatal);
+    if (isLambda) {
+      isValid = TFormula("tmp", dataName.data(), dim, 0, false).IsValid();
+    } else {
+      TFormula formula("tmp", dataName.data(), false);
+      isValid = formula.IsValid();
+      dim = formula.GetNdim();
+      nParameters = formula.GetNpar();
+    }
+  }
+  if (!isValid) {
+    logger::error("'{}' is not a valid function expression.", dataName);
+    return;
+  }
+  // parameters ([0], [a], or those of predefined functions like gaus and pol2) cannot be set and would all be 0
+  if (nParameters > 0) {
+    logger::error("Function '{}' uses parameters, which cannot be set: write their values into the function.", dataName);
+    return;
+  }
+  // the lambda constructors of ROOT take the number of parameters and dimensions
+  constexpr int32_t nPar = 0;
+  if (dim <= 1) {
+    auto* func = (isLambda) ? new TF1(dataName.data(), dataName.data(), 0., 1., nPar, 1) : new TF1(dataName.data(), dataName.data());
+    func->SetNpx(1000);  // drawn across the whole frame, where ROOT's default of 100 points looks angular
+    dataPtr.reset(func);
+  } else if (dim == 2) {
+    dataPtr.reset((isLambda) ? new TF2(dataName.data(), dataName.data(), 0., 1., 0., 1., nPar, 2) : new TF2(dataName.data(), dataName.data()));
+  } else if (dim == 3) {
+    dataPtr.reset((isLambda) ? new TF3(dataName.data(), dataName.data(), 0., 1., 0., 1., 0., 1., nPar, 3) : new TF3(dataName.data(), dataName.data()));
+  } else {
+    logger::error("Cannot create function {}.", dataName);
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Reads the trees and RNTuples found in the inputs of a data source (mTreeInputs), each over all inputs that contain it, and forgets
+ * where they were found.
+ */
+//**************************************************************************************************
+void PlotManager::ChainTrees(required_data_t& requiredData)
 {
   // what a chained tree is made of in words, e.g. "3 files" or "412 folders in 3 files" (empty if it has only one input)
   auto describeInputs = [](const vector<tree_input_t>& treeInputs) -> string {
@@ -2078,6 +2081,7 @@ void PlotManager::ChainTrees(map<string, unordered_map<string, set<string>>>& re
       }
     }
   }
+  mTreeInputs.clear();
 }
 
 //**************************************************************************************************

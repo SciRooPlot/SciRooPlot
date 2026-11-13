@@ -141,8 +141,6 @@ class PlotManager
   std::unique_ptr<TCanvas> ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, const std::map<char, std::vector<Plot::shared_group_t>>& sharedAxes);
   static void LogCreated(const Plot& plot);
   bool BrowseInteractively(const Plot& fullPlot, const std::string& mode, std::shared_ptr<TCanvas> canvas);
-  bool ReadSourceGroup(const std::string& baseSource, const std::vector<std::string>& dataSources);
-  void ChainTrees(std::map<std::string, std::unordered_map<std::string, std::set<std::string>>>& requiredData);
   bool WriteOutput(Plot& fullPlot, const std::string& mode, const std::shared_ptr<TCanvas>& canvas);
   static void KeepOnClose(TCanvas* canvas);
   static bool IsClosed(const TCanvas* canvas);
@@ -240,6 +238,10 @@ class PlotManager
   std::shared_ptr<Plot::Pad::Data> RefFuncDrawnIn(Plot& plot, uint8_t padID);
   std::vector<std::tuple<std::string, std::string, Plot::Pad::Data::data_info_t>> GetMissingData(Plot& plot);
   bool FillBuffer();
+  using required_data_t = std::map<std::string, std::unordered_map<std::string, std::set<std::string>>>;  // data source -> folder -> names still to find
+  bool ReadSourceGroup(const std::string& baseSource, const std::vector<std::string>& dataSources);
+  void MakeUserData(const std::string& dataSource, const std::string& dataName, std::unique_ptr<TObject>& dataPtr);
+  void ChainTrees(required_data_t& requiredData);
   bool IsBuffered(const std::string& dataSource, const std::string& name) const;
   std::vector<std::string> ExpandInputs(const std::string& dataSource) const;
   bool IsDataSourceDefined(const std::string& dataSource) const;
