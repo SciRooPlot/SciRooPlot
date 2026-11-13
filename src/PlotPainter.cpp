@@ -143,6 +143,7 @@ using util::is_hist_1d;
 using util::is_hist_2d;
 using util::is_hist_3d;
 using util::is_one_of_v;
+using util::join_strings;
 using util::make_scope_guard;
 using util::pick;
 using util::plural;
@@ -8832,46 +8833,45 @@ void PlotPainter::WarnIfOutsideFrame(TPad* pad)
 
 //**************************************************************************************************
 /**
- * Function to replace placeholders in labels.
+ * Replaces the placeholders of a label (<mean>, <entries[d]>, <mean:2@1>, ...) by the values of the data of a legend row (rowData) or,
+ * in a text, of the data they name (findData).
  */
 //**************************************************************************************************
 void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::function<TNamed*(uint16_t, const optional<uint8_t>&)>& findData)
 {
-  // <word>, with a format in brackets (which may contain '>', e.g. [>8.2f]) and a reference :data@pad, in either order
-  static const std::regex wordsRegex("<(name|title|source|projection|selection|entries|integral|mean|stddev|maximum|minimum)(?:\\[[^\\]]*\\])?(?::\\d{1,9}(?:@\\d{1,9})?)?(?:\\[[^\\]]*\\])?>");
-  static const std::regex formatRegex("\\[[^\\]]*\\]");
-  static const std::regex refRegex(":(\\d{1,9})(?:@(\\d{1,9}))?>$");  // after the format is removed
+  // <word>, with a format in brackets (which may contain '>', e.g. [>8.2f]) and a reference :data@pad, in either order:
+  // groups 1 word, 2 format before the reference, 3 data, 4 pad, 5 format after the reference
+  static const std::regex placeholderRegex("<(name|title|source|projection|selection|entries|integral|mean|stddev|maximum|minimum)(?:\\[([^\\]]*)\\])?(?::(\\d{1,9})(?:@(\\d{1,9}))?)?(?:\\[([^\\]]*)\\])?>");
   // what looks like a placeholder with a reference but is none, e.g. a typo as <meen:1> (a word with brackets alone, e.g. <x[cm]>, may be text)
   static const std::regex lookalikeRegex("<[A-Za-z]+(?:\\[[^\\]]*\\])?:\\d+(?:@\\d+)?(?:\\[[^\\]]*\\])?>");
   for (auto it = std::sregex_iterator(str.begin(), str.end(), lookalikeRegex); it != std::sregex_iterator(); ++it) {
-    if (!std::regex_match(it->str(), wordsRegex)) logger::warning("Placeholder {} is not valid: known are <name>, <title>, <source>, <projection>, <selection>, <entries>, <integral>, <mean>, <stddev>, <maximum>, <minimum>.", it->str());
+    if (!std::regex_match(it->str(), placeholderRegex)) logger::warning("Placeholder {} is not valid: known are <name>, <title>, <source>, <projection>, <selection>, <entries>, <integral>, <mean>, <stddev>, <maximum>, <minimum>.", it->str());
   }
-  auto wordsBegin = std::sregex_iterator(str.begin(), str.end(), wordsRegex);
-  auto wordsEnd = std::sregex_iterator();
 
   string result;
   size_t lastEnd = 0;  // offset into the original str, just past the previous match
 
-  for (std::sregex_iterator match = wordsBegin; match != wordsEnd; ++match) {
-    string matchStr = match->str();
-    size_t matchPos = match->position();
+  for (auto match = std::sregex_iterator(str.begin(), str.end(), placeholderRegex); match != std::sregex_iterator(); ++match) {
+    const string matchStr = match->str();
+    const string word = (*match)[1].str();
+    const size_t matchPos = match->position();
 
     // copy the untouched text since the previous match, then compute the replacement
     result.append(str, lastEnd, matchPos - lastEnd);
 
     // the data: that of the legend row, or in a text the one named by number (<mean:2>: data 2 of the pad, <mean:1@4>: data 1 of pad 4)
     TNamed* data_ptr = rowData;
-    const string withoutFormat = std::regex_replace(matchStr, formatRegex, "");
-    if (std::smatch ref; std::regex_search(withoutFormat, ref, refRegex)) {
+    if (const auto& dataRef = (*match)[3]; dataRef.matched) {
+      const auto& padRef = (*match)[4];
       data_ptr = nullptr;
-      const auto dataID = std::stoul(ref[1].str());
-      const auto padNumber = (ref[2].matched) ? std::stoul(ref[2].str()) : 0ul;
+      const auto dataID = std::stoul(dataRef.str());
+      const auto padNumber = (padRef.matched) ? std::stoul(padRef.str()) : 0ul;
       if (!findData) {
         logger::warning("Placeholder {}: the data can be named in texts only, a legend label shows the data of its row.", matchStr);
       } else if (dataID <= std::numeric_limits<uint16_t>::max() && padNumber <= std::numeric_limits<uint8_t>::max()) {
-        data_ptr = findData(static_cast<uint16_t>(dataID), (ref[2].matched) ? optional<uint8_t>(static_cast<uint8_t>(padNumber)) : nullopt);
+        data_ptr = findData(static_cast<uint16_t>(dataID), (padRef.matched) ? optional<uint8_t>(static_cast<uint8_t>(padNumber)) : nullopt);
       }
-      if (findData && !data_ptr) logger::warning("Placeholder {}: there is no data {} drawn in {}.", matchStr, dataID, (ref[2].matched) ? "pad " + ref[2].str() : "this pad");
+      if (findData && !data_ptr) logger::warning("Placeholder {}: there is no data {} drawn in {}.", matchStr, dataID, (padRef.matched) ? "pad " + padRef.str() : "this pad");
     } else if (!data_ptr) {
       logger::warning("Placeholder {} in a text needs the number of its data, e.g. <mean:1> for data 1 of the pad or <mean:1@2> for data 1 of pad 2.", matchStr);
     }
@@ -8881,34 +8881,18 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
       continue;
     }
 
-    string format{};
-    if (auto formatIt = std::sregex_iterator(matchStr.begin(), matchStr.end(), formatRegex); formatIt != std::sregex_iterator()) {
-      format = formatIt->str();
-      format = format.substr(1, format.size() - 2);
-    }
-    format.erase(remove(format.begin(), format.end(), '%'), format.end());
-    format.erase(remove(format.begin(), format.end(), ' '), format.end());
-    const bool integerFormat = !format.empty() && (format.back() == 'd' || format.back() == 'i');  // e.g. <entries[d]>
-    if (!integerFormat && !(str_contains(format, "e") || str_contains(format, "f") || str_contains(format, "g") || str_contains(format, "E") || str_contains(format, "F") || str_contains(format, "G"))) {
-      format = format + "g";
-    }
-    format = "{:" + format + "}";
-    auto formatValue = [&](double_t value) {
-      // all placeholders are formatted from a double; integer formats need an integer argument
-      return integerFormat ? fmt::format(fmt::runtime(format), std::llround(value)) : fmt::format(fmt::runtime(format), value);
-    };
-
     string replaceStr = matchStr;
-    if (str_contains(matchStr, "name") || str_contains(matchStr, "source") || str_contains(matchStr, "projection") || str_contains(matchStr, "selection")) {
+    optional<double_t> value;  // the number shown by the placeholders of numbers
+    if (word == "name" || word == "source" || word == "projection" || word == "selection") {
       // from the definition of the data (the drawn object is named "<index>:<name>[<request>]:<data source>[<projection>]"):
       // its name, data source, what is filled (variables in the notation of TTree::Draw, "y:x") and which entries or bins
       replaceStr.clear();
       auto definition = mDataDefinitions.find(data_ptr);
       if (definition == mDataDefinitions.end()) {
         // not drawn data: nothing to describe
-      } else if (const auto& data = *definition->second; str_contains(matchStr, "name")) {
+      } else if (const auto& data = *definition->second; word == "name") {
         replaceStr = data.GetName();
-      } else if (str_contains(matchStr, "source")) {
+      } else if (word == "source") {
         if (!is_user_defined(data.GetDataSource())) replaceStr = data.GetDataSource();
       } else {
         const auto& dataInfo = data.GetDataInfo();
@@ -8924,7 +8908,7 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
           if (titles != mProjectionAxisTitles.end() && axis < titles->second.size() && !titles->second[axis].empty()) return titles->second[axis];
           return (axis < 3) ? string(1, static_cast<char>('x' + axis)) : "axis " + std::to_string(axis);
         };
-        if (str_contains(matchStr, "projection")) {
+        if (word == "projection") {
           if (projInfo && !projInfo->dims.empty()) {
             if (projInfo->isProfile && *projInfo->isProfile) replaceStr = "prof. ";
             for (auto axis = projInfo->dims.rbegin(); axis != projInfo->dims.rend(); ++axis) {
@@ -8940,20 +8924,13 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
           }
           if (dataInfo.weight && !replaceStr.empty()) replaceStr += " (" + *dataInfo.weight + ")";
         } else {
-          auto join = [](const vector<string>& items, const string& separator) {
-            string joined;
-            for (const auto& item : items) {
-              joined += ((joined.empty()) ? "" : separator) + item;
-            }
-            return joined;
-          };
           vector<string> parts;
           if (dataInfo.filters) {
             for (const auto& filter : *dataInfo.filters) {
               parts.push_back((dataInfo.filters->size() > 1 && str_contains(filter, "||")) ? "(" + filter + ")" : filter);
             }
           }
-          if (!parts.empty()) parts = {join(parts, " && ")};
+          if (!parts.empty()) parts = {join_strings(parts, " && ")};
           if (dataInfo.entries.max) parts.push_back(fmt::format("entries [{}, {})", dataInfo.entries.min.value_or(0), *dataInfo.entries.max));
           if (projInfo) {
             for (const auto& [axis, low, high] : projInfo->ranges) {
@@ -8965,98 +8942,96 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
               }
             }
           }
-          replaceStr = join(parts, ", ");
+          replaceStr = join_strings(parts, ", ");
         }
       }
-    } else if (str_contains(matchStr, "title")) {
+    } else if (word == "title") {
       replaceStr = data_ptr->GetTitle();
-    } else if (data_ptr->InheritsFrom(TH1::Class())) {
-      try {
-        if (str_contains(matchStr, "entries")) {
-          replaceStr = formatValue(static_cast<TH1*>(data_ptr)->GetEntries());
-        } else if (str_contains(matchStr, "integral")) {
-          replaceStr = formatValue(static_cast<TH1*>(data_ptr)->Integral());
-        } else if (auto* poly = dynamic_cast<TH2Poly*>(data_ptr); poly && (str_contains(matchStr, "mean") || str_contains(matchStr, "stddev"))) {
-          // from the polygons at their centres: ROOT's statistics of a TH2Poly read the cells of its TH2 grid, which hold nothing
-          double_t sumW{}, sumWX{}, sumWX2{};
-          for (int32_t bin = 1; bin <= poly->GetNumberOfBins(); ++bin) {
-            auto* polyBin = static_cast<TH2PolyBin*>(poly->GetBins()->At(bin - 1));
-            const double_t x = 0.5 * (polyBin->GetXMin() + polyBin->GetXMax());
-            const double_t w = polyBin->GetContent();
-            sumW += w;
-            sumWX += w * x;
-            sumWX2 += w * x * x;
-          }
-          const double_t mean = (sumW != 0.) ? sumWX / sumW : 0.;
-          replaceStr = formatValue(str_contains(matchStr, "mean") ? mean : ((sumW != 0.) ? std::sqrt(std::max(sumWX2 / sumW - mean * mean, 0.)) : 0.));
-        } else if (str_contains(matchStr, "mean")) {
-          replaceStr = formatValue(static_cast<TH1*>(data_ptr)->GetMean());
-        } else if (str_contains(matchStr, "stddev")) {
-          replaceStr = formatValue(static_cast<TH1*>(data_ptr)->GetStdDev());
-        } else if (str_contains(matchStr, "maximum") || str_contains(matchStr, "minimum")) {
-          // from the bins: GetMaximum()/GetMinimum() would return the frame limits stored on the drawn histogram
-          auto* hist = static_cast<TH1*>(data_ptr);
-          const bool isMax = str_contains(matchStr, "maximum");
-          if (auto* poly = dynamic_cast<TH2Poly*>(hist)) {
-            // the polygons, not the cells of the TH2 grid (GetMaximumBin)
-            double_t extreme = (isMax) ? -std::numeric_limits<double_t>::infinity() : std::numeric_limits<double_t>::infinity();
-            for (int32_t bin = 1; bin <= poly->GetNumberOfBins(); ++bin) {
-              extreme = (isMax) ? std::max(extreme, poly->GetBinContent(bin)) : std::min(extreme, poly->GetBinContent(bin));
-            }
-            replaceStr = formatValue(std::isfinite(extreme) ? extreme : 0.);
-          } else {
-            replaceStr = formatValue(hist->GetBinContent((isMax) ? hist->GetMaximumBin() : hist->GetMinimumBin()));
-          }
+    } else if (auto* hist = dynamic_cast<TH1*>(data_ptr)) {
+      const bool isMax = word == "maximum";
+      if (word == "entries") {
+        value = hist->GetEntries();
+      } else if (word == "integral") {
+        value = hist->Integral();
+      } else if (auto* poly = dynamic_cast<TH2Poly*>(hist); poly && (word == "mean" || word == "stddev")) {
+        // from the polygons at their centres: ROOT's statistics of a TH2Poly read the cells of its TH2 grid, which hold nothing
+        double_t sumW{}, sumWX{}, sumWX2{};
+        for (int32_t bin = 1; bin <= poly->GetNumberOfBins(); ++bin) {
+          auto* polyBin = static_cast<TH2PolyBin*>(poly->GetBins()->At(bin - 1));
+          const double_t x = 0.5 * (polyBin->GetXMin() + polyBin->GetXMax());
+          const double_t w = polyBin->GetContent();
+          sumW += w;
+          sumWX += w * x;
+          sumWX2 += w * x * x;
         }
-      } catch (const fmt::format_error& e) {
-        logger::error("Incompatible format string in {}: {}.", matchStr, e.what());
-        replaceStr = matchStr;
-      }
-    } else if (auto* graph = dynamic_cast<TGraph*>(data_ptr); graph && (str_contains(matchStr, "entries") || (graph->GetN() > 0 && !str_contains(matchStr, "integral") && !str_contains(matchStr, "mean") && !str_contains(matchStr, "stddev")))) {
-      // for graphs only the unambiguous ones: number of points and smallest / largest y value
-      try {
-        if (str_contains(matchStr, "entries")) {
-          replaceStr = formatValue(static_cast<double_t>(graph->GetN()));  // as double like the histogram entries, so the same formats apply
-        } else if (str_contains(matchStr, "maximum") || str_contains(matchStr, "minimum")) {
-          // the points inside the frame (outside of it they are not drawn)
-          const bool isMax = str_contains(matchStr, "maximum");
-          const auto range = mGraphFrameRangeX.find(graph);
-          double_t extreme = (isMax) ? -std::numeric_limits<double_t>::infinity() : std::numeric_limits<double_t>::infinity();
-          for (int32_t i = 0; i < graph->GetN(); ++i) {
-            const double_t x = graph->GetX()[i];
-            if (range != mGraphFrameRangeX.end() && (x < range->second.first || x > range->second.second)) continue;
-            extreme = (isMax) ? std::max(extreme, graph->GetY()[i]) : std::min(extreme, graph->GetY()[i]);
-          }
-          replaceStr = formatValue(std::isfinite(extreme) ? extreme : 0.);
+        const double_t mean = (sumW != 0.) ? sumWX / sumW : 0.;
+        value = (word == "mean") ? mean : ((sumW != 0.) ? std::sqrt(std::max(sumWX2 / sumW - mean * mean, 0.)) : 0.);
+      } else if (word == "mean") {
+        value = hist->GetMean();
+      } else if (word == "stddev") {
+        value = hist->GetStdDev();
+      } else if (poly) {
+        // maximum and minimum from the polygons, not the cells of the TH2 grid (GetMaximumBin)
+        double_t extreme = (isMax) ? -std::numeric_limits<double_t>::infinity() : std::numeric_limits<double_t>::infinity();
+        for (int32_t bin = 1; bin <= poly->GetNumberOfBins(); ++bin) {
+          extreme = (isMax) ? std::max(extreme, poly->GetBinContent(bin)) : std::min(extreme, poly->GetBinContent(bin));
         }
-      } catch (const fmt::format_error& e) {
-        logger::error("Incompatible format string in {}: {}.", matchStr, e.what());
-        replaceStr = matchStr;
+        value = std::isfinite(extreme) ? extreme : 0.;
+      } else {
+        // from the bins: GetMaximum()/GetMinimum() would return the frame limits stored on the drawn histogram
+        value = hist->GetBinContent((isMax) ? hist->GetMaximumBin() : hist->GetMinimumBin());
       }
-    } else if (auto* graph2d = dynamic_cast<TGraph2D*>(data_ptr); graph2d && (str_contains(matchStr, "entries") || (graph2d->GetN() > 0 && (str_contains(matchStr, "maximum") || str_contains(matchStr, "minimum"))))) {
+    } else if (auto* graph = dynamic_cast<TGraph*>(data_ptr); graph && (word == "entries" || (graph->GetN() > 0 && (word == "maximum" || word == "minimum")))) {
+      // for graphs only the unambiguous ones: number of points and smallest / largest y value of the points inside the frame (outside of
+      // it they are not drawn)
+      if (word == "entries") {
+        value = graph->GetN();
+      } else {
+        const bool isMax = word == "maximum";
+        const auto range = mGraphFrameRangeX.find(graph);
+        double_t extreme = (isMax) ? -std::numeric_limits<double_t>::infinity() : std::numeric_limits<double_t>::infinity();
+        for (int32_t i = 0; i < graph->GetN(); ++i) {
+          const double_t x = graph->GetX()[i];
+          if (range != mGraphFrameRangeX.end() && (x < range->second.first || x > range->second.second)) continue;
+          extreme = (isMax) ? std::max(extreme, graph->GetY()[i]) : std::min(extreme, graph->GetY()[i]);
+        }
+        value = std::isfinite(extreme) ? extreme : 0.;
+      }
+    } else if (auto* graph2d = dynamic_cast<TGraph2D*>(data_ptr); graph2d && (word == "entries" || (graph2d->GetN() > 0 && (word == "maximum" || word == "minimum")))) {
       // as for graphs: the number of points and the smallest / largest z of the points inside the frame
-      try {
-        if (str_contains(matchStr, "entries")) {
-          replaceStr = formatValue(static_cast<double_t>(graph2d->GetN()));
-        } else {
-          const bool isMax = str_contains(matchStr, "maximum");
-          const auto range = mGraph2DFrameRange.find(graph2d);
-          double_t extreme = (isMax) ? -std::numeric_limits<double_t>::infinity() : std::numeric_limits<double_t>::infinity();
-          for (int32_t i = 0; i < graph2d->GetN(); ++i) {
-            const double_t x = graph2d->GetX()[i];
-            const double_t y = graph2d->GetY()[i];
-            if (range != mGraph2DFrameRange.end() && (x < range->second[0] || x > range->second[1] || y < range->second[2] || y > range->second[3])) continue;
-            extreme = (isMax) ? std::max(extreme, graph2d->GetZ()[i]) : std::min(extreme, graph2d->GetZ()[i]);
-          }
-          replaceStr = formatValue(std::isfinite(extreme) ? extreme : 0.);
+      if (word == "entries") {
+        value = graph2d->GetN();
+      } else {
+        const bool isMax = word == "maximum";
+        const auto range = mGraph2DFrameRange.find(graph2d);
+        double_t extreme = (isMax) ? -std::numeric_limits<double_t>::infinity() : std::numeric_limits<double_t>::infinity();
+        for (int32_t i = 0; i < graph2d->GetN(); ++i) {
+          const double_t x = graph2d->GetX()[i];
+          const double_t y = graph2d->GetY()[i];
+          if (range != mGraph2DFrameRange.end() && (x < range->second[0] || x > range->second[1] || y < range->second[2] || y > range->second[3])) continue;
+          extreme = (isMax) ? std::max(extreme, graph2d->GetZ()[i]) : std::min(extreme, graph2d->GetZ()[i]);
         }
-      } catch (const fmt::format_error& e) {
-        logger::error("Incompatible format string in {}: {}.", matchStr, e.what());
-        replaceStr = matchStr;
+        value = std::isfinite(extreme) ? extreme : 0.;
       }
     } else {
       const string name = data_ptr->GetName();
       logger::warning("Placeholder {} is not available for {} {}.", matchStr, data_ptr->ClassName(), name.substr(name.find(':') + 1));  // without the "<index>:" prefix
+    }
+
+    if (value) {
+      // the format in brackets as in printf or fmt (<mean[.2f]>, <entries[d]>), without '%' and spaces; general ('g') by default
+      string format = ((*match)[2].matched) ? (*match)[2].str() : (*match)[5].str();
+      format.erase(remove(format.begin(), format.end(), '%'), format.end());
+      format.erase(remove(format.begin(), format.end(), ' '), format.end());
+      const bool integerFormat = !format.empty() && (format.back() == 'd' || format.back() == 'i');
+      if (!integerFormat && format.find_first_of("eEfFgG") == string::npos) format += "g";
+      format = "{:" + format + "}";
+      try {
+        // all values are doubles; integer formats need an integer argument
+        replaceStr = (integerFormat) ? fmt::format(fmt::runtime(format), std::llround(*value)) : fmt::format(fmt::runtime(format), *value);
+      } catch (const fmt::format_error& e) {
+        logger::error("Incompatible format string in {}: {}.", matchStr, e.what());
+      }
     }
 
     result += replaceStr;
