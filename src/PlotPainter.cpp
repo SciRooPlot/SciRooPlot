@@ -255,7 +255,7 @@ TGraph* PlotPainter::ToGraph(const TH1* hist)
 /**
  * Graph of a 1d histogram for the clipped aliases (only the bins in the range of its x axis):
  * the steps (two points per bin, at its edges) for hist_clipped and hist_open_clipped, for hist_clipped also the vertical lines at the outer edges,
- * which go down out of the frame (see ClippedBase) until the frame is final (then to ROOT's base line, see GeneratePlot); the bin centres for
+ * which go down out of the frame (see ClippedBase) until the frame is final (then to ROOT's base line, see FinishPad); the bin centres for
  * curve_clipped. ROOT cuts the lines of the graph at the frame.
  */
 //**************************************************************************************************
@@ -472,7 +472,7 @@ struct PlotPainter::item_state_t {
 
 //**************************************************************************************************
 /**
- * Function to generate the plot.
+ * The canvas of a plot: its pads with their data, frames, boxes and shapes, the data taken from the inputs in dataBuffer.
  */
 //**************************************************************************************************
 unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& dataBuffer)
@@ -5182,7 +5182,8 @@ TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<dou
 
 //**************************************************************************************************
 /**
- * Function to warn user if incompatible text font and size were used.
+ * Warns about the first text (also of a legend, or an axis of a frame) whose size does not fit its font: a relative size of 1 or more
+ * for a font of precision 0 to 2, a pixel size of at most 1 for precision 3.
  */
 //**************************************************************************************************
 void PlotPainter::CheckFontSizes(TList* list)
@@ -5226,6 +5227,7 @@ void PlotPainter::CheckFontSizes(TList* list)
  * Whether data has errors as ROOT draws them by default: a histogram with stored errors of which at least one is not zero
  * (a profile always computes them), a graph with a y error that is not zero. With countErrors, also a histogram without stored
  * errors whose contents give it errors (the square roots of the contents, which ROOT draws only when asked to).
+ * Histograms are 1d (the bins 1 to NbinsX are looked at).
  */
 //**************************************************************************************************
 bool PlotPainter::HasErrors(const TObject* obj, bool countErrors)
@@ -5709,7 +5711,7 @@ bool PlotPainter::DrawBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<P
 
 //**************************************************************************************************
 /**
- * Function to generate a legend or text box.
+ * The legend or text box with its rows or lines, styled and at its place in the pad (in the given coordinates).
  */
 //**************************************************************************************************
 TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> boxVariant, coordinates_t coordinates, TPad* pad)
@@ -8086,7 +8088,7 @@ TF3* PlotPainter::ScaleFunc(TF3* func, double_t domainFactorX, double_t domainFa
 
 //**************************************************************************************************
 /**
- * Returns actual dimensions in pixel of the text with latex formatting.
+ * Width and height in pixels of a text as painted in the pad (with its latex).
  */
 //**************************************************************************************************
 tuple<uint32_t, uint32_t> PlotPainter::GetTextDimensions(TLatex& text, TPad* pad)
@@ -8549,7 +8551,7 @@ optional<data_ptr_t> PlotPainter::DenominatorClone(const Plot::Pad::Ratio& ratio
 //**************************************************************************************************
 /**
  * Whether the colour axis of a pad is the contents of a 3d histogram (C), not its z axis: its frame is a 3d histogram (or profile),
- * not projected. Known before the pad is painted, for the z groups (see PlotManager::GeneratePlot); GetContentScales gives the pads
+ * not projected. Known before the pad is painted, for the z groups (see PlotManager::ApplySharedAxes); GetContentScales gives the pads
  * as painted.
  */
 //**************************************************************************************************
@@ -9186,7 +9188,7 @@ vector<tuple<double_t, double_t, double_t>> PlotPainter::GradientRGB(int32_t nCo
 
 //**************************************************************************************************
 /**
- * Helper to generate nColors between specified rgb endpoints.
+ * nColors colours spread evenly over a gradient between rgb endpoints, with the given alpha.
  */
 //**************************************************************************************************
 vector<int16_t> PlotPainter::GenerateGradientColors(int32_t nColors, const vector<tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, float_t alpha)

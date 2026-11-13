@@ -261,7 +261,7 @@ inline const std::map<draw_option_t, std::string> defaultDrawOptions_Func3d{
 
 //**************************************************************************************************
 /**
- * Class that contains functionality to generate plots using the ROOT framework.
+ * Paints plots with ROOT: a canvas per plot, from its definition and the inputs read for it.
  */
 //**************************************************************************************************
 class PlotPainter
