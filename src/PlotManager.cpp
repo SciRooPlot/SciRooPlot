@@ -481,6 +481,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
   // Lists and directories become folders of the data source (a list without a name, for which ROOT reports its class name,
   // and a file are added item by item), so their items are addressed by path and stored like objects given directly.
   // Folders of the same name are merged; an object replaces one of the same name in its folder.
+  set<const TObject*> listsOnPath;  // the lists being added (one inside the other), so a list holding itself is added once
   std::function<void(TObject*, TDirectory*, const string&)> add = [&](TObject* object, TDirectory* target, const string& folder) {
     const string name = object->GetName();
     if (name.empty()) {
@@ -489,6 +490,10 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     }
     auto* list = (object->InheritsFrom(TMap::Class())) ? nullptr : dynamic_cast<TCollection*>(object);
     auto* directory = dynamic_cast<TDirectory*>(object);
+    if (list && listsOnPath.count(list)) {
+      logger::warning("Data source {}: the list {}{} contains itself, the repeated one is left out.", dataSource, folder, name);
+      return;
+    }
     if (list || directory) {
       TDirectory* subDir = target;
       string subFolder = folder;
@@ -507,9 +512,11 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
         subFolder += name + "/";
       }
       if (list) {
+        listsOnPath.insert(list);
         for (TObject* item : *list) {
           if (item) add(item, subDir, subFolder);
         }
+        listsOnPath.erase(list);
         return;
       }
       // a directory: the objects in memory (possibly newer than what is written), then the latest cycle of each key
@@ -3340,6 +3347,12 @@ void PlotManager::ReadData(TObject* folder, set<string>& dataNames, const string
       }
     }
   } else if (is_container(folder->IsA())) {
+    // a container holding itself (directly or through another one) would be searched forever: the repeated one is left out
+    if (!mContainersOnPath.insert(folder).second) {
+      logger::warning("{} (data source {}) contains itself: the repeated one is not searched.", folder->GetName(), dataSource);
+      return;
+    }
+    auto onPathGuard = make_scope_guard([this, folder]() { mContainersOnPath.erase(folder); });
     for (bool traverse : {false, true}) {
       for_each_item(folder, [&](const string& name, TObject* obj) {
         if (traverse && is_container(obj->IsA())) {
