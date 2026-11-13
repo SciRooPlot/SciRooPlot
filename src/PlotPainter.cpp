@@ -5583,9 +5583,7 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
     // line: black, the default line width of the pad; fill: regions light grey and translucent, arrow heads in the line colour, ellipses open
     auto* line = dynamic_cast<TAttLine*>(object);
     auto* fill = dynamic_cast<TAttFill*>(object);
-    const color_t lineColor = shape->GetLineColor().value_or(color_t(kBlack));
-    line->SetLineColor(lineColor.ToIndex());
-    if (shape->GetLineAlpha()) line->SetLineColor(TColor::GetColorTransparent(line->GetLineColor(), *shape->GetLineAlpha()));
+    line->SetLineColor(ColorWithAlpha(kBlack, shape->GetLineColor(), shape->GetLineAlpha()));
     line->SetLineStyle(shape->GetLineStyle().value_or(kSolid));
     if (auto width = get_first(shape->GetLineWidth(), pad.GetDefaultLineWidth(), padDefaults.GetDefaultLineWidth())) line->SetLineWidth(static_cast<Width_t>(*width));
     if (fill) {
@@ -5905,8 +5903,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       legend->SetColumnSeparation(static_cast<float_t>(relColumnSeparation));
       legend->SetTextFont(textFont);
       legend->SetTextSize(textSize);
-      if (text.color) legend->SetTextColor(text.color->ToIndex());
-      if (text.alpha) legend->SetTextColor(TColor::GetColorTransparent(legend->GetTextColor(), *text.alpha));
+      legend->SetTextColor(ColorWithAlpha(legend->GetTextColor(), text.color, text.alpha));
 
       if (title) {
         string center = (nColumns > 1) ? "c" : "";
@@ -6009,36 +6006,23 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         curEntry->SetFillColor(fillAttr.GetFillColor());
         curEntry->SetFillStyle(fillAttr.GetFillStyle());
 
-        if (box->GetDefaultMarkerColor()) curEntry->SetMarkerColor(box->GetDefaultMarkerColor()->ToIndex());
-        if (box->GetDefaultMarkerAlpha()) curEntry->SetMarkerColor(TColor::GetColorTransparent(curEntry->GetMarkerColor(), *box->GetDefaultMarkerAlpha()));
-        if (box->GetDefaultMarkerStyle()) curEntry->SetMarkerStyle(*box->GetDefaultMarkerStyle());
-        if (box->GetDefaultMarkerSize()) curEntry->SetMarkerSize(*box->GetDefaultMarkerSize());
-
-        if (box->GetDefaultLineColor()) curEntry->SetLineColor(box->GetDefaultLineColor()->ToIndex());
-        if (box->GetDefaultLineAlpha()) curEntry->SetLineColor(TColor::GetColorTransparent(curEntry->GetLineColor(), *box->GetDefaultLineAlpha()));
-        if (box->GetDefaultLineStyle()) curEntry->SetLineStyle(*box->GetDefaultLineStyle());
-        if (box->GetDefaultLineWidth()) curEntry->SetLineWidth(*box->GetDefaultLineWidth());
-
-        if (box->GetDefaultFillColor()) curEntry->SetFillColor(box->GetDefaultFillColor()->ToIndex());
-        if (box->GetDefaultFillAlpha()) curEntry->SetFillColor(TColor::GetColorTransparent(curEntry->GetFillColor(), *box->GetDefaultFillAlpha()));
-        if (box->GetDefaultFillStyle()) curEntry->SetFillStyle(*box->GetDefaultFillStyle());
-
-        if (entry.GetMarkerColor()) curEntry->SetMarkerColor(entry.GetMarkerColor()->ToIndex());
-        if (entry.GetMarkerAlpha()) curEntry->SetMarkerColor(TColor::GetColorTransparent(curEntry->GetMarkerColor(), *entry.GetMarkerAlpha()));
-        if (entry.GetMarkerStyle()) curEntry->SetMarkerStyle(*entry.GetMarkerStyle());
-        if (entry.GetMarkerSize()) curEntry->SetMarkerSize(*entry.GetMarkerSize());
-
-        if (entry.GetLineColor()) curEntry->SetLineColor(entry.GetLineColor()->ToIndex());
-        if (entry.GetLineAlpha()) curEntry->SetLineColor(TColor::GetColorTransparent(curEntry->GetLineColor(), *entry.GetLineAlpha()));
-        if (entry.GetLineStyle()) curEntry->SetLineStyle(*entry.GetLineStyle());
-        if (entry.GetLineWidth()) curEntry->SetLineWidth(*entry.GetLineWidth());
-
-        if (entry.GetFillColor()) curEntry->SetFillColor(entry.GetFillColor()->ToIndex());
-        if (entry.GetFillAlpha()) curEntry->SetFillColor(TColor::GetColorTransparent(curEntry->GetFillColor(), *entry.GetFillAlpha()));
-        if (entry.GetFillStyle()) curEntry->SetFillStyle(*entry.GetFillStyle());
-
-        if (entry.GetTextColor()) curEntry->SetTextColor(entry.GetTextColor()->ToIndex());
-        if (entry.GetTextAlpha()) curEntry->SetTextColor(TColor::GetColorTransparent(curEntry->GetTextColor(), *entry.GetTextAlpha()));
+        auto applyLayout = [curEntry](const layout_t& marker, const layout_t& line, const layout_t& fill) {
+          curEntry->SetMarkerColor(ColorWithAlpha(curEntry->GetMarkerColor(), marker.color, marker.alpha));
+          if (marker.style) curEntry->SetMarkerStyle(*marker.style);
+          if (marker.scale) curEntry->SetMarkerSize(*marker.scale);
+          curEntry->SetLineColor(ColorWithAlpha(curEntry->GetLineColor(), line.color, line.alpha));
+          if (line.style) curEntry->SetLineStyle(*line.style);
+          if (line.scale) curEntry->SetLineWidth(*line.scale);
+          curEntry->SetFillColor(ColorWithAlpha(curEntry->GetFillColor(), fill.color, fill.alpha));
+          if (fill.style) curEntry->SetFillStyle(*fill.style);
+        };
+        applyLayout({box->GetDefaultMarkerColor(), box->GetDefaultMarkerAlpha(), box->GetDefaultMarkerStyle(), box->GetDefaultMarkerSize()},
+                    {box->GetDefaultLineColor(), box->GetDefaultLineAlpha(), box->GetDefaultLineStyle(), box->GetDefaultLineWidth()},
+                    {box->GetDefaultFillColor(), box->GetDefaultFillAlpha(), box->GetDefaultFillStyle(), {}});
+        applyLayout({entry.GetMarkerColor(), entry.GetMarkerAlpha(), entry.GetMarkerStyle(), entry.GetMarkerSize()},
+                    {entry.GetLineColor(), entry.GetLineAlpha(), entry.GetLineStyle(), entry.GetLineWidth()},
+                    {entry.GetFillColor(), entry.GetFillAlpha(), entry.GetFillStyle(), {}});
+        curEntry->SetTextColor(ColorWithAlpha(curEntry->GetTextColor(), entry.GetTextColor(), entry.GetTextAlpha()));
         if (entry.GetTextFont() || entry.GetTextSize()) {
           const auto [font, size] = entryText(entry);
           curEntry->SetTextFont(font);
@@ -6053,8 +6037,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       paveText->SetBorderSize(1);
       paveText->SetTextFont(textFont);
       paveText->SetTextSize(textSize);
-      if (text.color) paveText->SetTextColor(text.color->ToIndex());
-      if (text.alpha) paveText->SetTextColor(TColor::GetColorTransparent(paveText->GetTextColor(), *text.alpha));
+      paveText->SetTextColor(ColorWithAlpha(paveText->GetTextColor(), text.color, text.alpha));
 
       for (const auto& line : lines) {
         TText* added = paveText->AddText(line.data());
@@ -6221,6 +6204,17 @@ bool PlotPainter::BeyondPad(double_t upperLeftX, double_t upperLeftY, double_t w
 
 //**************************************************************************************************
 /**
+ * A colour index with the colour (else current) and the transparency that are set.
+ */
+//**************************************************************************************************
+Color_t PlotPainter::ColorWithAlpha(Color_t current, const optional<color_t>& color, const optional<float_t>& alpha)
+{
+  const Color_t index = (color) ? color->ToIndex() : current;
+  return (alpha) ? TColor::GetColorTransparent(index, *alpha) : index;
+}
+
+//**************************************************************************************************
+/**
  * Applies the border and fill set for a box (the ones not set keep the values the box has).
  */
 //**************************************************************************************************
@@ -6228,12 +6222,10 @@ template <typename BoxType>
 void PlotPainter::ApplyBoxStyle(const BoxType& box, TPave* pave)
 {
   if (box.GetBorderStyle()) pave->SetLineStyle(*box.GetBorderStyle());
-  if (box.GetBorderColor()) pave->SetLineColor(box.GetBorderColor()->ToIndex());
-  if (box.GetBorderAlpha()) pave->SetLineColor(TColor::GetColorTransparent(pave->GetLineColor(), *box.GetBorderAlpha()));
+  pave->SetLineColor(ColorWithAlpha(pave->GetLineColor(), box.GetBorderColor(), box.GetBorderAlpha()));
   if (box.GetBorderWidth()) pave->SetLineWidth(*box.GetBorderWidth());
   if (box.GetFillStyle()) pave->SetFillStyle(*box.GetFillStyle());
-  if (box.GetFillColor()) pave->SetFillColor(box.GetFillColor()->ToIndex());
-  if (box.GetFillAlpha()) pave->SetFillColor(TColor::GetColorTransparent(pave->GetFillColor(), *box.GetFillAlpha()));
+  pave->SetFillColor(ColorWithAlpha(pave->GetFillColor(), box.GetFillColor(), box.GetFillAlpha()));
 }
 
 //**************************************************************************************************

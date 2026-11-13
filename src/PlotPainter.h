@@ -420,6 +420,7 @@ class PlotPainter
   static bool BeyondPad(double_t upperLeftX, double_t upperLeftY, double_t widthNDC, double_t heightNDC);
   template <typename BoxType>
   static void ApplyBoxStyle(const BoxType& box, TPave* pave);
+  static Color_t ColorWithAlpha(Color_t current, const std::optional<color_t>& color, const std::optional<float_t>& alpha);
   static std::string HistCommand(const std::string& histName, const std::string& commands);
   static std::string CppQuoted(const std::string& text);
   template <typename From, typename To>
