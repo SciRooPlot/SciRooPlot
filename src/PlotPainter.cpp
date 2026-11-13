@@ -5680,6 +5680,12 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     const float_t textSize = text.size.value_or(24.f);
     const int16_t textFont = text.font.value_or(43);
+    // the title of a legend without the empty groups ROOT's TMathText crashes on
+    optional<string> title;
+    if constexpr (isLegend) {
+      title = box->GetTitle();
+      if (title) DropEmptyGroups(*title);
+    }
 
     // the drawn data a legend row refers to (named "<number of the data in the pad>:<name>" when drawn), in this pad or in another one
     // (with the option it is drawn with, which TObject::GetDrawOption finds only in the current pad)
@@ -5819,8 +5825,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       auto [w, h] = GetTextDimensions(markerDummy, pad);
       symbolColWidthPixel = box->GetSymbolColScale().value_or(1.) * w;
 
-      if (auto title = box->GetTitle()) {
-        DropEmptyGroups(*title);
+      if (title) {
         TLatex textLine(0, 0, (*title).data());
         textLine.SetTextFont(textFont);
         textLine.SetTextSize(textSize);
@@ -5915,8 +5920,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       if (text.color) legend->SetTextColor(text.color->ToIndex());
       if (text.alpha) legend->SetTextColor(TColor::GetColorTransparent(legend->GetTextColor(), *text.alpha));
 
-      if (auto title = box->GetTitle()) {
-        DropEmptyGroups(*title);
+      if (title) {
         string center = (nColumns > 1) ? "c" : "";
         legend->SetHeader((*title).data(), center.data());
       }
