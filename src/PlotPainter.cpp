@@ -8841,11 +8841,24 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
 {
   // <word>, with a format in brackets (which may contain '>', e.g. [>8.2f]) and a reference :data@pad, in either order:
   // groups 1 word, 2 format before the reference, 3 data, 4 pad, 5 format after the reference
-  static const std::regex placeholderRegex("<(name|title|source|projection|selection|entries|integral|mean|stddev|maximum|minimum)(?:\\[([^\\]]*)\\])?(?::(\\d{1,9})(?:@(\\d{1,9}))?)?(?:\\[([^\\]]*)\\])?>");
-  // what looks like a placeholder with a reference but is none, e.g. a typo as <meen:1> (a word with brackets alone, e.g. <x[cm]>, may be text)
-  static const std::regex lookalikeRegex("<[A-Za-z]+(?:\\[[^\\]]*\\])?:\\d+(?:@\\d+)?(?:\\[[^\\]]*\\])?>");
-  for (auto it = std::sregex_iterator(str.begin(), str.end(), lookalikeRegex); it != std::sregex_iterator(); ++it) {
-    if (!std::regex_match(it->str(), placeholderRegex)) logger::warning("Placeholder {} is not valid: known are <name>, <title>, <source>, <projection>, <selection>, <entries>, <integral>, <mean>, <stddev>, <maximum>, <minimum>.", it->str());
+  static const string words = "name|title|source|projection|selection|entries|integral|mean|stddev|maximum|minimum";
+  static const std::regex wordRegex(words);
+  static const std::regex placeholderRegex("<(" + words + ")(?:\\[([^\\]]*)\\])?(?::(\\d{1,9})(?:@(\\d{1,9}))?)?(?:\\[([^\\]]*)\\])?>");
+  // what may be meant as a placeholder but is none: a known word with a malformed reference or format (<mean:1@>, <mean: 1>), or an
+  // unknown word with a reference, e.g. a typo as <meen:1> (an unknown word with brackets alone, e.g. <x[cm]>, may be text)
+  static const std::regex candidateRegex("<([A-Za-z]+)((?:\\[[^\\]]*\\]|[^<>\\[])*)>");
+  static const std::regex referenceRegex("(?:\\[[^\\]]*\\])?:\\d+(?:@\\d+)?(?:\\[[^\\]]*\\])?");
+  for (auto it = std::sregex_iterator(str.begin(), str.end(), candidateRegex); it != std::sregex_iterator(); ++it) {
+    if (std::regex_match(it->str(), placeholderRegex)) continue;
+    const string word = (*it)[1].str();
+    const string suffix = (*it)[2].str();
+    if (std::regex_match(word, wordRegex)) {
+      if (!suffix.empty() && (suffix[0] == ':' || suffix[0] == '@' || suffix[0] == '[')) {
+        logger::warning("Placeholder {} is not valid: the data is named as <{}:1> or <{}:1@2> (data 1 of pad 2), a format in brackets as <{}[.2f]>.", it->str(), word, word, word);
+      }
+    } else if (std::regex_match(suffix, referenceRegex)) {
+      logger::warning("Placeholder {} is not valid: known are <name>, <title>, <source>, <projection>, <selection>, <entries>, <integral>, <mean>, <stddev>, <maximum>, <minimum>.", it->str());
+    }
   }
 
   string result;

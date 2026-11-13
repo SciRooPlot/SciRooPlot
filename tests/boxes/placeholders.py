@@ -7,8 +7,8 @@
   source, what is filled in the notation of TTree::Draw, which entries or bins with the axis titles of the input); <title> the title of the
   drawn object; an empty one takes one separating space with it
 - in a legend label the data of its row, in a text the data named by number (<mean:2>, <mean:1@2> for data 1 of pad 2), the format in
-  brackets ([.2f], [>8.2f], [d]); a placeholder without number in a text, a number without data and a word that is no placeholder are
-  left as they are, with a warning
+  brackets ([.2f], [>8.2f], [d]); a placeholder without number in a text, a number without data, a malformed number or format and a word
+  that is no placeholder are left as they are, with a warning (a known word followed by other text, <mean value>, is text)
 Cases: every data kind × every numeric placeholder × legend label or text × the frame at the data or an x range inside it, and named
 definitions for the descriptive ones.
 Reference: the drawn objects read back (bins with their centre inside the frame, the points inside it) and the documented descriptions.
@@ -120,7 +120,8 @@ plot = S.Plot("text_numbers", "texts", "1d_ratio")
 plot[1].AddData("h", "s")
 plot[1].AddData("g", "s")
 plot[2].AddData("h", "s").Scale(2.0)
-plot[1].AddText(0.2, 0.8, ["<entries[d]:2> <maximum[.1f]:2> <integral[.1f]:1@2>", "<mean> <mean:5> <mean:1@7> <meen:1> <mean:123456> plain #mu < 3"])
+MALFORMED = ("<mean:1@>", "<mean::1>", "<mean: 1>", "<mean:-1>", "<mean:1e3>", "<mean:1@p2>", "<mean:1234567890>", "<mean[.2f]x>")
+plot[1].AddText(0.2, 0.8, ["<entries[d]:2> <maximum[.1f]:2> <integral[.1f]:1@2>", "<mean> <mean:5> <mean:1@7> <meen:1> <mean:123456> plain #mu < 3", " ".join(MALFORMED[:4]), " ".join(MALFORMED[4:]) + " <mean value>"])
 p.pm.AddPlot(plot)
 plot = S.Plot("legend_number", "texts", "1d")
 plot[1].AddData("h", "s", "<mean:1>")
@@ -236,10 +237,13 @@ found = labels("text_numbers", "texts")
 h = [o for o in run.objects("text_numbers", "texts", 2) if o.InheritsFrom("TH1")]
 first = f"3 6.0 {h[0].Integral():.1f}" if h else None
 check("a text names data of its pad and of another pad drawn after it by number", found[:1] == [first], f"{found[:1]} instead of {first}")
-check("what cannot be replaced is left as it is", found[1:] == ["<mean> <mean:5> <mean:1@7> <meen:1> <mean:123456> plain #mu < 3"], f"{found[1:]}")
+check("what cannot be replaced is left as it is", found[1:] == ["<mean> <mean:5> <mean:1@7> <meen:1> <mean:123456> plain #mu < 3", " ".join(MALFORMED[:4]), " ".join(MALFORMED[4:]) + " <mean value>"], f"{found[1:]}")
 messages = run.messages("text_numbers", "texts")
 for text in ("<mean> in a text needs the number", "<mean:5>: there is no data 5 drawn in this pad", "<mean:1@7>: there is no data 1 drawn in pad 7", "Placeholder <meen:1> is not valid", "<mean:123456>: there is no data 123456"):
     check(f"a warning: {text}", sum(text in line for line in messages) == 1, " | ".join(messages))
+for text in MALFORMED:
+    check(f"a warning: {text} is not valid", sum(f"Placeholder {text} is not valid: the data is named as" in line for line in messages) == 1, " | ".join(messages))
+check("a known word followed by other text is text", not any("<mean value>" in line for line in messages), " | ".join(messages))
 check("a number in a legend label is left as it is, with a warning", labels("legend_number", "texts") == ["<mean:1>"] and any("a legend label shows the data of its row" in m for m in run.messages("legend_number", "texts")), f"{labels('legend_number', 'texts')}")
 for name in ("stats_title", "stats_title_graph"):
     padObj = run.pad(name, "texts")
