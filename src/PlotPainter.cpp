@@ -1043,14 +1043,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   } else {
     webGlobals += fmt::format(" gStyle->SetPalette({});", static_cast<int32_t>(kBird));
   }
-  string quotedFormat;  // the format goes into interpreted code
-  for (const char c : webTextFormat.value_or("g")) {
-    if (c == '"' || c == '\\') quotedFormat += '\\';
-    quotedFormat += c;
-  }
   webGlobals += fmt::format(" gStyle->SetOptTitle({});", webTitles ? 1 : 0);
   const auto [webBoxRange, webWhiskerRange] = webCandleRanges.value_or(std::pair{0.5, 1.});
-  webGlobals += fmt::format(" gStyle->SetPaintTextFormat(\"{}\"); TCandle::SetBoxRange({}); TCandle::SetWhiskerRange({});", quotedFormat, webBoxRange, webWhiskerRange);
+  webGlobals += fmt::format(" gStyle->SetPaintTextFormat({}); TCandle::SetBoxRange({}); TCandle::SetWhiskerRange({});", CppQuoted(webTextFormat.value_or("g")), webBoxRange, webWhiskerRange);
   TExec* resetExec = new TExec(
     "reset_globals",
     fmt::format("if (gPad->GetCanvas()->IsWeb()) {{{} }} else {{ gStyle->SetOptTitle(1); gStyle->SetPalette({}); gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange(0.5); TCandle::SetWhiskerRange(1.); }}",
@@ -1855,12 +1850,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       exec->Draw();
     };
     if (const string textFormat = data->GetTextFormat().value_or("g"); textFormat != activeTextFormat) {
-      string quoted;  // the format goes into interpreted code
-      for (const char c : textFormat) {
-        if (c == '"' || c == '\\') quoted += '\\';
-        quoted += c;
-      }
-      drawExec("text_format_" + std::to_string(dataIndex), fmt::format("gStyle->SetPaintTextFormat(\"{}\");", quoted));
+      drawExec("text_format_" + std::to_string(dataIndex), fmt::format("gStyle->SetPaintTextFormat({});", CppQuoted(textFormat)));
       activeTextFormat = textFormat;
     }
 
@@ -1908,13 +1898,8 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
             levels += fmt::format("{}, ", level);
           levels += "}.data()";
         }
-        string quoted;  // the name goes into interpreted code
-        for (const char c : string(data_ptr->GetName())) {
-          if (c == '"' || c == '\\') quoted += '\\';
-          quoted += c;
-        }
         drawExec("levels_" + std::to_string(dataIndex - hasRefFunc),
-                 fmt::format("if (auto* graph = dynamic_cast<TGraph2D*>(gPad->GetPrimitive(\"{}\"))) graph->GetHistogram()->SetContour({});", quoted, levels));
+                 fmt::format("if (auto* graph = dynamic_cast<TGraph2D*>(gPad->GetPrimitive({}))) graph->GetHistogram()->SetContour({});", CppQuoted(data_ptr->GetName()), levels));
       }
     }
     if constexpr (!is_hist<data_type>()) {
@@ -8770,11 +8755,22 @@ void PlotPainter::DrawCommonTitle(TCanvas* canvas, char axisLabel, const vector<
 //**************************************************************************************************
 string PlotPainter::HistCommand(const string& histName, const string& commands)
 {
-  string name = histName;
-  for (size_t pos = name.find_first_of("\\\""); pos != string::npos; pos = name.find_first_of("\\\"", pos + 2)) {
-    name.insert(pos, 1, '\\');
+  return fmt::format(" if (auto* h = dynamic_cast<TH1*>(gPad->GetPrimitive({}))) {{{} }}", CppQuoted(histName), commands);
+}
+
+//**************************************************************************************************
+/**
+ * A text as C++ string literal for interpreted code: in quotes, with its quotes and backslashes escaped.
+ */
+//**************************************************************************************************
+string PlotPainter::CppQuoted(const string& text)
+{
+  string quoted = "\"";
+  for (const char c : text) {
+    if (c == '"' || c == '\\') quoted += '\\';
+    quoted += c;
   }
-  return fmt::format(" if (auto* h = dynamic_cast<TH1*>(gPad->GetPrimitive(\"{}\"))) {{{} }}", name, commands);
+  return quoted + '"';
 }
 
 //**************************************************************************************************

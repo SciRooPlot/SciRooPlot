@@ -459,6 +459,7 @@ class PlotPainter
   template <typename BoxType>
   static void ApplyBoxStyle(const BoxType& box, TPave* pave);
   static std::string HistCommand(const std::string& histName, const std::string& commands);
+  static std::string CppQuoted(const std::string& text);
   template <typename From, typename To>
   static void CopyStyle(const From& from, To& to);
   template <typename FuncT>
