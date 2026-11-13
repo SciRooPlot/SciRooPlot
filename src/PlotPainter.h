@@ -417,6 +417,7 @@ class PlotPainter
   template <typename BoxType>
   std::pair<double_t, double_t> PlaceBox(const BoxType& box, coordinates_t coordinates, TPad* pad, double_t widthNDC, double_t heightNDC, double_t borderX, double_t borderY, const std::string& boxType);
   static void WarnIfBeyondPad(const std::string& boxType, double_t upperLeftX, double_t upperLeftY, double_t widthNDC, double_t heightNDC);
+  static bool BeyondPad(double_t upperLeftX, double_t upperLeftY, double_t widthNDC, double_t heightNDC);
   template <typename BoxType>
   static void ApplyBoxStyle(const BoxType& box, TPave* pave);
   static std::string HistCommand(const std::string& histName, const std::string& commands);

@@ -6113,8 +6113,7 @@ void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, const Plot::Pad& pad
   if (box.GetHeight() && !box.GetWidth()) widthNDC = heightNDC / aspect;
 
   const auto [upperLeftX, upperLeftY] = PlaceBox(box, coordinates, pad_ptr, widthNDC, heightNDC, 0., 0., "image");
-  constexpr double_t tolerance = 1e-9;
-  if (widthNDC <= 0. || heightNDC <= 0. || upperLeftX < -tolerance || upperLeftY - heightNDC < -tolerance || upperLeftX + widthNDC > 1. + tolerance || upperLeftY > 1. + tolerance) {
+  if (widthNDC <= 0. || heightNDC <= 0. || BeyondPad(upperLeftX, upperLeftY, widthNDC, heightNDC)) {
     logger::warning("Image {} is not drawn: it does not fit into its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}).", name.substr(name.find('_') + 1), upperLeftX, upperLeftY, widthNDC, heightNDC);
     delete image;
     return;
@@ -6204,10 +6203,20 @@ std::pair<double_t, double_t> PlotPainter::PlaceBox(const BoxType& box, coordina
 //**************************************************************************************************
 void PlotPainter::WarnIfBeyondPad(const string& boxType, double_t upperLeftX, double_t upperLeftY, double_t widthNDC, double_t heightNDC)
 {
-  constexpr double_t tolerance = 1e-9;
-  if (upperLeftX < -tolerance || upperLeftY - heightNDC < -tolerance || upperLeftX + widthNDC > 1. + tolerance || upperLeftY > 1. + tolerance) {
+  if (BeyondPad(upperLeftX, upperLeftY, widthNDC, heightNDC)) {
     logger::warning("The {} reaches beyond its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}, in units of the pad): the part outside of it is cut off.", boxType, upperLeftX, upperLeftY, widthNDC, heightNDC);
   }
+}
+
+//**************************************************************************************************
+/**
+ * Whether a box (upper left corner and size in units of the pad) reaches beyond its pad.
+ */
+//**************************************************************************************************
+bool PlotPainter::BeyondPad(double_t upperLeftX, double_t upperLeftY, double_t widthNDC, double_t heightNDC)
+{
+  constexpr double_t tolerance = 1e-9;
+  return upperLeftX < -tolerance || upperLeftY - heightNDC < -tolerance || upperLeftX + widthNDC > 1. + tolerance || upperLeftY > 1. + tolerance;
 }
 
 //**************************************************************************************************
