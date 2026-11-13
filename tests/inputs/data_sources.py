@@ -7,11 +7,11 @@ cannot be read (a broken symlink, a corrupt file, an unset environment variable,
 is reported and the other inputs are still read; a symlinked directory inside a directory input is skipped with a warning. Of several
 cycles of a key the latest counts; a directory hidden by a newer key of its name is still reached by a path, the search and wildcards. Tables of a directory are read only when they are requested, and a restricted data source
 (src:folder) leaves tables out. Data of an unknown data source is reported missing with the reason, and a data source with an
-illegal name is refused. Inputs added after GeneratePlots (appended or replaced) are read by the next GeneratePlots; without a change
-the data is not read again.
+illegal name is refused. Inputs added after GeneratePlots (appended or replaced) and input files rewritten since are read by the next
+GeneratePlots; without a change the data is not read again.
 Covers: the same file through a symlink in a directory source, or ./, chained once, tables read only when requested;
 the same table name in two inputs: the first wins, a second AddDataSource replacing an input warns, a file added
-before a second GeneratePlots: the tree read again over both, inputs below a directory with ':' in its name.
+before a second GeneratePlots: the tree read again over both, an input file rewritten between two GeneratePlots giving the old data, inputs below a directory with ':' in its name.
 """
 
 import os
@@ -298,6 +298,8 @@ report("unchanged")
 pm.AddDataSource("s", {b!r})
 pm.AddDataSource("r", {b!r}, True)
 report("added")
+shutil.copy({a!r}, {b!r})
+report("rewritten")
 """)
 values = {(step, name): value for step, name, value in re.findall(r"^VALUE (\w+) (\w) (\S+)$", out.stdout, re.M)}
 check("a data source without a name is refused", "Specify a name for the data source." in out.text, out.tail())
@@ -309,4 +311,6 @@ check("a second GeneratePlots without changes gives the same", all(values.get(("
 check("a file appended: the tree chained over both by the next GeneratePlots", values.get(("added", "t")) == "20.0", str(values))
 check("a file appended: its data found by the next GeneratePlots", values.get(("added", "b")) == "12.0", str(values))
 check("the inputs replaced: the next GeneratePlots reads the new one", values.get(("added", "h")) == "2.0", str(values))
+check("an input file rewritten: the next GeneratePlots reads it again", values.get(("rewritten", "h")) == "1.0", str(values))
+check("an input file rewritten: said once", out.text.count("Inputs of data source r changed since they were read") == 1, out.tail())
 finish()

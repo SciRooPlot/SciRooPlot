@@ -3,10 +3,11 @@ the first data of its pad makes when it is drawn in 3d itself; data drawn flat (
 of the other kind is not drawn, with one warning, and the data after it keeps its number. In a 3d view no data covers the data drawn
 before it with the background (ROOT paints the frame fill colour behind the box for 2d graphs drawn in 3d and the colour boxes of 3d
 histograms). The edges ROOT draws around every box, bar, cell and triangle of a 3d view have width 1 unless the data sets one (or keeps
-the width of its input); the faces of a 3d function are white unless it has a fill colour of its own.
+the width of its input); the faces of a 3d function are white unless it has a fill colour of its own. The points and lines of a 2d graph
+in 3d paint only themselves, also when its z range goes below zero.
 Covers: 3d views over a flat map and flat maps in a 3d view drawn silently, a 2d graph drawn as points or lines covering the data before
 it, the colour boxes of a 3d histogram on walls in the palette maximum, wide black edges hiding the colours of small 3d boxes, black faces
-of 3d functions.
+of 3d functions, a plane of colour behind the coloured points and a mesh under the lines of a 2d graph reaching below zero.
 """
 
 import re
@@ -102,6 +103,28 @@ for i, case in enumerate(looks):
     elif case["style"] == "input":
         data.SetKeepInputStyle()
     p.pm.AddPlot(plot)
+
+# the points and lines of a 2d graph alone in its 3d view, also when its z range goes below zero: ROOT then paints the cells of the empty
+# histogram they are drawn from as well, at their coordinates in the view (seen for x and y from 0 to 1)
+below = {}
+for name, cls in (("below", ROOT.TGraph2D), ("below_errors", ROOT.TGraph2DErrors)):
+    graph = cls(36)
+    graph.SetName(name)
+    for n in range(36):
+        graph.SetPoint(n, n % 6, n // 6, (n % 6) * (n // 6) - 3.0)
+        if cls == ROOT.TGraph2DErrors:
+            graph.SetPointError(n, 0.1, 0.1, 1.0)
+    below[name] = graph
+p.source("below", below)
+lows = cases(
+    {"graph": list(below), "alias": ["points", "points_col", "line"]},
+    always=lambda c: True,
+    named=[{"graph": "below_errors", "alias": "points_col", "why": "coloured points of a 2d graph reaching below zero"}],
+)
+for i, case in enumerate(lows):
+    plot = S.Plot(f"z{i}", "lows", "2d")
+    plot[1].AddData(case["graph"], "below").SetDrawOption(getattr(S, case["alias"]))
+    p.pm.AddPlot(plot)
 run = p.plot()
 
 for i, case in enumerate(frames):
@@ -133,6 +156,21 @@ def erased(i, case):
 
 
 in_chunks(pairs, erased)
+
+
+def painted(i, case):
+    """the share of the plot that a 2d graph drawn alone as points or lines in 3d paints (its points, error bars and lines: a few percent)"""
+    title = f"paints only its points and lines: {describe(case)}"
+    canvas = run.canvas(f"z{i}", "lows")
+    if not canvas:
+        return [(title, False, "plot not made")]
+    background, _ = pixels(canvas, lambda obj: not re.match(r"\d+:", obj.GetName()))
+    alone, _ = pixels(run.canvas(f"z{i}", "lows"), lambda obj: True)
+    share = (alone != background).mean()
+    return [(title, share < 0.08, f"{share:.1%} of the plot painted by the data")]
+
+
+in_chunks(lows, painted)
 
 for i, case in enumerate(looks):
     what = describe(case)
