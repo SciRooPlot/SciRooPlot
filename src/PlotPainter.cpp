@@ -1553,7 +1553,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     ++dataIndex;
     drawOption = "SAME ";
   };
-  draw_option_t alias = optionAlias.value_or(static_cast<draw_option_t>(255));  // 255: no alias
+  optional<draw_option_t> alias = optionAlias;
   if (optionAlias) {
     const std::map<draw_option_t, string>* options{};
     const char* typeName{};
@@ -1586,7 +1586,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       drawOption += it->second;
     } else {
       Warn(state, "Drawing option {} is not available for {} {}, using the default of ROOT.", draw_option_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), DataName(*data));
-      alias = static_cast<draw_option_t>(255);
+      alias.reset();
     }
   }
 
@@ -1993,7 +1993,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
           // a graph with several sets of y errors draws them as the parts of the option after ';' say, one per set, the first part being
           // the graph itself (TGraphPainter::PaintGraphMultiErrors): an alias gives each set the error style it gives other graphs
           auto* multi = dynamic_cast<TGraphMultiErrors*>(data_ptr);
-          if (multi && multi->GetNYErrors() > 0 && alias != static_cast<draw_option_t>(255) && drawOption.find(';') == string::npos) {
+          if (multi && multi->GetNYErrors() > 0 && alias && drawOption.find(';') == string::npos) {
             string global, errors;
             for (char c : drawOption) {
               const bool errorStyle = (c >= '2' && c <= '5');                                     // boxes and bands
@@ -2179,7 +2179,7 @@ void PlotPainter::DrawPointValues(item_state_t& state, T data_ptr)
  */
 //**************************************************************************************************
 template <typename T>
-void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, draw_option_t alias, bool projected)
+void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, optional<draw_option_t> alias, bool projected)
 {
   pad_state_t& padState = state.padState;
   auto& data = state.data;
@@ -2375,7 +2375,7 @@ void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, draw_option_t ali
  */
 //**************************************************************************************************
 template <typename T>
-void PlotPainter::ApplyDataStyle(item_state_t& state, T data_ptr, draw_option_t alias)
+void PlotPainter::ApplyDataStyle(item_state_t& state, T data_ptr, optional<draw_option_t> alias)
 {
   pad_state_t& padState = state.padState;
   auto& data = state.data;
@@ -2467,7 +2467,7 @@ void PlotPainter::ApplyDataStyle(item_state_t& state, T data_ptr, draw_option_t 
     // an input without a visible fill (ROOT's default fill colour 0 with a solid style) keeps none when the style is kept and the data
     // sets a fill colour (SetColor sets all three) but no fill style, for drawing options that draw no area (points, lines): their
     // fill would otherwise show (as the area of a graph drawn with a line); options that fill (band, area, hist, ...) keep it
-    const bool keptWithoutFill = keep && !data->GetFillStyle() && data_ptr->GetFillColor() == 0 && alias != static_cast<draw_option_t>(255) && !aliasesFilling.count(alias);
+    const bool keptWithoutFill = keep && !data->GetFillStyle() && data_ptr->GetFillColor() == 0 && alias && !aliasesFilling.count(*alias);
     if (auto fillColor = get_first(data->GetFillColor(),
                                    fromPad(pick(usedDefaults.color, pad.GetDefaultFillColors())),
                                    fromPad(pick(usedDefaults.color, fillDefaults(pad, *data))))) {

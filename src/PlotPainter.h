@@ -318,9 +318,9 @@ class PlotPainter
   template <typename T>
   void DrawPointValues(item_state_t& state, T data_ptr);
   template <typename T>
-  void DataRanges(item_state_t& state, T& data_ptr, draw_option_t alias, bool projected);
+  void DataRanges(item_state_t& state, T& data_ptr, std::optional<draw_option_t> alias, bool projected);
   template <typename T>
-  void ApplyDataStyle(item_state_t& state, T data_ptr, draw_option_t alias);
+  void ApplyDataStyle(item_state_t& state, T data_ptr, std::optional<draw_option_t> alias);
   template <typename T>
   void SetUpFrame(item_state_t& state, T data_ptr, const std::string& polarGridOption);
   template <typename T>
