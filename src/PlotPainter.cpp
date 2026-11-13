@@ -163,6 +163,7 @@ void PlotPainter::CopyStyle(const From& from, To& to)
   from.TAttFill::Copy(to);
   from.TAttMarker::Copy(to);
 }
+
 template <typename FuncT>
 void PlotPainter::CopyFuncAttributes(FuncT* from, FuncT* to)
 {
@@ -183,6 +184,7 @@ bool PlotPainter::SetBinRange(TAxis* axis, const optional<double_t>& min, const 
   axis->SetRange(first, last);
   return std::max(first, 1) <= std::min(last, axis->GetNbins());  // false: no bin in the range, ROOT then selects all bins
 }
+
 std::pair<int32_t, int32_t> PlotPainter::BinRange(const TAxis* axis, const optional<double_t>& min, const optional<double_t>& max)
 {
   int32_t first = axis->GetFirst();
@@ -6910,7 +6912,8 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
 
 //**************************************************************************************************
 /**
- * Functions to retrieve a copy or projection of the stored data properly casted it to its actual ROOT type.
+ * A copy of an input as the type it is drawn as, or its projection or profile (projInfo); the ranges stored with it are dropped
+ * unless keepStoredRanges. None for an input of another type or a projection that fails (reported).
  */
 //**************************************************************************************************
 optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot::Pad::Data::proj_info_t>& projInfo, bool keepStoredRanges)
@@ -6986,13 +6989,19 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
   return nullopt;
 }
 
+//**************************************************************************************************
+/**
+ * A copy of an input of type T (a TEfficiency: the graph or histogram it makes), none if it is not one; with several types,
+ * that of the first type the input is one of (derived types first).
+ */
+//**************************************************************************************************
 template <typename T>
 optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
 {
   if (obj && obj->InheritsFrom(T::Class())) {
     if constexpr (std::is_same_v<T, TEfficiency>) {
       auto teff = static_cast<TEfficiency*>(obj);
-      int dim = teff->GetDimension();
+      const int32_t dim = teff->GetDimension();
       // a TEfficiency carries ROOT's fill defaults (colour 19, style 1001; TH1 and TGraph start with colour 0) and copies them to the created object:
       // they are not a fill set by the user, so the default drawing rule must not take them as one (points, not an area, with SetKeepInputStyle())
       // the created object is named by ROOT (eff_graph, eff_histo): it is drawn under the name of the input
@@ -7020,6 +7029,12 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj)
   return GetDataClone<Next, Rest...>(obj);
 }
 
+//**************************************************************************************************
+/**
+ * The projection or profile of a histogram (also THn, THnSparse) onto one to three of its axes, within the ranges of projInfo
+ * (the ranges stored with the input are not applied, and are restored afterwards). None if it cannot be made (reported).
+ */
+//**************************************************************************************************
 optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::proj_info_t projInfo)
 {
   const bool isProfile = projInfo.isProfile && *projInfo.isProfile;
@@ -7278,6 +7293,11 @@ optional<data_ptr_t> PlotPainter::GetProjection(TObject* obj, Plot::Pad::Data::p
   return nullopt;
 }
 
+//**************************************************************************************************
+/**
+ * Axis i (0, 1, 2: x, y, z) of a histogram, and the letter ROOT names it by in the options of projections.
+ */
+//**************************************************************************************************
 template <typename T>
 TAxis* PlotPainter::GetAxis(T* histPtr, int16_t i)
 {
@@ -7309,8 +7329,8 @@ string PlotPainter::GetAxisStr(int16_t i)
 
 //**************************************************************************************************
 /**
- * Helper-functions for (interpolated) division of various root data types.
- * Return false if the division is not possible.
+ * Divides the numerator by the denominator in place, a graph or function denominator interpolated (evaluated) at the x values
+ * of the numerator, with gaussian (or binomial) error propagation. Returns false if the division is not possible (reported).
  */
 //**************************************************************************************************
 bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialErrors, bool verbose, const TH1* denominatorBins)
@@ -7360,8 +7380,9 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
     denomEy = nullptr;
   }
 
-  bool deleteDenom = false;
   std::unique_ptr<TGraph> filledBins;
+  std::unique_ptr<TGraph> sortedDenom;
+  vector<double_t> interpY, interpEy, interpEyLow, interpEyHigh;  // the denominator interpolated at the x values of the numerator
   if (doInterpol) {
     if (denominatorBins) {
       auto* filled = new TGraphErrors();
@@ -7393,20 +7414,19 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
     }
     // spline interpolation requires sorted values
     if (!denominator->TestBit(TGraph::kIsSortedX)) {
-      denominator = static_cast<TGraph*>(denominator->Clone(denominator->GetName()));  // keeps the name for messages
+      sortedDenom.reset(static_cast<TGraph*>(denominator->Clone(denominator->GetName())));  // keeps the name for messages
+      denominator = sortedDenom.get();
       SortGraph(denominator);
       denomX = denominator->GetX();
       denomY = denominator->GetY();
       denomEy = denominator->GetEY();
       denomEyLow = denominator->GetEYlow();
       denomEyHigh = denominator->GetEYhigh();
-      deleteDenom = true;
     }
     // a spline needs strictly increasing x: with a repeated x (steps, bands) every interpolated value is NaN and the ratio empty
     for (int32_t i = 1; i < denomN; ++i) {
       if (denomX[i] == denomX[i - 1]) {
         logger::error("Cannot divide {} by graph {}: it has two points at x = {}, so it cannot be interpolated at the x values of {}.", numerator->GetName(), denominator->GetName(), denomX[i], numerator->GetName());
-        if (deleteDenom) delete denominator;
         return false;
       }
     }
@@ -7435,20 +7455,19 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
       denomSplineHigh.emplace("denomSplineHigh", denomX, denomShiftHigh.data(), denomN);
     }
 
-    // reset denominator pointers
-    denomY = nullptr;
-    denomEy = nullptr;
-    denomEyLow = nullptr;
-    denomEyHigh = nullptr;
-
-    // create arrays of interpolated points and errors at numerator positions
-    denomY = new double_t[numN];
+    // the values and errors of the denominator are from here on the interpolated ones, the errors of the kind the numerator has
+    interpY.resize(numN);
+    denomY = interpY.data();
+    denomEy = denomEyLow = denomEyHigh = nullptr;
     if (!errorlessDenom) {
       if (numEy) {
-        denomEy = new double_t[numN];
+        interpEy.resize(numN);
+        denomEy = interpEy.data();
       } else if (numEyLow && numEyHigh) {
-        denomEyLow = new double_t[numN];
-        denomEyHigh = new double_t[numN];
+        interpEyLow.resize(numN);
+        interpEyHigh.resize(numN);
+        denomEyLow = interpEyLow.data();
+        denomEyHigh = interpEyHigh.data();
       }
     }
     // outside the denominator's range the spline extrapolates: warn with the distance, so the user can judge if that is reasonable
@@ -7525,17 +7544,9 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   for (auto it = undefined.rbegin(); it != undefined.rend(); ++it) {
     RemoveGraphPoint(numerator, *it);
   }
-  if (doInterpol) {
-    if (denomY) delete[] denomY;
-    if (denomEy) delete[] denomEy;
-    if (denomEyLow) delete[] denomEyLow;
-    if (denomEyHigh) delete[] denomEyHigh;
-  }
-  if (deleteDenom) {
-    delete denominator;
-  }
   return true;
 }
+
 bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialErrors, bool verbose, const TH1* denominatorBins)
 {
   if (numerator->GetDimension() != 1) {
@@ -7560,6 +7571,7 @@ bool PlotPainter::Divide(TH1* numerator, TGraph* denominator, bool binomialError
   numerator->SetEntries(entries);
   return true;
 }
+
 bool PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialErrors, bool verbose)
 {
   if (denominator->GetDimension() != 1) {
@@ -7574,6 +7586,7 @@ bool PlotPainter::Divide(TGraph* numerator, TH1* denominator, bool binomialError
   denominatorGraph.SetName(denominator->GetName());  // used in messages
   return Divide(numerator, &denominatorGraph, binomialErrors, verbose, denominator);
 }
+
 bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, bool verbose)
 {
   bool empty{verbose};  // said once: the division by a graph below would also say that the denominator is zero everywhere
@@ -7654,6 +7667,7 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, 
   logger::error("Cannot divide {} by {}: their binnings differ (interpolated division of {}d histograms is not supported).", numerator->GetName(), denominator->GetName(), numerator->GetDimension());
   return false;
 }
+
 bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors, bool verbose)
 {
   if (denominator->GetNdim() > numerator->GetDimension()) {
@@ -7718,6 +7732,7 @@ bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors, 
   }
   return true;
 }
+
 bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialErrors, bool verbose)
 {
   if (denominator->GetNdim() > 1) {
@@ -7937,6 +7952,7 @@ optional<PlotPainter::multi_error_sums_t> PlotPainter::MultiErrorSums(TGraph* gr
   const int32_t n = graph->GetN();
   return multi_error_sums_t{{graph->GetEYlow(), graph->GetEYlow() + n}, {graph->GetEYhigh(), graph->GetEYhigh() + n}};
 }
+
 void PlotPainter::SwapMultiErrors(TGraph* graph, optional<multi_error_sums_t>& sums, int32_t i)
 {
   if (!sums) return;
@@ -7946,6 +7962,7 @@ void PlotPainter::SwapMultiErrors(TGraph* graph, optional<multi_error_sums_t>& s
     std::swap(multi->GetEYlow(e)[i], multi->GetEYhigh(e)[i]);
   }
 }
+
 void PlotPainter::ScaleMultiErrors(TGraph* graph, const optional<multi_error_sums_t>& sums)
 {
   if (!sums) return;
@@ -7962,6 +7979,11 @@ void PlotPainter::ScaleMultiErrors(TGraph* graph, const optional<multi_error_sum
   }
 }
 
+//**************************************************************************************************
+/**
+ * Rescales the point coordinates (and their errors) of a 2d graph along one axis (0, 1, 2: x, y, z) by a constant factor.
+ */
+//**************************************************************************************************
 void PlotPainter::ScaleGraphAxis(TGraph2D* graph, int16_t axis, double_t scaleFactor)
 {
   double_t* values{};
