@@ -3737,6 +3737,12 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     warnIncomplete(ptr->GetXaxis(), mods.GetRebinGroupX(), "RebinX");
     warnIncomplete(ptr->GetYaxis(), mods.GetRebinGroupY(), "RebinY");
     warnIncomplete(ptr->GetZaxis(), mods.GetRebinGroupZ(), "RebinZ");
+    // ROOT refuses a group larger than the axis with an error: said here, that axis is left as it is
+    auto rebinFits = [&](const TAxis* axis, const optional<uint16_t>& group, const char* what) {
+      if (!group || *group <= axis->GetNbins()) return group.has_value();
+      warn("{}({}) needs at least as many bins, {} has {}, ignoring.", what, *group, ptr->GetName(), axis->GetNbins());
+      return false;
+    };
     {  // ROOT's warnings silenced for the rebinning only
       auto quietRebin = ignore_root_messages_below(kError);
       if constexpr (is_hist_2d<ptr_type>()) {
@@ -3744,12 +3750,16 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
           // a TH2Poly has no bins along its axes (ROOT aborts)
           warnUnsupported(mods.GetRebinGroupX().has_value(), "RebinX");
           warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
-        } else if (mods.GetRebinGroupX() && mods.GetRebinGroupY()) {
-          ptr->Rebin2D(*mods.GetRebinGroupX(), *mods.GetRebinGroupY());
-        } else if (mods.GetRebinGroupX()) {
-          ptr->RebinX(*mods.GetRebinGroupX());
-        } else if (mods.GetRebinGroupY()) {
-          ptr->RebinY(*mods.GetRebinGroupY());
+        } else {
+          const bool rebinX = rebinFits(ptr->GetXaxis(), mods.GetRebinGroupX(), "RebinX");
+          const bool rebinY = rebinFits(ptr->GetYaxis(), mods.GetRebinGroupY(), "RebinY");
+          if (rebinX && rebinY) {
+            ptr->Rebin2D(*mods.GetRebinGroupX(), *mods.GetRebinGroupY());
+          } else if (rebinX) {
+            ptr->RebinX(*mods.GetRebinGroupX());
+          } else if (rebinY) {
+            ptr->RebinY(*mods.GetRebinGroupY());
+          }
         }
         warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
       } else if constexpr (is_hist_3d<ptr_type>()) {
@@ -3757,16 +3767,12 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
           // TProfile3D has no rebinning of its own: the one of TH3 leaves every bin empty (ROOT bug)
           warnUnsupported(mods.GetRebinGroupX() || mods.GetRebinGroupY() || mods.GetRebinGroupZ(), "Rebinning");
         } else {
-          if (mods.GetRebinGroupX()) ptr->RebinX(*mods.GetRebinGroupX());
-          if (mods.GetRebinGroupY()) ptr->RebinY(*mods.GetRebinGroupY());
-          if (mods.GetRebinGroupZ()) ptr->RebinZ(*mods.GetRebinGroupZ());
+          if (rebinFits(ptr->GetXaxis(), mods.GetRebinGroupX(), "RebinX")) ptr->RebinX(*mods.GetRebinGroupX());
+          if (rebinFits(ptr->GetYaxis(), mods.GetRebinGroupY(), "RebinY")) ptr->RebinY(*mods.GetRebinGroupY());
+          if (rebinFits(ptr->GetZaxis(), mods.GetRebinGroupZ(), "RebinZ")) ptr->RebinZ(*mods.GetRebinGroupZ());
         }
       } else {
-        if (mods.GetRebinGroupX() && *mods.GetRebinGroupX() > ptr->GetNbinsX()) {
-          warn("RebinX({}) needs at least as many bins, {} has {}, ignoring.", *mods.GetRebinGroupX(), ptr->GetName(), ptr->GetNbinsX());
-        } else if (mods.GetRebinGroupX()) {
-          ptr->RebinX(*mods.GetRebinGroupX());
-        }
+        if (rebinFits(ptr->GetXaxis(), mods.GetRebinGroupX(), "RebinX")) ptr->RebinX(*mods.GetRebinGroupX());
         warnUnsupported(mods.GetRebinGroupY().has_value(), "RebinY");
         warnUnsupported(mods.GetRebinGroupZ().has_value(), "RebinZ");
       }
@@ -3800,10 +3806,13 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     if (mods.GetNiterSmooth() && !smoothable) {
       warnUnsupported(true, "Smooth");
     } else if (mods.GetNiterSmooth()) {
+      // TH2::Smooth smooths once, whatever the number of times (ROOT warns about more): said here
+      if (ptr->GetDimension() == 2 && *mods.GetNiterSmooth() > 1) {
+        warn("Smooth({}) smooths 2d histogram {} once: ROOT smooths 2d histograms only once.", *mods.GetNiterSmooth(), ptr->GetName());
+      }
       if constexpr (isProfileType) {
         // ROOT's Smooth would treat the sums stored in a profile as its contents: the mean values are smoothed instead,
         // over the filled bins only (an empty bin has no mean), keeping the entries and the spread (i.e. the error) of each bin
-        const int32_t nTimes = *mods.GetNiterSmooth();
         double_t* sums = ptr->GetArray();                     // per bin: sum of weight * y
         double_t* sumsSquared = ptr->GetSumw2()->GetArray();  // per bin: sum of weight * y^2
         auto setMean = [&](int32_t bin, double_t newMean) {
@@ -3824,7 +3833,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
           if (means.size() < 3) {
             warn("Smooth needs at least three filled bins in profile histogram {}, ignoring.", ptr->GetName());
           } else {
-            TH1::SmoothArray(static_cast<int32_t>(means.size()), means.data(), nTimes);
+            TH1::SmoothArray(static_cast<int32_t>(means.size()), means.data(), *mods.GetNiterSmooth());
             for (size_t i = 0; i < bins.size(); ++i) {
               setMean(bins[i], means[i]);
             }
@@ -3839,8 +3848,8 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
           for (int32_t bin = 0; bin < ptr->GetNcells(); ++bin) {
             filled->SetBinContent(bin, (ptr->GetBinEntries(bin) == 0.) ? 0. : 1.);
           }
-          means->Smooth(nTimes);
-          filled->Smooth(nTimes);
+          means->Smooth(1);  // once, see above
+          filled->Smooth(1);
           for (int32_t bin = 0; bin < ptr->GetNcells(); ++bin) {
             if (ptr->GetBinEntries(bin) == 0. || ptr->IsBinUnderflow(bin) || ptr->IsBinOverflow(bin)) continue;
             setMean(bin, means->GetBinContent(bin) / filled->GetBinContent(bin));
@@ -3848,6 +3857,8 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
         }
       } else if (ptr->GetDimension() == 1 && ptr->GetNbinsX() < 3) {
         warn("Smooth needs at least three bins in histogram {}, ignoring.", ptr->GetName());
+      } else if (ptr->GetDimension() == 2) {
+        ptr->Smooth(1);  // once, see above
       } else {
         ptr->Smooth(*mods.GetNiterSmooth());
       }
