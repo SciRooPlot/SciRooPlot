@@ -109,10 +109,11 @@ for i, case in enumerate(todo):
 for alias in REPEATED:
     drawn = run.drawn(f"repeated_{alias}", "aliases")
     check(f"a graph with points at one x drawn {alias}: drawn with the default of ROOT", len(drawn) == 2 and drawn[1][1] == "", str([(o.ClassName(), opt) for o, opt in drawn]))
-repeatedWarnings = run.warnings("Graph repeated:repeated_x")
+repeatedWarnings = run.warnings("graph repeated:repeated_x")
+named = [m.group(1) for w in repeatedWarnings if (m := re.search(r"Drawing option (\w+) .* \(it needs points with distinct x values\), using the default of ROOT", w))]
 check(
-    "a graph with points at one x drawn as a histogram: one warning saying why",
-    len(repeatedWarnings) == len(REPEATED) and all("needs points with distinct x values): using the default of ROOT" in w for w in repeatedWarnings),
+    "a graph with points at one x drawn as a histogram: one warning naming the option and why",
+    len(repeatedWarnings) == len(REPEATED) and sorted(named) == sorted(REPEATED),
     " | ".join(repeatedWarnings),
 )
 # a graph with asymmetric errors drawn as a histogram is drawn with their mean, with a warning

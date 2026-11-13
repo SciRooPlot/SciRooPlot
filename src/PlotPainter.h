@@ -376,7 +376,7 @@ class PlotPainter
   static bool Divide(TGraph* numerator, TF1* denominator, bool binomialErrors = false, bool verbose = true);
 
   static TGraph* ToGraph(const TH1* hist);
-  static TH1* ToHist(TGraph* graph, bool warn = true, bool warnAsymmetric = true);  // warnAsymmetric: the option shows the errors
+  static TH1* ToHist(TGraph* graph, draw_option_t option, bool warn, bool warnAsymmetric);  // warnAsymmetric: the option shows the errors
   static TGraph* ToClippedGraph(const TH1* hist, draw_option_t alias, bool logY);
   static double_t ClippedBase(const TGraph* graph, bool logY);
   static bool SetBinRange(TAxis* axis, const std::optional<double_t>& min, const std::optional<double_t>& max);

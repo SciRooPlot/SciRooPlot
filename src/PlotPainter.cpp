@@ -304,12 +304,21 @@ double_t PlotPainter::ClippedBase(const TGraph* graph, bool logY)
   return minY - 1e6 * (maxAbsY + 1.);
 }
 
-TH1* PlotPainter::ToHist(TGraph* graph, bool warn, bool warnAsymmetric)
+//**************************************************************************************************
+/**
+ * A graph as a histogram, to draw it with a drawing option ROOT has only for histograms (the graph is deleted): none if it has no bins
+ * (no points, or points at one x), with a warning naming the option if warn is set.
+ */
+//**************************************************************************************************
+TH1* PlotPainter::ToHist(TGraph* graph, draw_option_t option, bool warn, bool warnAsymmetric)
 {
+  auto warnNoBins = [&](const char* reason) {
+    if (warn) logger::warning("Drawing option {} is not available for graph {} ({}), using the default of ROOT.", draw_option_name(option), graph->GetName(), reason);
+  };
   SortGraph(graph);
   const int32_t n = graph->GetN();
   if (n == 0) {
-    if (warn) logger::warning("Graph {} cannot be drawn as a histogram (it has no points): using the default of ROOT.", graph->GetName());
+    warnNoBins("it has no points");
     return nullptr;
   }
   // bin edges from the x errors (if the graph has them): the bins of neighbouring points must touch (within precision),
@@ -359,7 +368,7 @@ TH1* PlotPainter::ToHist(TGraph* graph, bool warn, bool warnAsymmetric)
         edges[i] = 0.5 * (graph->GetPointX(i - 1) + graph->GetPointX(i));
       }
       if (i > 0 && !(edges[i] > edges[i - 1])) {
-        if (warn) logger::warning("Graph {} cannot be drawn as a histogram (it needs points with distinct x values): using the default of ROOT.", graph->GetName());
+        warnNoBins("it needs points with distinct x values");
         return nullptr;
       }
     }
@@ -4292,7 +4301,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       // a graph is cut at the frame anyway: only the steps need its bins
       if (*optionAlias != curve_clipped) {
         // steps show no errors: no warning about asymmetric ones
-        if (TH1* histogram = ToHist(data_ptr, dataIndex != 0, false)) {
+        if (TH1* histogram = ToHist(data_ptr, *optionAlias, dataIndex != 0, false)) {
           mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
           drawClipped(histogram, *optionAlias);
           return;
@@ -4313,7 +4322,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
   } else if constexpr (is_graph_1d<data_type>()) {
     if (optionAlias && !defaultDrawOptions_Graph.count(*optionAlias) && defaultDrawOptions_Hist.count(*optionAlias)) {
       // the warning about asymmetric errors (drawn with their mean) only where the option shows errors
-      if (TH1* hist = ToHist(data_ptr, dataIndex != 0, !aliasesWithoutErrors.count(*optionAlias))) {
+      if (TH1* hist = ToHist(data_ptr, *optionAlias, dataIndex != 0, !aliasesWithoutErrors.count(*optionAlias))) {
         mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
         drawItem(hist, optionAlias);
         return;
