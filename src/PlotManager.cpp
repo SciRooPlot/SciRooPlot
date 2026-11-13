@@ -2564,6 +2564,11 @@ std::unique_ptr<TCanvas> PlotManager::Paint(PlotPainter& painter, Plot& toPaint)
 {
   try {
     return painter.GeneratePlot(toPaint, mDataBuffer);
+  } catch (const std::length_error& e) {
+    // ROOT's axis painter reserves room for a number of ticks that overflows for an axis spanning less than about 1e-196, or too many decades of a log scale
+    logger::error("Plot {} could not be painted: ROOT cannot draw one of its axes, spanning less than about 1e-196 or too many decades on a log scale ({}).", toPaint.GetName(),
+                  util::without_final_period(e.what()));
+    return nullptr;
   } catch (const std::exception& e) {
     logger::error("Plot {} could not be painted: {}.", toPaint.GetName(), util::without_final_period(e.what()));
     return nullptr;
