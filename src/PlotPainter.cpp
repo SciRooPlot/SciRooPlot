@@ -420,11 +420,11 @@ struct PlotPainter::pad_state_t {
   struct used_defaults_t {
     uint16_t color, markerStyle, lineStyle, fillStyle;  // one colour entry per data item for marker, line and fill alike
   };
+  Plot::Pad& pad;
   Plot::Pad& padDefaults;
+  const uint8_t padID;
   const fill_defaults_t& fillDefaults;  // the fill colours a data item takes when it sets none (see GeneratePlot)
   const data_buffer_t& dataBuffer;
-  Plot::Pad& pad;
-  const uint8_t padID;
   TPad* pad_ptr{};
   vector<shared_ptr<Plot::Pad::Data>> drawData;  // the frame copy, the reference function (hasRefFunc) and the data of the pad
   string padSetup;                               // run before anything of the pad is painted (palette, candle ranges, text format)
@@ -574,7 +574,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       if (!pad.GetData().empty() || pad.GetFrame()) logger::warning("Pad {} is the cell of a colour scale: its data is not drawn.", padID);
       continue;
     }
-    pad_state_t padState{padDefaults, fillDefaults, dataBuffer, pad, padID};
+    pad_state_t padState{pad, padDefaults, padID, fillDefaults, dataBuffer};
     auto& pad_ptr = padState.pad_ptr;
     auto& drawData = padState.drawData;
     auto& padSetup = padState.padSetup;
@@ -1088,7 +1088,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
   auto& clippedSteps = padState.clippedSteps;
 
   const bool flatFrame = axisHist_ptr && !pad_ptr->GetView() && !polarFrame && !polargram;
-  if (flatFrame) AddAxisRoom(pad_ptr, axisHist_ptr, padDefaults, pad, padID, (hasRefFunc) ? drawData[1].get() : nullptr, padSetup);
+  if (flatFrame) AddAxisRoom(pad, padDefaults, padID, pad_ptr, axisHist_ptr, (hasRefFunc) ? drawData[1].get() : nullptr, padSetup);
   if (mScalesInCells.count(padID)) {
     // the colour scale of the pad is shown by a ColorScale() cell: the drawing options lose their Z (ROOT then removes the scale it made)
     static const std::regex withScale("(COL|BOX[0-9]?|CONT[0-9]?|LEGO[0-9]?|SURF[0-9]?|TRI[0-9]?)Z", std::regex::icase);
@@ -1347,8 +1347,8 @@ void PlotPainter::FinishPad(pad_state_t& padState)
   if (!pad.GetShapes().empty() && !canDrawShapes) {
     logger::warning("The shapes of pad {} are not drawn: they need a cartesian axis frame (no 3d view, no polar graphs).", padID);
   } else if (!pad.GetShapes().empty()) {
-    DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::behind_data, axisHist_ptr, padID);
-    DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::after_data, nullptr, padID);
+    DrawShapes(pad, padDefaults, padID, pad_ptr, Plot::Pad::Shape::layer_t::behind_data, axisHist_ptr);
+    DrawShapes(pad, padDefaults, padID, pad_ptr, Plot::Pad::Shape::layer_t::after_data, nullptr);
   }
 
   // legends, texts and images: the ones with a given position before the statistics boxes, the automatically placed ones after them,
@@ -1441,7 +1441,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
   }
 
   placeBoxes(false);
-  if (canDrawShapes) DrawShapes(pad_ptr, pad, padDefaults, Plot::Pad::Shape::layer_t::on_top, nullptr, padID);
+  if (canDrawShapes) DrawShapes(pad, padDefaults, padID, pad_ptr, Plot::Pad::Shape::layer_t::on_top, nullptr);
 
   // viewing angles of 3D drawings: the pad's own, else those of pad 0
   if (auto theta = get_first(pad.GetViewTheta(), padDefaults.GetViewTheta())) {
@@ -4457,13 +4457,13 @@ bool PlotPainter::IsViewFrame(TPad* pad, const TH1* frame)
  * clipped alias count as drawn (within the automatic frame).
  */
 //**************************************************************************************************
-void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefaults, const Plot::Pad& padSettings, uint8_t padID, const Plot::Pad::Data* refFunc, string& padSetup)
+void PlotPainter::AddAxisRoom(const Plot::Pad& pad, const Plot::Pad& padDefaults, uint8_t padID, TPad* pad_ptr, TH1* frame, const Plot::Pad::Data* refFunc, string& padSetup)
 {
   const bool is2d = frame->GetDimension() > 1;
   const char valueAxis = (is2d) ? 'Z' : 'Y';
   // a frame drawn with HBAR shows the histogram's x axis vertically: the room set for an axis of the pad (X horizontal, Y vertical)
   // is applied to the axis of the histogram drawn there, and everything below works on the axes of the histogram
-  const bool hbar = IsHBarFrame(pad, frame);
+  const bool hbar = IsHBarFrame(pad_ptr, frame);
   auto histLabel = [hbar](char padLabel) { return (hbar && padLabel != 'Z') ? ((padLabel == 'X') ? 'Y' : 'X') : padLabel; };
   struct room_t {
     char axisLabel;
@@ -4474,9 +4474,9 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
   for (char axisLabel : {'X', 'Y', 'Z'}) {
     if (mCommonRanges.count({padID, axisLabel})) continue;  // the common range of a shared axis includes the room of its pads
     room_t room{axisLabel, {}, {}};
-    const optional<double_t> userMin = MinRange(padSettings, padDefaults, axisLabel);
-    const optional<double_t> userMax = MaxRange(padSettings, padDefaults, axisLabel);
-    for (const auto* axis : AxisSettings(padSettings, padDefaults, axisLabel)) {
+    const optional<double_t> userMin = MinRange(pad, padDefaults, axisLabel);
+    const optional<double_t> userMax = MaxRange(pad, padDefaults, axisLabel);
+    for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
       if (axis->GetRoomBelowMin()) room.below = axis->GetRoomBelowMin();
       if (axis->GetRoomAboveMax()) room.above = axis->GetRoomAboveMax();
     }
@@ -4507,17 +4507,17 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
   }
   if (rooms.empty()) return;
 
-  auto isLogAxis = [pad, &histLabel](char axisLabel) {
+  auto isLogAxis = [pad_ptr, &histLabel](char axisLabel) {
     const char padLabel = histLabel(axisLabel);  // the swap is its own inverse
-    return (padLabel == 'X') ? pad->GetLogx() : ((padLabel == 'Y') ? pad->GetLogy() : pad->GetLogz());
+    return (padLabel == 'X') ? pad_ptr->GetLogx() : ((padLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
   };
   // the ranges drawn so far: those of the frame, painted when it was set up (data drawn on top do not change them)
   double_t xMin{}, yMin{}, xMax{}, yMax{};
-  pad->GetRangeAxis(xMin, yMin, xMax, yMax);
-  xMin = FromPad(xMin, pad->GetLogx());
-  xMax = FromPad(xMax, pad->GetLogx());
-  yMin = FromPad(yMin, pad->GetLogy());
-  yMax = FromPad(yMax, pad->GetLogy());
+  pad_ptr->GetRangeAxis(xMin, yMin, xMax, yMax);
+  xMin = FromPad(xMin, pad_ptr->GetLogx());
+  xMax = FromPad(xMax, pad_ptr->GetLogx());
+  yMin = FromPad(yMin, pad_ptr->GetLogy());
+  yMax = FromPad(yMax, pad_ptr->GetLogy());
   if (hbar) {
     std::swap(xMin, yMin);
     std::swap(xMax, yMax);
@@ -4558,7 +4558,7 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
         }
       }
     };
-    TIter next(pad->GetListOfPrimitives());
+    TIter next(pad_ptr->GetListOfPrimitives());
     while (TObject* obj = next()) {
       auto definition = mDataDefinitions.find(obj);
       if (obj == frame || definition == mDataDefinitions.end() || definition->second.get() == refFunc) continue;
@@ -4683,7 +4683,7 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
   // and afterwards they are cut at the frame again, whether it changed or not (candles and violins are not cut along their distribution)
   auto dataHists = [&](char axisLabel) {
     vector<std::pair<TH1*, const Plot::Pad::Data*>> hists;
-    TIter next(pad->GetListOfPrimitives());
+    TIter next(pad_ptr->GetListOfPrimitives());
     while (TObject* obj = next()) {
       auto* hist = dynamic_cast<TH1*>(obj);
       auto definition = mDataDefinitions.find(obj);
@@ -4700,7 +4700,7 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
   // functions given as formula span the widened frame along the axis of their own (pad coordinates), the reference function always
   auto stretchFunctions = [&](char axisLabel, double_t newMin, double_t newMax) {
     const char funcLabel = histLabel(axisLabel);  // the swap is its own inverse
-    for (TObject* obj : *pad->GetListOfPrimitives()) {
+    for (TObject* obj : *pad_ptr->GetListOfPrimitives()) {
       auto* func = dynamic_cast<TF1*>(obj);
       auto definition = mDataDefinitions.find(obj);
       if (!func || definition == mDataDefinitions.end()) continue;
@@ -4773,7 +4773,7 @@ void PlotPainter::AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefault
     if (axisLabel == valueAxis) {
       if (!is2d) {
         // 1d histograms are drawn from the lower edge of the frame (their stored minimum): it moves along
-        for (TObject* obj : *pad->GetListOfPrimitives()) {
+        for (TObject* obj : *pad_ptr->GetListOfPrimitives()) {
           auto* hist = dynamic_cast<TH1*>(obj);
           if (hist && hist != frame && hist->GetDimension() == 1 && TMath::AreEqualRel(hist->GetMinimumStored(), curMin, 1e-9)) hist->SetMinimum(newMin);
         }
@@ -5367,27 +5367,27 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
  * insertAfter: put the shapes behind this primitive (the frame histogram for the layer behind the data) instead of at the end.
  */
 //**************************************************************************************************
-void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot::Pad& padDefaults, Plot::Pad::Shape::layer_t layer, TObject* insertAfter, uint8_t padID)
+void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults, uint8_t padID, TPad* pad_ptr, Plot::Pad::Shape::layer_t layer, TObject* insertAfter)
 {
   using Shape = Plot::Pad::Shape;
   using kind_t = Shape::kind_t;
   // TLine, TArrow, TBox and TEllipse take axis values (they convert them to pad coordinates, log10 on a log axis, when painted)
-  const double_t xMin = FromPad(pad->GetUxmin(), pad->GetLogx()), xMax = FromPad(pad->GetUxmax(), pad->GetLogx());
-  const double_t yMin = FromPad(pad->GetUymin(), pad->GetLogy()), yMax = FromPad(pad->GetUymax(), pad->GetLogy());
+  const double_t xMin = FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx()), xMax = FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx());
+  const double_t yMin = FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()), yMax = FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy());
   const double_t nan = std::numeric_limits<double_t>::quiet_NaN();
   uint8_t shapeIndex{};
   std::map<kind_t, uint16_t> numberOfKind;  // over all layers: the nth shape of a kind is the nth call that added one
-  for (const auto& shape : const_cast<Plot::Pad&>(padSettings).GetShapes()) {
+  for (const auto& shape : const_cast<Plot::Pad&>(pad).GetShapes()) {
     ++shapeIndex;
     const kind_t kind = shape->GetKind();
     const uint16_t number = ++numberOfKind[kind];
     if (shape->GetLayer() != layer) continue;
     const auto& c = shape->GetCoordinates();
-    const coordinates_t coordinates = get_first_or(user_coordinates, shape->GetCoordinateSystem(), padSettings.GetDefaultShapeCoordinates(), padDefaults.GetDefaultShapeCoordinates());
+    const coordinates_t coordinates = get_first_or(user_coordinates, shape->GetCoordinateSystem(), pad.GetDefaultShapeCoordinates(), padDefaults.GetDefaultShapeCoordinates());
     const bool isUser = (coordinates == user_coordinates);
     const bool cutAtFrame = (coordinates != pad_coordinates);  // in fractions of the pad a shape may lie outside of the frame on purpose
     // fractions of the frame or the pad: the part of the pad they span
-    const std::array<double_t, 4> span = (coordinates == frame_coordinates) ? FrameInPad(pad) : std::array<double_t, 4>{0., 0., 1., 1.};  // x1, y1, x2, y2
+    const std::array<double_t, 4> span = (coordinates == frame_coordinates) ? FrameInPad(pad_ptr) : std::array<double_t, 4>{0., 0., 1., 1.};  // x1, y1, x2, y2
     const size_t nExpected = (kind == kind_t::vertical_line || kind == kind_t::horizontal_line) ? 1u : ((kind == kind_t::region_x || kind == kind_t::region_y) ? 2u : 4u);
     // a polygon with too few points and positions that are not finite numbers were reported when the shape was added
     if ((kind == kind_t::polygon) ? (c.size() < 6 || c.size() % 2) : (c.size() != nExpected)) continue;
@@ -5398,8 +5398,8 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
       ReportIgnored(fmt::format("The fill of shape {} ({}) of pad {}", shapeIndex, Shape::KindName(kind), padID), "a line has no area (an arrow fills its head)");
     }
     // positions as axis values: given so, or fractions of the frame or the pad converted; a log axis cannot show values that are not positive
-    auto valueX = [&](double_t x) { return (!isUser) ? FromPad(pad->GetX1() + (span[0] + x * (span[2] - span[0])) * (pad->GetX2() - pad->GetX1()), pad->GetLogx()) : ((pad->GetLogx() && x <= 0.) ? nan : x); };
-    auto valueY = [&](double_t y) { return (!isUser) ? FromPad(pad->GetY1() + (span[1] + y * (span[3] - span[1])) * (pad->GetY2() - pad->GetY1()), pad->GetLogy()) : ((pad->GetLogy() && y <= 0.) ? nan : y); };
+    auto valueX = [&](double_t x) { return (!isUser) ? FromPad(pad_ptr->GetX1() + (span[0] + x * (span[2] - span[0])) * (pad_ptr->GetX2() - pad_ptr->GetX1()), pad_ptr->GetLogx()) : ((pad_ptr->GetLogx() && x <= 0.) ? nan : x); };
+    auto valueY = [&](double_t y) { return (!isUser) ? FromPad(pad_ptr->GetY1() + (span[1] + y * (span[3] - span[1])) * (pad_ptr->GetY2() - pad_ptr->GetY1()), pad_ptr->GetLogy()) : ((pad_ptr->GetLogy() && y <= 0.) ? nan : y); };
     auto skip = [&](const char* reason) { logger::warning("Shape {} ({}) of pad {} is not drawn: {}.", shapeIndex, Shape::KindName(kind), padID, reason); };
 
     TObject* object{};
@@ -5429,9 +5429,9 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
           continue;
         }
         // compared in pad coordinates: 10^log10(limit) is not always the limit, so a line at a limit of a log axis would count as outside
-        const bool logAxis = (isVertical) ? pad->GetLogx() : pad->GetLogy();
+        const bool logAxis = (isVertical) ? pad_ptr->GetLogx() : pad_ptr->GetLogy();
         const double_t padPos = (logAxis) ? std::log10(pos) : pos;
-        if (padPos < ((isVertical) ? pad->GetUxmin() : pad->GetUymin()) || padPos > ((isVertical) ? pad->GetUxmax() : pad->GetUymax())) {
+        if (padPos < ((isVertical) ? pad_ptr->GetUxmin() : pad_ptr->GetUymin()) || padPos > ((isVertical) ? pad_ptr->GetUxmax() : pad_ptr->GetUymax())) {
           skip("its position is outside of the frame");
           continue;
         }
@@ -5476,12 +5476,12 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
           skip("its centre is not positive on a log axis");
           continue;
         }
-        if (isUser && (pad->GetLogx() || pad->GetLogy())) {
+        if (isUser && (pad_ptr->GetLogx() || pad_ptr->GetLogy())) {
           logger::warning("Shape {} (ellipse) of pad {} is drawn distorted: TEllipse does not convert its radii on a log axis.", shapeIndex, padID);
         }
         // the radii are in pad coordinates (TEllipse converts only the centre)
-        const double_t rx = (isUser) ? c[2] : c[2] * (span[2] - span[0]) * (pad->GetX2() - pad->GetX1());
-        const double_t ry = (isUser) ? c[3] : c[3] * (span[3] - span[1]) * (pad->GetY2() - pad->GetY1());
+        const double_t rx = (isUser) ? c[2] : c[2] * (span[2] - span[0]) * (pad_ptr->GetX2() - pad_ptr->GetX1());
+        const double_t ry = (isUser) ? c[3] : c[3] * (span[3] - span[1]) * (pad_ptr->GetY2() - pad_ptr->GetY1());
         const auto arc = shape->GetArc().value_or(std::pair<double_t, double_t>{0., 360.});
         object = new TEllipse(x, y, rx, ry, arc.first, arc.second, shape->GetRotation().value_or(0.));
         break;
@@ -5494,7 +5494,7 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
         for (size_t i = 0; i + 1 < c.size(); i += 2) {
           const double_t x = valueX(c[i]), y = valueY(c[i + 1]);
           valid = valid && std::isfinite(x) && std::isfinite(y);
-          points.emplace_back(padCoord(x, pad->GetLogx()), padCoord(y, pad->GetLogy()));
+          points.emplace_back(padCoord(x, pad_ptr->GetLogx()), padCoord(y, pad_ptr->GetLogy()));
         }
         if (!valid) {
           skip("a point is not positive on a log axis");
@@ -5502,7 +5502,7 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
         }
         if (cutAtFrame) {
           // inside: of the four frame edges (axis, limit, sign: lower or upper limit)
-          for (auto [axis, limit, sign] : {std::tuple{0, pad->GetUxmin(), 1.}, std::tuple{0, pad->GetUxmax(), -1.}, std::tuple{1, pad->GetUymin(), 1.}, std::tuple{1, pad->GetUymax(), -1.}}) {
+          for (auto [axis, limit, sign] : {std::tuple{0, pad_ptr->GetUxmin(), 1.}, std::tuple{0, pad_ptr->GetUxmax(), -1.}, std::tuple{1, pad_ptr->GetUymin(), 1.}, std::tuple{1, pad_ptr->GetUymax(), -1.}}) {
             auto coord = [axis = axis](const std::pair<double_t, double_t>& p) { return (axis == 0) ? p.first : p.second; };
             auto inside = [&, limit = limit, sign = sign](const std::pair<double_t, double_t>& p) { return sign * (coord(p) - limit) >= 0.; };
             vector<std::pair<double_t, double_t>> cut;
@@ -5526,8 +5526,8 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
         points.push_back(points.front());  // closed
         vector<double_t> x, y;
         for (const auto& [px, py] : points) {
-          x.push_back(FromPad(px, pad->GetLogx()));
-          y.push_back(FromPad(py, pad->GetLogy()));
+          x.push_back(FromPad(px, pad_ptr->GetLogx()));
+          y.push_back(FromPad(py, pad_ptr->GetLogy()));
         }
         object = new TPolyLine(static_cast<int32_t>(x.size()), x.data(), y.data(), "f");
         if (shape->GetLineColor() || shape->GetLineStyle() || shape->GetLineWidth() || shape->GetLineAlpha()) {
@@ -5546,7 +5546,7 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
     line->SetLineColor(lineColor.ToIndex());
     if (shape->GetLineAlpha()) line->SetLineColor(TColor::GetColorTransparent(line->GetLineColor(), *shape->GetLineAlpha()));
     line->SetLineStyle(shape->GetLineStyle().value_or(kSolid));
-    if (auto width = get_first(shape->GetLineWidth(), padSettings.GetDefaultLineWidth(), padDefaults.GetDefaultLineWidth())) line->SetLineWidth(static_cast<Width_t>(*width));
+    if (auto width = get_first(shape->GetLineWidth(), pad.GetDefaultLineWidth(), padDefaults.GetDefaultLineWidth())) line->SetLineWidth(static_cast<Width_t>(*width));
     if (fill) {
       const bool hasFill = shape->GetFillColor() || shape->GetFillStyle();
       if (isRegion && !hasFill) {
@@ -5573,13 +5573,13 @@ void PlotPainter::DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot
       drawn->SetBit(kCanDelete);    // owned by the pad
       const char* option = (drawn == object && regionOutline) ? "l" : ((drawn == object && kind == kind_t::polygon) ? "f" : "");
       if (insertAfter) {
-        pad->GetListOfPrimitives()->AddAfter(insertAfter, drawn);
+        pad_ptr->GetListOfPrimitives()->AddAfter(insertAfter, drawn);
         insertAfter = drawn;
-        for (auto* link = pad->GetListOfPrimitives()->FirstLink(); link && *option; link = link->Next()) {  // AddAfter takes no option
+        for (auto* link = pad_ptr->GetListOfPrimitives()->FirstLink(); link && *option; link = link->Next()) {  // AddAfter takes no option
           if (link->GetObject() == drawn) link->SetOption(option);
         }
       } else {
-        pad->GetListOfPrimitives()->Add(drawn, option);
+        pad_ptr->GetListOfPrimitives()->Add(drawn, option);
       }
     }
   }

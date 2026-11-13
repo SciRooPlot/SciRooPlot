@@ -342,7 +342,7 @@ class PlotPainter
   static TObject* Input(const Plot::Pad::Data& data, const data_buffer_t& dataBuffer) { return Input(data.GetDataSource(), data.GetName() + data.GetDataInfo().GetNameSuffix(), dataBuffer); }
   std::optional<data_ptr_t> InputClone(TObject* input, const std::string& messageName, const std::optional<Plot::Pad::Data::proj_info_t>& projInfo, bool keepStoredRanges = false);
   std::optional<data_ptr_t> DenominatorClone(const Plot::Pad::Ratio& ratio, const data_buffer_t& dataBuffer);
-  void AddAxisRoom(TPad* pad, TH1* frame, const Plot::Pad& padDefaults, const Plot::Pad& padSettings, uint8_t padID, const Plot::Pad::Data* refFunc, std::string& padSetup);
+  void AddAxisRoom(const Plot::Pad& pad, const Plot::Pad& padDefaults, uint8_t padID, TPad* pad_ptr, TH1* frame, const Plot::Pad::Data* refFunc, std::string& padSetup);
   void ApplyScale(TObject* obj, std::set<TObject*>& done, const std::string& drawOption = "");
   Width_t ScaleLineWidth(Width_t width) const;
   Style_t ScaleMarkerStyle(Style_t style) const;
@@ -435,7 +435,7 @@ class PlotPainter
   bool DrawBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, const Plot::Pad& pad, const Plot::Pad& padDefaults, TPad* pad_ptr,
                const std::string& name);
   TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, coordinates_t coordinates, TPad* pad);
-  void DrawShapes(TPad* pad, const Plot::Pad& padSettings, const Plot::Pad& padDefaults, Plot::Pad::Shape::layer_t layer, TObject* insertAfter, uint8_t padID);
+  void DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults, uint8_t padID, TPad* pad_ptr, Plot::Pad::Shape::layer_t layer, TObject* insertAfter);
   bool FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY, bool& coversData);
   void FindBoxPosition(TPad* pad, double_t width, double_t height, box_placement_t placement, const std::string& boxType, double_t& lowerLeftX, double_t& lowerLeftY);
   static std::pair<double_t, double_t> SizeUnit(coordinates_t coordinates, const TVirtualPad* pad);  // the NDC of a size of 1 set for a box
