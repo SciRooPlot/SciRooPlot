@@ -5653,6 +5653,175 @@ bool PlotPainter::DrawBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<P
 
 //**************************************************************************************************
 /**
+ * The drawn data a legend row refers to (named "<number of the data in the pad>:<name>" when drawn), in the pad or in the pad padID,
+ * with the option it is drawn with (which TObject::GetDrawOption finds only in the current pad); data with a legend row but nothing
+ * painted is found as well.
+ */
+//**************************************************************************************************
+std::pair<TObject*, string> PlotPainter::FindDrawn(TPad* pad, uint16_t dataID, const optional<uint8_t>& padID) const
+{
+  TPad* source = (padID) ? dynamic_cast<TPad*>(pad->GetCanvas()->GetPrimitive(("Pad_" + std::to_string(*padID)).data())) : pad;
+  if (!source) return {nullptr, ""};
+  const string prefix = std::to_string(dataID) + ":";
+  for (TObjLink* link = source->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+    if (str_starts_with(link->GetObject()->GetName(), prefix)) return {link->GetObject(), link->GetOption()};
+  }
+  if (auto notPainted = mNotPainted.find({source, dataID}); notPainted != mNotPainted.end()) {
+    return notPainted->second;
+  }
+  return {nullptr, ""};
+}
+
+//**************************************************************************************************
+/**
+ * Font and size of a legend row that sets one of them: the other one taken from the box, a size inherited across font precisions
+ * converted (pixels for precision 3, a fraction of the pad otherwise), so that both are given to the row and scale together.
+ */
+//**************************************************************************************************
+std::pair<int16_t, float_t> PlotPainter::EntryText(const Plot::Pad::LegendEntry& entry, int16_t textFont, float_t textSize, const TVirtualPad* pad) const
+{
+  const int16_t font = entry.GetTextFont().value_or(textFont);
+  if (entry.GetTextSize()) return {font, *entry.GetTextSize()};
+  if ((font % 10 > 2) == (textFont % 10 > 2)) return {font, textSize};
+  const double_t heightPixel = TextHeightPixel(textFont, textSize, pad);
+  const auto [width, height] = TextPadSizePixel(pad);
+  return {font, static_cast<float_t>((font % 10 > 2) ? heightPixel / mScale : heightPixel / std::min(width, height))};
+}
+
+//**************************************************************************************************
+/**
+ * Adds the rows of a legend box (their labels with the placeholders replaced: lines) to the legend, in nColumns columns of nRows rows,
+ * filled row by row or top down: each with the symbol of the data it refers to (and of the data added with AddSymbolOf) in the look of
+ * that data, overridden by the defaults of the box and by the settings of the row.
+ */
+//**************************************************************************************************
+void PlotPainter::AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box, const vector<string>& lines, uint8_t nColumns, uint16_t nRows, bool orderTopDown,
+                                int16_t textFont, float_t textSize, TPad* pad)
+{
+  const uint16_t nLines = lines.size();
+  const uint16_t nPlaces = (orderTopDown) ? nRows * nColumns : nLines;
+  for (uint16_t place = 0; place < nPlaces; ++place) {
+    // the entry at this place of TLegend's row-by-row filling
+    const uint16_t i = (orderTopDown) ? (place % nColumns) * nRows + place / nColumns : place;
+    if (i >= nLines) {
+      legend->AddEntry(static_cast<TObject*>(nullptr), "", "");  // a free place at the bottom of the last column
+      continue;
+    }
+    const auto& entry = box.GetEntries()[i];
+    string label = lines[i];
+
+    // user-defined symbol elements for single entry or all entries
+    string symbolElements = entry.GetSymbolElements() ? *entry.GetSymbolElements() : ((box.GetDefaultSymbolElements()) ? *box.GetDefaultSymbolElements() : "");
+
+    TLegendEntry* curEntry = nullptr;
+    TAttMarker markerAttr;
+    TAttLine lineAttr;
+    TAttFill fillAttr;
+    // the symbol a drawn data gives the row (elements: those set for the row, else what the data draws) in the look of the data
+    struct SymbolPart {
+      uint16_t dataID;
+      string elements;
+      TAttMarker marker;
+      TAttLine line;
+      TAttFill fill;
+    };
+    auto symbolPart = [](uint16_t dataID, TObject* data_ptr, const string& drawnWith, const string& elements) {
+      const LegendSymbol drawn = GetLegendSymbol(data_ptr, drawnWith);
+      SymbolPart part{dataID, str_upper((elements.empty()) ? drawn.elements : elements), {}, {}, {}};
+      if (auto ptr = dynamic_cast<TAttMarker*>(data_ptr)) ptr->Copy(part.marker);
+      if (auto ptr = dynamic_cast<TAttLine*>(data_ptr)) ptr->Copy(part.line);
+      if (auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(part.fill);
+      // what is not drawn is not shown (TLegend would draw lines of width 0 as hairlines, hollow fills as outlines)
+      auto drop = [&part](char element) { part.elements.erase(std::remove(part.elements.begin(), part.elements.end(), element), part.elements.end()); };
+      if (part.line.GetLineWidth() <= 0) {
+        drop('L');
+        drop('E');
+      }
+      const bool hollow = part.fill.GetFillStyle() == 0 || part.fill.GetFillColor() == 0;
+      // the outline TLegend draws around a fill symbol without line
+      if (str_contains(part.elements, "F") && !str_contains(part.elements, "L")) {
+        if (drawn.outline == Outline::thin && part.line.GetLineWidth() > 0) {  // outlined thin and solid in the line colour
+          part.line.SetLineWidth(1);
+          part.line.SetLineStyle(kSolid);
+          if (hollow) part.fill.SetFillColor(part.line.GetLineColor());
+        }
+        if (drawn.outline == Outline::none || part.line.GetLineWidth() <= 0) part.line.SetLineColor(TColor::GetColorTransparent(part.line.GetLineColor(), 0.f));
+      }
+      return part;
+    };
+    // the parts of the row's data and of the data added with AddSymbolOf, in the order they are drawn
+    std::vector<SymbolPart> parts;
+    const auto [data_ptr, drawnWith] = (entry.GetRefDataID()) ? FindDrawn(pad, *entry.GetRefDataID(), entry.GetRefPadID()) : std::pair<TObject*, string>{nullptr, ""};
+    if (data_ptr) parts.push_back(symbolPart(*entry.GetRefDataID(), data_ptr, drawnWith, symbolElements));
+    for (uint16_t dataID : entry.GetSymbolOf()) {
+      const auto [other_ptr, otherDrawnWith] = FindDrawn(pad, dataID, entry.GetRefPadID());
+      if (!other_ptr) {
+        logger::warning("Legend row '{}': there is no data {} drawn in {}.", label, dataID, (entry.GetRefPadID()) ? "pad " + std::to_string(*entry.GetRefPadID()) : "this pad");
+        continue;
+      }
+      parts.push_back(symbolPart(dataID, other_ptr, otherDrawnWith, ""));
+    }
+    std::stable_sort(parts.begin(), parts.end(), [](const SymbolPart& a, const SymbolPart& b) { return a.dataID < b.dataID; });
+    if (!parts.empty()) {
+      // each element in the look of the data giving it, the one drawn later where two give the same (as in the plot); the line of the row
+      // is that of the L element, without one the outline of the fill (TLegend draws no error bar with a fill), else that of the error bars
+      symbolElements.clear();
+      const SymbolPart* lineFrom = nullptr;
+      const SymbolPart* outlineFrom = nullptr;
+      const SymbolPart* errorsFrom = nullptr;
+      for (const auto& part : parts) {
+        for (char element : part.elements) {
+          if (!str_contains(symbolElements, string(1, element))) symbolElements += element;
+          if (element == 'P') part.marker.Copy(markerAttr);
+          if (element == 'F') {
+            part.fill.Copy(fillAttr);
+            outlineFrom = &part;
+          }
+          if (element == 'L') lineFrom = &part;
+          if (element == 'E') errorsFrom = &part;
+        }
+      }
+      if (const SymbolPart* from = (lineFrom) ? lineFrom : ((outlineFrom) ? outlineFrom : errorsFrom)) from->line.Copy(lineAttr);
+    }
+    curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), symbolElements.data());
+
+    // the attributes of the data, overridden by the defaults of the box and by those of the entry
+    curEntry->SetMarkerColor(markerAttr.GetMarkerColor());
+    curEntry->SetMarkerStyle(markerAttr.GetMarkerStyle());
+    curEntry->SetMarkerSize(markerAttr.GetMarkerSize());
+    curEntry->SetLineColor(lineAttr.GetLineColor());
+    curEntry->SetLineStyle(lineAttr.GetLineStyle());
+    curEntry->SetLineWidth(lineAttr.GetLineWidth());
+    curEntry->SetFillColor(fillAttr.GetFillColor());
+    curEntry->SetFillStyle(fillAttr.GetFillStyle());
+
+    auto applyLayout = [curEntry](const layout_t& marker, const layout_t& line, const layout_t& fill) {
+      curEntry->SetMarkerColor(ColorWithAlpha(curEntry->GetMarkerColor(), marker.color, marker.alpha));
+      if (marker.style) curEntry->SetMarkerStyle(*marker.style);
+      if (marker.scale) curEntry->SetMarkerSize(*marker.scale);
+      curEntry->SetLineColor(ColorWithAlpha(curEntry->GetLineColor(), line.color, line.alpha));
+      if (line.style) curEntry->SetLineStyle(*line.style);
+      if (line.scale) curEntry->SetLineWidth(*line.scale);
+      curEntry->SetFillColor(ColorWithAlpha(curEntry->GetFillColor(), fill.color, fill.alpha));
+      if (fill.style) curEntry->SetFillStyle(*fill.style);
+    };
+    applyLayout({box.GetDefaultMarkerColor(), box.GetDefaultMarkerAlpha(), box.GetDefaultMarkerStyle(), box.GetDefaultMarkerSize()},
+                {box.GetDefaultLineColor(), box.GetDefaultLineAlpha(), box.GetDefaultLineStyle(), box.GetDefaultLineWidth()},
+                {box.GetDefaultFillColor(), box.GetDefaultFillAlpha(), box.GetDefaultFillStyle(), {}});
+    applyLayout({entry.GetMarkerColor(), entry.GetMarkerAlpha(), entry.GetMarkerStyle(), entry.GetMarkerSize()},
+                {entry.GetLineColor(), entry.GetLineAlpha(), entry.GetLineStyle(), entry.GetLineWidth()},
+                {entry.GetFillColor(), entry.GetFillAlpha(), entry.GetFillStyle(), {}});
+    curEntry->SetTextColor(ColorWithAlpha(curEntry->GetTextColor(), entry.GetTextColor(), entry.GetTextAlpha()));
+    if (entry.GetTextFont() || entry.GetTextSize()) {
+      const auto [font, size] = EntryText(entry, textFont, textSize, pad);
+      curEntry->SetTextFont(font);
+      curEntry->SetTextSize(size);
+    }
+  }
+}
+
+//**************************************************************************************************
+/**
  * The legend or text box with its rows or lines, styled and at its place in the pad (in the given coordinates).
  */
 //**************************************************************************************************
@@ -5673,24 +5842,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       if (title) DropEmptyGroups(*title);
     }
 
-    // the drawn data a legend row refers to (named "<number of the data in the pad>:<name>" when drawn), in this pad or in another one
-    // (with the option it is drawn with, which TObject::GetDrawOption finds only in the current pad)
-    auto findDrawn = [this, pad](uint16_t dataID, const optional<uint8_t>& padID) -> std::pair<TObject*, string> {
-      TPad* source = (padID) ? dynamic_cast<TPad*>(pad->GetCanvas()->GetPrimitive(("Pad_" + std::to_string(*padID)).data())) : pad;
-      if (!source) return {nullptr, ""};
-      const string prefix = std::to_string(dataID) + ":";
-      for (TObjLink* link = source->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
-        if (str_starts_with(link->GetObject()->GetName(), prefix)) return {link->GetObject(), link->GetOption()};
-      }
-      if (auto notPainted = mNotPainted.find({source, dataID}); notPainted != mNotPainted.end()) {
-        return notPainted->second;
-      }
-      return {nullptr, ""};
-    };
-    auto findData = [&findDrawn](uint16_t dataID, const optional<uint8_t>& padID) { return findDrawn(dataID, padID).first; };
     // the data the placeholders of a legend row or a text refer to (a histogram drawn as graph: the histogram)
     auto findPlaceholderData = [&](uint16_t dataID, const optional<uint8_t>& padID) -> TNamed* {
-      TObject* data_ptr = findData(dataID, padID);
+      TObject* data_ptr = FindDrawn(pad, dataID, padID).first;
       if (auto source = mSourceHists.find(data_ptr); data_ptr && source != mSourceHists.end()) {
         data_ptr = source->second.get();
       }
@@ -5732,17 +5886,6 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     const double_t textHeightPixel = TextHeightPixel(textFont, textSize, pad);  // lines with sub- or superscripts are higher
     double_t lineHeightPixel = textHeightPixel;
 
-    // font and size of an entry that sets one of them: the other one taken from the box, a size inherited across font precisions
-    // converted (pixels for precision 3, a fraction of the pad otherwise), so that both are given to the entry and scale together
-    auto entryText = [&](const auto& entry) -> std::pair<int16_t, float_t> {
-      const int16_t font = entry.GetTextFont().value_or(textFont);
-      if (entry.GetTextSize()) return {font, *entry.GetTextSize()};
-      if ((font % 10 > 2) == (textFont % 10 > 2)) return {font, textSize};
-      const double_t heightPixel = TextHeightPixel(textFont, textSize, pad);
-      const auto [width, height] = TextPadSizePixel(pad);
-      return {font, static_cast<float_t>((font % 10 > 2) ? heightPixel / mScale : heightPixel / std::min(width, height))};
-    };
-
     struct LineExtent {
       double_t over;
       double_t under;
@@ -5754,7 +5897,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       auto lineTextSize = textSize;
       if constexpr (isLegend) {
         const auto& entry = box->GetEntries()[lineID];
-        if (entry.GetTextFont() || entry.GetTextSize()) std::tie(lineTextFont, lineTextSize) = entryText(entry);
+        if (entry.GetTextFont() || entry.GetTextSize()) std::tie(lineTextFont, lineTextSize) = EntryText(entry, textFont, textSize, pad);
         if (entry.GetRefDataID()) {
           if (TNamed* data_ptr = findPlaceholderData(*entry.GetRefDataID(), entry.GetRefPadID())) {
             ReplacePlaceholders(line, data_ptr);
@@ -5910,125 +6053,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         legend->SetHeader((*title).data(), center.data());
       }
 
-      const uint16_t nPlaces = (orderTopDown) ? nRows * nColumns : nLines;
-      for (uint16_t place = 0; place < nPlaces; ++place) {
-        // the entry at this place of TLegend's row-by-row filling
-        const uint16_t i = (orderTopDown) ? (place % nColumns) * nRows + place / nColumns : place;
-        if (i >= nLines) {
-          legend->AddEntry(static_cast<TObject*>(nullptr), "", "");  // a free place at the bottom of the last column
-          continue;
-        }
-        const auto& entry = box->GetEntries()[i];
-        string label = lines[i];
-
-        // user-defined symbol elements for single entry or all entries
-        string symbolElements = entry.GetSymbolElements() ? *entry.GetSymbolElements() : ((box->GetDefaultSymbolElements()) ? *box->GetDefaultSymbolElements() : "");
-
-        TLegendEntry* curEntry = nullptr;
-        TAttMarker markerAttr;
-        TAttLine lineAttr;
-        TAttFill fillAttr;
-        // the symbol a drawn data gives the row (elements: those set for the row, else what the data draws) in the look of the data
-        struct SymbolPart {
-          uint16_t dataID;
-          string elements;
-          TAttMarker marker;
-          TAttLine line;
-          TAttFill fill;
-        };
-        auto symbolPart = [](uint16_t dataID, TObject* data_ptr, const string& drawnWith, const string& elements) {
-          const LegendSymbol drawn = GetLegendSymbol(data_ptr, drawnWith);
-          SymbolPart part{dataID, str_upper((elements.empty()) ? drawn.elements : elements), {}, {}, {}};
-          if (auto ptr = dynamic_cast<TAttMarker*>(data_ptr)) ptr->Copy(part.marker);
-          if (auto ptr = dynamic_cast<TAttLine*>(data_ptr)) ptr->Copy(part.line);
-          if (auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(part.fill);
-          // what is not drawn is not shown (TLegend would draw lines of width 0 as hairlines, hollow fills as outlines)
-          auto drop = [&part](char element) { part.elements.erase(std::remove(part.elements.begin(), part.elements.end(), element), part.elements.end()); };
-          if (part.line.GetLineWidth() <= 0) {
-            drop('L');
-            drop('E');
-          }
-          const bool hollow = part.fill.GetFillStyle() == 0 || part.fill.GetFillColor() == 0;
-          // the outline TLegend draws around a fill symbol without line
-          if (str_contains(part.elements, "F") && !str_contains(part.elements, "L")) {
-            if (drawn.outline == Outline::thin && part.line.GetLineWidth() > 0) {  // outlined thin and solid in the line colour
-              part.line.SetLineWidth(1);
-              part.line.SetLineStyle(kSolid);
-              if (hollow) part.fill.SetFillColor(part.line.GetLineColor());
-            }
-            if (drawn.outline == Outline::none || part.line.GetLineWidth() <= 0) part.line.SetLineColor(TColor::GetColorTransparent(part.line.GetLineColor(), 0.f));
-          }
-          return part;
-        };
-        // the parts of the row's data and of the data added with AddSymbolOf, in the order they are drawn
-        std::vector<SymbolPart> parts;
-        const auto [data_ptr, drawnWith] = (entry.GetRefDataID()) ? findDrawn(*entry.GetRefDataID(), entry.GetRefPadID()) : std::pair<TObject*, string>{nullptr, ""};
-        if (data_ptr) parts.push_back(symbolPart(*entry.GetRefDataID(), data_ptr, drawnWith, symbolElements));
-        for (uint16_t dataID : entry.GetSymbolOf()) {
-          const auto [other_ptr, otherDrawnWith] = findDrawn(dataID, entry.GetRefPadID());
-          if (!other_ptr) {
-            logger::warning("Legend row '{}': there is no data {} drawn in {}.", label, dataID, (entry.GetRefPadID()) ? "pad " + std::to_string(*entry.GetRefPadID()) : "this pad");
-            continue;
-          }
-          parts.push_back(symbolPart(dataID, other_ptr, otherDrawnWith, ""));
-        }
-        std::stable_sort(parts.begin(), parts.end(), [](const SymbolPart& a, const SymbolPart& b) { return a.dataID < b.dataID; });
-        if (!parts.empty()) {
-          // each element in the look of the data giving it, the one drawn later where two give the same (as in the plot); the line of the row
-          // is that of the L element, without one the outline of the fill (TLegend draws no error bar with a fill), else that of the error bars
-          symbolElements.clear();
-          const SymbolPart* lineFrom = nullptr;
-          const SymbolPart* outlineFrom = nullptr;
-          const SymbolPart* errorsFrom = nullptr;
-          for (const auto& part : parts) {
-            for (char element : part.elements) {
-              if (!str_contains(symbolElements, string(1, element))) symbolElements += element;
-              if (element == 'P') part.marker.Copy(markerAttr);
-              if (element == 'F') {
-                part.fill.Copy(fillAttr);
-                outlineFrom = &part;
-              }
-              if (element == 'L') lineFrom = &part;
-              if (element == 'E') errorsFrom = &part;
-            }
-          }
-          if (const SymbolPart* from = (lineFrom) ? lineFrom : ((outlineFrom) ? outlineFrom : errorsFrom)) from->line.Copy(lineAttr);
-        }
-        curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), symbolElements.data());
-
-        // the attributes of the data, overridden by the defaults of the box and by those of the entry
-        curEntry->SetMarkerColor(markerAttr.GetMarkerColor());
-        curEntry->SetMarkerStyle(markerAttr.GetMarkerStyle());
-        curEntry->SetMarkerSize(markerAttr.GetMarkerSize());
-        curEntry->SetLineColor(lineAttr.GetLineColor());
-        curEntry->SetLineStyle(lineAttr.GetLineStyle());
-        curEntry->SetLineWidth(lineAttr.GetLineWidth());
-        curEntry->SetFillColor(fillAttr.GetFillColor());
-        curEntry->SetFillStyle(fillAttr.GetFillStyle());
-
-        auto applyLayout = [curEntry](const layout_t& marker, const layout_t& line, const layout_t& fill) {
-          curEntry->SetMarkerColor(ColorWithAlpha(curEntry->GetMarkerColor(), marker.color, marker.alpha));
-          if (marker.style) curEntry->SetMarkerStyle(*marker.style);
-          if (marker.scale) curEntry->SetMarkerSize(*marker.scale);
-          curEntry->SetLineColor(ColorWithAlpha(curEntry->GetLineColor(), line.color, line.alpha));
-          if (line.style) curEntry->SetLineStyle(*line.style);
-          if (line.scale) curEntry->SetLineWidth(*line.scale);
-          curEntry->SetFillColor(ColorWithAlpha(curEntry->GetFillColor(), fill.color, fill.alpha));
-          if (fill.style) curEntry->SetFillStyle(*fill.style);
-        };
-        applyLayout({box->GetDefaultMarkerColor(), box->GetDefaultMarkerAlpha(), box->GetDefaultMarkerStyle(), box->GetDefaultMarkerSize()},
-                    {box->GetDefaultLineColor(), box->GetDefaultLineAlpha(), box->GetDefaultLineStyle(), box->GetDefaultLineWidth()},
-                    {box->GetDefaultFillColor(), box->GetDefaultFillAlpha(), box->GetDefaultFillStyle(), {}});
-        applyLayout({entry.GetMarkerColor(), entry.GetMarkerAlpha(), entry.GetMarkerStyle(), entry.GetMarkerSize()},
-                    {entry.GetLineColor(), entry.GetLineAlpha(), entry.GetLineStyle(), entry.GetLineWidth()},
-                    {entry.GetFillColor(), entry.GetFillAlpha(), entry.GetFillStyle(), {}});
-        curEntry->SetTextColor(ColorWithAlpha(curEntry->GetTextColor(), entry.GetTextColor(), entry.GetTextAlpha()));
-        if (entry.GetTextFont() || entry.GetTextSize()) {
-          const auto [font, size] = entryText(entry);
-          curEntry->SetTextFont(font);
-          curEntry->SetTextSize(size);
-        }
-      }
+      AddLegendRows(legend, *box, lines, nColumns, nRows, orderTopDown, textFont, textSize, pad);
       returnBox = legend;
     } else {
       TPaveText* paveText = new TPaveText(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "NDC NB");
