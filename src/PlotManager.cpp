@@ -401,7 +401,7 @@ void PlotManager::SetDataRootFile(const string& fileName)
 
 //**************************************************************************************************
 /**
- * Define the inputs of a data source: files, folders within files (file.root:folder), directories or wildcard patterns.
+ * Whether a data source can be named so (an empty or illegal name is reported).
  */
 //**************************************************************************************************
 bool PlotManager::IsValidDataSourceName(const string& dataSource)
@@ -428,6 +428,12 @@ std::unique_ptr<TFile> PlotManager::OpenInputFile(const string& fileName)
   if (is_remote(fileName)) return std::unique_ptr<TFile>(TFile::Open(fileName.data(), "READ"));
   return std::make_unique<TFile>(fileName.data(), "READ");
 }
+
+//**************************************************************************************************
+/**
+ * Define the inputs of a data source: files, folders within files (file.root:folder), directories or wildcard patterns.
+ */
+//**************************************************************************************************
 void PlotManager::AddDataSource(const string& dataSource, const vector<string>& inputs, bool replace)
 {
   if (!IsValidDataSourceName(dataSource)) return;
@@ -458,7 +464,7 @@ void PlotManager::AddDataSource(const string& dataSource, const string& input, b
 
 //**************************************************************************************************
 /**
- * Define input data for user defined unique dataSource.
+ * Define the inputs of a data source by objects in memory: they are copied into the user data file, which becomes an input of it.
  */
 //**************************************************************************************************
 void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>& inputs, bool replace)
@@ -579,7 +585,16 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
   AddDataSource(dataSource, {mUserDataFile + ":" + dataSource}, replace);
 }
 
-// data read from the inputs of a data source (also of its folders, dataSource:folder) is read again by the next GeneratePlots
+void PlotManager::AddDataSource(const string& dataSource, TObject* input, bool replace)
+{
+  AddDataSource(dataSource, vector<TObject*>{input}, replace);
+}
+
+//**************************************************************************************************
+/**
+ * Data read from the inputs of a data source (also of its folders, dataSource:folder) is read again by the next GeneratePlots.
+ */
+//**************************************************************************************************
 void PlotManager::ForgetBufferedData(const string& dataSource)
 {
   auto isPart = [&](const string& source) { return source == dataSource || source.rfind(dataSource + ":", 0) == 0; };
@@ -601,10 +616,6 @@ void PlotManager::ForgetBufferedData(const string& dataSource)
   for (auto it = mDataInfoBuffer.begin(); it != mDataInfoBuffer.end();) {
     it = (isPart(it->first)) ? mDataInfoBuffer.erase(it) : std::next(it);
   }
-}
-void PlotManager::AddDataSource(const string& dataSource, TObject* input, bool replace)
-{
-  AddDataSource(dataSource, vector<TObject*>{input}, replace);
 }
 
 //**************************************************************************************************
