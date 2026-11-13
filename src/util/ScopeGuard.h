@@ -23,8 +23,11 @@
 #include <TROOT.h>
 
 #include <algorithm>
+#include <functional>
+#include <mutex>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace SciRooPlot::util
 {
@@ -67,6 +70,50 @@ inline auto ignore_root_messages_below(Int_t level)
   auto guard = make_scope_guard([previous = gErrorIgnoreLevel]() { gErrorIgnoreLevel = previous; });
   gErrorIgnoreLevel = std::max(gErrorIgnoreLevel, level);
   return guard;
+}
+
+// the filters of the open filter_root_messages scopes (the innermost last) and the handler set before the first one
+struct root_message_filters_t {
+  std::mutex mutex;
+  std::vector<std::function<bool(Int_t, Bool_t, const char*, const char*)>> drops;
+  ErrorHandlerFunc_t outer{};
+};
+inline root_message_filters_t& root_message_filters()
+{
+  static root_message_filters_t filters;
+  return filters;
+}
+
+// ROOT messages for which drop(level, abort, location, message) is true are dropped until the end of the scope, the others go on to the
+// handler set before (ROOT's default if there is none); nested scopes ask the innermost first. Messages of other threads pass the same filters.
+template <typename P>
+auto filter_root_messages(P drop)
+{
+  auto& filters = root_message_filters();
+  {
+    std::lock_guard<std::mutex> lock(filters.mutex);
+    if (filters.drops.empty()) {
+      filters.outer = SetErrorHandler([](Int_t level, Bool_t abort, const char* location, const char* msg) {
+        auto& current = root_message_filters();
+        ErrorHandlerFunc_t outer{};
+        {
+          std::lock_guard<std::mutex> lock(current.mutex);
+          for (auto it = current.drops.rbegin(); it != current.drops.rend(); ++it) {
+            if ((*it)(level, abort, location, msg)) return;
+          }
+          outer = current.outer;
+        }
+        (outer) ? outer(level, abort, location, msg) : DefaultErrorHandler(level, abort, location, msg);
+      });
+    }
+    filters.drops.emplace_back(std::move(drop));
+  }
+  return make_scope_guard([]() {
+    auto& current = root_message_filters();
+    std::lock_guard<std::mutex> lock(current.mutex);
+    current.drops.pop_back();
+    if (current.drops.empty()) SetErrorHandler(current.outer);
+  });
 }
 
 // ROOT runs single-threaded until the end of the scope (if on)

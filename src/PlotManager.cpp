@@ -140,6 +140,7 @@ namespace SciRooPlot
 {
 using util::disable_implicit_mt;
 using util::expand_path;
+using util::filter_root_messages;
 using util::find_container_key;
 using util::for_each_item;
 using util::ignore_root_messages_below;
@@ -1435,12 +1436,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   auto quiet = ignore_root_messages_below(kWarning);
   // ROOT's "Something strange: num. of critical sectors not equal 2" for the empty lego plot that draws the frame of every 3d view, in
   // spherical coordinates over a narrow range (ROOT bug 66): the picture is the same as without it
-  static ErrorHandlerFunc_t outerHandler = nullptr;
-  outerHandler = SetErrorHandler([](Int_t level, Bool_t abort, const char* location, const char* msg) {
-    if (TString(location) == "TView3D::FindThetaSectors") return;
-    outerHandler(level, abort, location, msg);
-  });
-  auto sectorsGuard = make_scope_guard([]() { SetErrorHandler(outerHandler); });
+  auto sectorsGuard = filter_root_messages([](Int_t, Bool_t, const char* location, const char*) { return TString(location) == "TView3D::FindThetaSectors"; });
   // the files opened and closed while plotting would leave gDirectory at gROOT: objects the caller makes afterwards
   // would no longer go into the file it had open
   TDirectory::TContext keepCurrentDirectory;
@@ -2532,15 +2528,8 @@ bool PlotManager::WriteOutput(Plot& fullPlot, const string& mode, const shared_p
     }
   }
   // only ROOT's "PDF not implemented yet" of TASImage::Paint is dropped (SciRooPlot warned above), every other message passes
-  static ErrorHandlerFunc_t rootErrorHandler = nullptr;
-  if (silenceNoPdfImages) {
-    rootErrorHandler = SetErrorHandler([](Int_t level, Bool_t abort, const char* location, const char* msg) {
-      if (TString(location) == "TASImage::Paint" && TString(msg).Contains("PDF")) return;
-      rootErrorHandler(level, abort, location, msg);
-    });
-  }
-  auto errorHandlerGuard = make_scope_guard([silenceNoPdfImages]() {
-    if (silenceNoPdfImages) SetErrorHandler(rootErrorHandler);
+  auto noPdfImagesGuard = filter_root_messages([silenceNoPdfImages](Int_t, Bool_t, const char* location, const char* msg) {
+    return silenceNoPdfImages && TString(location) == "TASImage::Paint" && TString(msg).Contains("PDF");
   });
   canvas->SaveAs(fullName.data());
   std::error_code writtenError;
@@ -2662,15 +2651,10 @@ std::unique_ptr<TCanvas> PlotManager::ApplySharedAxes(PlotPainter& painter, Plot
   // the errors of the first paint (SciRooPlot's and ROOT's) are not repeated by a second one, new ones are given
   logger::error_memory_t firstErrors;
   logger::error_memory() = &firstErrors;
-  static ErrorHandlerFunc_t outerHandler = nullptr;
-  outerHandler = SetErrorHandler([](Int_t level, Bool_t abort, const char* location, const char* msg) {
-    if (level >= kError && !abort && logger::error_memory() && !logger::error_memory()->Pass(fmt::format("{}: {}", location, msg))) return;
-    outerHandler(level, abort, location, msg);
+  auto repeatedErrorsGuard = filter_root_messages([](Int_t level, Bool_t abort, const char* location, const char* msg) {
+    return level >= kError && !abort && logger::error_memory() && !logger::error_memory()->Pass(fmt::format("{}: {}", location, msg));
   });
-  auto forgetErrors = make_scope_guard([]() {
-    logger::error_memory() = nullptr;
-    SetErrorHandler(outerHandler);
-  });
+  auto forgetErrors = make_scope_guard([]() { logger::error_memory() = nullptr; });
   // the automatic ranges: the union of the ranges the pads get on their own (with their room), known after a first paint;
   // the plot is painted again only if a pad got another range than the union
   Plot firstPlot = fullPlot;  // painting changes the plot (e.g. the legend rows of the data)
@@ -4136,32 +4120,11 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   processGroup = [&](const vector<const data_info_t*>& infos, bool sequential) {
     OutputCapture rootOutput;
     // errors of ROOT's tree reader (a column of another type in one of the chained inputs) go there too: they are the reason given below
-    static std::mutex readerMutex;
-    static OutputCapture* readerOutput = nullptr;
-    static ErrorHandlerFunc_t outerHandler = nullptr;
-    OutputCapture* const enclosingOutput = readerOutput;  // a group processed while another one is
-    {
-      std::lock_guard<std::mutex> lock(readerMutex);
-      readerOutput = &rootOutput;
-    }
-    if (!enclosingOutput) {
-      outerHandler = SetErrorHandler([](Int_t level, Bool_t abort, const char* location, const char* msg) {
-        if (level >= kError && location && std::string_view(location).rfind("TTreeReader", 0) == 0) {
-          std::lock_guard<std::mutex> lock(readerMutex);
-          if (readerOutput) {
-            std::ostream(readerOutput) << "Error in <" << location << ">: " << msg << '\n';
-            return;
-          }
-        }
-        (outerHandler) ? outerHandler(level, abort, location, msg) : DefaultErrorHandler(level, abort, location, msg);
-      });
-    }
-    auto readerGuard = make_scope_guard([enclosingOutput]() {
-      {
-        std::lock_guard<std::mutex> lock(readerMutex);
-        readerOutput = enclosingOutput;
-      }
-      if (!enclosingOutput) SetErrorHandler(outerHandler);
+    // (a group processed while another one is takes them)
+    auto readerGuard = filter_root_messages([&rootOutput](Int_t level, Bool_t, const char* location, const char* msg) {
+      if (level < kError || !location || !str_starts_with(location, "TTreeReader")) return false;
+      std::ostream(&rootOutput) << "Error in <" << location << ">: " << msg << '\n';
+      return true;
     });
     vector<DataFrameRequest<data_info_t>> requests;  // successfully booked requests
     vector<const data_info_t*> rejected;             // requests already reported as invalid while preparing them
