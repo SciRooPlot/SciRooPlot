@@ -1822,6 +1822,7 @@ const REF = [
 <div class="tablewrap"><table class="cmd"><thead><tr><th>Task</th><th>Command</th></tr></thead><tbody>
 <tr><td>Start a project</td><td><code>srp init-py &lt;project&gt;</code> or <code>srp init-cpp &lt;project&gt;</code> (minimal), <code>srp example-py &lt;project&gt;</code> (the commented example plots with their data)</td></tr>
 <tr><td>Use a program you already have</td><td><code>srp add &lt;project&gt; &lt;program&gt; [&lt;outdir&gt;]</code></td></tr>
+<tr><td>Plot from a notebook, <code>python3 -c</code> or stdin (no program to register)</td><td><code>pm.SetOutputDirectory("plots")</code>, then <code>pm.GeneratePlots("pdf", ".+", ".+")</code> in the same session: mode, name and group</td></tr>
 <tr><td>See and switch projects</td><td><code>srp projects [&lt;project&gt;]</code> (program, output folder, variables, plots and inputs), <code>srp select &lt;project&gt;</code></td></tr>
 <tr><td>Set where files go</td><td><code>srp set &lt;project&gt; outdir &lt;dir&gt;</code></td></tr>
 <tr><td>Store a path for your code</td><td><code>srp set &lt;project&gt; inputDir &lt;dir&gt;</code>, read with <code>pm.GetProjectProperty("inputDir")</code></td></tr>

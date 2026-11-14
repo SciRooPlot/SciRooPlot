@@ -76,7 +76,7 @@ int main() {
 }
 ```
 Python is the same API: `from SciRooPlot import *`, `PlotManager("myProject")`, `plot[1]['X']`, `pm.AddPlot(plot)`, `pm.SaveProject()` (see "C++ vs Python").
-Scripts can make plots without the `plot` app: `pm.SetOutputDirectory("/path/out")` (a registered project has one already), then `pm.GeneratePlots("pdf", "name", "group")` (a mode of `plot` other than `list`, then the name and the group pattern: the reverse order of `plot <group> <name>`) on the plots added so far, `pm.LoadPlots(name, group)` to read saved definitions back first, `pm.ListPlots()`.
+Scripts can make plots without the `plot` app: `pm.SetOutputDirectory("/path/out")` (a registered project has one already), then `pm.GeneratePlots("pdf", "name", "group")` (a mode of `plot` other than `list`, then the name and the group pattern: the reverse order of `plot <group> <name>`) on the plots added so far, `pm.LoadPlots(name, group)` to read saved definitions back first, `pm.ListPlots()`. This is also the way for definitions run from `python3 -c`, stdin or a notebook: there is no program file to register with `srp add`.
 
 ## Data sources
 
