@@ -1358,7 +1358,7 @@ auto Plot::Pad::SetDefaultCandleWhiskerRange(float_t range) -> decltype(*this)
 
 //**************************************************************************************************
 /**
- * Coordinate system of the legends, texts, statistics boxes and images that set none (default: pad_coordinates).
+ * Coordinate system of the legends, texts, statistics boxes and images that set none (default: frame_coordinates).
  */
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultBoxCoordinates(coordinates_t coordinates) -> decltype(*this)
@@ -2339,7 +2339,7 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend(box_placement_t placement, const std:
 
 //**************************************************************************************************
 /**
- * Default constructor for Data objects.
+ * Constructor of data by name, data source and legend label.
  */
 //**************************************************************************************************
 Plot::Pad::Data::Data(const string& name, const string& dataSource, const optional<string>& legendLabel)
@@ -3779,7 +3779,7 @@ Plot::Pad::Axis::Axis(const char axisName) : Axis()
 
 //**************************************************************************************************
 /**
- * Constructor to define entry from file.
+ * Construct an axis from its property tree.
  */
 //**************************************************************************************************
 Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()

@@ -243,10 +243,10 @@ std::istream& operator>>(std::istream& stream, color_t& color);
 
 // colour, transparency, style and size of one attribute of a drawn object
 struct layout_t {
-  std::optional<color_t> color;        // marker_color , line_color, fill_color, text_color
-  std::optional<float_t> alpha;        // marker_alpha , line_alpha, fill_alpha, text_alpha
-  std::optional<int16_t> style;        // marker_style , line_style, fill_style, text_font
-  std::optional<float_t> scale;        // marker_size , line_width, fill_?????, text_size
+  std::optional<color_t> color;        // marker, line, fill, text, border colour
+  std::optional<float_t> alpha;        // marker, line, fill, text, border alpha
+  std::optional<int16_t> style;        // marker, line, fill, border style, text font
+  std::optional<float_t> scale;        // marker size, line width, text size, border width (a fill has none)
   void Update(const layout_t& other);  // takes over the values set in other
 };
 
