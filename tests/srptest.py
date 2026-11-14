@@ -133,6 +133,7 @@ def describe(case):
 # (-4 to 5 in the variant crossing) with positive values (usable on log axes): about 1 to 10 for 1d data, products of those for 2d and 3d data, about 0.1 to 0.8 for
 # efficiencies. Properties: binned (a histogram: the frame shows whole bins), polar (drawn in a polar grid, no cartesian frame), formula
 # (a function of the plot definition, no input object), cpp (a function of compiled C++ code: stored as values sampled over its range),
+# labels (alphanumeric bin labels on x: hist_labels is hist with a word for every bin),
 # projected (an n-dimensional histogram, drawn as its projection onto the first axis, or the first two), polygons (bins that are
 # polygons: the axes have no bins, a frame ends where it is asked to as for graphs).
 # hist_noerrors is a histogram whose errors are all zero, hist_counts one filled without weights (no Sumw2: its errors are the square
@@ -144,6 +145,7 @@ DATA_KINDS = {
     "hist_var": (1, "TH1D", {"binned"}),
     "hist_noerrors": (1, "TH1D", {"binned"}),
     "hist_counts": (1, "TH1D", {"binned"}),
+    "hist_labels": (1, "TH1D", {"binned", "labels"}),
     "profile": (1, "TProfile", {"binned"}),
     "profile_spread": (1, "TProfile", {"binned"}),
     "efficiency": (1, "TEfficiency", {"binned"}),
@@ -164,6 +166,8 @@ DATA_KINDS = {
     "hist2poly": (2, "TH2Poly", {"binned", "polygons"}),
     "efficiency2d": (2, "TEfficiency", {"binned"}),
     "thn_sparse2d": (2, "THnSparseD", {"binned", "projected"}),
+    "thn2d": (2, "THnD", {"binned", "projected"}),
+    "hist2d_var": (2, "TH2D", {"binned"}),
     "graph2d": (2, "TGraph2D", set()),
     "graph2d_errors": (2, "TGraph2DErrors", set()),
     "graph2d_asymm": (2, "TGraph2DAsymmErrors", set()),
@@ -171,6 +175,7 @@ DATA_KINDS = {
     "tf2_cpp": (2, "TF2", {"cpp"}),
     "function2d": (2, "TF2", {"formula"}),
     "hist3d": (3, "TH3D", {"binned"}),
+    "hist3d_var": (3, "TH3D", {"binned"}),
     "profile3d": (3, "TProfile3D", {"binned"}),
     "tf3": (3, "TF3", set()),
     "tf3_cpp": (3, "TF3", {"cpp"}),
@@ -349,6 +354,7 @@ def data_objects(variant="normal"):
     thn = ROOT.THnD("thn", "", 2, nBins[:2], low[:2], high[:2])
     sparse = ROOT.THnSparseD("thn_sparse", "", 2, nBins[:2], low[:2], high[:2])
     sparse2 = ROOT.THnSparseD("thn_sparse2d", "", 3, np.array([18, 18, 3], dtype=np.int32), np.array([lo, lo, 0.0]), np.array([hi, hi, 3.0]))
+    thn2 = ROOT.THnD("thn2d", "", 3, np.array([18, 18, 3], dtype=np.int32), np.array([lo, lo, 0.0]), np.array([hi, hi, 3.0]))
     for b in range(18):
         x = lo + 0.25 + 0.5 * b
         for nd in (thn, sparse):
@@ -357,9 +363,10 @@ def data_objects(variant="normal"):
         for c in range(18):
             y = lo + 0.25 + 0.5 * c
             if keep(18 * b + c):
-                sparse2.Fill(np.array([x, y, 1.5]), value(18 * b + c, x, y))
+                for nd in (sparse2, thn2):
+                    nd.Fill(np.array([x, y, 1.5]), value(18 * b + c, x, y))
     if outside:
-        for nd, coords in ((thn, ([0.0, 1.5], [11.0, 1.5])), (sparse, ([0.0, 1.5], [11.0, 1.5])), (sparse2, ([0.0, 5.0, 1.5], [11.0, 5.0, 1.5]))):
+        for nd, coords in ((thn, ([0.0, 1.5], [11.0, 1.5])), (sparse, ([0.0, 1.5], [11.0, 1.5])), (sparse2, ([0.0, 5.0, 1.5], [11.0, 5.0, 1.5])), (thn2, ([0.0, 5.0, 1.5], [11.0, 5.0, 1.5]))):
             for c in coords:
                 nd.Fill(np.array(c), outside)
     xs = [lo + 0.5 * i for i in range(19)]
@@ -419,6 +426,22 @@ def data_objects(variant="normal"):
                 p2.Fill(x, y, 0.9 * value(index, x, y))
                 p2.Fill(x, y, 1.1 * value(index, x, y))
     h2.SetEntries(sum(keep(n) for n in range(18 * 18)))
+    nv = edges.size() - 1
+    h2v = ROOT.TH2D("hist2d_var", "", nv, edges.data(), nv, edges.data())
+    h3v = ROOT.TH3D("hist3d_var", "", nv, edges.data(), nv, edges.data(), nv, edges.data())
+    for i in range(1, nv + 1):
+        for j in range(1, nv + 1):
+            x, y = h2v.GetXaxis().GetBinCenter(i), h2v.GetYaxis().GetBinCenter(j)
+            if keep(nv * (i - 1) + j - 1):
+                h2v.SetBinContent(i, j, value(nv * (i - 1) + j - 1, x, y))
+                h2v.SetBinError(i, j, abs(0.1 * value(nv * (i - 1) + j - 1, x, y)))
+            for k in range(1, nv + 1):
+                index = nv * nv * (i - 1) + nv * (j - 1) + k - 1
+                if keep(index):
+                    z = h3v.GetZaxis().GetBinCenter(k)
+                    h3v.SetBinContent(i, j, k, value(index, x, y, z))
+    h2v.SetEntries(sum(keep(n) for n in range(nv * nv)))
+    h3v.SetEntries(sum(keep(n) for n in range(nv**3)))
     poly = ROOT.srptest_poly(d)
     for i in range(9):
         for j in range(9):
@@ -436,10 +459,10 @@ def data_objects(variant="normal"):
                     p3.Fill(x, y, z, value(index, x, y, z))
     h3.SetEntries(sum(keep(n) for n in range(9**3)))
     if outside:
-        for hist in (h2, p2, poly):
+        for hist in (h2, p2, poly, h2v):
             hist.Fill(0.0, 5.0, outside)
             hist.Fill(11.0, 5.0, outside)
-        for hist in (h3, p3):
+        for hist in (h3, p3, h3v):
             hist.Fill(0.0, 5.0, 5.0, outside)
             hist.Fill(11.0, 5.0, 5.0, outside)
     points = order([(n, lo + (n % 10), lo + (n // 10)) for n in range(100) if keep(n)])
@@ -451,10 +474,13 @@ def data_objects(variant="normal"):
         g2a.SetPointError(m, 0.1, 0.2, 0.2, 0.1, abs(0.05 * value(n, x, y)), abs(0.15 * value(n, x, y)))
     for graph, name in ((g2, "graph2d"), (g2e, "graph2d_errors"), (g2a, "graph2d_asymm")):
         graph.SetName(name)
-    objects = {"hist": h, "hist_noerrors": hn, "hist_counts": hc, "hist_var": hv, "profile": p, "profile_spread": ps, "efficiency": eff, "efficiency_weighted": effW}
+    hl = h.Clone("hist_labels")
+    for b in range(1, hl.GetNbinsX() + 1):
+        hl.GetXaxis().SetBinLabel(b, f"bin {chr(ord('a') + b - 1)}")
+    objects = {"hist": h, "hist_labels": hl, "hist_noerrors": hn, "hist_counts": hc, "hist_var": hv, "profile": p, "profile_spread": ps, "efficiency": eff, "efficiency_weighted": effW}
     objects.update({"thn": thn, "thn_sparse": sparse, "graph": g, "graph_errors": ge, "graph_asymm": ga, "graph_bent": gb, "graph_multi": gm, "graph_polar": gp})
-    objects.update({"hist2d": h2, "profile2d": p2, "hist2poly": poly, "efficiency2d": eff2, "thn_sparse2d": sparse2, "graph2d": g2, "graph2d_errors": g2e})
-    objects.update({"graph2d_asymm": g2a, "hist3d": h3, "profile3d": p3})
+    objects.update({"hist2d": h2, "hist2d_var": h2v, "profile2d": p2, "hist2poly": poly, "efficiency2d": eff2, "thn_sparse2d": sparse2, "thn2d": thn2})
+    objects.update({"graph2d": g2, "graph2d_errors": g2e, "graph2d_asymm": g2a, "hist3d": h3, "hist3d_var": h3v, "profile3d": p3})
     if variant in FUNCTION_VARIANTS:
         npx = NPX.get(variant, NPX["normal"])
         cpp = variant if variant in ("negative", "zeros", "crossing", "constant", "undefined") else "normal"
@@ -675,9 +701,50 @@ def add_data(pad, kind, source="inputs", variant="normal"):
     return data
 
 
-def source_of(variant):
-    """the data source Project.inputs makes for a variant"""
-    return "inputs" if variant == "normal" else f"inputs_{variant}"
+def source_of(variant, storage="double"):
+    """the data source Project.inputs makes for a variant (and storage type of the histograms)"""
+    return ("inputs" if variant == "normal" else f"inputs_{variant}") + ("" if storage == "double" else f"_{storage}")
+
+
+# The contents of histograms in other storage types than double (TH1F, TH1I, TH1C, ...): float precision and range, integers truncated
+# and saturating at the ends of their range (ROOT's SetBinContent). A dimension of the tests where storage matters, not data kinds.
+STORAGES = {"double": "D", "float": "F", "int": "I", "char": "C"}
+STORED_KINDS = ("hist", "hist_var", "hist2d")  # the kinds the storage types are made of (TH1D, TH2D)
+
+
+def stored(obj, storage):
+    """a TH1D or TH2D with the same bins, contents, errors and entries in another storage type"""
+    if storage == "double" or obj.ClassName() not in ("TH1D", "TH2D"):
+        return obj
+    cls = getattr(ROOT, obj.ClassName()[:-1] + STORAGES[storage])
+    axes = [obj.GetXaxis(), obj.GetYaxis()][: obj.GetDimension()]
+    binning = [arg for axis in axes for arg in (axis.GetNbins(), np.array([axis.GetBinLowEdge(b) for b in range(1, axis.GetNbins() + 2)]))]
+    copy = cls(obj.GetName(), obj.GetTitle(), *binning)
+    if obj.GetSumw2N():
+        copy.Sumw2()
+    for cell in range(obj.GetNcells()):
+        copy.SetBinContent(cell, obj.GetBinContent(cell))
+        if obj.GetSumw2N():
+            copy.SetBinError(cell, obj.GetBinError(cell))
+    copy.SetEntries(obj.GetEntries())
+    ROOT.SetOwnership(copy, False)
+    return copy
+
+
+@functools.cache
+def _stored_objects(variant, storage):
+    return {k: stored(o, storage) for k, o in data_objects(variant).items() if k in STORED_KINDS}
+
+
+def holds_nonfinite(kind, variant, storage="double"):
+    """whether the input of a kind in a variant holds a NaN or infinite value (in an integer storage type the contents are what ROOT
+    converts them to, stored errors keep them)"""
+    if variant not in ("nan", "inf"):
+        return False
+    if storage == "double":
+        return True
+    obj = _stored_objects(variant, storage)[kind]
+    return any(not math.isfinite(obj.GetBinContent(c)) or not math.isfinite(obj.GetBinError(c)) for c in range(obj.GetNcells()))
 
 
 def base_of(kind):
@@ -1148,6 +1215,7 @@ class ModifierExpected:
     def __init__(self, name):
         self.name = name  # the data's name in messages
         self.warnings = []
+        self.mixed = False  # a labelled axis rebinned: ROOT's result has the wrong labels (and is not compared)
 
     def unsupported(self, what, cls):
         self.warnings.append(f"{what} of {self.name} is ignored: it is not supported for a {cls}")
@@ -1248,6 +1316,9 @@ def reference_hist(base, mods, exp):
         ROOT.gErrorIgnoreLevel = ROOT.kError
         for axis in [a for a in "XYZ"[:dim] if a in groups]:
             a = getattr(h, f"Get{axis}axis")()
+            if a.GetLabels():
+                exp.warn(f"Rebin{axis} on the labelled axis of {exp.name} mixes up the labels")
+                exp.mixed = True
             if a.GetNbins() % GROUP:
                 exp.warn(f"Rebin{axis}({GROUP}): the {a.GetNbins()} bins of {exp.name} are no multiple of it")
             getattr(h, f"Rebin{axis}" if dim > 1 else "Rebin")(GROUP)
@@ -1670,12 +1741,17 @@ def x_errors(obj, points):
 
 
 def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
-    """the expected ratio: a histogram, a dict like graph_values, or None (an error is expected)"""
+    """the expected ratio: a histogram, a dict like graph_values, or None (an error is expected); a histogram with bin labels on x is
+    divided only by one of as many bins or by a function: the rest would place its bins among numeric positions"""
     nf, df = division_family(numObj), division_family(denObj)
+    numLabels, denLabels = (o.InheritsFrom("TH1") and bool(o.GetXaxis().GetLabels()) for o in (numObj, denObj))
     if nf == "graph2d" or nf in ("func2", "func3"):
         exp.error(f"Cannot divide {exp.num} ({as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}) by {exp.den}")
         return None
     if nf == "func1":
+        if df == "hist1" and denLabels:
+            exp.error(f"Cannot divide {exp.num} by {exp.den}: the x axis of {exp.den} is alphanumeric")
+            return None
         if df == "graph" or df == "hist1":
             den = x_errors(denObj, Points(as_divided(denObj) if df == "hist1" else denObj))
             keep = [i for i, x in enumerate(den.x) if numFunc.inside(x)]  # a function of the inputs within its range
@@ -1720,6 +1796,9 @@ def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
             if dim != 1:
                 exp.error(f"Cannot divide {exp.num} ({as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}) by {exp.den}")
                 return None
+            if numLabels:
+                exp.error(f"Cannot divide {exp.num} by graph {exp.den}: its x axis is alphanumeric")
+                return None
             return graph_to_hist(num, divide_points(x_errors(num, Points(num)), x_errors(denObj, Points(denObj)), binomial, exp))
         if df == "graph2d":
             exp.error(f"Cannot divide {exp.num} ({as_divided(numObj).ClassName() if numObj.InheritsFrom('TH1') else numObj.ClassName()}) by {exp.den}")
@@ -1739,6 +1818,9 @@ def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
             if dim > 1:
                 exp.error(f"Cannot divide {exp.num} by {exp.den}: their binnings differ")
                 return None
+            if numLabels or denLabels:
+                exp.error(f"Cannot divide {exp.num} by {exp.den}: their binnings differ and interpolation needs numeric axes")
+                return None
             said = len(exp.warnings)
             ratio = graph_to_hist(num, divide_points(x_errors(num, Points(num)), x_errors(den, Points(den)), binomial, exp))
             if empty:  # said once: the division of the points says nothing more (that the denominator is zero everywhere)
@@ -1753,6 +1835,9 @@ def division_reference(numObj, denObj, numFunc, denFunc, binomial, exp):
         num.ClearUnderflowAndOverflow()
         return num
     # a graph numerator
+    if df == "hist1" and denLabels:
+        exp.error(f"Cannot divide graph {exp.num} by {exp.den}: the x axis of {exp.den} is alphanumeric")
+        return None
     if df == "graph" or df == "hist1":
         den = x_errors(denObj, Points(as_divided(denObj) if df == "hist1" else denObj))
         num = with_errors_of(x_errors(numObj, Points(numObj)), den)
@@ -1782,9 +1867,14 @@ def divide_polygons(num, den, binomial):
 
 
 def same_binning(a, b):
+    """as SciRooPlot compares them before dividing: the same number of bins, and the same edges unless one axis has bin labels"""
     for axis in "XYZ"[: a.GetDimension()]:
         x, y = getattr(a, f"Get{axis}axis")(), getattr(b, f"Get{axis}axis")()
-        if x.GetNbins() != y.GetNbins() or any(not close(x.GetBinLowEdge(i), y.GetBinLowEdge(i), 1e-10) for i in range(1, x.GetNbins() + 2)):
+        if x.GetNbins() != y.GetNbins():
+            return False
+        if x.GetLabels() or y.GetLabels():
+            continue
+        if any(not close(x.GetBinLowEdge(i), y.GetBinLowEdge(i), 1e-10) for i in range(1, x.GetNbins() + 2)):
             return False
     return True
 
@@ -1834,6 +1924,7 @@ def divide_by_function_hist(num, func, funcDim, binomial, exp):
         if not num.GetSumw2N():
             num.Sumw2()
         bx, by, bz = (ROOT.std.vector("int")(1) for _ in range(3))
+        canExtend = num.SetCanExtend(ROOT.TH1.kNoAxis)  # ROOT doubles an axis with bin labels when its overflow bin is set
         for c in range(num.GetNcells()):
             if num.IsBinUnderflow(c) or num.IsBinOverflow(c):
                 num.SetBinContent(c, 0.0)
@@ -1846,6 +1937,7 @@ def divide_by_function_hist(num, func, funcDim, binomial, exp):
             zero += d == 0
             num.SetBinError(c, num.GetBinError(c) / abs(d) if d else 0.0)
             num.SetBinContent(c, num.GetBinContent(c) / d if d else 0.0)
+        num.SetCanExtend(canExtend)
     if outside:
         exp.warn(f"{outside} bins of {exp.num} lie outside the range of function {exp.den}")
     if zero:
@@ -2387,10 +2479,13 @@ class Project:
         write_objects(self.path(f"{name}.root"), objects)
         self.pm.AddDataSource(name, self.path(f"{name}.root"))
 
-    def inputs(self, variants=("normal",)):
-        """the data source "inputs" with one object of every data kind; other variants in the data sources "inputs_<variant>"."""
+    def inputs(self, variants=("normal",), storages=("double",)):
+        """the data source "inputs" with one object of every data kind; other variants in the data sources "inputs_<variant>", the
+        histograms in other storage types (STORED_KINDS only) in "inputs_<variant>_<storage>"."""
         for variant in variants:
-            self.source(source_of(variant), data_objects(variant))
+            objects = data_objects(variant)
+            for storage in storages:
+                self.source(source_of(variant, storage), objects if storage == "double" else {k: stored(o, storage) for k, o in objects.items() if k in STORED_KINDS})
 
     def plot(self, group=".+", name=".+", mode="file", timeout=1800, env=None):
         """runs plot; env: variables changed for it (None as value: removed)"""

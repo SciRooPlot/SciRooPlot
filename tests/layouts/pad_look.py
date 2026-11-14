@@ -158,6 +158,8 @@ for i, case in enumerate(todo):
             horizontal, vertical = (frame.GetYaxis(), frame.GetXaxis()) if hbars else (frame.GetXaxis(), frame.GetYaxis())
             for axisName, axis, hidden in (("x", horizontal, hideX), ("y", vertical, hideY)):
                 label = pixels(axis.GetLabelSize(), axis.GetLabelFont(), side)
+                if axis.GetLabels() and axis.GetLabelFont() % 10 != 3:  # bin labels: ROOT paints them at 0.66666 of the size (set compensated)
+                    label *= 0.66666
                 titleSize = pixels(axis.GetTitleSize(), axis.GetTitleFont(), side)
                 if hidden:
                     check(f"{axisName} labels and title hidden towards the touching panel in pad {padID}: {what}", label == 0 and titleSize == 0, f"label {label:.2f} px, title {titleSize:.2f} px")

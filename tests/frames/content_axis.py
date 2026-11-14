@@ -4,11 +4,12 @@ warned about (ROOT colours the boxes linearly) and not applied; the settings of 
 scale; a 'C' axis in a pad without a 3d histogram is warned about.
 Cases: every 3d histogram kind × a range on 'C' (both ends, minimum, maximum), a title on 'C', a log 'C', a range and title on 'Z', and the
 named cases.
-Reference: the frame and data read back (minimum, maximum, colour levels, the colour scale's axis title, the z axis).
+Reference: the frame and data read back (minimum, maximum, colour levels, the colour scale's axis title, the z axis: the bins holding
+the range).
 Covers: the content axis of 3d histograms.
 """
 
-from srptest import DATA_3D, DATA_KINDS, Project, S, add_data, cases, check, close, describe, finish
+from srptest import DATA_3D, DATA_KINDS, Project, S, add_data, cases, check, close, data_objects, describe, finish
 
 KINDS = tuple(k for k in DATA_3D if "binned" in DATA_KINDS[k][2])
 SETTINGS = {"range": (5.0, 400.0), "min_only": (50.0, None), "max_only": (None, 300.0), "title": None, "log": None, "z_axis": None}
@@ -16,6 +17,7 @@ todo = cases({"kind": list(KINDS), "setting": list(SETTINGS)}, always=lambda c: 
 
 p = Project("content_axis")
 p.inputs()
+inputs = data_objects()
 for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "content", "2d")
     pad = plot[1]
@@ -71,7 +73,10 @@ for i, case in enumerate(todo):
     else:
         z = frame.GetZaxis()
         shown = (z.GetBinLowEdge(z.GetFirst()), z.GetBinUpEdge(z.GetLast()))
-        check(f"{what}: the range of 'Z' on the binned z axis", close(shown[0], 2.0, 1e-9) and close(shown[1], 8.0, 1e-9), f"{shown}")
+        ref = inputs[case["kind"]].GetZaxis().Clone()  # the bins holding the range, as ROOT's SetRangeUser takes them
+        ref.SetRangeUser(2.0, 8.0)
+        want = (ref.GetBinLowEdge(ref.GetFirst()), ref.GetBinUpEdge(ref.GetLast()))
+        check(f"{what}: the range of 'Z' on the binned z axis", close(shown[0], want[0], 1e-9) and close(shown[1], want[1], 1e-9), f"{shown} instead of {want}")
         check(f"{what}: the look of 'Z' stays off the colour scale", palette is None or (abs(palette.GetAxis().GetLabelSize() - 0.06) > 1e-3 and palette.GetAxis().GetTitle() != "binned z"), f"{palette.GetAxis().GetLabelSize() if palette else None}")
 check("a 'C' axis in a pad without a 3d histogram is warned about", any("The C axis of pad 1 is ignored" in m for m in run.messages("no_th3", "named")), " | ".join(run.messages("no_th3", "named")))
 finish()

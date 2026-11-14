@@ -1,7 +1,7 @@
 """A pad whose frame is drawn with horizontal bars (hbars or ROOT's HBAR: ROOT draws the histogram's x axis vertically) keeps the meaning of its axes:
 'X' is the horizontal axis (the contents), 'Y' the vertical one (the bins): their ranges, titles and label sizes land on the axis drawn
 there; the room above the maximum is room right of the bars, which start at the left edge of the frame, and room above the bins is
-room above everything drawn there; graphs and functions drawn on top keep their pad coordinates (x horizontal): the room counts their x
+room above everything drawn there (bins with labels cannot be widened: warned and ignored); graphs and functions drawn on top keep their pad coordinates (x horizontal): the room counts their x
 horizontally and their y vertically, and a formula function spans the horizontal frame; a log horizontal axis starts at
 the smallest positive content of the bins shown; axes drawn again on top (SetRedrawAxes) keep the look of the axis drawn at each place;
 a side panel of a map shares the map's vertical range, with its labels hidden on the shared axis only.
@@ -122,6 +122,9 @@ for i, case in enumerate(todo):
     elif setting == "room":
         largest = max(shown + graphX)
         check(f"{what}: a quarter of the width free right of everything drawn", close((f["X"][1] - largest) / (f["X"][1] - f["X"][0]), 0.25, 1e-6), f"frame {f['X']}, largest {largest}")
+    elif setting == "room_y" and "labels" in DATA_KINDS[case["kind"]][2]:  # bins with labels: the axis cannot be widened
+        said = [m for m in run.messages(f"h{i}", "hbars") if "The room on the Y axis of pad 1 is ignored: an axis with bin labels cannot be widened" in m]
+        check(f"{what}: room above labelled bins ignored with a warning", len(said) == 1 and close(f["Y"][1], max(hi for lo, hi, c in bins)), f"frame {f['Y']}, {said}")
     elif setting == "room_y":
         top = max([hi for lo, hi, c in bins] + [y + GRAPH_ERRORS[1] for x, y in GRAPH if case["extra"] == "graph"])
         check(f"{what}: a fifth of the height free above everything drawn", close((f["Y"][1] - top) / (f["Y"][1] - f["Y"][0]), 0.2, 1e-6), f"frame {f['Y']}, top {top}")

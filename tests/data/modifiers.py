@@ -1,13 +1,16 @@
 """Every modifier of the data on every data kind in every variant gives the result of the same operation done with plain ROOT on the data
 as drawn without the modifier, or is reported as not supported for that kind and leaves the data as it is. The modifiers act in one
 order, whatever the order they are set in: ScaleX/Y/Z of the axes, Rebin, DivideBinWidth, Smooth, Normalize, Cumulative,
-NormalizeToMaximum, Scale. Histograms (also projected THn, TEfficiency 2d): ROOT's Rebin, Scale(1, "width") (a TH2Poly by bin area),
+NormalizeToMaximum, Scale; for histograms also stored as float, integer and char (TH1F, TH1I, TH1C, ...: ROOT computes in their type).
+Histograms (also projected THn, TEfficiency 2d): ROOT's Rebin, Scale(1, "width") (a TH2Poly by bin area),
 Smooth (1d and 2d), Integral, GetCumulative (1d), GetMaximum; profiles: their means, smoothed over the filled bins; graphs (also TEfficiency
 1d): the integral is the sum of the values, the maximum the largest value, smoothing sorts the points (TGraphSmooth::SmoothSuper); 2d graphs:
 NormalizeToMaximum and the scale factors; functions: the scale factors (of the arguments or of the value). Normalize and
 NormalizeToMaximum within a range in x take the bins reaching into it, the points inside it. Each warning names its data, and every
-warning is expected. A rebinning group larger than its axis leaves that axis as it is, with a warning; contents a modifier brings beyond
-the largest float or to infinity are reported as those of the input.
+warning is expected. Rebinning a labelled axis is warned about (ROOT merges the bins but keeps the first labels; not compared). A
+rebinning group larger than its axis leaves that axis as it is, with a warning; contents a modifier brings beyond
+the largest float or to infinity are reported as those of the input, and are set to zero without adding bins to an axis with bin
+labels.
 Covers: TGraphMultiErrors scaled: both error dimensions follow; the Normalize range of a TH2Poly; graphs scaled by a negative
 factor (Normalize of values summing up below zero) keep positive errors, low and high swapped; a TGraphMultiErrors sorted for Smooth keeps
 each error with its point; messages after Cumulative name the data.
@@ -21,6 +24,8 @@ from srptest import (
     DATA_KINDS,
     GRAPHS,
     MODIFIERS,
+    STORAGES,
+    STORED_KINDS,
     VARIANTS,
     ModifierExpected,
     Project,
@@ -31,11 +36,13 @@ from srptest import (
     check,
     data_name,
     describe,
+    drawn_type,
     family,
     finish,
     func_diff,
     graph_diff,
     has_variant,
+    holds_nonfinite,
     hist_diff,
     modifier_reference,
     profile_means,
@@ -44,27 +51,28 @@ from srptest import (
 )
 
 p = Project("modifiers", bases=("1d", "2d"))
-p.inputs(VARIANTS)
+p.inputs(VARIANTS, tuple(STORAGES))
 todo = cases(
-    {"kind": list(DATA_KINDS), "mods": [(m,) for m in MODIFIERS] + list(COMBINATIONS), "variant": list(VARIANTS)},
-    valid=lambda c: has_variant(c["kind"], c["variant"]),
-    always=lambda c: c["variant"] == "normal",
+    {"kind": list(DATA_KINDS), "mods": [(m,) for m in MODIFIERS] + list(COMBINATIONS), "variant": list(VARIANTS), "storage": list(STORAGES)},
+    valid=lambda c: has_variant(c["kind"], c["variant"]) and (c["storage"] == "double" or c["kind"] in STORED_KINDS),
+    always=lambda c: c["variant"] == "normal" and c["storage"] == "double",
     named=[
-        {"kind": "graph_multi", "mods": ("scale",), "variant": "normal", "why": "both error dimensions of a scaled TGraphMultiErrors follow"},
-        {"kind": "hist_var", "mods": ("rebin_x",), "variant": "normal", "why": "bins no multiple of the group"},
-        {"kind": "hist2poly", "mods": ("normalize_range",), "variant": "normal", "why": "range of a TH2Poly"},
-        {"kind": "hist2poly", "mods": ("norm_max_range",), "variant": "normal", "why": "range of a TH2Poly"},
-        {"kind": "graph_asymm", "mods": ("normalize_range",), "variant": "negative", "why": "negative factor of a graph"},
-        {"kind": "graph_multi", "mods": ("normalize_range",), "variant": "negative", "why": "negative factor of a graph"},
-        {"kind": "graph_multi", "mods": ("smooth",), "variant": "unsorted", "why": "sorting a TGraphMultiErrors"},
-        {"kind": "hist", "mods": ("norm_max", "cumulative"), "variant": "zeros", "why": "name after Cumulative"},
+        {"kind": "graph_multi", "mods": ("scale",), "variant": "normal", "storage": "double", "why": "both error dimensions of a scaled TGraphMultiErrors follow"},
+        {"kind": "hist_var", "mods": ("rebin_x",), "variant": "normal", "storage": "double", "why": "bins no multiple of the group"},
+        {"kind": "hist2poly", "mods": ("normalize_range",), "variant": "normal", "storage": "double", "why": "range of a TH2Poly"},
+        {"kind": "hist2poly", "mods": ("norm_max_range",), "variant": "normal", "storage": "double", "why": "range of a TH2Poly"},
+        {"kind": "graph_asymm", "mods": ("normalize_range",), "variant": "negative", "storage": "double", "why": "negative factor of a graph"},
+        {"kind": "graph_multi", "mods": ("normalize_range",), "variant": "negative", "storage": "double", "why": "negative factor of a graph"},
+        {"kind": "graph_multi", "mods": ("smooth",), "variant": "unsorted", "storage": "double", "why": "sorting a TGraphMultiErrors"},
+        {"kind": "hist", "mods": ("norm_max", "cumulative"), "variant": "zeros", "storage": "double", "why": "name after Cumulative"},
+        {"kind": "efficiency_weighted", "mods": ("scale",), "variant": "empty", "storage": "double", "why": "an efficiency without events is not drawn"},
     ],
 )
 bases = {}  # (kind, variant): the plot of the data as drawn without modifiers
 
 
 def add_plot(name, case, mods):
-    p.pm.AddDataSource(name, p.path(f"{source_of(case['variant'])}.root"))
+    p.pm.AddDataSource(name, p.path(f"{source_of(case['variant'], case['storage'])}.root"))
     plot = S.Plot(name, "modifiers", base_of(case["kind"]))
     data = add_data(plot[1], case["kind"], name, case["variant"])
     for mod in mods:
@@ -73,26 +81,26 @@ def add_plot(name, case, mods):
 
 
 for i, case in enumerate(todo):
-    key = (case["kind"], case["variant"])
+    key = (case["kind"], case["variant"], case["storage"])
     if key not in bases:
         bases[key] = f"base{len(bases)}"
         add_plot(bases[key], case, ())
     add_plot(f"mod{i}", case, case["mods"])
 run = p.plot("modifiers")
 
-expectedWarnings = [(f" {kind}:{name} has", "NaN or infinite") for (kind, variant), name in bases.items() if variant in ("nan", "inf")]  # (data name, fragment)
-expectedWarnings += [(f"Graph {kind}:{name} ", "has no points: it is not drawn") for (kind, variant), name in bases.items() if variant == "empty" and (DATA_KINDS[kind][1] in GRAPHS or kind == "efficiency")]
-expectedWarnings += [w for kind, variant in bases for w in variant_warnings(kind, variant)]
+expectedWarnings = [(f" {kind}:{name} has", "NaN or infinite") for (kind, variant, storage), name in bases.items() if holds_nonfinite(kind, variant, storage)]  # (data name, fragment)
+expectedWarnings += [(f"Graph {kind}:{name} ", "has no points: it is not drawn") for (kind, variant, _), name in bases.items() if variant == "empty" and (DATA_KINDS[kind][1] in GRAPHS or drawn_type(kind) == "graph")]
+expectedWarnings += [w for kind, variant, _ in bases for w in variant_warnings(kind, variant)]
 silent = set()  # data whose warnings are not compared
 for i, case in enumerate(todo):
     what = describe(case)
     kind = case["kind"]
     formulaKind = "formula" in DATA_KINDS[kind][2]
-    if case["variant"] in ("nan", "inf"):
+    if holds_nonfinite(kind, case["variant"], case["storage"]):
         expectedWarnings.append((f" {kind}:mod{i} has", "NaN or infinite"))
     expectedWarnings += variant_warnings(kind, case["variant"])
-    base, obs = run.drawn(bases[(kind, case["variant"])], "modifiers"), run.drawn(f"mod{i}", "modifiers")
-    if not base and not obs and case["variant"] == "empty" and (DATA_KINDS[kind][1] in GRAPHS or kind == "efficiency"):
+    base, obs = run.drawn(bases[(kind, case["variant"], case["storage"])], "modifiers"), run.drawn(f"mod{i}", "modifiers")
+    if not base and not obs and case["variant"] == "empty" and (DATA_KINDS[kind][1] in GRAPHS or drawn_type(kind) == "graph"):
         expectedWarnings.append((f"Graph {kind}:mod{i} ", "has no points: it is not drawn"))
         silent.add(f"{kind}:mod{i}")  # what its modifiers report about no points is not compared
         continue  # an empty graph is not drawn (see frames/robust_frames.py), modified or not
@@ -104,6 +112,8 @@ for i, case in enumerate(todo):
     fam = family(base)
     ref = modifier_reference(base, case["mods"], exp)
     expectedWarnings += [(exp.name, w) for w in exp.warnings]
+    if exp.mixed:
+        continue  # a labelled axis rebinned: warned, ROOT's result has the wrong labels
     if fam == "func":
         diff = func_diff(ref, obs, 1e-9)
     elif fam in ("graph", "graph2d"):
@@ -135,6 +145,9 @@ limits["h3"] = ROOT.TH3D("h3", "", 4, 0.0, 4.0, 4, 0.0, 4.0, 4, 0.0, 4.0)
 for h in limits.values():
     for c in range(h.GetNcells()):
         h.SetBinContent(c, 1.0 + c % 7)
+limits["h1l"] = limits["h1"].Clone("h1l")  # bin labels: ROOT doubles such an axis when its overflow bin is set
+for b in range(1, 11):
+    limits["h1l"].GetXaxis().SetBinLabel(b, f"bin {b}")
 q.source("lim", limits)
 limitCases = {  # plot: (data, base, modifier, expected warning, expected bins along x, y, z)
     "x1": ("h1", "1d", lambda d: d.RebinX(11), "RebinX(11) of h1:lim is ignored: it needs at least as many bins, the axis has 10", (10,)),
@@ -143,6 +156,7 @@ limitCases = {  # plot: (data, base, modifier, expected warning, expected bins a
     "z3": ("h3", "2d", lambda d: d.RebinXYZ(2, 2, 5), "RebinZ(5) of h3:lim is ignored: it needs at least as many bins, the axis has 4", (2, 2, 4)),
     "float": ("h1", "1d", lambda d: d.Scale(1e40), "h1:lim has 12 bins with contents beyond the largest float", (10,)),
     "inf": ("h1", "1d", lambda d: d.Scale(1e300), "h1:lim has 12 bins with NaN or infinite values", (10,)),
+    "inf_labels": ("h1l", "1d", lambda d: d.Scale(1e300), "h1l:lim has 12 bins with NaN or infinite values", (10,)),
 }
 for name, (data, base, modify, _, _) in limitCases.items():
     plot = S.Plot(name, "limits", base)

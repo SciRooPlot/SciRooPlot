@@ -1,4 +1,4 @@
-"""Every data kind in every variant (values crossing zero, a NaN or infinite value, all zeros, no entries, a single bin or point, values
+"""Every data kind in every variant, histograms also stored as float, integer and char (values crossing zero, a NaN or infinite value, all zeros, no entries, a single bin or point, values
 near the largest float, one value everywhere, a function NaN over part of its range) gives a plot with a finite frame and no ROOT errors,
 on linear and log scales of its value axis: a log axis keeps a positive range (or is switched off with a warning when there is nothing
 positive), the colour scale of a map has two different ends unless every content is zero. Data with a NaN or infinite value is reported
@@ -14,13 +14,33 @@ colour (its scale had equal ends), a function NaN in part of its range drawn as 
 
 import math
 
-from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, cases, check, close, describe, drawn_type, finish, formula, has_variant, source_of
+from srptest import (
+    DATA_KINDS,
+    ROOT,
+    STORAGES,
+    STORED_KINDS,
+    VARIANTS,
+    Project,
+    S,
+    add_data,
+    base_of,
+    cases,
+    check,
+    close,
+    describe,
+    drawn_type,
+    finish,
+    formula,
+    has_variant,
+    holds_nonfinite,
+    source_of,
+)
 
 p = Project("robust_frames")
-p.inputs(VARIANTS)
+p.inputs(VARIANTS, tuple(STORAGES))
 todo = cases(
-    {"kind": list(DATA_KINDS), "variant": list(VARIANTS), "log": [False, True]},
-    valid=lambda c: has_variant(c["kind"], c["variant"]),
+    {"kind": list(DATA_KINDS), "variant": list(VARIANTS), "log": [False, True], "storage": list(STORAGES)},
+    valid=lambda c: has_variant(c["kind"], c["variant"]) and (c["storage"] == "double" or c["kind"] in STORED_KINDS),
 )
 
 
@@ -66,7 +86,7 @@ for kind in UNDRAWN:
 
 for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "robust", base_of(case["kind"]))
-    add_data(plot[1], case["kind"], source_of(case["variant"]), case["variant"])
+    add_data(plot[1], case["kind"], source_of(case["variant"], case["storage"]), case["variant"])
     if case["log"]:
         plot[1][value_axis(case["kind"])].SetLog()
     p.pm.AddPlot(plot)
@@ -115,7 +135,7 @@ check(
     removable and math.isclose(removable.GetUxmin(), -10.0) and math.isclose(removable.GetUxmax(), 10.0) and not any("sin(x)/x" in line for line in run.warnings()),
     " | ".join(line for line in run.warnings() if "sin(x)/x" in line),
 )
-kinds = {case["kind"] for case in todo if case["variant"] in ("nan", "inf")}
-unreported = sorted(kind for kind in kinds if not any(line.split("]", 1)[-1].split()[0].split(":")[0] == kind and "NaN" in line for line in run.warnings()))
+kinds = {(case["kind"], source_of(case["variant"], case["storage"])) for case in todo if holds_nonfinite(case["kind"], case["variant"], case["storage"])}
+unreported = sorted(f"{kind}:{source}" for kind, source in kinds if not any(line.split("]", 1)[-1].split()[0] == f"{kind}:{source}" and "NaN" in line for line in run.warnings()))
 check("data with a NaN or infinite value is reported by name", not unreported, ", ".join(unreported))
 finish()

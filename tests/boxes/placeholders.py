@@ -1,8 +1,8 @@
 """Placeholders in legend labels, texts and statistics box titles are replaced by what they name:
 - <entries> the stored entries of a histogram, the points of a graph; <integral>, <maximum>, <minimum>, <mean> and <stddev> of a histogram
   over the bins drawn (those inside the frame; a TH2Poly by its polygons), <maximum> and <minimum> of a graph the largest and smallest y
-  of the points inside the frame, of a 2d graph z; a placeholder a kind of data has no value for is left as it is, with a warning naming
-  it and the data
+  of the points inside the frame, of a 2d graph z; a placeholder a kind of data has no value for (also <mean> and <stddev> of bins with
+  labels, which are categories) is left as it is, with a warning naming it and the data
 - <name>, <source>, <projection> and <selection> from the definition of the data (the name without request or projection, the data
   source, what is filled in the notation of TTree::Draw, which entries or bins with the axis titles of the input); <title> the title of the
   drawn object; an empty one takes one separating space with it
@@ -166,6 +166,8 @@ def reference(obj, word, frame):
     if obj.InheritsFrom("TH1"):
         if word == "entries":
             return obj.GetEntries()
+        if word in ("mean", "stddev") and obj.GetXaxis().GetLabels():
+            return None  # bins with labels are categories: no mean and spread
         if obj.InheritsFrom("TH2Poly"):
             values = [(b.GetContent(), 0.5 * (b.GetXMin() + b.GetXMax()), b.GetContent()) for b in obj.GetBins() if inside(b.GetXMin(), b.GetXMax(), frame["X"]) and inside(b.GetYMin(), b.GetYMax(), frame["Y"])]
         else:
