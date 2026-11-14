@@ -64,20 +64,22 @@ void vertexZ(const char* dataDir = "ExampleData", const char* output = "vertexZ.
   style(data, 0.035, 0.026);
   data->GetXaxis()->SetLabelSize(0);
   data->GetYaxis()->SetTitle("normalised counts");
-  data->GetYaxis()->SetTitleOffset(1.45);
+  data->GetYaxis()->SetTitleOffset(1.12);
   data->SetMaximum(0.036);
   data->SetMinimum(0.0);
+  data->GetYaxis()->ChangeLabel(1, -1, 0);  // no label at the lower edge, where the ratio pad begins
   data->SetMarkerStyle(kFullCircle);
+  data->SetMarkerSize(1.4);
   data->SetMarkerColor(kBlack);
   data->SetLineColor(kBlack);
-  data->SetLineWidth(4);
-  mc->SetLineColor(kRed + 1);
+  data->SetLineWidth(5);
+  mc->SetLineColor(TColor::GetColor("#d6403a"));
   mc->SetLineWidth(3);
   data->Draw("E X0");
   mc->Draw("HIST SAME");
   data->Draw("E X0 SAME");
 
-  TLegend legend(0.189, 0.80, 0.45, 0.92);
+  TLegend legend(0.190, 0.773, 0.418, 0.895);
   legend.SetBorderSize(0);
   legend.SetFillStyle(0);
   legend.SetTextFont(43);
@@ -91,18 +93,22 @@ void vertexZ(const char* dataDir = "ExampleData", const char* output = "vertexZ.
   style(ratio, 0.067, 0.036);
   ratio->GetYaxis()->SetTitle("data / sim.");
   ratio->GetYaxis()->CenterTitle();
-  ratio->GetYaxis()->SetTitleOffset(1.45);
-  ratio->GetYaxis()->SetRangeUser(-1.0, 5.0);
+  ratio->GetYaxis()->SetTitleOffset(1.27);
+  ratio->GetYaxis()->SetRangeUser(0.5, 2.5);
   ratio->GetYaxis()->SetNdivisions(305);
+  ratio->GetYaxis()->ChangeLabel(-1, -1, 0);  // no label at the upper edge, where the upper pad begins
   ratio->SetMarkerStyle(kFullCircle);
+  ratio->SetMarkerSize(1.4);
   ratio->SetMarkerColor(kBlack);
   ratio->SetLineColor(kBlack);
-  ratio->SetLineWidth(4);
-  ratio->Draw("E X0");
-  TLine one(ratio->GetXaxis()->GetXmin(), 1.0, ratio->GetXaxis()->GetXmax(), 1.0);
-  one.SetLineWidth(4);
-  one.Draw();
-  ratio->Draw("E X0 SAME");
+  ratio->SetLineWidth(5);
+  ratio->Draw("AXIS");
+  TF1 one("one", "1", ratio->GetXaxis()->GetXmin(), ratio->GetXaxis()->GetXmax());
+  one.SetLineStyle(kDashed);
+  one.SetLineWidth(2);
+  one.SetLineColor(kGray + 2);
+  one.Draw("SAME");
+  ratio->DrawCopy("E X0 SAME")->GetXaxis()->SetRangeUser(-20.0, 20.0);  // where both have enough events
 
   canvas.SaveAs(output);
 }

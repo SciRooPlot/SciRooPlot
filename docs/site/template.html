@@ -2479,11 +2479,12 @@ pm.AddBasePlot(PlotManager.MakeBasePlot("1d_ratio"))
 plot = Plot("vertexZ", "detector/events", "1d_ratio")
 plot[1].AddData("hVtxZ", "EventQA", "data").Normalize()
 plot[1].AddData("hVtxZ", "EventQA_MC", "simulation").Normalize() \\
-       .SetDrawOption(hist).SetLine(kSolid, 3.0, kRed + 1)
+       .SetDrawOption(hist).SetLine(kSolid, 3.0, "#d6403a")
 plot[1].AddLegend(0.05, 0.94)
 plot[1]['Y'].SetTitle("normalised counts").SetMaxRange(0.036)
-plot[2].AddRatio(["hVtxZ", "EventQA"], ["hVtxZ", "EventQA_MC"]).Both().Normalize()
-plot[2]['Y'].SetTitle("data / sim.").SetRange(-1.0, 5.0)
+plot[2].AddRatio(["hVtxZ", "EventQA"], ["hVtxZ", "EventQA_MC"]).Both().Normalize().Result().SetRangeX(-20.0, 20.0)
+plot[2].SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 2)
+plot[2]['Y'].SetTitle("data / sim.").SetRange(0.5, 2.5)
 pm.AddPlot(plot)
 pm.SaveProject()`,
     cpp: `PlotManager pm("myProject");
@@ -2494,11 +2495,12 @@ pm.AddBasePlot(PlotManager::MakeBasePlot("1d_ratio"));
 Plot plot("vertexZ", "detector/events", "1d_ratio");
 plot[1].AddData("hVtxZ", "EventQA", "data").Normalize();
 plot[1].AddData("hVtxZ", "EventQA_MC", "simulation").Normalize()
-       .SetDrawOption(hist).SetLine(kSolid, 3.0, kRed + 1);
+       .SetDrawOption(hist).SetLine(kSolid, 3.0, "#d6403a");
 plot[1].AddLegend(0.05, 0.94);
 plot[1]['Y'].SetTitle("normalised counts").SetMaxRange(0.036);
-plot[2].AddRatio({"hVtxZ", "EventQA"}, {"hVtxZ", "EventQA_MC"}).Both().Normalize();
-plot[2]['Y'].SetTitle("data / sim.").SetRange(-1.0, 5.0);
+plot[2].AddRatio({"hVtxZ", "EventQA"}, {"hVtxZ", "EventQA_MC"}).Both().Normalize().Result().SetRangeX(-20.0, 20.0);
+plot[2].SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 2);
+plot[2]['Y'].SetTitle("data / sim.").SetRange(0.5, 2.5);
 pm.AddPlot(plot);
 pm.SaveProject();` },
   { id: "ptSpectrumPublished", tab: "ROOT file and a CSV table", title: "Your measurement next to published values from a CSV table",
