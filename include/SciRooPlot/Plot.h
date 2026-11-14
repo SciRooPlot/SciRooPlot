@@ -470,7 +470,8 @@ class Plot : public FillSetters<Plot>
   static bool CheckCount(int64_t count, const std::string& what);    // at least one
   static bool CheckPixels(int64_t size, const std::string& what);    // a side of a canvas: 1 to 32767 pixels
   static bool CheckFont(int16_t font);
-  static void Quietly(bool quiet, const std::function<void()>& call);  // without messages if quiet
+  static bool CheckMarkerStyle(int16_t style, const std::string& what);  // ROOT's markers and their thicker versions up to line width 10
+  static void Quietly(bool quiet, const std::function<void()>& call);    // without messages if quiet
   static std::optional<float_t> RoundWidth(const std::optional<float_t>& width, const char* what);
   static void ReadWidthFromTree(const boost::property_tree::ptree& tree, std::optional<float_t>& target, const char* key);
   // keys <prefix>color, <prefix>alpha, <prefix><style> and <prefix><scale> (none without scale key, a width is rounded)

@@ -208,6 +208,14 @@ bool Plot::CheckFinite(double value, const string& what)
   logger::warning("The {} ({}) is ignored: it is not a finite number.", what, Shown(value));
   return false;
 }
+bool Plot::CheckMarkerStyle(int16_t style, const string& what)
+{
+  // ROOT draws markers 1 to 49, from 50 on the same with thicker lines (width 2 for 50 to 67, 3 for 68 to 85 ...); absurd widths crash it
+  constexpr int16_t maxStyle = 50 + 18 * 9 - 1;  // line width 10
+  if (style >= 0 && style <= maxStyle) return true;
+  logger::warning("The {} ({}) is ignored: ROOT has markers 1 to 49 and their thicker versions up to line width 10 (styles up to {}).", what, style, maxStyle);
+  return false;
+}
 bool Plot::CheckNotNegative(double value, const string& what)
 {
   if (!CheckFinite(value, what)) return false;
@@ -309,6 +317,7 @@ Derived& MarkerSetters<Derived>::SetMarker(int16_t style, float_t size, color_t 
 {
   bool valid = Plot::CheckFinite(size, "marker size");
   valid = Plot::CheckAlpha(alpha, "marker alpha") && valid;
+  valid = Plot::CheckMarkerStyle(style, "marker style") && valid;
   if (valid) mMarker = {color, alpha, style, size};
   return static_cast<Derived&>(*this);
 }
@@ -327,7 +336,7 @@ Derived& MarkerSetters<Derived>::SetMarkerAlpha(float_t alpha)
 template <class Derived>
 Derived& MarkerSetters<Derived>::SetMarkerStyle(int16_t style)
 {
-  mMarker.style = style;
+  if (Plot::CheckMarkerStyle(style, "marker style")) mMarker.style = style;
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -1294,6 +1303,9 @@ auto Plot::Pad::SetDefaultColors(const vector<pair<color_t, float_t>>& gradient,
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultMarkerStyles(const vector<int16_t>& styles) -> decltype(*this)
 {
+  for (int16_t style : styles) {
+    if (!CheckMarkerStyle(style, "default marker style")) return *this;
+  }
   mMarkerDefaults.styles = styles;
   return *this;
 }
@@ -4733,6 +4745,7 @@ auto Plot::Pad::LegendBox::SetDefaultMarkerAlpha(float_t alpha) -> decltype(*thi
 
 auto Plot::Pad::LegendBox::SetDefaultMarkerStyle(int16_t style) -> decltype(*this)
 {
+  if (!CheckMarkerStyle(style, "legend default marker style")) return *this;
   mMarkerDefault.style = style;
   return *this;
 }
