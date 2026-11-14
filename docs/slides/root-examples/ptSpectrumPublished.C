@@ -6,6 +6,7 @@ void ptSpectrumPublished(const char* dataDir = "ExampleData", const char* output
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);
+  gStyle->SetEndErrorSize(0);
 
   // the measurement from the ROOT file
   TFile file(Form("%s/spectra.root", dataDir));
@@ -55,23 +56,24 @@ void ptSpectrumPublished(const char* dataDir = "ExampleData", const char* output
     axis->SetTickLength(0.03);
   }
   frame->GetXaxis()->SetNoExponent();
-  frame->GetXaxis()->SetTitleOffset(1.2);
+  frame->GetXaxis()->SetTitleOffset(1.0);
   frame->GetYaxis()->SetTitleOffset(1.45);
   data->GetXaxis()->SetRangeUser(0.15, 10.);
   data->SetMarkerStyle(kFullCircle);
   data->SetMarkerColor(kBlack);
   data->SetLineColor(kBlack);
-  data->SetLineWidth(4);
+  data->SetLineWidth(5);
   published.SetMarkerStyle(kOpenSquare);
   published.SetMarkerSize(1.6);
   const int blue = TColor::GetColor("#3a78c2");
   published.SetMarkerColor(blue);
   published.SetLineColor(blue);
-  published.SetLineWidth(4);
+  published.SetLineWidth(5);
   data->Draw("E X0 SAME");
   published.Draw("P Z SAME");
 
-  TLegend legend(0.19, 0.19, 0.6, 0.29);
+  TLegend legend(0.184, 0.184, 0.630, 0.288);
+  legend.SetMargin(0.12);
   legend.SetBorderSize(0);
   legend.SetFillStyle(0);
   legend.SetTextFont(43);
