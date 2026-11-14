@@ -15,6 +15,8 @@ not exist ...), the other parameters plain. Reference: the same call with the pl
   a call that adds something (Filter, Define, Join, AddSymbolOf, ApplyLayout) keeps the first one; named cases of calls replacing each
   other (Entries, a drawing option and an alias, contour levels and their number, also from a layout, SetDefinesFrame(False),
   SetTransparent after a fill colour).
+The messages of the style setters name what was set (the width of SetFrameBorder as "frame border width", SetDefaultLineWidth of a legend
+as "legend default line width"), and a style setter given several invalid values names each of them.
 Style numbers (markers, lines, fills) are not checked: ROOT draws an unknown style in its default style.
 Covers: the same tree joined again, a selection of data that is not projected, pad margins without room for the
 frame, calls replacing each other.
@@ -230,6 +232,42 @@ for case in cases:
     new = {phase: new_messages(case, plain, phase) for phase in ("defined", "loaded", "made")}
     ok = case["made"] is not None and len(new["defined"]) <= 1 and len(new["loaded"] + new["made"]) <= 1 and any(new.values())
     S.check(f"{label(case)}: reported once", ok, f"new messages: {new}" if any(new.values()) else "no new message")
+
+
+# the messages of the style setters name what was set: "default line width" for SetDefaultLineWidth (of a pad or a legend), "frame border
+# width" for the width of SetFrameBorder, "marker alpha" for the alpha of SetMarker
+STYLE_SETTER = re.compile(r"Set(Default)?(FrameFill|FrameBorder)?(Marker|Line|Fill|Text|Border)?(Alpha|Width|Size)?")
+
+
+def attribute(case):
+    """the attribute a message about the invalid value of a style setter names, None for other setters and parameters"""
+    method = case["label"].split("(")[0].split(".")[1]
+    m = STYLE_SETTER.fullmatch(method)
+    if not m or case["param"] not in ("alpha", "width", "size") or (m.group(4) or case["param"]).lower() != case["param"] or not (any(m.groups()[:3]) or method == "SetAlpha"):
+        return None
+    words = [re.sub(r"(?<!^)([A-Z])", r" \1", g).lower() for g in m.groups()[:3] if g]
+    return " ".join([*words, case["param"]])
+
+
+for case in cases:
+    if case["valid"] or case["raised"] or not (what := attribute(case)):
+        continue
+    new = new_messages(case, case["plainCase"], "defined")
+    S.check(f"{label(case)}: the message names the {what}", any(what in line for line in new), str(new))
+
+# a setter of several values, each of them invalid: every one of them named (none hidden behind the first)
+for case in S.setter_cases()[0]:
+    if case["variant"] != "plain" or not case["meant"] or case["host"] in ("statement", "base", "base_pad", "c") or case["cls"] in SKIPPED:
+        continue
+    bad = {param: S.setter_invalid(case["cls"], case["method"], param) for param in case["params"]}
+    bad = {param: values[0] for param, values in bad.items() if values and param in ("style", "font", "size", "width", "alpha")}
+    if len(bad) < 2 or not STYLE_SETTER.fullmatch(case["method"]):
+        continue
+    given = [bad.get(param, value) for param, value in zip(case["params"], case["values"])]
+    host = S.SETTER_HOSTS[case["cls"]][case["host"]][0].replace("{name}", f"all_{case['cls']}_{case['method']}_{case['host']}")
+    result, printed = S.captured(lambda code=host.replace("{call}", S.call(case["method"], given, "py")): exec(code, namespace))  # noqa: S102
+    lines = [line for line in printed.splitlines() if line.strip()]
+    S.check(f"{case['cls']}.{case['method']}({', '.join(case['params'])}) on {case['host']} with {', '.join(bad)} invalid: each named", not isinstance(result, Exception) and len(lines) == len(bad), str(lines)[:300])
 widened = [line for case in cases for phase in ("defined", "loaded", "made") for line in case.get(phase) or [] if re.search(r"\d\.\d{12,}", line)]
 S.check("values in the messages as given (a float not widened to double: 1.2, not 1.2000000476837158)", not widened, " | ".join(widened[:3]))
 pad = run.pad("margins_order", "g")

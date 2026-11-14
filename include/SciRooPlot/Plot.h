@@ -248,6 +248,19 @@ struct layout_t {
   std::optional<int16_t> style;        // marker, line, fill, border style, text font
   std::optional<float_t> scale;        // marker size, line width, text size, border width (a fill has none)
   void Update(const layout_t& other);  // takes over the values set in other
+  // the checked setters of all style setters (what names the attribute in messages: "marker", "default line", "frame border" ...): a
+  // value that is not valid is warned about and ignored, the value set before stays; the setters of all values together set nothing if
+  // one of them is not valid (each such value warned about)
+  void SetMarker(int16_t newStyle, float_t size, color_t newColor, float_t newAlpha, const std::string& what);
+  void SetLine(int16_t newStyle, float_t width, color_t newColor, float_t newAlpha, const std::string& what);  // also borders
+  void SetFill(int16_t newStyle, color_t newColor, float_t newAlpha, const std::string& what);
+  void SetText(int16_t font, float_t size, color_t newColor, float_t newAlpha, const std::string& what);
+  void SetAlpha(float_t newAlpha, const std::string& what);
+  void SetMarkerStyle(int16_t newStyle, const std::string& what);
+  void SetMarkerSize(float_t size, const std::string& what);
+  void SetWidth(float_t width, const std::string& what);  // of a line or border (rounded)
+  void SetFont(int16_t font);
+  void SetTextSize(float_t size, const std::string& what);
 };
 
 //**************************************************************************************************
@@ -469,6 +482,7 @@ class Plot : public FillSetters<Plot>
   friend class BorderSetters;
   template <class>
   friend class PositionSetters;
+  friend struct layout_t;
 
   // helpers (also used by the nested classes and the setter groups)
   static std::optional<std::string> NameError(const std::string& name, bool isGroup = false);
