@@ -2654,11 +2654,6 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
   if (dataLayout.mLegend.entry) {  // merged like the styles: what the data's own entry sets and the layout does not is kept
     if (mLegend.entry) {
       *mLegend.entry += *dataLayout.mLegend.entry;
-      // += leaves the place of the row out (AddDataRow sets it apart): the layout's place counts as well
-      if (dataLayout.mLegend.entry->mPosition) {
-        mLegend.entry->mPosition = dataLayout.mLegend.entry->mPosition;
-        mLegend.entry->mPositionDataID = dataLayout.mLegend.entry->mPositionDataID;
-      }
     } else {
       mLegend.entry = dataLayout.mLegend.entry;
     }
@@ -4738,11 +4733,7 @@ auto Plot::Pad::LegendBox::SetSymbolColScale(float_t scale) -> decltype(*this)
 void Plot::Pad::LegendBox::AddDataRow(const string& label, uint16_t dataID, const optional<LegendEntry>& appearance)
 {
   LegendEntry& entry = mLegendEntries.emplace_back(LegendEntry(label, dataID));
-  if (appearance) {
-    entry += *appearance;
-    entry.mPosition = appearance->mPosition;  // a place of its own among the rows (by default the place of the data)
-    entry.mPositionDataID = appearance->mPositionDataID;
-  }
+  if (appearance) entry += *appearance;  // with a place of its own among the rows (by default the place of the data)
 }
 
 //**************************************************************************************************
@@ -4895,6 +4886,10 @@ void Plot::Pad::LegendEntry::operator+=(
   if (legendEntry.mLabel) this->mLabel = legendEntry.mLabel;
   if (legendEntry.mRefDataID) this->mRefDataID = legendEntry.mRefDataID;
   if (legendEntry.mRefPadID) this->mRefPadID = legendEntry.mRefPadID;
+  if (legendEntry.mPosition) {
+    mPosition = legendEntry.mPosition;
+    mPositionDataID = legendEntry.mPositionDataID;
+  }
   mMarker.Update(legendEntry.mMarker);
   mLine.Update(legendEntry.mLine);
   mFill.Update(legendEntry.mFill);
