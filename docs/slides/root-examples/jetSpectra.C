@@ -39,8 +39,9 @@ void jetSpectra(const char* dataDir = "ExampleData", const char* output = "jetSp
   // the curve spans a wider range than the data, so it is drawn first and makes the axes
   nlo->SetLineColor(kGray + 2);
   nlo->SetLineStyle(kDashed);
-  nlo->SetLineWidth(2);
-  nlo->SetNpx(500);
+  nlo->SetLineWidth(3);
+  nlo->SetMinimum(0.011);  // the y range a histogram of the curve gets: half its smallest value, room above its largest
+  nlo->SetMaximum(6.6e8);
   nlo->Draw();
   auto frame = nlo->GetHistogram();
   for (auto axis : {frame->GetXaxis(), frame->GetYaxis()}) {
@@ -51,17 +52,18 @@ void jetSpectra(const char* dataDir = "ExampleData", const char* output = "jetSp
   }
   frame->GetXaxis()->SetNoExponent();
   frame->GetXaxis()->SetTitle("#it{p}_{T}^{jet} (GeV/#it{c})");
-  frame->GetXaxis()->SetTitleOffset(1.2);
+  frame->GetXaxis()->SetTitleOffset(1.0);
   frame->GetYaxis()->SetTitle("d#it{N}/d#it{p}_{T} (GeV/#it{c})^{-1}");
   frame->GetYaxis()->SetTitleOffset(1.45);
-  TLegend legend(0.212, 0.2, 0.6, 0.454);
+  TLegend legend(0.215, 0.197, 0.542, 0.457);
+  legend.SetMargin(0.166);
   legend.SetHeader("anti-#it{k}_{T} jets, |#eta| < 0.5");
   for (size_t i = 0; i < spectra.size(); ++i) {
     spectra[i]->SetMarkerStyle(kFullSquare);
     spectra[i]->SetMarkerSize(1.2);
     spectra[i]->SetMarkerColor(colors[i]);
     spectra[i]->SetLineColor(colors[i]);
-    spectra[i]->SetLineWidth(4);
+    spectra[i]->SetLineWidth(5);
     spectra[i]->Draw("E X0 SAME");
     legend.AddEntry(spectra[i], radii[i].second.data(), "pe");
   }

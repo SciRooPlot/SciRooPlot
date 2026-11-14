@@ -2731,7 +2731,7 @@ plot = Plot("spectra", "collisions/jets", "1d")
 jetStyle = Data().SetMarkerStyle(kFullSquare).SetMarkerSize(1.2)
 for tag, label in [("R02", "#it{R} = 0.2"), ("R04", "#it{R} = 0.4"), ("R06", "#it{R} = 0.6")]:
     plot[1].AddData("hJetPt_" + tag, "jets", label).ApplyLayout(jetStyle).RebinX(2)
-plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kDashed, 2.0, kGray + 2)
+plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kDashed, 3.0, kGray + 2)
 plot[1].AddLegend(0.08, 0.38, "anti-#it{k}_{T} jets, |#eta| < 0.5")
 plot[1]['X'].SetLog().SetTitle("#it{p}_{T}^{jet} (GeV/#it{c})")
 plot[1]['Y'].SetLog().SetTitle("d#it{N}/d#it{p}_{T} (GeV/#it{c})^{-1}")
@@ -2746,7 +2746,7 @@ const Data jetStyle = Data().SetMarkerStyle(kFullSquare).SetMarkerSize(1.2);
 for (const auto& [tag, label] : std::vector<std::pair<std::string, std::string>>{{"R02", "#it{R} = 0.2"}, {"R04", "#it{R} = 0.4"}, {"R06", "#it{R} = 0.6"}}) {
   plot[1].AddData("hJetPt_" + tag, "jets", label).ApplyLayout(jetStyle).RebinX(2);
 }
-plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kDashed, 2.0, kGray + 2);
+plot[1].AddData("fNLO_R04", "jets", "NLO, #it{R} = 0.4").SetDefinesFrame().SetLine(kDashed, 3.0, kGray + 2);
 plot[1].AddLegend(0.08, 0.38, "anti-#it{k}_{T} jets, |#eta| < 0.5");
 plot[1]['X'].SetLog().SetTitle("#it{p}_{T}^{jet} (GeV/#it{c})");
 plot[1]['Y'].SetLog().SetTitle("d#it{N}/d#it{p}_{T} (GeV/#it{c})^{-1}");
