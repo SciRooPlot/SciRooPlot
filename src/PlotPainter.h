@@ -303,7 +303,8 @@ class PlotPainter
   bool PrepareRatioNumerator(item_state_t& state, data_ptr_t& numerator);
   template <typename T>
   void ProcessData(item_state_t& state, T&& data_ptr);
-  static size_t FrameDataIndex(const std::vector<std::shared_ptr<Plot::Pad::Data>>& data, const data_buffer_t& dataBuffer);
+  template <class DataPtr>
+  static size_t FrameDataIndex(const std::vector<DataPtr>& data, const data_buffer_t& dataBuffer);  // the data of a pad or those drawn
   static TObject* Input(const std::string& source, const std::string& key, const data_buffer_t& dataBuffer);
   static TObject* Input(const Plot::Pad::Data& data, const data_buffer_t& dataBuffer) { return Input(data.GetDataSource(), data.GetName() + data.GetDataInfo().GetNameSuffix(), dataBuffer); }
   std::optional<data_ptr_t> InputClone(TObject* input, const std::string& messageName, const std::optional<Plot::Pad::Data::proj_info_t>& projInfo, bool keepStoredRanges = false);

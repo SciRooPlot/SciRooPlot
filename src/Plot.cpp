@@ -1593,58 +1593,6 @@ auto Plot::Pad::SetView(double_t theta, double_t phi) -> decltype(*this)
 
 //**************************************************************************************************
 /**
- * Constructor from other pad.
- */
-//**************************************************************************************************
-Plot::Pad::Pad(const Pad& other)
-  : FillSetters<Pad>(other), mPosition(other.mPosition), mMargins(other.mMargins), mView(other.mView),
-    mFrameFill(other.mFrameFill), mFrameBorder(other.mFrameBorder), mText(other.mText),
-    mMarkerDefaults(other.mMarkerDefaults), mLineDefaults(other.mLineDefaults), mFillDefaults(other.mFillDefaults),
-    mCandleOptionDefaults(other.mCandleOptionDefaults), mBoxCoordinates(other.mBoxCoordinates), mShapeCoordinates(other.mShapeCoordinates),
-    mPalette(other.mPalette), mRedrawAxes(other.mRedrawAxes), mIsEmptyCell(other.mIsEmptyCell), mColorScaleOf(other.mColorScaleOf),
-    mLayoutValues(other.mLayoutValues), mHiddenNextTo(other.mHiddenNextTo), mAxes(other.mAxes)
-{
-  mData.reserve(other.mData.size());
-  for (const auto& data : other.mData) {
-    mData.push_back(data->Clone());
-  }
-  if (other.mRefFunc) mRefFunc = other.mRefFunc->Clone();
-  if (other.mFrame) mFrame = other.mFrame->Clone();
-
-  mLegendBoxes.reserve(other.mLegendBoxes.size());
-  for (const auto& legendBox : other.mLegendBoxes) {
-    mLegendBoxes.push_back(std::make_shared<LegendBox>(*legendBox));
-  }
-  mTextBoxes.reserve(other.mTextBoxes.size());
-  for (const auto& textBox : other.mTextBoxes) {
-    mTextBoxes.push_back(std::make_shared<TextBox>(*textBox));
-  }
-  mShapes.reserve(other.mShapes.size());
-  for (const auto& shape : other.mShapes) {
-    mShapes.push_back(std::make_shared<Shape>(*shape));
-  }
-  mImageBoxes.reserve(other.mImageBoxes.size());
-  for (const auto& imageBox : other.mImageBoxes) {
-    mImageBoxes.push_back(std::make_shared<ImageBox>(*imageBox));
-  }
-}
-
-//**************************************************************************************************
-/**
- * Assignment operator.
- */
-//**************************************************************************************************
-Plot::Pad& Plot::Pad::operator=(const Pad& other)
-{
-  if (this != &other) {
-    Pad tmp(other);
-    *this = std::move(tmp);
-  }
-  return *this;
-}
-
-//**************************************************************************************************
-/**
  * Constructor from property tree.
  */
 //**************************************************************************************************

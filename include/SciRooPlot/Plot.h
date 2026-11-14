@@ -204,6 +204,48 @@ struct enum_names<coordinates_t> {
 
 class PanelLayout;
 
+// a shared pointer whose copy is a copy of the object (by its Clone, if it has one: a Ratio stays a Ratio), so that a copied pad owns its parts
+template <class T>
+class clone_ptr : public std::shared_ptr<T>
+{
+ public:
+  clone_ptr() = default;
+  clone_ptr(std::nullptr_t) {}  // NOLINT(runtime/explicit)
+  template <class U, class = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+  clone_ptr(std::shared_ptr<U> ptr);  // NOLINT(runtime/explicit): the pointer of a new object (a Ratio for a Data)
+  clone_ptr(const clone_ptr& other) : std::shared_ptr<T>(other.Copy()) {}
+  clone_ptr(clone_ptr&&) noexcept = default;
+  clone_ptr& operator=(const clone_ptr& other)
+  {
+    if (this != &other) std::shared_ptr<T>::operator=(other.Copy());
+    return *this;
+  }
+  clone_ptr& operator=(clone_ptr&&) noexcept = default;
+  ~clone_ptr() = default;
+
+ private:
+  template <class U, class = void>
+  struct has_clone : std::false_type {
+  };
+  template <class U>
+  struct has_clone<U, std::void_t<decltype(std::declval<const U&>().Clone())>> : std::true_type {
+  };
+  std::shared_ptr<T> Copy() const
+  {
+    if (!*this) return nullptr;
+    if constexpr (has_clone<T>::value) {
+      return (*this)->Clone();
+    } else {
+      return std::make_shared<T>(**this);
+    }
+  }
+};
+template <class T>
+template <class U, class>
+clone_ptr<T>::clone_ptr(std::shared_ptr<U> ptr) : std::shared_ptr<T>(std::move(ptr))
+{
+}
+
 //**************************************************************************************************
 /**
  * A colour: an index of ROOT (kRed + 1, 632) or rgb components, given as "#rrggbb" or {r, g, b} (each from 0 to 1).
@@ -552,9 +594,9 @@ class Plot::Pad : public FillSetters<Pad>
 
   Pad() = default;
   explicit Pad(const boost::property_tree::ptree& padTree);
-  Pad(const Pad& other);
+  Pad(const Pad& other) = default;  // with copies of the data, boxes and shapes
   Pad(Pad&&) = default;
-  Pad& operator=(const Pad& other);
+  Pad& operator=(const Pad& other) = default;
   Pad& operator=(Pad&&) = default;
   void operator+=(const Pad& pad);
   // 'X', 'Y', 'Z', or 'C': the content of a 3d histogram, whose z axis is binned: its colour scale (range, title, title and label look,
@@ -813,15 +855,15 @@ class Plot::Pad : public FillSetters<Pad>
   std::map<char, std::vector<uint8_t>> mHiddenNextTo;
 
   std::map<char, Axis> mAxes;
-  std::vector<std::shared_ptr<Data>> mData;
-  std::shared_ptr<Data> mRefFunc;
-  std::shared_ptr<Data> mFrame;
+  std::vector<clone_ptr<Data>> mData;
+  clone_ptr<Data> mRefFunc;
+  clone_ptr<Data> mFrame;
   static void ReplaceData(std::shared_ptr<Data>& slot, const Data& data);  // copies into an existing object: references to it stay valid
 
-  std::vector<std::shared_ptr<LegendBox>> mLegendBoxes;
-  std::vector<std::shared_ptr<TextBox>> mTextBoxes;
-  std::vector<std::shared_ptr<Shape>> mShapes;
-  std::vector<std::shared_ptr<ImageBox>> mImageBoxes;
+  std::vector<clone_ptr<LegendBox>> mLegendBoxes;
+  std::vector<clone_ptr<TextBox>> mTextBoxes;
+  std::vector<clone_ptr<Shape>> mShapes;
+  std::vector<clone_ptr<ImageBox>> mImageBoxes;
 };
 
 //**************************************************************************************************

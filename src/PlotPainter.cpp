@@ -706,7 +706,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     pad_ptr->SetNumber(padID);
     pad_ptr->Draw();
     pad_ptr->cd();
-    drawData = pad.GetData();
+    drawData.assign(pad.GetData().begin(), pad.GetData().end());  // the data themselves, not copies
     const bool hasData = !drawData.empty();
     unique_ptr<TH1> emptyFrame;  // frame made from the axis ranges of a pad without data and frame input
 
@@ -8465,7 +8465,8 @@ bool PlotPainter::PlaceZTitle(TPad* pad, TAxis* zAxis, const vector<label_range_
  * then comes from the first data that is not empty (if there is any).
  */
 //**************************************************************************************************
-size_t PlotPainter::FrameDataIndex(const vector<shared_ptr<Plot::Pad::Data>>& data, const data_buffer_t& dataBuffer)
+template <class DataPtr>
+size_t PlotPainter::FrameDataIndex(const vector<DataPtr>& data, const data_buffer_t& dataBuffer)
 {
   auto framePos = std::find_if(data.rbegin(), data.rend(), [](const auto& curData) { return curData->GetDefinesFrame(); });
   size_t frameDataID = (framePos != data.rend()) ? static_cast<size_t>((framePos.base() - 1) - data.begin()) : 0u;
