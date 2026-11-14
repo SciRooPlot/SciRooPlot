@@ -9035,7 +9035,8 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
       }
     } else if (word == "title") {
       replaceStr = data_ptr->GetTitle();
-    } else if (auto* hist = dynamic_cast<TH1*>(data_ptr)) {
+    } else if (auto* hist = dynamic_cast<TH1*>(data_ptr); hist && !((word == "mean" || word == "stddev") && hist->GetXaxis()->GetLabels())) {
+      // (bins with labels are categories: ROOT gives no mean and spread for them, 0; such a placeholder is not available)
       const bool isMax = word == "maximum";
       if (word == "entries") {
         value = hist->GetEntries();
