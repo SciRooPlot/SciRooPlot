@@ -2,7 +2,8 @@
 and its path in it (a data source restricted to a folder, source:folder, and a path in a name become subdirectories), equal to the object
 in the input file, for every data kind of srptest read from a file in every variant (every value at least once in the fast run); a
 function of the plot definition under its data source, named by its formula. Keys are written in a fixed order: the same plots give the
-same file. The plots themselves are not painted."""
+same file. The plots themselves are not painted.
+Covers: a data source restricted to a folder, a path in a name, functions of the plot definition, the fixed key order."""
 
 from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, cases, check, data_objects, describe, finish, func_diff, graph_diff, has_variant, hist_diff, source_of
 from srptest import formula as formula_of

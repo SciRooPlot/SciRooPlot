@@ -12,7 +12,7 @@ Covers: a data range without bins or points, the range of a 2d graph (y ignored,
 views (cut to the coordinates of the view), a range beyond a function sampled over its range (warned once), and the named cases.
 """
 
-from srptest import DATA_1D, DATA_2D, DATA_KINDS, ROOT, Project, S, add_data, axis_range, base_of, cases, check, close, data_objects, describe, finish
+from srptest import DATA_1D, DATA_2D, DATA_KINDS, ROOT, Project, S, add_data, axis_range, base_of, cases, check, close, data_objects, describe, finish, points_of
 
 RANGES = {"X": (3.3, 6.6), "Y": (3.4, 6.7)}
 EFFICIENCY_Y = (0.3, 0.6)  # the values of an efficiency are between 0 and 1
@@ -89,10 +89,6 @@ run = p.plot()
 check("the plots are made without errors", not run.errors(), " | ".join(run.errors()[:3]))
 
 
-def points(graph):
-    return [(graph.GetX()[k], graph.GetY()[k]) for k in range(graph.GetN())]
-
-
 for i, case in enumerate(todo):
     kind, axis = case["kind"], case["axis"]
     what = describe(case)
@@ -129,10 +125,10 @@ for i, case in enumerate(todo):
         check(f"{what}: the points inside drawn (the map of their interpolation, also in the saved canvas)", found == want, f"{len(found)} points instead of {len(want)}")
     elif obj.InheritsFrom("TGraph"):
         coord = 0 if axis == "X" else 1
-        found = points(obj)
+        found = points_of(obj)
         source = inputs.get(kind)
         if source is not None and source.InheritsFrom("TGraph"):
-            want = sorted(pt for pt in points(source) if lo <= pt[coord] <= hi)
+            want = sorted(pt for pt in points_of(source) if lo <= pt[coord] <= hi)
             check(f"{what}: the points inside drawn", sorted(found) == want, f"{len(found)} points instead of {len(want)}")
         else:  # a TEfficiency: the graph ROOT makes of it
             check(f"{what}: only the points inside drawn", found and all(lo <= pt[coord] <= hi for pt in found), f"{found[:3]}")

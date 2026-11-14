@@ -16,7 +16,8 @@ gif output draws wrongly, are warned about there, once per text and run, not in 
 Mode html needs ROOT 6.42 (before, ROOT writes PostScript under that name): with an older ROOT it is refused with an error and writes
 nothing.
 A json file holds one palette, with which JSROOT colours every map: that of the first pad drawing a map (its own or that of pad 0, a ROOT
-palette or a gradient); maps of other pads with another palette are named in one warning per plot."""
+palette or a gradient); maps of other pads with another palette are named in one warning per plot.
+Covers: multi-panel plots (maps, legend strip, grid, 3d views), texts beyond ASCII in bitmaps, mode html with an older ROOT."""
 
 import json
 import os

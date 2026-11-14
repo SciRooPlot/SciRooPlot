@@ -4,7 +4,8 @@ times (ROOT's spelling on the last frame); other spellings are refused. The repe
 made (missing data, missing base plot, failing while painted); a gif whose frames all fail is not reported as saved. The file is <group>.gif next to the folder of the deepest group all frames are in, animation.gif
 in the output directory if they have none. Checked in the gif file itself (screen size, the size and delay of every frame, the loop count),
 for frames of every data kind of srptest (each frame the size of its canvas, so the order shows); the canvases from mode file.
-The gif has the size of its first frame (ROOT's): frames of another canvas size give one warning per gif, naming the first such plot."""
+The gif has the size of its first frame (ROOT's): frames of another canvas size give one warning per gif, naming the first such plot.
+Covers: the gif named after the deepest common group, frames of other canvas sizes."""
 
 import os
 

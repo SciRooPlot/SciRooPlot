@@ -6,7 +6,7 @@ plot definition (AddPoints) are named in messages by their label, or by their nu
 Covers: area sorted the points of a graph silently, points of the definition named by all their coordinates (warnings of kilobytes).
 """
 
-from srptest import ALIASES, DATA_KINDS, Project, S, add_data, alias_table, base_of, cases, check, close, data_objects, describe, drawn_type, finish, has_variant, message_name, source_of
+from srptest import ALIASES, DATA_KINDS, Project, S, add_data, alias_table, base_of, cases, check, close, data_objects, describe, drawn_type, finish, has_variant, message_name, points_of, source_of
 
 TABLE = alias_table()
 GRAPHS = tuple(k for k in DATA_KINDS if drawn_type(k) == "graph" and has_variant(k, "unsorted"))
@@ -48,10 +48,6 @@ for i, case in enumerate(todo):
 run = p.plot("given")
 
 
-def points(graph):
-    return [(graph.GetPointX(i), graph.GetPointY(i)) for i in range(graph.GetN())]
-
-
 def same(a, b):
     return len(a) == len(b) and all(close(x1, x2) and close(y1, y2) for (x1, y1), (x2, y2) in zip(a, b))
 
@@ -81,9 +77,9 @@ for i, case in enumerate(todo):
         check(f"drawn as a graph: {what}", False, obj.ClassName())
         continue
     if case["alias"] == "area":
-        check(f"area drawn through the points sorted by x: {what}", same(points(obj), sorted(points(given))), f"drawn {points(obj)[:5]}")
+        check(f"area drawn through the points sorted by x: {what}", same(points_of(obj), sorted(points_of(given))), f"drawn {points_of(obj)[:5]}")
     else:
-        check(f"drawn through the points as given: {what}", same(points(obj), points(given)), f"drawn {[(round(x, 3), round(y, 3)) for x, y in points(obj)[:6]]}")
+        check(f"drawn through the points as given: {what}", same(points_of(obj), points_of(given)), f"drawn {[(round(x, 3), round(y, 3)) for x, y in points_of(obj)[:6]]}")
 for kind in GRAPHS:  # the warnings name the data, not the plot
     found = [w for w in sortWarnings if f"graph {message_name(kind, 'unsorted')} " in w]
     unsorted = sum(c["kind"] == kind and c["alias"] == "area" and c["variant"] == "unsorted" for c in todo)

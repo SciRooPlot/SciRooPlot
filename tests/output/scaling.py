@@ -2,7 +2,8 @@
 scaled alike: the dashes and gaps of line styles 2 to 4 s times as long, the outline of open markers s pixels wide, filled markers still
 filled; vector files (svg, pdf, eps) do not depend on it. screenscale s does the same for the plots shown on screen (mode show): the window
 shows the dashes and markers as the png at bitmapscale s (X11 has fixed patterns for styles 2 to 4, which SciRooPlot replaces by styles of
-its own). The screen part needs Xvfb and ImageMagick's import for the screenshot; it is left out without them."""
+its own). The screen part needs Xvfb and ImageMagick's import for the screenshot; it is left out without them.
+Covers: dashes of line styles 2 to 4 and outlines of open markers scaled, the screen of mode show."""
 
 import os
 import re

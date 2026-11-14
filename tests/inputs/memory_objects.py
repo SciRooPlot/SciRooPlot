@@ -16,17 +16,10 @@ import gc
 import os
 import re
 
-from srptest import DATA_KINDS, ROOT, Project, S, add_data, base_of, cases, check, data_objects, describe, drawn_diff, finish, has_variant, missing, python, source_of
+from srptest import DATA_KINDS, ROOT, Project, S, add_data, base_of, cases, check, data_objects, describe, drawn_diff, finish, has_variant, missing, one_bin, own, python, source_of
 
 VARIANTS = ("normal", "negative", "nan", "empty", "single", "unsorted", "overflow")
 HOLDERS = ("object", "list", "nameless_list", "directory", "file")
-keep = []
-
-
-def own(obj):
-    ROOT.SetOwnership(obj, False)
-    keep.append(obj)
-    return obj
 
 
 def named_list(name, items, cls="TList"):
@@ -36,12 +29,6 @@ def named_list(name, items, cls="TList"):
     for item in items:
         lst.Add(item)
     return lst
-
-
-def hist(name, content, owned=True):
-    h = ROOT.TH1D(name, "", 4, 0.0, 4.0)
-    h.SetBinContent(1, content)
-    return own(h) if owned else h
 
 
 p = Project("memory_objects")
@@ -106,61 +93,61 @@ p.pm.AddDataSource("deleted", deleted)
 del deleted
 gc.collect()
 lifetimes["deleted by Python after adding it"] = ("deleted", "deleted", 11)
-changed = hist("changed", 12)
+changed = one_bin("changed", 12)
 p.pm.AddDataSource("changed", changed)
 changed.SetBinContent(1, 99)
 lifetimes["changed after adding it"] = ("changed", "changed", 12)
-grown = named_list("grown", [hist("first", 13)])
+grown = named_list("grown", [one_bin("first", 13)])
 p.pm.AddDataSource("grown", grown)
-grown.Add(hist("late", 14))
+grown.Add(one_bin("late", 14))
 lifetimes["its list filled after adding it: the item added before"] = ("grown/first", "grown", 13)
 lifetimes["its list filled after adding it: the item added later is not there"] = ("grown/late", "grown", None)
-twice = hist("twice", 15)
+twice = one_bin("twice", 15)
 p.pm.AddDataSource("two_a", twice)
 p.pm.AddDataSource("two_b", twice)
 lifetimes["one object in two data sources: the first"] = ("twice", "two_a", 15)
 lifetimes["one object in two data sources: the second"] = ("twice", "two_b", 15)
-p.pm.AddDataSource("appended", hist("one", 16))
-p.pm.AddDataSource("appended", [hist("two", 17), hist("one", 18)])
+p.pm.AddDataSource("appended", one_bin("one", 16))
+p.pm.AddDataSource("appended", [one_bin("two", 17), one_bin("one", 18)])
 lifetimes["a second call adds to the data source"] = ("two", "appended", 17)
 lifetimes["a second call: an object of the same name replaces the first"] = ("one", "appended", 18)
-p.pm.AddDataSource("replaced", [hist("old", 19), hist("both", 20)])
-p.pm.AddDataSource("replaced", hist("both", 21), True)
+p.pm.AddDataSource("replaced", [one_bin("old", 19), one_bin("both", 20)])
+p.pm.AddDataSource("replaced", one_bin("both", 21), True)
 lifetimes["replace: the new object"] = ("both", "replaced", 21)
 lifetimes["replace: the earlier objects are gone"] = ("old", "replaced", None)
-p.pm.AddDataSource("merged", [named_list("out", [hist("h1", 22), hist("h", 23)]), named_list("out", [hist("h2", 24), hist("h", 25)])])
+p.pm.AddDataSource("merged", [named_list("out", [one_bin("h1", 22), one_bin("h", 23)]), named_list("out", [one_bin("h2", 24), one_bin("h", 25)])])
 lifetimes["lists of the same name merged: the first"] = ("out/h1", "merged", 22)
 lifetimes["lists of the same name merged: the second"] = ("out/h2", "merged", 24)
 lifetimes["lists of the same name merged: the same name replaced"] = ("out/h", "merged", 25)
-p.pm.AddDataSource("lists", [named_list("la", [hist("h", 26)]), named_list("lb", [hist("h", 27)])])
+p.pm.AddDataSource("lists", [named_list("la", [one_bin("h", 26)]), named_list("lb", [one_bin("h", 27)])])
 lifetimes["two lists, the same name in each: the first by path"] = ("la/h", "lists", 26)
 lifetimes["two lists, the same name in each: the second by path"] = ("lb/h", "lists", 27)
 lifetimes["two lists, the same name in each: the search finds the first"] = ("h", "lists", 26)
-p.pm.AddDataSource("nameless", [named_list(None, [hist("k1", 28)]), named_list(None, [hist("k2", 29)], "TObjArray")])
+p.pm.AddDataSource("nameless", [named_list(None, [one_bin("k1", 28)]), named_list(None, [one_bin("k2", 29)], "TObjArray")])
 lifetimes["two nameless lists: the first"] = ("k1", "nameless", 28)
 lifetimes["two nameless lists: the second"] = ("k2", "nameless", 29)
-nested = named_list("outer", [hist("ho", 30), named_list("inner", [hist("hi", 31)], "THashList")])
+nested = named_list("outer", [one_bin("ho", 30), named_list("inner", [one_bin("hi", 31)], "THashList")])
 p.pm.AddDataSource("nested", nested)
 lifetimes["a list in a list: by path"] = ("outer/inner/hi", "nested", 31)
 lifetimes["a list in a list: by the search"] = ("hi", "nested", 31)
 withFile = p.path("mixed.root")
 f = ROOT.TFile(withFile, "RECREATE")
-hist("onfile", 32, owned=False).Write()
-hist("mixed", 33, owned=False).Write()
+one_bin("onfile", 32, owned=False).Write()
+one_bin("mixed", 33, owned=False).Write()
 f.Close()
-p.pm.AddDataSource("mixed", hist("mixed", 34))
+p.pm.AddDataSource("mixed", one_bin("mixed", 34))
 p.pm.AddDataSource("mixed", withFile)
 lifetimes["objects and a file in one data source: the file's object"] = ("onfile", "mixed", 32)
 lifetimes["objects and a file in one data source: the first input wins"] = ("mixed", "mixed", 34)
 
 # the caller's lists and files stay as they were
 callerFile = own(ROOT.TFile(p.path("caller.root"), "RECREATE"))
-hist("ondisk", 35, owned=False).Write()
+one_bin("ondisk", 35, owned=False).Write()
 callerSub = callerFile.mkdir("sub")
 callerSub.cd()
-hist("insub", 36, owned=False).Write()
+one_bin("insub", 36, owned=False).Write()
 callerFile.cd()
-inMemory = hist("inmemory", 37)
+inMemory = one_bin("inmemory", 37)
 inMemory.SetDirectory(callerFile)  # newer than anything written: only in memory
 ROOT.gROOT.cd()
 keysBefore = sorted(k.GetName() for k in callerFile.GetListOfKeys())

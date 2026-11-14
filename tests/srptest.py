@@ -523,6 +523,18 @@ def write_objects(path, objects):
 _kept = []  # objects handed to ROOT containers, kept alive for the whole test
 
 
+def one_bin(name, content, owned=True):
+    """a histogram of 4 bins from 0 to 4 with a content in its first bin (kept alive for ROOT containers, unless owned is False)"""
+    h = ROOT.TH1D(name, "", 4, 0.0, 4.0)
+    h.SetBinContent(1, content)
+    return own(h) if owned else h
+
+
+def points_of(graph):
+    """the points of a graph as (x, y)"""
+    return [(graph.GetPointX(i), graph.GetPointY(i)) for i in range(graph.GetN())]
+
+
 def own(obj):
     """obj, owned by the test until it ends (not deleted by Python while a ROOT container holds it)"""
     ROOT.SetOwnership(obj, False)

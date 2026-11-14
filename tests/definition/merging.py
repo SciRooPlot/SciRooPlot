@@ -11,6 +11,7 @@ The cases are those of round_trip.py (every overload on every object it can be c
   of values, contour levels, samples of functions) as if called on the data, the others (also the statistics box) not taken; SetLayout replaces the appearance
   the data had, ApplyLayout puts the layout's on top of it (a legend row merged like the styles). Every setter of Data is in LAYOUT or
   NOT_LAYOUT, so that a new one must be put into one of them.
+Covers: legend rows placed at or showing other data, the data of the implicit legend, placeholders naming data of a pad.
 """
 
 import os

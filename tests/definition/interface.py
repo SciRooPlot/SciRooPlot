@@ -4,6 +4,7 @@ Every public method of the headers (as the API reference lists them, generated f
 and parameter names, unless the reference marks it C++ only, and every binding is such a method. Operators are compared by their number
 of parameters (Python cannot name them). The default values are the same (an empty optional, list or text {} of C++ is None, [] or '' of Python;
 objects made by a constructor are not compared). The differences by design are listed below with their reason.
+Covers: the differences by design between the C++ and the Python interface (listed below).
 """
 
 import math

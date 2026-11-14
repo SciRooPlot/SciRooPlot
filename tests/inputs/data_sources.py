@@ -18,17 +18,9 @@ import os
 import re
 
 import numpy as np
-from srptest import ROOT, Project, S, check, finish, missing, python
+from srptest import ROOT, Project, S, check, finish, missing, one_bin, python
 
 p = Project("data_sources")
-keep = []
-
-
-def hist(name, content):
-    h = ROOT.TH1D(name, "", 4, 0.0, 4.0)
-    h.SetBinContent(1, content)
-    keep.append(h)
-    return h
 
 
 def write(path, contents, trees=(), folders=None):
@@ -36,7 +28,7 @@ def write(path, contents, trees=(), folders=None):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     f = ROOT.TFile(path, "RECREATE")
     for name, content in contents.items():
-        hist(name, content).Write(name)
+        one_bin(name, content).Write(name)
     for name, entries in dict(trees).items():
         tree = ROOT.TTree(name, name)
         x = np.zeros(1)
@@ -58,7 +50,7 @@ def write(path, contents, trees=(), folders=None):
                     tree.Fill()
                 tree.Write()
             else:
-                hist(name, content).Write(name)
+                one_bin(name, content).Write(name)
         f.cd()
     f.Close()
 
@@ -100,8 +92,8 @@ os.symlink(runs, p.path("current"))
 os.environ["SRP_TEST_INPUTS"] = p.path("in")
 cycles = p.path("cycles.root")
 f = ROOT.TFile(cycles, "RECREATE")
-hist("hc", 501).Write()
-hist("hc", 502).Write()
+one_bin("hc", 501).Write()
+one_bin("hc", 502).Write()
 graph = ROOT.TGraph(2)  # ROOT's default name: Graph
 for i, y in enumerate((503, 503)):
     graph.SetPoint(i, i, y)
@@ -110,14 +102,14 @@ graph.SetPoint(0, 0, 504)
 graph.Write()
 inner = f.mkdir("x")
 inner.cd()
-hist("inside", 505).Write()
+one_bin("inside", 505).Write()
 deeper = inner.mkdir("y")
 deeper.cd()
 stack = ROOT.THStack("s", "")
-stack.Add(hist("instack", 507))
+stack.Add(one_bin("instack", 507))
 stack.Write("s", ROOT.TObject.kSingleKey)
 f.cd()
-hist("x", 506).Write()  # a newer key of the directory's name
+one_bin("x", 506).Write()  # a newer key of the directory's name
 f.Close()
 
 sources = {

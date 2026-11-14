@@ -15,7 +15,9 @@ digits give an illegal range), an empty polar graph (the grid drawn alone is not
 range (its stored values are written with bare nan, which does not compile; drawn only where it is a number). SciRooPlot completes what ROOT leaves out
 of every macro: the max digits of axes (ROOT drops them from SetNdivisions) and line colour 1 of histograms (ROOT takes it as default, a
 histogram made by the macro takes the colour of the style). Other attributes are not compared (colour scales in the frame's contour
-levels)."""
+levels).
+Covers: multi-panel plots (legend strip, grid, 3d views), the setup of a colour-scale cell before it, max digits of axes and
+black lines of histograms."""
 
 import concurrent.futures
 import os

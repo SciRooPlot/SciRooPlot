@@ -8,6 +8,7 @@ four pads sharing their axes. References:
 - a plot run twice draws every plot the same: the same primitives in the same order, with the same values, positions, sizes, styles,
   colours (as rgb and alpha) and pad ranges, the same palette;
 - a plot drawn among only half of the plots (every other one) is drawn as among all of them.
+Covers: the same file from processes with other hash seeds, a plot drawn among half of the plots.
 """
 
 import os

@@ -11,6 +11,7 @@ plot is loaded together with an unchanged one. Reference: what was written:
   legend, hold different keys).
 A file loaded group by group into one manager gives no messages (its base plots are read again with every call and replaced silently).
 (Text after a value on the same line is dropped by the reader of the format, before SciRooPlot sees it: not checked.)
+Covers: repeated parts holding different keys (legend rows), a file loaded group by group.
 """
 
 import os
