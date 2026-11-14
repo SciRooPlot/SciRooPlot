@@ -1038,7 +1038,8 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   const auto& GetName() const { return mName; }
   const auto& GetLegendLabel() const { return mLegend.label; }
   const auto& GetLegendID() const { return mLegend.id; }
-  std::optional<LegendEntry> GetLegendEntryIfSet() const;  // without a label or data reference set on it (the data decides those)
+  const auto& GetLegendEntryIfSet() const { return mLegend.entry; }
+  void CheckLegendEntry();  // drops a label or data reference set on the legend entry, with a warning (the data decides those)
   const auto& GetDrawOption() const { return mDrawOption; }
   const auto& GetDrawOptionAlias() const { return mDrawOptionAlias; }
   const auto& GetTextFormat() const { return mTextFormat; }

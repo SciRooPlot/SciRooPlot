@@ -2385,7 +2385,10 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   if (auto var = get_from_tree<bool>(dataTree, "keep_input_style")) mKeepInputStyle = *var;
   read_from_tree(dataTree, mLegend.label, "legend_label");
   read_from_tree(dataTree, mLegend.id, "legend_id");
-  if (const auto entryTree = dataTree.get_child_optional("legend_entry")) mLegend.entry = LegendEntry(*entryTree);
+  if (const auto entryTree = dataTree.get_child_optional("legend_entry")) {
+    mLegend.entry = LegendEntry(*entryTree);
+    CheckLegendEntry();
+  }
   read_from_tree(dataTree, mDrawOption, "draw_option");
   ReadNamed(dataTree, mDrawOptionAlias, "draw_option_alias");
   read_from_tree(dataTree, mTextFormat, "text_format");
@@ -2694,35 +2697,27 @@ auto Plot::Pad::Data::SetLegend(uint8_t legendID) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetLegendEntry(const LegendEntry& legendEntry) -> decltype(*this)
 {
-  // the data decides whether it has a row and what it says, the entry how the row looks
   mLegend.entry = legendEntry;
-  if (mLegend.entry->mLabel) {
-    logger::warning("The legend entry of {} cannot set its label, use SetLegendLabel.", mName);
-    mLegend.entry->mLabel.reset();
-  }
-  if (mLegend.entry->mRefDataID || mLegend.entry->mRefPadID) {  // e.g. a copy of an entry of LegendBox::AddDataEntry
-    logger::warning("The legend entry of {} cannot refer to other data.", mName);
-    mLegend.entry->mRefDataID.reset();
-    mLegend.entry->mRefPadID.reset();
-  }
+  CheckLegendEntry();
   return *this;
+}
+// the data decides whether it has a row and what it says, the entry how the row looks (checked where it is set, for an entry set
+// through GetLegendEntry when the plot is added, and when the plot is read)
+void Plot::Pad::Data::CheckLegendEntry()
+{
+  if (!mLegend.entry) return;
+  LegendEntry& entry = *mLegend.entry;
+  if (entry.mLabel || entry.mRefDataID || entry.mRefPadID) {  // e.g. a copy of an entry of LegendBox::AddDataEntry
+    logger::warning("The legend entry of {} cannot set its label (use SetLegendLabel) or refer to other data: they are ignored.", mName);
+    entry.mLabel.reset();
+    entry.mRefDataID.reset();
+    entry.mRefPadID.reset();
+  }
 }
 auto Plot::Pad::Data::GetLegendEntry() -> LegendEntry&
 {
   if (!mLegend.entry) mLegend.entry.emplace();
   return *mLegend.entry;
-}
-optional<Plot::Pad::LegendEntry> Plot::Pad::Data::GetLegendEntryIfSet() const
-{
-  if (!mLegend.entry) return {};
-  LegendEntry entry = *mLegend.entry;
-  if (entry.mLabel || entry.mRefDataID || entry.mRefPadID) {  // set on the entry from GetLegendEntry
-    logger::warning("The legend entry of {} is ignored: it cannot set its label (use SetLegendLabel) or refer to other data.", mName);
-    entry.mLabel.reset();
-    entry.mRefDataID.reset();
-    entry.mRefPadID.reset();
-  }
-  return entry;
 }
 auto Plot::Pad::Data::SetDrawOption(const string& drawOption) -> decltype(*this)
 {

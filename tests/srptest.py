@@ -3200,6 +3200,8 @@ def setter_meant_for(cls, method, host):
         return host != "pad0" and not (host == "base_pad" and method in PAD_ADDERS)
     if cls == "Plot" and method in ("SetGroup", "AppendGroup"):
         return host != "base"
+    if cls == "LegendEntry" and method in ("SetLabel", "SetRefData"):
+        return host != "data_row"  # the data decides what its row says and refers to (reported when the plot is added)
     if cls == "Panel" and method == "Span":
         return host == "strip"
     if cls == "Data" and method in SELECTIONS + TREE_SELECTIONS:

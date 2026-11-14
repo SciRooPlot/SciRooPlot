@@ -1003,6 +1003,7 @@ void PlotManager::AddPlot(Plot plot)
   };
   for (auto& [padID, pad] : plot.GetPads()) {
     for (const auto& data : pad.GetData()) {
+      data->CheckLegendEntry();  // an entry set through GetLegendEntry
       warnUnusedRequest(data->GetDataInfo(), data->GetName());
       if (auto ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data)) warnUnusedRequest(ratio->GetDenomDataInfo(), ratio->GetDenomName());
     }
