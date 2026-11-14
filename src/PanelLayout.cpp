@@ -654,13 +654,13 @@ void PanelLayout::ApplyGeometry(Plot& plot, Grid& grid) const
     target['Z'].SetTitleSize(mTitleSize / minSide);  // also for the z axis of 3D views in panels without a colour scale
     // kept apart from the axis settings (see PlotPainter): the title offsets of a flat frame (a 3D view places its titles itself), and the look
     // of the colour scale, which for a 3d histogram is the C axis
-    target.mLayoutValues["title_size"] = static_cast<float_t>(mTitleSize / minSide);
-    target.mLayoutValues["title_offset_x"] = static_cast<float_t>(mXTitleOffset * minSide / (1.6 * mTitleSize * height));
-    target.mLayoutValues["title_offset_y"] = static_cast<float_t>((mYTitleOffset != 0.) ? mYTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: automatic
+    target.mLayoutValues.titleSize = static_cast<float_t>(mTitleSize / minSide);
+    target.mLayoutValues.titleOffsetX = static_cast<float_t>(mXTitleOffset * minSide / (1.6 * mTitleSize * height));
+    target.mLayoutValues.titleOffsetY = static_cast<float_t>((mYTitleOffset != 0.) ? mYTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: automatic
     if (colOwnScale[c1]) {
-      target.mLayoutValues["title_offset_z"] = static_cast<float_t>((mZTitleOffset != 0.) ? mZTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: next to the labels
-      target.mLayoutValues["color_scale_offset"] = static_cast<float_t>(mColorScaleOffset / width);
-      target.mLayoutValues["color_scale_width"] = static_cast<float_t>(mColorScaleWidth / width);
+      target.mLayoutValues.titleOffsetZ = static_cast<float_t>((mZTitleOffset != 0.) ? mZTitleOffset * minSide / (1.6 * mTitleSize * width) : 0.);  // 0: next to the labels
+      target.mLayoutValues.colorScaleOffset = static_cast<float_t>(mColorScaleOffset / width);
+      target.mLayoutValues.colorScaleWidth = static_cast<float_t>(mColorScaleWidth / width);
     }
     // touching panels of another length share no axis (see below), but the labels between them are hidden all the same
     auto otherLength = [&, cell = cell, r0 = r0, c0 = c0](size_t r, size_t c, bool sameRows) {

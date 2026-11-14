@@ -1178,8 +1178,8 @@ void PlotPainter::FinishPad(pad_state_t& padState)
     if (axis->GetColorScaleOffset()) scaleOffset = axis->GetColorScaleOffset();
     if (axis->GetColorScaleWidth()) scaleWidth = axis->GetColorScaleWidth();
   }
-  if (!scaleOffset) scaleOffset = LayoutValue(pad, padDefaults, "color_scale_offset");
-  if (!scaleWidth) scaleWidth = LayoutValue(pad, padDefaults, "color_scale_width");
+  if (!scaleOffset) scaleOffset = LayoutValue(pad, padDefaults, &Plot::Pad::layout_values_t::colorScaleOffset);
+  if (!scaleWidth) scaleWidth = LayoutValue(pad, padDefaults, &Plot::Pad::layout_values_t::colorScaleWidth);
   if (scaleOffset || scaleWidth) {
     for (TObject* primitive : *pad_ptr->GetListOfPrimitives()) {
       auto* hist = dynamic_cast<TH1*>(primitive);
@@ -1401,8 +1401,8 @@ void PlotPainter::StyleContentScale(pad_state_t& padState)
       zAxis->SetLabelColor(textColor->ToIndex());
     }
     if (textSize) zAxis->SetLabelSize(*textSize);
-    if (auto titleSize = LayoutValue(pad, padDefaults, "title_size")) zAxis->SetTitleSize(*titleSize);
-    if (auto titleOffset = LayoutValue(pad, padDefaults, "title_offset_z")) zAxis->SetTitleOffset(*titleOffset);
+    if (auto titleSize = LayoutValue(pad, padDefaults, &Plot::Pad::layout_values_t::titleSize)) zAxis->SetTitleSize(*titleSize);
+    if (auto titleOffset = LayoutValue(pad, padDefaults, &Plot::Pad::layout_values_t::titleOffsetZ)) zAxis->SetTitleOffset(*titleOffset);
     bool ownTitleOffset = zAxis->GetTitleOffset() != 0.f;  // a fixed distance from the layout
     optional<float_t> titleAlpha, labelAlpha, axisAlpha;
     for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
@@ -3138,7 +3138,7 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
     if (hide) {
       if (!ownTitleSize) textSizeTitle = 0.f;
       if (!ownLabelSize) textSizeLabel = 0.f;
-    } else if (auto titleSize = LayoutValue(pad, padDefaults, "title_size"); titleSize && !ownTitleSize) {
+    } else if (auto titleSize = LayoutValue(pad, padDefaults, &Plot::Pad::layout_values_t::titleSize); titleSize && !ownTitleSize) {
       textSizeTitle = titleSize;
     }
   }
@@ -3155,7 +3155,7 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
   if (!userTitleOffset) {
     if (viewFrame) {
       axis_ptr->SetTitleOffset((axisLabel == 'Z') ? 0.f : 1.5f);
-    } else if (auto layoutOffset = LayoutValue(pad, padDefaults, string("title_offset_") + static_cast<char>(std::tolower(axisLabel)))) {
+    } else if (auto layoutOffset = LayoutValue(pad, padDefaults, Plot::Pad::layout_values_t::TitleOffset(axisLabel))) {
       axis_ptr->SetTitleOffset(*layoutOffset);
     }
   }
@@ -8324,14 +8324,10 @@ vector<string> PlotPainter::LabelTexts(const TAxis* axis, const vector<double_t>
  * A value a PanelLayout set for a pad (see Plot::Pad::mLayoutValues): the pad's own, else that of pad 0.
  */
 //**************************************************************************************************
-optional<float_t> PlotPainter::LayoutValue(const Plot::Pad& pad, const Plot::Pad& padDefaults, const string& key)
+optional<float_t> PlotPainter::LayoutValue(const Plot::Pad& pad, const Plot::Pad& padDefaults, Plot::Pad::layout_values_t::value_t value)
 {
-  for (const Plot::Pad* curPad : {&pad, &padDefaults}) {
-    if (auto value = curPad->mLayoutValues.find(key); value != curPad->mLayoutValues.end()) {
-      return value->second;
-    }
-  }
-  return std::nullopt;
+  if (!value) return std::nullopt;
+  return (pad.mLayoutValues.*value) ? pad.mLayoutValues.*value : padDefaults.mLayoutValues.*value;
 }
 
 //**************************************************************************************************

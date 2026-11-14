@@ -847,10 +847,25 @@ class Plot::Pad : public FillSetters<Pad>
   std::optional<coordinates_t> mShapeCoordinates;
   palette_defaults_t mPalette;
   std::optional<bool> mRedrawAxes;
-  bool mIsEmptyCell{};                           // an Empty() cell of a PanelLayout: room for a legend or a text, nothing to warn about when left blank
-  std::optional<uint8_t> mColorScaleOf;          // a ColorScale() cell of a PanelLayout: shows the colour scale of the z group of this pad
-  std::map<std::string, float_t> mLayoutValues;  // set by a PanelLayout, kept apart from the axis settings: title offsets for a flat frame (a 3D view
-                                                 // has its own) and the defaults of the colour scale (also of a 3d histogram, whose scale is the C axis)
+  bool mIsEmptyCell{};                   // an Empty() cell of a PanelLayout: room for a legend or a text, nothing to warn about when left blank
+  std::optional<uint8_t> mColorScaleOf;  // a ColorScale() cell of a PanelLayout: shows the colour scale of the z group of this pad
+  // set by a PanelLayout, kept apart from the axis settings: title offsets for a flat frame (a 3D view has its own) and the defaults of the
+  // colour scale (also of a 3d histogram, whose scale is the C axis)
+  struct layout_values_t {
+    using value_t = std::optional<float_t> layout_values_t::*;
+    std::optional<float_t> titleSize;
+    std::optional<float_t> titleOffsetX;
+    std::optional<float_t> titleOffsetY;
+    std::optional<float_t> titleOffsetZ;
+    std::optional<float_t> colorScaleOffset;
+    std::optional<float_t> colorScaleWidth;
+    static value_t TitleOffset(char axis);  // of 'X', 'Y' or 'Z' (none for 'C')
+    void Update(const layout_values_t& other);
+    void Read(const boost::property_tree::ptree& padTree);  // under the key layout_values
+    void Put(boost::property_tree::ptree& padTree) const;
+    static const std::array<std::pair<const char*, value_t>, 6>& Keys();
+  };
+  layout_values_t mLayoutValues;
 
   // a panel of a PanelLayout: the axes whose labels and title are hidden, with the panels touching there (x: below, y: on the left);
   // hidden in a flat frame (a 3D view or a polar drawing keeps its own)

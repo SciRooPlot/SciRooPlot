@@ -1638,13 +1638,7 @@ Plot::Pad::Pad(const ptree& padTree)
       mHiddenNextTo[static_cast<char>(std::toupper(key[0]))] = get_from_tree<vector<uint8_t>>(*hiddenTree, key).value_or(vector<uint8_t>{});
     }
   }
-  if (auto layoutTree = padTree.get_child_optional("layout_values")) {
-    // the values a PanelLayout sets (another key is not read: the loading names it)
-    static const std::set<string> layoutKeys{"title_size", "title_offset_x", "title_offset_y", "title_offset_z", "color_scale_offset", "color_scale_width"};
-    for (const auto& [key, value] : *layoutTree) {
-      if (layoutKeys.count(key)) mLayoutValues[key] = *get_from_tree<float_t>(*layoutTree, key);
-    }
-  }
+  mLayoutValues.Read(padTree);
 
   for (const auto& content : padTree) {
     // add data
@@ -1687,6 +1681,47 @@ Plot::Pad::Pad(const ptree& padTree)
       if (!axis) logger::throw_invalid_argument("{} has no name", content.first);
       mAxes[*axis] = Axis(content.second);
     }
+  }
+}
+
+//**************************************************************************************************
+/**
+ * The values a PanelLayout sets for a pad, with their keys in plot files (another key under layout_values is not read: the loading names it).
+ */
+//**************************************************************************************************
+const std::array<std::pair<const char*, Plot::Pad::layout_values_t::value_t>, 6>& Plot::Pad::layout_values_t::Keys()
+{
+  static const std::array<std::pair<const char*, value_t>, 6> keys{{{"title_size", &layout_values_t::titleSize},
+                                                                    {"title_offset_x", &layout_values_t::titleOffsetX},
+                                                                    {"title_offset_y", &layout_values_t::titleOffsetY},
+                                                                    {"title_offset_z", &layout_values_t::titleOffsetZ},
+                                                                    {"color_scale_offset", &layout_values_t::colorScaleOffset},
+                                                                    {"color_scale_width", &layout_values_t::colorScaleWidth}}};
+  return keys;
+}
+Plot::Pad::layout_values_t::value_t Plot::Pad::layout_values_t::TitleOffset(char axis)
+{
+  if (axis == 'X') return &layout_values_t::titleOffsetX;
+  if (axis == 'Y') return &layout_values_t::titleOffsetY;
+  if (axis == 'Z') return &layout_values_t::titleOffsetZ;
+  return nullptr;
+}
+void Plot::Pad::layout_values_t::Update(const layout_values_t& other)
+{
+  for (const auto& [key, value] : Keys()) {
+    if (other.*value) this->*value = other.*value;
+  }
+}
+void Plot::Pad::layout_values_t::Read(const ptree& padTree)
+{
+  for (const auto& [key, value] : Keys()) {
+    read_from_tree(padTree, this->*value, string("layout_values.") + key);
+  }
+}
+void Plot::Pad::layout_values_t::Put(ptree& padTree) const
+{
+  for (const auto& [key, value] : Keys()) {
+    put_in_tree(padTree, this->*value, string("layout_values.") + key);
   }
 }
 
@@ -1736,9 +1771,7 @@ ptree Plot::Pad::GetPropertyTree() const
   for (const auto& [axisLabel, pads] : mHiddenNextTo) {
     put_in_tree(padTree, optional(pads), string("hidden_next_to.") + static_cast<char>(std::tolower(axisLabel)));
   }
-  for (const auto& [key, value] : mLayoutValues) {
-    padTree.put("layout_values." + key, value);
-  }
+  mLayoutValues.Put(padTree);
 
   int32_t dataID = 1;
   for (const auto& data : mData) {
@@ -1836,9 +1869,7 @@ void Plot::Pad::operator+=(const Pad& pad)
   for (const auto& [axisLabel, pads] : pad.mHiddenNextTo) {
     mHiddenNextTo[axisLabel] = pads;
   }
-  for (const auto& [key, value] : pad.mLayoutValues) {
-    mLayoutValues[key] = value;
-  }
+  mLayoutValues.Update(pad.mLayoutValues);
   if (pad.mRefFunc) ReplaceData(mRefFunc, *pad.mRefFunc);
   if (pad.mFrame) ReplaceData(mFrame, *pad.mFrame);
   for (auto& [axisLabel, axis] : pad.mAxes) {
