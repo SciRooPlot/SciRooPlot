@@ -6,6 +6,7 @@ void nuclearModification(const char* dataDir = "ExampleData", const char* output
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptTitle(0);
+  gStyle->SetEndErrorSize(0);
 
   // read the inputs: the pp spectrum, the Pb-Pb spectra per centrality class, the published table
   TFile ppFile(Form("%s/spectra.root", dataDir));
@@ -16,6 +17,7 @@ void nuclearModification(const char* dataDir = "ExampleData", const char* output
     return;
   }
   const std::vector<std::pair<std::string, double>> centralities = {{"0-10", 1500.0}, {"10-30", 750.0}, {"30-50", 260.0}};  // <N_coll>
+  const char* colors[3] = {"#e0453a", "#f28e2b", "#3a78c2"};
   TTree table;
   if (table.ReadFile(Form("%s/raa_published.csv", dataDir), "", ',') <= 0) {
     Error("nuclearModification", "cannot read %s/raa_published.csv", dataDir);
@@ -71,50 +73,57 @@ void nuclearModification(const char* dataDir = "ExampleData", const char* output
     }
     ratio->GetXaxis()->SetRangeUser(0.15, 10.0);
     ratio->GetXaxis()->SetTitle(i == 2 ? "#it{p}_{T} (GeV/#it{c})" : "");  // one x title, at the end of the row
-    ratio->GetXaxis()->SetTitleOffset(1.2);
+    ratio->GetXaxis()->SetTitleOffset(1.0);
     ratio->GetXaxis()->SetNoExponent();
+    if (i < 2) ratio->GetXaxis()->ChangeLabel(-1, -1, 0);  // the label at the edge, cut by the next pad
     ratio->GetXaxis()->SetTickLength(0.03 / width * 0.38);
     ratio->GetYaxis()->SetTitle(i == 0 ? "#it{R}_{AA}" : "");
     ratio->GetYaxis()->CenterTitle();
-    ratio->GetYaxis()->SetTitleOffset(1.45);
+    ratio->GetYaxis()->SetTitleOffset(1.29);
     ratio->GetYaxis()->SetTickLength(0.03 * 0.38 / width);
     ratio->SetMinimum(0.0);
     ratio->SetMaximum(1.4);
     ratio->SetMarkerStyle(kFullCircle);
-    ratio->SetMarkerColor(kBlack);
-    ratio->SetLineColor(kBlack);
-    ratio->SetLineWidth(4);
-    ratio->Draw("E X0");
+    ratio->SetMarkerSize(1.4);
+    ratio->SetMarkerColor(TColor::GetColor(colors[i]));
+    ratio->SetLineColor(TColor::GetColor(colors[i]));
+    ratio->SetLineWidth(5);
+    ratio->Draw("AXIS");
 
-    auto one = new TLine(0.15, 1.0, 10.0, 1.0);
+    auto one = new TF1(Form("one%zu", i), "1", 0.15, 10.0);
     keep.push_back(one);
     one->SetLineColor(kGray + 1);
     one->SetLineStyle(kDashed);
-    one->SetLineWidth(2);
-    one->Draw();
-    auto text = new TLatex(0.5, 0.88, (cent + "%").data());
+    one->SetLineWidth(3);
+    one->Draw("SAME");
+    ratio->DrawCopy("E X0 SAME")->GetXaxis()->SetRangeUser(0.15, 6.0);  // where the spectra have the statistics
+    const double textX[3] = {0.568, 0.489, 0.466};
+    auto text = new TLatex(textX[i], 0.877, (cent + "%").data());
     keep.push_back(text);
     text->SetNDC();
-    text->SetTextAlign(21);
+    text->SetTextAlign(12);
     text->SetTextFont(43);
     text->SetTextSize(31);
     text->Draw();
 
     if (i == 0) {
-      syst.SetFillColor(kOrange - 9);
-      syst.SetLineColor(kOrange + 1);
+      const int orange = TColor::GetColor("#f28e2b");
+      syst.SetFillColor(TColor::GetColor("#fbd5a5"));
+      syst.SetLineColor(orange);
       syst.Draw("2");
       statistical.SetMarkerStyle(kOpenCircle);
       statistical.SetMarkerSize(1.2);
-      statistical.SetMarkerColor(kOrange + 1);
-      statistical.SetLineColor(kOrange + 1);
+      statistical.SetMarkerColor(orange);
+      statistical.SetLineColor(orange);
+      statistical.SetLineWidth(5);
       statistical.Draw("P Z");
-      ratio->Draw("E X0 SAME");
-      auto published = new TLegend(0.2, 0.62, 0.7, 0.78);
+      auto published = new TLegend(0.198, 0.677, 0.527, 0.781);
+      published->SetMargin(0.17);
       keep.push_back(published);
       published->AddEntry(&syst, "published, syst.", "f");
       published->AddEntry(&statistical, "published, stat.", "pe");
-      auto measured = new TLegend(0.2, 0.22, 0.6, 0.3);
+      auto measured = new TLegend(0.198, 0.252, 0.446, 0.304);
+      measured->SetMargin(0.23);
       keep.push_back(measured);
       measured->AddEntry(ratio, "Pb-Pb / pp", "pe");
       for (auto legend : {published, measured}) {
@@ -129,7 +138,8 @@ void nuclearModification(const char* dataDir = "ExampleData", const char* output
       auto box = new TH1D("normBox", "", 1, 0.0, 1.0);  // a legend row needs an object with the fill
       keep.push_back(box);
       box->SetFillColor(kGray);
-      auto note = new TLegend(0.1, 0.22, 0.6, 0.3);
+      auto note = new TLegend(0.105, 0.252, 0.456, 0.304);
+      note->SetMargin(0.18);
       keep.push_back(note);
       note->AddEntry(box, "norm. unc. 5%", "f");
       note->SetBorderSize(0);

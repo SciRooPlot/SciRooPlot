@@ -2677,16 +2677,18 @@ pm.AddBasePlot(PlotManager.MakeBasePlot("1d_3x1"))
 
 centralities = ["0-10", "10-30", "30-50"]
 ncoll = {"0-10": 1500.0, "10-30": 750.0, "30-50": 260.0}
+colors = {"0-10": "#e0453a", "10-30": "#f28e2b", "30-50": "#3a78c2"}
 plot = Plot("nuclearModification", "heavyion", "1d_3x1")
 for i, cent in enumerate(centralities):
     pad = plot[i + 1]
     label = "Pb-Pb / pp" if i == 0 else None
-    pad.AddRatio(["cent_" + cent + "/ptSpec", "heavyion"], ["ptSpec", "data"], label).Numer().Scale(1.0 / ncoll[cent])
-    pad.SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 1)
+    pad.AddRatio(["cent_" + cent + "/ptSpec", "heavyion"], ["ptSpec", "data"], label).Numer().Scale(1.0 / ncoll[cent]) \\
+       .Result().SetRangeX(0.15, 6.0).SetColor(colors[cent])
+    pad.SetRefFunc("1").SetLine(kDashed, 3.0, kGray + 1)
     pad.AddText(0.48, 0.93, cent + "%")
 plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high") \\
-       .SetDrawOption(boxes).SetFill(1001, kOrange - 9).SetLineColor(kOrange + 1).SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"))
-plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetMarker(kOpenCircle, 1.2, kOrange + 1).SetLegend(2)
+       .SetDrawOption(boxes).SetColor("#f28e2b").SetFill(1001, "#fbd5a5").SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"))
+plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetColor("#f28e2b").SetMarkerStyle(kOpenCircle).SetMarkerSize(1.2).SetLegend(2)
 plot[1].AddLegend(0.05, 0.19)
 plot[1].AddLegend(0.05, 0.78)
 plot[3].AddLegend(0.11, 0.19).AddEntry("norm. unc. 5%").SetSymbolElements("F").SetFill(1001, kGray)
@@ -2701,18 +2703,20 @@ pm.AddBasePlot(PlotManager::MakeBasePlot("1d_3x1"));
 
 const std::vector<std::string> centralities = {"0-10", "10-30", "30-50"};
 std::map<std::string, double> ncoll = {{"0-10", 1500.0}, {"10-30", 750.0}, {"30-50", 260.0}};
+std::map<std::string, std::string> colors = {{"0-10", "#e0453a"}, {"10-30", "#f28e2b"}, {"30-50", "#3a78c2"}};
 Plot plot("nuclearModification", "heavyion", "1d_3x1");
 for (size_t i = 0; i < centralities.size(); ++i) {
   const std::string& cent = centralities[i];
   auto& pad = plot[i + 1];
   const std::optional<std::string> label = (i == 0) ? std::optional<std::string>("Pb-Pb / pp") : std::nullopt;
-  pad.AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}, label).Numer().Scale(1.0 / ncoll[cent]);
-  pad.SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 1);
+  pad.AddRatio({"cent_" + cent + "/ptSpec", "heavyion"}, {"ptSpec", "data"}, label).Numer().Scale(1.0 / ncoll[cent])
+     .Result().SetRangeX(0.15, 6.0).SetColor(colors[cent]);
+  pad.SetRefFunc("1").SetLine(kDashed, 3.0, kGray + 1);
   pad.AddText(0.48, 0.93, cent + "%");
 }
 plot[1].AddData("raa_published", "heavyion", "published, syst.").Scatter("pt", "raa", "pt_err", "pt_err", "syst_low", "syst_high")
-       .SetDrawOption(boxes).SetFill(1001, kOrange - 9).SetLineColor(kOrange + 1).SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
-plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetMarker(kOpenCircle, 1.2, kOrange + 1).SetLegend(2);
+       .SetDrawOption(boxes).SetColor("#f28e2b").SetFill(1001, "#fbd5a5").SetLegend(2).SetLegendEntry(LegendEntry().SetSymbolElements("F"));
+plot[1].AddData("raa_published", "heavyion", "published, stat.").Scatter("pt", "raa", "0.", "stat").SetColor("#f28e2b").SetMarkerStyle(kOpenCircle).SetMarkerSize(1.2).SetLegend(2);
 plot[1].AddLegend(0.05, 0.19);
 plot[1].AddLegend(0.05, 0.78);
 plot[3].AddLegend(0.11, 0.19).AddEntry("norm. unc. 5%").SetSymbolElements("F").SetFill(1001, kGray);
