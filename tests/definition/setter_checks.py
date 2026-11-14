@@ -1,7 +1,7 @@
 """An invalid argument of the plot definition is reported once, and nothing is stored silently.
 
 The cases are every overload of the Python interface (as round_trip.py: every object it can be called on) with each invalid value of
-one of its parameters (INVALID: not a number, values outside of what the parameter means, empty expressions, numbers of things that do
+one of its parameters (srptest.SETTER_INVALID: not a number, values outside of what the parameter means, empty expressions, numbers of things that do
 not exist ...), the other parameters plain. Reference: the same call with the plain value on the same object, defined and plotted.
 - the call raises (the plot is not made), or it gives exactly one message more than the plain call, either when the plot is defined
   or when it is plotted (loading the saved plot may say again what was said when it was defined): an invalid value is ignored, what was
@@ -16,6 +16,8 @@ not exist ...), the other parameters plain. Reference: the same call with the pl
   other (Entries, a drawing option and an alias, contour levels and their number, also from a layout, SetDefinesFrame(False),
   SetTransparent after a fill colour).
 Style numbers (markers, lines, fills) are not checked: ROOT draws an unknown style in its default style.
+Covers: the same tree joined again, a selection of data that is not projected, pad margins without room for the
+frame, calls replacing each other.
 """
 
 import os
@@ -26,115 +28,6 @@ import numpy as np
 import srptest as S
 
 NAN, INF = float("nan"), float("inf")
-# the invalid values of the parameters, by name (or method.name, Class.method.name, which win); None: the parameter has none
-INVALID = {
-    "alpha": [1.5, -0.2, NAN],
-    "size": [NAN],
-    "SetTextSize.size": [-1.0, NAN],
-    "SetText.size": [-1.0, NAN],
-    "SetDefaultTextSize.size": [-1.0, NAN],
-    "SetLabelSize.size": [-1.0, NAN],
-    "SetTitleSize.size": [-1.0, NAN],
-    "width": [NAN],  # a negative line width draws the exclusion side of a graph
-    "SetSize.width": [-0.2, NAN],
-    "SetSize.height": [-0.2, NAN],
-    "ImageBox.SetWidth.width": [-0.2, NAN],
-    "ImageBox.SetHeight.height": [-0.2, NAN],
-    "Plot.SetDimensions.width": [0, -5, 100000],  # a canvas side: 1 to 32767 pixels
-    "Plot.SetDimensions.height": [0, 100000],
-    "Plot.SetWidth.width": [0, 100000],
-    "Plot.SetHeight.height": [0, 100000],
-    "Axis.SetColorScaleWidth.width": [-0.02, NAN],
-    "margin": [-0.1, NAN],
-    "lineSpacing": [-1.0, NAN],
-    "spacing": [-0.1, NAN],
-    "scale": [-1.0, NAN],
-    "numColumns": [0],
-    "align": [99, 14, -12],
-    "font": [999, -1],
-    "contours": [[3.0, 1.0, 2.0], [1.0, NAN]],
-    "nContours": [0, -3],
-    "nIterSmooth": [0],
-    "nGroup": [0],
-    "nGroupX": [0],
-    "nGroupY": [0],
-    "nGroupZ": [0],
-    "nx": [0, -5],
-    "ny": [0],
-    "scaleFactor": [NAN, INF],
-    "min": [NAN],
-    "max": [NAN],
-    "frameFraction": [1.0, -0.5, NAN],
-    "nEntries": [0],
-    "entryMin": [50],
-    "dims": [[]],
-    "dataDims": [[("x", 0)], [("", 10)]],
-    "ranges": [[(0, 7.0, 2.0)], [(0, NAN, 2.0)]],
-    "filter": [""],
-    "key": [""],
-    "value": [""],
-    "weight": [""],
-    "keys": [["k1", "k1"], ["a b"], ["k1", "k2", "x"]],
-    "alias": ["1x"],
-    "tree": [""],
-    "JoinByIndex.tree": ["", ["t2", "s2"]],  # by an index column only from the same data source
-    "indexColumn": ["a b"],
-    "symbolElements": ["zq"],
-    "tickOrientation": ["x"],
-    "angle": [NAN],
-    "theta": [NAN],
-    "phi": [NAN],
-    "phiMin": [NAN],
-    "phiMax": [NAN],
-    "offset": [NAN],
-    "tickLength": [NAN],
-    "palette": [9999],
-    "gradient": [[(633, 0.0)], [(633, 0.0), (600, NAN)]],
-    "rgbEndpoints": [[(0.0, 1.0, 0.0, 0.0)]],
-    "nColors": [0],
-    "color": [99999, "#xyz", (2.0, 0.0, 0.0)],
-    "padID": [300],
-    "pads": [[0]],
-    "dataID": [0],
-    "dataIDs": [[0]],
-    "refDataID": [0],
-    "SetLegend.legendID": [0],  # legends are numbered from 1
-    "radiusX": [-1.0, NAN],
-    "radiusY": [-1.0, NAN],
-    "points": [[(1.0, 2.0), (3.0, 4.0)], [(1.0, 2.0), (NAN, 4.0), (5.0, 1.0)]],
-    "group": ["/x//", ""],
-    "subgroup": [""],
-    "xlow": [0.95, -0.5, NAN],
-    "ylow": [1.5],
-    "xup": [1.5],
-    "yup": [NAN],
-    "top": [-0.1, 1.5, NAN],
-    "bottom": [-0.1, 1.5, NAN],
-    "left": [-0.1, 1.5, NAN],
-    "right": [-0.1, 1.5, NAN],
-    "range": [-0.5, 1.5, NAN],
-    "axis": [S.Char("Q")],
-    "format": ["xyz"],
-    "function": ["[0]*x", "gaus", ""],
-    "textFormat": ["%q"],
-    "startX": [NAN],
-    "endX": [NAN],
-    "startY": [NAN],
-    "endY": [NAN],
-    "x": [NAN],
-    "y": [NAN],
-    "xPos": [NAN],
-    "yPos": [NAN],
-    "x1": [NAN],
-    "x2": [NAN],
-    "y1": [NAN],
-    "y2": [NAN],
-    "pos1": [(NAN, 1.0)],
-    "pos2": [(3.0, NAN)],
-    "positions": [[(NAN, 1.0), (2.0, 3.0)]],
-    "AddPoints.x": [[1.0, NAN, 3.0]],
-    "AddPoints.y": [[3.0, 1.0, INF]],
-}
 # values that mean something in ROOT or SciRooPlot: no message
 VALID = {
     "palette": [0, -1, 1, 20],  # up to 0: ROOT's default palette, 1: its rainbow, up to 50: so many colours of the default palette
@@ -151,13 +44,6 @@ SKIPPED = ("PlotManager", "PanelLayout", "Panel", "BasePlotShape")  # the projec
 # data other than 3d histograms (with a warning), its setters are those of the other axes
 
 
-def invalid_values(cls, method, param):
-    for key in (f"{cls}.{method}.{param}", f"{method}.{param}", param):
-        if key in INVALID:
-            return INVALID[key]
-    return []
-
-
 # the cases: each invalid value with its plain twin on the same host
 cases = []
 for case in S.setter_cases()[0]:
@@ -171,7 +57,7 @@ for case in S.setter_cases()[0]:
                 break
         else:
             valids = []
-        for valid, values in ((False, invalid_values(case["cls"], case["method"], param)), (True, valids)):
+        for valid, values in ((False, S.setter_invalid(case["cls"], case["method"], param)), (True, valids)):
             for bad in values:
                 given = list(case["values"])
                 given[i] = bad

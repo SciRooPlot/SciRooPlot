@@ -10,13 +10,16 @@ the file format escapes), empty text and false (srptest.SETTER_VALUES). The refe
 - a call made where it is not meant to be (data in pad 0 or a base plot, a selection of the ratio itself, the arc of a line ...): stored
   or reported, never dropped silently;
 - loading the saved file and saving it again gives the same file, plot by plot, without a message.
+Numbers given as numpy scalars (np.int64, np.float64, np.float32) are taken as the numbers they hold, without a message.
 Named: a ratio denominator without data source takes the numerator's (every form of AddRatio), a numerator needs one.
 An overload without a test value fails, so a new setter needs its values in srptest.SETTER_VALUES. The whole list takes a second.
+Covers: a ratio denominator without data source, numbers given as numpy scalars.
 """
 
 import os
 import re
 
+import numpy as np
 import srptest as S
 
 cases, problems = S.setter_cases()
@@ -114,6 +117,34 @@ for case in cases:
         S.check(f"{label(case)}: read back as stored", not diff, str(diff)[:400])
 with open(first, "rb") as a, open(second, "rb") as b:
     S.check("the file saved after loading is the same file", a.read() == b.read())
+
+
+# numbers given as numpy scalars (np.int64, np.float64, np.float32 where it holds the value exactly) are taken as the numbers they hold
+def as_numpy(value):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return value
+    if isinstance(value, int):
+        return S.Code(f"np.int64({value})")
+    return S.Code(f"np.float32({value!r})" if float(np.float32(value)) == value else f"np.float64({value!r})")
+
+
+numpyPm = S.S.PlotManager("roundtrip_numpy")
+numpyNamespace = dict(vars(S.S), pm=numpyPm, np=np)
+numpyCases = []
+for case in cases:
+    if case["variant"] != "plain" or not case["meant"] or case["unset"] or case["host"] == "statement" or not case["accepted"]:
+        continue
+    if not any(isinstance(v, (int, float)) and not isinstance(v, bool) for v in case["values"]):
+        continue
+    code = S.SETTER_HOSTS[case["cls"]][case["host"]][0].replace("{call}", S.call(case["method"], [as_numpy(v) for v in case["values"]], "py"))
+    result, printed = S.captured(lambda code=code, case=case: exec(code.replace("{name}", case["name"]), numpyNamespace))  # noqa: S102
+    numpyCases.append((case, result, printed.strip()))
+numpyFile = os.path.join(S.WORK, "numpy.info")
+numpyPm.SavePlots(file=numpyFile)
+numpySaved = {key.split(":")[0]: values for key, values in S.info_plots(numpyFile).items()}
+for case, result, printed in numpyCases:
+    name = case["name"] if case["name"] in saved else case["name"] + "_renamed"
+    S.check(f"{label(case)} with numpy scalars: taken as the numbers", not isinstance(result, Exception) and not printed and numpySaved.get(name) == saved.get(name), f"{result!r} {printed} {numpySaved.get(name) != saved.get(name)}"[:300])
 
 # a ratio denominator without data source takes the numerator's, in every form; a numerator needs one
 FORMS = {

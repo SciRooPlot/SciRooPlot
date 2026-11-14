@@ -2720,6 +2720,8 @@ def literal(value, lang):
     if isinstance(value, int):
         return str(value)
     if isinstance(value, float):
+        if math.isnan(value):
+            return "float('nan')" if lang == "py" else "std::numeric_limits<double>::quiet_NaN()"
         if math.isinf(value):
             sign = "-" if value < 0 else ""
             return f"{sign}float('inf')" if lang == "py" else f"{sign}std::numeric_limits<double>::infinity()"
@@ -2993,6 +2995,125 @@ for _method in ("Project1D", "Project2D", "Profile1D", "Profile2D"):
     SETTER_VALUES[f"{_method}.y"] = {"plain": ("y", 20), "precise": ("y", (1 / 3, 0.5, 4.0))}
 for _param in ("x", "y", "z", "xErr", "yErr", "xErrLow", "xErrHigh", "yErrLow", "yErrHigh"):
     SETTER_VALUES[f"Scatter.{_param}"] = {"plain": _param, "text": f'{_param} * (std::string("$;") == "$;")'}
+# The invalid values of the parameters (definition/setter_checks.py, definition/cpp_python.py), by name (or method.name, Class.method.name, which win); None: the parameter has none
+SETTER_INVALID = {
+    "alpha": [1.5, -0.2, math.nan],
+    "size": [math.nan],
+    "SetTextSize.size": [-1.0, math.nan],
+    "SetText.size": [-1.0, math.nan],
+    "SetDefaultTextSize.size": [-1.0, math.nan],
+    "SetLabelSize.size": [-1.0, math.nan],
+    "SetTitleSize.size": [-1.0, math.nan],
+    "width": [math.nan],  # a negative line width draws the exclusion side of a graph
+    "SetSize.width": [-0.2, math.nan],
+    "SetSize.height": [-0.2, math.nan],
+    "ImageBox.SetWidth.width": [-0.2, math.nan],
+    "ImageBox.SetHeight.height": [-0.2, math.nan],
+    "Plot.SetDimensions.width": [0, -5, 100000],  # a canvas side: 1 to 32767 pixels
+    "Plot.SetDimensions.height": [0, 100000],
+    "Plot.SetWidth.width": [0, 100000],
+    "Plot.SetHeight.height": [0, 100000],
+    "Axis.SetColorScaleWidth.width": [-0.02, math.nan],
+    "margin": [-0.1, math.nan],
+    "lineSpacing": [-1.0, math.nan],
+    "spacing": [-0.1, math.nan],
+    "scale": [-1.0, math.nan],
+    "numColumns": [0],
+    "align": [99, 14, -12],
+    "font": [999, -1],
+    "contours": [[3.0, 1.0, 2.0], [1.0, math.nan]],
+    "nContours": [0, -3],
+    "nIterSmooth": [0],
+    "nGroup": [0],
+    "nGroupX": [0],
+    "nGroupY": [0],
+    "nGroupZ": [0],
+    "nx": [0, -5],
+    "ny": [0],
+    "scaleFactor": [math.nan, math.inf],
+    "min": [math.nan],
+    "max": [math.nan],
+    "frameFraction": [1.0, -0.5, math.nan],
+    "nEntries": [0],
+    "entryMin": [50],
+    "dims": [[]],
+    "dataDims": [[("x", 0)], [("", 10)]],
+    "ranges": [[(0, 7.0, 2.0)], [(0, math.nan, 2.0)]],
+    "filter": [""],
+    "key": [""],
+    "value": [""],
+    "weight": [""],
+    "keys": [["k1", "k1"], ["a b"], ["k1", "k2", "x"]],
+    "alias": ["1x"],
+    "tree": [""],
+    "JoinByIndex.tree": ["", ["t2", "s2"]],  # by an index column only from the same data source
+    "indexColumn": ["a b"],
+    "symbolElements": ["zq"],
+    "tickOrientation": ["x"],
+    "angle": [math.nan],
+    "theta": [math.nan],
+    "phi": [math.nan],
+    "phiMin": [math.nan],
+    "phiMax": [math.nan],
+    "offset": [math.nan],
+    "tickLength": [math.nan],
+    "palette": [9999],
+    "gradient": [[(633, 0.0)], [(633, 0.0), (600, math.nan)]],
+    "rgbEndpoints": [[(0.0, 1.0, 0.0, 0.0)]],
+    "nColors": [0],
+    "color": [99999, "#xyz", (2.0, 0.0, 0.0)],
+    "padID": [300],
+    "pads": [[0]],
+    "dataID": [0],
+    "dataIDs": [[0]],
+    "refDataID": [0],
+    "SetLegend.legendID": [0],  # legends are numbered from 1
+    "radiusX": [-1.0, math.nan],
+    "radiusY": [-1.0, math.nan],
+    "points": [[(1.0, 2.0), (3.0, 4.0)], [(1.0, 2.0), (math.nan, 4.0), (5.0, 1.0)]],
+    "group": ["/x//", ""],
+    "subgroup": [""],
+    "xlow": [0.95, -0.5, math.nan],
+    "ylow": [1.5],
+    "xup": [1.5],
+    "yup": [math.nan],
+    "top": [-0.1, 1.5, math.nan],
+    "bottom": [-0.1, 1.5, math.nan],
+    "left": [-0.1, 1.5, math.nan],
+    "right": [-0.1, 1.5, math.nan],
+    "range": [-0.5, 1.5, math.nan],
+    "axis": [Char("Q")],
+    "format": ["xyz"],
+    "function": ["[0]*x", "gaus", ""],
+    "textFormat": ["%q"],
+    "startX": [math.nan],
+    "endX": [math.nan],
+    "startY": [math.nan],
+    "endY": [math.nan],
+    "x": [math.nan],
+    "y": [math.nan],
+    "xPos": [math.nan],
+    "yPos": [math.nan],
+    "x1": [math.nan],
+    "x2": [math.nan],
+    "y1": [math.nan],
+    "y2": [math.nan],
+    "pos1": [(math.nan, 1.0)],
+    "pos2": [(3.0, math.nan)],
+    "positions": [[(math.nan, 1.0), (2.0, 3.0)]],
+    "AddPoints.x": [[1.0, math.nan, 3.0]],
+    "AddPoints.y": [[3.0, 1.0, math.inf]],
+}
+
+
+def setter_invalid(cls, method, param):
+    """the invalid values of a parameter of a setter"""
+    for key in (f"{cls}.{method}.{param}", f"{method}.{param}", param):
+        if key in SETTER_INVALID:
+            return SETTER_INVALID[key]
+    return []
+
+
 SETTER_VARIANTS = ("plain", "precise", "extreme", "text", "empty", "false")
 
 

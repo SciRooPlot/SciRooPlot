@@ -5,7 +5,9 @@ in both languages, and the C++ forms that Python has no spelling for (braced lis
 type each call returns): a C++ program saves them as Python does. Reference: the file Python saves.
 - the program compiles (checked with g++ and clang++, where there, -Wall -Wextra without warnings) and runs;
 - every plot is the same as Python's, value by value, and each call gives the same messages (a thrown exception the same text).
-Cases written only in Python (a list for a Data) are left out.
+Cases written only in Python (a list for a Data) are left out. The invalid values of definition/setter_checks.py are reported alike in
+both languages (but values Python's conversion of the argument refuses, which C++ converts itself).
+Covers: braced lists of projections, invalid values reported alike in both languages.
 """
 
 import os
@@ -42,6 +44,23 @@ for i, (py, cpp) in enumerate(BRACED):
         )
 
 
+# invalid values (those of definition/setter_checks.py) on every setter where they are meant: each is reported alike in both languages;
+# values Python's conversion refuses (a number out of the range of an integer type, a wrong type) are left out: C++ converts them itself
+SKIPPED = ("PlotManager", "PanelLayout", "Panel", "BasePlotShape")  # as in setter_checks.py
+for case in list(cases):
+    if case["cls"] == "C++" or case["variant"] != "plain" or not case["meant"] or case["unset"] or case["host"] in ("statement", "base", "base_pad", "c") or case["cls"] in SKIPPED:
+        continue
+    py, cpp = S.SETTER_HOSTS[case["cls"]][case["host"]]
+    for i, param in enumerate(case["params"]):
+        for bad in S.setter_invalid(case["cls"], case["method"], param):
+            if isinstance(bad, list) and len(bad) == 1:
+                continue  # {x} in C++ is the scalar overload (Python's [x] the list)
+            given = list(case["values"])
+            given[i] = bad
+            invalid = {**case, "variant": f"invalid {param}={S.literal(bad, 'py')}", "py": py.replace("{call}", S.call(case["method"], given, "py")), "cpp": cpp.replace("{call}", S.call(case["method"], given, "cpp"))}
+            cases.append(invalid)
+
+
 def label(case):
     variant = f" {case['variant']}" if case["variant"] != "plain" else ""
     return f"{case['cls']}.{case['method']}({', '.join(case['params'])}) on {case['host']}{variant}" + (f" [{case['why']}]" if case.get("why") else "")
@@ -54,6 +73,8 @@ for i, case in enumerate(cases):
     result, printed = S.captured(lambda case=case: exec(case["py"].replace("{name}", case["name"]), namespace))  # noqa: S102  the cases
     # what the call reports (a thrown exception as its message), as C++ prints it
     case["messages"] = [line.strip() for line in printed.splitlines() if line.strip()] + ([f"thrown: {result}"] if isinstance(result, Exception) else [])
+    case["converted"] = isinstance(result, TypeError)  # refused by Python's conversion of the argument
+cases = [case for case in cases if not (case["converted"] and case["variant"].startswith("invalid"))]
 pyFile, cppFile = os.path.join(S.WORK, "python.info"), os.path.join(S.WORK, "cpp.info")
 pm.SavePlots(file=pyFile)
 
