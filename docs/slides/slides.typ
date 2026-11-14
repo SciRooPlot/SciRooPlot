@@ -361,14 +361,15 @@
   plot[1].AddData("ptSpec", "data", "data")
          .SetMarker(kFullCircle, 1.0, kBlack);
   plot[1].AddData("ptSpec", "mc", "simulation")
-         .SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1);
+         .SetDrawOption(hist_open).SetLine(kSolid, 3.0, "#d6403a");
   plot[1].AddLegend();
   plot[1].AddText({"Example Experiment",
                    "pp, #sqrt{#it{s}} = 13.6 TeV", "|#eta| < 0.8"});
   plot[1]['Y'].SetLog();
-  plot[2].AddRatio({"ptSpec", "data"}, {"ptSpec", "mc"});
+  plot[2].AddRatio({"ptSpec", "data"}, {"ptSpec", "mc"}).SetRangeX(0.15, 6.0);
+  plot[2].SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 2);
   plot[2]['Y'].SetTitle("data / sim.").SetRange(0.7, 1.3);
-  plot[0]['X'].SetLog().SetRange(0.15, 15.0);
+  plot[0]['X'].SetLog().SetRange(0.15, 10.0);
   pm.AddPlot(plot);
   pm.SaveProject();
   ```
@@ -382,14 +383,15 @@
   plot[1].AddData("ptSpec", "data", "data") \
          .SetMarker(kFullCircle, 1.0, kBlack)
   plot[1].AddData("ptSpec", "mc", "simulation") \
-         .SetDrawOption(hist_open).SetLine(kSolid, 3.0, kRed + 1)
+         .SetDrawOption(hist_open).SetLine(kSolid, 3.0, "#d6403a")
   plot[1].AddLegend()
   plot[1].AddText(["Example Experiment",
                    "pp, #sqrt{#it{s}} = 13.6 TeV", "|#eta| < 0.8"])
   plot[1]['Y'].SetLog()
-  plot[2].AddRatio(["ptSpec", "data"], ["ptSpec", "mc"])
+  plot[2].AddRatio(["ptSpec", "data"], ["ptSpec", "mc"]).SetRangeX(0.15, 6.0)
+  plot[2].SetRefFunc("1").SetLine(kDashed, 2.0, kGray + 2)
   plot[2]['Y'].SetTitle("data / sim.").SetRange(0.7, 1.3)
-  plot[0]['X'].SetLog().SetRange(0.15, 15.0)
+  plot[0]['X'].SetLog().SetRange(0.15, 10.0)
   pm.AddPlot(plot)
   pm.SaveProject()
   ```

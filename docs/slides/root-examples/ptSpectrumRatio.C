@@ -49,7 +49,7 @@ void ptSpectrumRatio(const char* dataDir = "ExampleData", const char* output = "
       axis->SetTitleFont(43);
       axis->SetTitleSize(39);
     }
-    hist->GetXaxis()->SetRangeUser(0.15, 15.0);
+    hist->GetXaxis()->SetRangeUser(0.15, 10.0);
     hist->GetXaxis()->SetNoExponent();
     hist->GetXaxis()->SetTickLength(tickX);
     hist->GetYaxis()->SetTickLength(tickY);
@@ -63,13 +63,13 @@ void ptSpectrumRatio(const char* dataDir = "ExampleData", const char* output = "
   data->SetMarkerStyle(kFullCircle);
   data->SetMarkerColor(kBlack);
   data->SetLineColor(kBlack);
-  data->SetLineWidth(4);
-  mc->SetLineColor(kRed + 1);
+  data->SetLineWidth(5);
+  mc->SetLineColor(TColor::GetColor("#d6403a"));
   mc->SetLineWidth(3);
   data->Draw("E X0");
   mc->Draw("HIST ][ SAME");  // without the vertical lines at the outer edges
 
-  TLegend legend(0.69, 0.81, 0.95, 0.93);
+  TLegend legend(0.179, 0.047, 0.407, 0.169);
   legend.SetBorderSize(0);
   legend.SetFillStyle(0);
   legend.SetTextFont(43);
@@ -82,16 +82,17 @@ void ptSpectrumRatio(const char* dataDir = "ExampleData", const char* output = "
   text.SetNDC();
   text.SetTextFont(43);
   text.SetTextSize(31);
-  text.DrawLatex(0.19, 0.20, "Example Experiment");
-  text.DrawLatex(0.19, 0.13, "pp, #sqrt{#it{s}} = 13.6 TeV");
-  text.DrawLatex(0.19, 0.06, "|#eta| < 0.8");
+  text.SetTextAlign(12);
+  text.DrawLatex(0.484, 0.200, "Example Experiment");
+  text.DrawLatex(0.484, 0.139, "pp, #sqrt{#it{s}} = 13.6 TeV");
+  text.DrawLatex(0.484, 0.078, "|#eta| < 0.8");
 
   // lower pad: ratio
   bottom.cd();
   style(ratio, 0.067, 0.036);
   ratio->GetYaxis()->SetTitle("data / sim.");
   ratio->GetYaxis()->CenterTitle();
-  ratio->GetYaxis()->SetTitleOffset(1.45);
+  ratio->GetYaxis()->SetTitleOffset(1.27);
   ratio->GetYaxis()->SetRangeUser(0.7, 1.3);
   ratio->GetYaxis()->SetNdivisions(305);
   ratio->SetMarkerStyle(kFullCircle);
@@ -99,11 +100,14 @@ void ptSpectrumRatio(const char* dataDir = "ExampleData", const char* output = "
   ratio->SetMarkerColor(kBlack);
   ratio->SetLineColor(kBlack);
   ratio->SetLineWidth(5);
-  ratio->Draw("E X0");
-  TLine one(0.15, 1.0, 15.0, 1.0);
-  one.SetLineWidth(4);
-  one.Draw();
-  ratio->Draw("E X0 SAME");
+  ratio->Draw("AXIS");
+  TF1 one("one", "1", 0.15, 10.0);
+  one.SetLineStyle(kDashed);
+  one.SetLineWidth(2);
+  one.SetLineColor(kGray + 2);
+  one.Draw("SAME");
+  // the points only up to 6 GeV/c, where the data still have statistics
+  ratio->DrawCopy("E X0 SAME")->GetXaxis()->SetRangeUser(0.15, 6.0);
 
   canvas.SaveAs(output);
 }
