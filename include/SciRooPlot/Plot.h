@@ -498,10 +498,8 @@ class Plot : public FillSetters<Plot>
   static void ReadNamed(const boost::property_tree::ptree& tree, std::optional<T>& value, const char* key);
   template <typename T>
   static void PutNamed(boost::property_tree::ptree& tree, const std::optional<T>& value, const char* key);
-  // a pad number of a saved plot (a number above 255 would wrap around and replace another pad), and lists of them: numbers separated by spaces
+  // a pad number of a saved plot (a number above 255 would wrap around and replace another pad)
   static uint8_t CheckedPadID(int64_t padID);
-  static std::vector<uint8_t> ReadPadList(const std::string& list, const std::string& key);
-  static std::string WritePadList(const std::vector<uint8_t>& pads);
 
   std::string mName;
   std::string mGroup;

@@ -642,7 +642,7 @@ Plot::Plot(const ptree& plotTree)
 
   // loop over all pads defined in property tree
   // the pads of a shared axis or common title
-  auto readPads = [](const ptree& tree) { return ReadPadList(get_from_tree<string>(tree, "pads").value_or(""), "pads"); };
+  auto readPads = [](const ptree& tree) { return get_from_tree<vector<uint8_t>>(tree, "pads").value_or(vector<uint8_t>{}); };
   auto readAxis = [](const ptree& tree, const string& key) {
     const auto axis = get_from_tree<char>(tree, "axis");
     if (!axis) logger::throw_invalid_argument("{} has no axis", key);
@@ -689,41 +689,6 @@ uint8_t Plot::CheckedPadID(int64_t padID)
 
 //**************************************************************************************************
 /**
- * The pads of a list read from a saved plot (the value of the given key): pad numbers separated by spaces.
- */
-//**************************************************************************************************
-vector<uint8_t> Plot::ReadPadList(const string& list, const string& key)
-{
-  vector<uint8_t> pads;
-  std::istringstream stream(list);
-  for (string padID; stream >> padID;) {
-    int64_t number{};
-    try {
-      number = util::string_to_type<int32_t>(padID);
-    } catch (const std::exception&) {
-      logger::throw_invalid_argument("Bad value '{}' of {}: pad numbers separated by spaces", list, key);
-    }
-    pads.push_back(CheckedPadID(number));
-  }
-  return pads;
-}
-
-//**************************************************************************************************
-/**
- * A list of pads as saved: pad numbers separated by spaces.
- */
-//**************************************************************************************************
-string Plot::WritePadList(const vector<uint8_t>& pads)
-{
-  string list;
-  for (uint8_t padID : pads) {
-    list += (list.empty() ? "" : " ") + std::to_string(padID);
-  }
-  return list;
-}
-
-//**************************************************************************************************
-/**
  * Get representation of plot as property tree.
  */
 //**************************************************************************************************
@@ -744,14 +709,14 @@ ptree Plot::GetPropertyTree() const
   for (size_t i = 0; i < mSharedAxes.size(); ++i) {
     ptree group;
     group.put("axis", mSharedAxes[i].axis);
-    group.put("pads", WritePadList(mSharedAxes[i].pads));
+    put_in_tree(group, optional(mSharedAxes[i].pads), "pads");
     if (mSharedAxes[i].fromLayout) group.put("layout", true);
     plotTree.put_child("SHARED_AXIS_" + std::to_string(i + 1), group);
   }
   for (size_t i = 0; i < mCommonTitles.size(); ++i) {
     ptree group;
     group.put("axis", mCommonTitles[i].first);
-    group.put("pads", WritePadList(mCommonTitles[i].second));
+    put_in_tree(group, optional(mCommonTitles[i].second), "pads");
     plotTree.put_child("COMMON_TITLE_" + std::to_string(i + 1), group);
   }
   return plotTree;
@@ -1693,7 +1658,7 @@ Plot::Pad::Pad(const ptree& padTree)
   if (auto hiddenTree = padTree.get_child_optional("hidden_next_to")) {
     for (const auto& [key, pads] : *hiddenTree) {
       if (key != "x" && key != "y") logger::throw_invalid_argument("Bad key hidden_next_to.{}: x or y", key);
-      mHiddenNextTo[static_cast<char>(std::toupper(key[0]))] = ReadPadList(pads.data(), "hidden_next_to." + key);
+      mHiddenNextTo[static_cast<char>(std::toupper(key[0]))] = get_from_tree<vector<uint8_t>>(*hiddenTree, key).value_or(vector<uint8_t>{});
     }
   }
   if (auto layoutTree = padTree.get_child_optional("layout_values")) {
@@ -1792,7 +1757,7 @@ ptree Plot::Pad::GetPropertyTree() const
   if (mIsEmptyCell) padTree.put("empty_cell", true);
   put_in_tree(padTree, mColorScaleOf, "color_scale_of");
   for (const auto& [axisLabel, pads] : mHiddenNextTo) {
-    padTree.put(string("hidden_next_to.") + static_cast<char>(std::tolower(axisLabel)), WritePadList(pads));
+    put_in_tree(padTree, optional(pads), string("hidden_next_to.") + static_cast<char>(std::tolower(axisLabel)));
   }
   for (const auto& [key, value] : mLayoutValues) {
     padTree.put("layout_values." + key, value);
@@ -4813,16 +4778,7 @@ Plot::Pad::LegendEntry::LegendEntry(const ptree& legendEntryTree)
   read_from_tree(legendEntryTree, mRefDataID, "ref_data_id");
   read_from_tree(legendEntryTree, mRefPadID, "ref_pad_id");
   read_from_tree(legendEntryTree, mSymbolElements, "symbol_elements");
-  if (const auto symbolOf = get_from_tree<string>(legendEntryTree, "symbol_of")) {
-    std::istringstream stream(*symbolOf);
-    for (string dataID; stream >> dataID;) {
-      try {
-        mSymbolOf.push_back(util::string_to_type<uint16_t>(dataID));
-      } catch (const std::exception&) {
-        logger::throw_invalid_argument("Bad value '{}' of symbol_of: data numbers separated by spaces", *symbolOf);
-      }
-    }
-  }
+  mSymbolOf = get_from_tree<vector<uint16_t>>(legendEntryTree, "symbol_of").value_or(vector<uint16_t>{});
   ReadNamed(legendEntryTree, mPosition, "position");
   if (mPosition && *mPosition != position_t::top) {
     // before or after the data numbered by position_data (from 1)
@@ -4851,12 +4807,7 @@ ptree Plot::Pad::LegendEntry::GetPropertyTree() const
   put_in_tree(legendEntryTree, mRefDataID, "ref_data_id");
   put_in_tree(legendEntryTree, mRefPadID, "ref_pad_id");
   put_in_tree(legendEntryTree, mSymbolElements, "symbol_elements");
-  if (!mSymbolOf.empty()) {
-    string symbolOf;
-    for (uint16_t dataID : mSymbolOf)
-      symbolOf += (symbolOf.empty() ? "" : " ") + std::to_string(dataID);
-    legendEntryTree.put("symbol_of", symbolOf);
-  }
+  if (!mSymbolOf.empty()) put_in_tree(legendEntryTree, optional(mSymbolOf), "symbol_of");
   if (mPosition) {
     PutNamed(legendEntryTree, mPosition, "position");
     if (mPosition != position_t::top) legendEntryTree.put("position_data", mPositionDataID);
