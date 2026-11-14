@@ -35,22 +35,22 @@ void trackSelection(const char* dataDir = "ExampleData", const char* output = "t
     axis->SetTitleSize(39);
   }
   all.GetXaxis()->SetTitle("#it{p}_{T} (GeV/#it{c})");
-  all.GetXaxis()->SetTitleOffset(1.2);
+  all.GetXaxis()->SetTitleOffset(1.0);
   all.GetXaxis()->SetNoExponent();
   all.GetYaxis()->SetTitle("tracks");
-  all.GetYaxis()->SetTitleOffset(1.45);
-  all.SetMinimum(30.0);
-  all.SetMaximum(2.e4);
+  all.GetYaxis()->SetTitleOffset(1.3);
   int color = 0;
   for (auto hist : {&all, &selected}) {
     hist->SetMarkerStyle(kFullCircle);
-    hist->SetMarkerColor(color ? kBlue + 1 : kBlack);
-    hist->SetLineColor(color ? kBlue + 1 : kBlack);
-    hist->SetLineWidth(4);
+    hist->SetMarkerSize(1.4);
+    hist->SetMarkerColor(color ? kP10Blue : kBlack);
+    hist->SetLineColor(color ? kP10Blue : kBlack);
+    hist->SetLineWidth(5);
     hist->Draw(color++ ? "E X0 SAME" : "E X0");
   }
 
-  TLegend legend(0.18, 0.18, 0.7, 0.3);
+  TLegend legend(0.184, 0.184, 0.639, 0.365);
+  legend.SetMargin(0.12);
   legend.SetBorderSize(0);
   legend.SetFillStyle(0);
   legend.SetTextFont(43);
