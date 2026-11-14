@@ -3010,6 +3010,10 @@ for _param in ("x", "y", "z", "xErr", "yErr", "xErrLow", "xErrHigh", "yErrLow", 
 # The invalid values of the parameters (definition/setter_checks.py, definition/cpp_python.py), by name (or method.name, Class.method.name, which win); None: the parameter has none
 SETTER_INVALID = {
     "alpha": [1.5, -0.2, math.nan],
+    "SetMarker.style": [-1, 212, 9999],  # ROOT's markers and their thicker versions up to line width 10 (ROOT crashes on 9999)
+    "SetMarkerStyle.style": [-1, 212, 9999],
+    "SetDefaultMarkerStyle.style": [9999],
+    "SetDefaultMarkerStyles.styles": [[20, 9999]],
     "size": [math.nan],
     "SetTextSize.size": [-1.0, math.nan],
     "SetText.size": [-1.0, math.nan],
