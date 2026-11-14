@@ -7648,6 +7648,8 @@ bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors, 
   // bins outside the range of the function are left out of the ratio, as points of graphs are: set to 0 and, along the axes, cut off the drawn range
   // (TH1::Divide would leave them as they are); the position of a bin is its centre; underflow and overflow are always left out
   if (!numerator->GetSumw2N()) numerator->Sumw2();
+  // an axis with bin labels can extend: ROOT doubles its bins when the overflow bin is set, and the loop over the cells below would never end
+  const uint32_t canExtend = numerator->SetCanExtend(TH1::kNoAxis);
   const double_t entries = numerator->GetEntries();
   int32_t nOutside{}, nZero{};
   auto divideBin = [&](int32_t bin, double_t* xyz, bool underOrOverflow) {
@@ -7691,6 +7693,7 @@ bool PlotPainter::Divide(TH1* numerator, TF1* denominator, bool binomialErrors, 
     }
     numerator->ResetStats();  // not for a TH2Poly: it reads past its arrays (ROOT bug)
   }
+  numerator->SetCanExtend(canExtend);
   numerator->SetEntries(entries);
   if (nOutside && verbose) {
     logger::warning("{} bins of {} lie outside the range of function {} and are left out of the ratio.", nOutside, numerator->GetName(), denominator->GetName());
