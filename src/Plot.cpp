@@ -559,19 +559,21 @@ string Plot::NormalizeGroup(const string& group)
 
 //**************************************************************************************************
 /**
- * Drawing option aliases are stored by name.
+ * Enums stored by name.
  */
 //**************************************************************************************************
-void Plot::ReadDrawOption(const ptree& tree, optional<draw_option_t>& option, const char* key)
+template <typename T>
+void Plot::ReadNamed(const ptree& tree, optional<T>& value, const char* key)
 {
   if (auto name = tree.get_optional<string>(key)) {
-    option = draw_option_from_name(*name);
-    if (!option) logger::warning("Unknown drawing option '{}' is ignored.", *name);
+    value = enum_from_name<T>(*name);
+    if (!value) logger::warning("Unknown {} '{}' is ignored.", enum_names<T>::what, *name);
   }
 }
-void Plot::PutDrawOption(ptree& tree, const optional<draw_option_t>& option, const char* key)
+template <typename T>
+void Plot::PutNamed(ptree& tree, const optional<T>& value, const char* key)
 {
-  if (option) tree.put(key, draw_option_name(*option));
+  if (value) tree.put(key, enum_name(*value));
 }
 
 //**************************************************************************************************
@@ -1683,14 +1685,8 @@ Plot::Pad::Pad(const ptree& padTree)
   mFillDefaults.ReadColors(padTree, "default_fill_colors");
   read_from_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_box_range");
   read_from_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whisker_range");
-  auto readCoordinates = [&padTree](const string& key, optional<coordinates_t>& coordinates) {
-    if (auto name = padTree.get_optional<string>(key)) {
-      coordinates = coordinates_from_name(*name);
-      if (!coordinates) logger::warning("Unknown coordinate system '{}' is ignored.", *name);
-    }
-  };
-  readCoordinates("default_box_coordinates", mBoxCoordinates);
-  readCoordinates("default_shape_coordinates", mShapeCoordinates);
+  ReadNamed(padTree, mBoxCoordinates, "default_box_coordinates");
+  ReadNamed(padTree, mShapeCoordinates, "default_shape_coordinates");
   read_from_tree(padTree, mRedrawAxes, "redraw_axes");
   mIsEmptyCell = get_from_tree<bool>(padTree, "empty_cell").value_or(false);
   read_from_tree(padTree, mColorScaleOf, "color_scale_of");
@@ -1734,7 +1730,7 @@ Plot::Pad::Pad(const ptree& padTree)
       mTextBoxes.push_back(std::make_shared<TextBox>(content.second));
     }
     if (str_contains(content.first, "SHAPE")) {
-      if (const string kind = content.second.get<string>("kind", ""); Shape::KindFromName(kind)) {
+      if (const string kind = content.second.get<string>("kind", ""); enum_from_name<Shape::kind_t>(kind)) {
         mShapes.push_back(std::make_shared<Shape>(content.second));
       } else {
         logger::warning("Unknown shape kind {} is ignored.", kind);
@@ -1790,8 +1786,8 @@ ptree Plot::Pad::GetPropertyTree() const
   mFillDefaults.PutColors(padTree, "default_fill_colors");
   put_in_tree(padTree, mCandleOptionDefaults.boxRange, "default_candle_option_box_range");
   put_in_tree(padTree, mCandleOptionDefaults.whiskerRange, "default_candle_option_whisker_range");
-  if (mBoxCoordinates) padTree.put("default_box_coordinates", coordinates_name(*mBoxCoordinates));
-  if (mShapeCoordinates) padTree.put("default_shape_coordinates", coordinates_name(*mShapeCoordinates));
+  PutNamed(padTree, mBoxCoordinates, "default_box_coordinates");
+  PutNamed(padTree, mShapeCoordinates, "default_shape_coordinates");
   put_in_tree(padTree, mRedrawAxes, "redraw_axes");
   if (mIsEmptyCell) padTree.put("empty_cell", true);
   put_in_tree(padTree, mColorScaleOf, "color_scale_of");
@@ -2391,7 +2387,7 @@ Plot::Pad::Data::Data(const ptree& dataTree) : Data()
   read_from_tree(dataTree, mLegend.id, "legend_id");
   if (const auto entryTree = dataTree.get_child_optional("legend_entry")) mLegend.entry = LegendEntry(*entryTree);
   read_from_tree(dataTree, mDrawOption, "draw_option");
-  ReadDrawOption(dataTree, mDrawOptionAlias, "draw_option_alias");
+  ReadNamed(dataTree, mDrawOptionAlias, "draw_option_alias");
   read_from_tree(dataTree, mTextFormat, "text_format");
   read_from_tree(dataTree, mTextAngle, "text_angle");
   read_from_tree(dataTree, mStats.format, "stats_format");
@@ -2575,7 +2571,7 @@ ptree Plot::Pad::Data::GetPropertyTree() const
   put_in_tree(dataTree, mLegend.id, "legend_id");
   if (mLegend.entry) dataTree.put_child("legend_entry", mLegend.entry->GetPropertyTree());
   put_in_tree(dataTree, mDrawOption, "draw_option");
-  PutDrawOption(dataTree, mDrawOptionAlias, "draw_option_alias");
+  PutNamed(dataTree, mDrawOptionAlias, "draw_option_alias");
   put_in_tree(dataTree, mTextFormat, "text_format");
   put_in_tree(dataTree, mTextAngle, "text_angle");
   put_in_tree(dataTree, mStats.format, "stats_format");
@@ -2740,7 +2736,7 @@ auto Plot::Pad::Data::SetDrawOption(const string& drawOption) -> decltype(*this)
   static const std::set<string> rootOptions{"box", "candle", "col", "colz", "cont", "hist", "iso", "lego", "surf", "text", "violin"};
   const size_t first = drawOption.find_first_not_of(" \t");
   const string name = (first == string::npos) ? "" : drawOption.substr(first, drawOption.find_last_not_of(" \t") - first + 1);
-  if (draw_option_from_name(name) && !rootOptions.count(name)) {
+  if (enum_from_name<draw_option_t>(name) && !rootOptions.count(name)) {
     logger::warning("Drawing option '{}' of {} is the name of an alias, but is passed to ROOT as it is: write SetDrawOption({}) for the alias.", name, mName, name);
   }
   mDrawOption = drawOption;
@@ -4135,14 +4131,8 @@ Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
   read_from_tree(boxTree, mPos.y, "y");
   read_from_tree(boxTree, mPos.w, "w");
   read_from_tree(boxTree, mPos.h, "h");
-  if (auto name = boxTree.get_optional<string>("coordinate_system")) {
-    mPos.coordinates = coordinates_from_name(*name);
-    if (!mPos.coordinates) logger::warning("Unknown coordinate system '{}' is ignored.", *name);
-  }
-  if (auto name = boxTree.get_optional<string>("placement")) {
-    mPos.placement = box_placement_from_name(*name);
-    if (!mPos.placement) logger::warning("Unknown box placement '{}' is ignored.", *name);
-  }
+  ReadNamed(boxTree, mPos.coordinates, "coordinate_system");
+  ReadNamed(boxTree, mPos.placement, "placement");
   this->ReadBorder(boxTree);
   this->ReadFill(boxTree);
   this->ReadText(boxTree);
@@ -4163,8 +4153,8 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
   put_in_tree(boxTree, mPos.y, "y");
   put_in_tree(boxTree, mPos.w, "w");
   put_in_tree(boxTree, mPos.h, "h");
-  if (mPos.coordinates) boxTree.put("coordinate_system", coordinates_name(*mPos.coordinates));
-  if (mPos.placement) boxTree.put("placement", box_placement_name(*mPos.placement));
+  PutNamed(boxTree, mPos.coordinates, "coordinate_system");
+  PutNamed(boxTree, mPos.placement, "placement");
   this->PutBorder(boxTree);
   this->PutFill(boxTree);
   this->PutText(boxTree);
@@ -4293,14 +4283,8 @@ Plot::Pad::ImageBox::ImageBox(const ptree& imageBoxTree)
   read_from_tree(imageBoxTree, mY, "y");
   read_from_tree(imageBoxTree, mWidth, "w");
   read_from_tree(imageBoxTree, mHeight, "h");
-  if (auto name = imageBoxTree.get_optional<string>("coordinate_system")) {
-    mCoordinates = coordinates_from_name(*name);
-    if (!mCoordinates) logger::warning("Unknown coordinate system '{}' is ignored.", *name);
-  }
-  if (auto name = imageBoxTree.get_optional<string>("placement")) {
-    mPlacement = box_placement_from_name(*name);
-    if (!mPlacement) logger::warning("Unknown box placement '{}' is ignored.", *name);
-  }
+  ReadNamed(imageBoxTree, mCoordinates, "coordinate_system");
+  ReadNamed(imageBoxTree, mPlacement, "placement");
 }
 
 //**************************************************************************************************
@@ -4316,8 +4300,8 @@ ptree Plot::Pad::ImageBox::GetPropertyTree() const
   put_in_tree(boxTree, mY, "y");
   put_in_tree(boxTree, mWidth, "w");
   put_in_tree(boxTree, mHeight, "h");
-  if (mCoordinates) boxTree.put("coordinate_system", coordinates_name(*mCoordinates));
-  if (mPlacement) boxTree.put("placement", box_placement_name(*mPlacement));
+  PutNamed(boxTree, mCoordinates, "coordinate_system");
+  PutNamed(boxTree, mPlacement, "placement");
   return boxTree;
 }
 
@@ -4888,16 +4872,14 @@ Plot::Pad::LegendEntry::LegendEntry(const ptree& legendEntryTree)
       }
     }
   }
-  if (const auto position = get_from_tree<string>(legendEntryTree, "position")) {
-    if (*position != "top" && *position != "before" && *position != "after") logger::throw_invalid_argument("Bad value '{}' of position: top, before or after", *position);
-    if (*position == "top") {
-      AtTop();
-    } else if (const auto dataID = get_from_tree<uint16_t>(legendEntryTree, "position_data")) {
-      if (*position == "before") {
-        BeforeData(*dataID);
-      } else {
-        AfterData(*dataID);
-      }
+  ReadNamed(legendEntryTree, mPosition, "position");
+  if (mPosition && *mPosition != position_t::top) {
+    // before or after the data numbered by position_data (from 1)
+    const auto dataID = get_from_tree<uint16_t>(legendEntryTree, "position_data").value_or(0);
+    if (dataID) {
+      mPositionDataID = dataID;
+    } else {
+      mPosition = nullopt;
     }
   }
   ReadFill(legendEntryTree);
@@ -4925,7 +4907,7 @@ ptree Plot::Pad::LegendEntry::GetPropertyTree() const
     legendEntryTree.put("symbol_of", symbolOf);
   }
   if (mPosition) {
-    legendEntryTree.put("position", (mPosition == position_t::top) ? "top" : ((mPosition == position_t::before) ? "before" : "after"));
+    PutNamed(legendEntryTree, mPosition, "position");
     if (mPosition != position_t::top) legendEntryTree.put("position_data", mPositionDataID);
   }
   PutFill(legendEntryTree);
@@ -5076,48 +5058,15 @@ Plot::Pad::Shape::Shape(kind_t kind, const vector<double_t>& coordinates) : mKin
 {
   const bool finite = std::all_of(coordinates.begin(), coordinates.end(), [](double_t value) { return std::isfinite(value); });
   if (!finite) {
-    logger::warning("A {} with a position that is not a finite number will not be drawn.", KindName(kind));
+    logger::warning("A {} with a position that is not a finite number will not be drawn.", enum_name(kind));
   }
-}
-
-const char* Plot::Pad::Shape::KindName(kind_t kind)
-{
-  switch (kind) {
-    case kind_t::line:
-      return "line";
-    case kind_t::arrow:
-      return "arrow";
-    case kind_t::vertical_line:
-      return "vertical_line";
-    case kind_t::horizontal_line:
-      return "horizontal_line";
-    case kind_t::region:
-      return "region";
-    case kind_t::region_x:
-      return "region_x";
-    case kind_t::region_y:
-      return "region_y";
-    case kind_t::ellipse:
-      return "ellipse";
-    case kind_t::polygon:
-      return "polygon";
-  }
-  return "";
-}
-
-optional<Plot::Pad::Shape::kind_t> Plot::Pad::Shape::KindFromName(const string& name)
-{
-  for (auto kind : {kind_t::line, kind_t::arrow, kind_t::vertical_line, kind_t::horizontal_line, kind_t::region, kind_t::region_x, kind_t::region_y, kind_t::ellipse, kind_t::polygon}) {
-    if (name == KindName(kind)) return kind;
-  }
-  return nullopt;
 }
 
 string Plot::Pad::Shape::KindLabel(kind_t kind)
 {
   if (kind == kind_t::region_x) return "region X";
   if (kind == kind_t::region_y) return "region Y";
-  string label = KindName(kind);
+  string label = enum_name(kind);
   std::replace(label.begin(), label.end(), '_', ' ');
   return label;
 }
@@ -5136,23 +5085,12 @@ optional<Plot::Pad::Shape::drawn_id_t> Plot::Pad::Shape::DecodeDrawnID(uint32_t 
 
 Plot::Pad::Shape::Shape(const ptree& shapeTree)
 {
-  if (auto kind = KindFromName(shapeTree.get<string>("kind", ""))) mKind = *kind;
+  if (auto kind = enum_from_name<kind_t>(shapeTree.get<string>("kind", ""))) mKind = *kind;
   optional<vector<double_t>> coordinates;
   read_from_tree(shapeTree, coordinates, "coordinates");
   if (coordinates) mCoordinates = *coordinates;
-  if (auto name = shapeTree.get_optional<string>("coordinate_system")) {
-    mCoordinateSystem = coordinates_from_name(*name);
-    if (!mCoordinateSystem) logger::warning("Unknown coordinate system '{}' is ignored.", *name);
-  }
-  if (auto layer = shapeTree.get_optional<string>("layer")) {
-    if (*layer == "behind_data") {
-      mLayer = layer_t::behind_data;
-    } else if (*layer == "on_top") {
-      mLayer = layer_t::on_top;
-    } else if (*layer != "after_data") {
-      logger::warning("Unknown shape layer {} is ignored.", *layer);
-    }
-  }
+  ReadNamed(shapeTree, mCoordinateSystem, "coordinate_system");
+  ReadNamed(shapeTree, mLayer, "layer");
   read_from_tree(shapeTree, mArrowHead, "arrow_head");
   read_from_tree(shapeTree, mArrowSize, "arrow_size");
   optional<double_t> phiMin;
@@ -5168,10 +5106,10 @@ Plot::Pad::Shape::Shape(const ptree& shapeTree)
 ptree Plot::Pad::Shape::GetPropertyTree() const
 {
   ptree shapeTree;
-  shapeTree.put("kind", KindName(mKind));
+  shapeTree.put("kind", enum_name(mKind));
   put_in_tree(shapeTree, optional<vector<double_t>>(mCoordinates), "coordinates");
-  if (mCoordinateSystem) shapeTree.put("coordinate_system", coordinates_name(*mCoordinateSystem));
-  if (mLayer) shapeTree.put("layer", (*mLayer == layer_t::behind_data) ? "behind_data" : ((*mLayer == layer_t::on_top) ? "on_top" : "after_data"));
+  PutNamed(shapeTree, mCoordinateSystem, "coordinate_system");
+  PutNamed(shapeTree, mLayer, "layer");
   put_in_tree(shapeTree, mArrowHead, "arrow_head");
   put_in_tree(shapeTree, mArrowSize, "arrow_size");
   if (mArc) {
@@ -5211,19 +5149,19 @@ auto Plot::Pad::Shape::SetOnTop() -> decltype(*this)
 }
 auto Plot::Pad::Shape::SetArrowHead(const string& style) -> decltype(*this)
 {
-  if (mKind != kind_t::arrow) logger::warning("SetArrowHead has an effect only on arrows (Pad::AddArrow), not on a {}.", KindName(mKind));
+  if (mKind != kind_t::arrow) logger::warning("SetArrowHead has an effect only on arrows (Pad::AddArrow), not on a {}.", enum_name(mKind));
   mArrowHead = style;
   return *this;
 }
 auto Plot::Pad::Shape::SetArrowSize(float_t size) -> decltype(*this)
 {
-  if (mKind != kind_t::arrow) logger::warning("SetArrowSize has an effect only on arrows (Pad::AddArrow), not on a {}.", KindName(mKind));
+  if (mKind != kind_t::arrow) logger::warning("SetArrowSize has an effect only on arrows (Pad::AddArrow), not on a {}.", enum_name(mKind));
   if (CheckNotNegative(size, "arrow size")) mArrowSize = size;
   return *this;
 }
 auto Plot::Pad::Shape::SetArc(double_t phiMin, double_t phiMax) -> decltype(*this)
 {
-  if (mKind != kind_t::ellipse) logger::warning("SetArc has an effect only on ellipses (Pad::AddEllipse), not on a {}.", KindName(mKind));
+  if (mKind != kind_t::ellipse) logger::warning("SetArc has an effect only on ellipses (Pad::AddEllipse), not on a {}.", enum_name(mKind));
   bool valid = CheckFinite(phiMin, "start angle of the arc");
   valid = CheckFinite(phiMax, "end angle of the arc") && valid;
   if (valid) mArc = {phiMin, phiMax};
@@ -5231,7 +5169,7 @@ auto Plot::Pad::Shape::SetArc(double_t phiMin, double_t phiMax) -> decltype(*thi
 }
 auto Plot::Pad::Shape::SetRotation(double_t theta) -> decltype(*this)
 {
-  if (mKind != kind_t::ellipse) logger::warning("SetRotation has an effect only on ellipses (Pad::AddEllipse), not on a {}.", KindName(mKind));
+  if (mKind != kind_t::ellipse) logger::warning("SetRotation has an effect only on ellipses (Pad::AddEllipse), not on a {}.", enum_name(mKind));
   if (CheckFinite(theta, "rotation angle")) mRotation = theta;
   return *this;
 }

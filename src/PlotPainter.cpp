@@ -317,7 +317,7 @@ double_t PlotPainter::ClippedBase(const TGraph* graph, bool logY)
 TH1* PlotPainter::ToHist(TGraph* graph, draw_option_t option, draw_option_t fallback, bool warn, bool warnAsymmetric)
 {
   auto warnNoBins = [&](const char* reason) {
-    if (warn) logger::warning("Drawing option {} is not available for graph {} ({}), drawing it as {}.", draw_option_name(option), graph->GetName(), reason, draw_option_name(fallback));
+    if (warn) logger::warning("Drawing option {} is not available for graph {} ({}), drawing it as {}.", enum_name(option), graph->GetName(), reason, enum_name(fallback));
   };
   SortGraph(graph);
   const int32_t n = graph->GetN();
@@ -1549,7 +1549,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
 
   using data_type = std::decay_t<decltype(data_ptr)>;
   // the drawing option in messages: the alias, else the option as given
-  auto optionName = [&]() { return (optionAlias) ? draw_option_name(*optionAlias) : data->GetDrawOption().value_or(""); };
+  auto optionName = [&]() { return (optionAlias) ? enum_name(*optionAlias) : data->GetDrawOption().value_or(""); };
   // data that cannot be drawn: reported, kept until the plot is done, and the next data keeps its number
   auto notDrawn = [&](auto&&... args) {
     logger::warning(std::forward<decltype(args)>(args)...);
@@ -1589,7 +1589,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     if (auto it = (options) ? options->find(*optionAlias) : decltype(options->end()){}; options && it != options->end()) {
       drawOption += it->second;
     } else {
-      Warn(state, "Drawing option {} is not available for {} {}, using the default of ROOT.", draw_option_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), DataName(*data));
+      Warn(state, "Drawing option {} is not available for {} {}, using the default of ROOT.", enum_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), DataName(*data));
       alias.reset();
     }
   }
@@ -4378,7 +4378,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
     if (optionAlias && !defaultDrawOptions_Hist.count(*optionAlias) && !defaultDrawOptions_Graph.count(*optionAlias)) {
       const draw_option_t unavailable = *optionAlias;
       optionAlias = defaultAlias(data_ptr);
-      Warn(state, "Drawing option {} is not available for {} {}, drawing it as {}.", draw_option_name(unavailable), (is_hist_1d<data_type>()) ? "1d histogram" : "graph", DataName(*data), draw_option_name(*optionAlias));
+      Warn(state, "Drawing option {} is not available for {} {}, drawing it as {}.", enum_name(unavailable), (is_hist_1d<data_type>()) ? "1d histogram" : "graph", DataName(*data), enum_name(*optionAlias));
     }
   }
   if (!optionAlias && !data->GetDrawOption()) optionAlias = defaultAlias(data_ptr);
@@ -4391,7 +4391,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       return;
     }
     if (data->GetMinRangeY() || data->GetMaxRangeY()) {
-      logger::warning("The y range of {} is not applied with drawing option {}: it is cut at the frame.", DataName(*data), draw_option_name(clippedAlias));
+      logger::warning("The y range of {} is not applied with drawing option {}: it is cut at the frame.", DataName(*data), enum_name(clippedAlias));
     }
     if (!pad_ptr->GetView()) {
       if (data->GetMinRangeX() || data->GetMaxRangeX()) SetBinRange(histogram->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
@@ -4445,7 +4445,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       if (!HasErrors(data_ptr, false, true) && data_ptr->GetN() > 0) {
         const draw_option_t withErrors = *optionAlias;
         optionAlias = defaultAlias(data_ptr);
-        Warn(state, "Graph {} has no errors to draw with drawing option {}: it is drawn as {}.", DataName(*data), draw_option_name(withErrors), draw_option_name(*optionAlias));
+        Warn(state, "Graph {} has no errors to draw with drawing option {}: it is drawn as {}.", DataName(*data), enum_name(withErrors), enum_name(*optionAlias));
       }
     }
   }
@@ -5443,12 +5443,12 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
     if (!finite) continue;
     const bool isLine = kind == kind_t::line || kind == kind_t::vertical_line || kind == kind_t::horizontal_line;
     if (isLine && (shape->GetFillColor() || shape->GetFillStyle() || shape->GetFillAlpha())) {
-      ReportIgnored(fmt::format("The fill of shape {} ({}) of pad {}", shapeIndex, Shape::KindName(kind), padID), "a line has no area (an arrow fills its head)");
+      ReportIgnored(fmt::format("The fill of shape {} ({}) of pad {}", shapeIndex, enum_name(kind), padID), "a line has no area (an arrow fills its head)");
     }
     // positions as axis values: given so, or fractions of the frame or the pad converted; a log axis cannot show values that are not positive
     auto valueX = [&](double_t x) { return (!isUser) ? FromPad(pad_ptr->GetX1() + (span[0] + x * (span[2] - span[0])) * (pad_ptr->GetX2() - pad_ptr->GetX1()), pad_ptr->GetLogx()) : ((pad_ptr->GetLogx() && x <= 0.) ? nan : x); };
     auto valueY = [&](double_t y) { return (!isUser) ? FromPad(pad_ptr->GetY1() + (span[1] + y * (span[3] - span[1])) * (pad_ptr->GetY2() - pad_ptr->GetY1()), pad_ptr->GetLogy()) : ((pad_ptr->GetLogy() && y <= 0.) ? nan : y); };
-    auto skip = [&](const char* reason) { logger::warning("Shape {} ({}) of pad {} is not drawn: {}.", shapeIndex, Shape::KindName(kind), padID, reason); };
+    auto skip = [&](const char* reason) { logger::warning("Shape {} ({}) of pad {} is not drawn: {}.", shapeIndex, enum_name(kind), padID, reason); };
 
     TObject* object{};
     TObject* outline{};  // drawn after the fill: the outline of a polygon

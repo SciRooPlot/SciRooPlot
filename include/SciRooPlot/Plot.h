@@ -37,6 +37,7 @@
 #include <functional>
 #include <initializer_list>
 #include <iosfwd>
+#include <iterator>
 #include <map>
 #include <memory>
 #include <optional>
@@ -48,6 +49,23 @@
 
 namespace SciRooPlot
 {
+// enums stored by name in plot files: enum_names<T> lists the names of the values (numbered from 0) and says what they name in messages
+template <typename T>
+struct enum_names;
+template <typename T>
+std::string enum_name(T value)
+{
+  return enum_names<T>::names[static_cast<std::size_t>(value)];
+}
+template <typename T>
+std::optional<T> enum_from_name(const std::string& name)
+{
+  for (std::size_t i = 0; i < std::size(enum_names<T>::names); ++i) {
+    if (name == enum_names<T>::names[i]) return static_cast<T>(i);
+  }
+  return std::nullopt;
+}
+
 // aliases for the drawing options of ROOT: the base word names the appearance, suffixes add one feature each
 // (1d: _xerr also draws the x errors, _endcaps draws end caps on the error bars, _smooth smooths, _nomarkers omits the markers;
 //  2d: _col colours the lines by the contents, _fill fills by the contents, a trailing z also draws the colour axis)
@@ -130,26 +148,15 @@ enum draw_option_t : uint8_t {
   DRAW_OPTIONS
 #undef OPT
 };
-// the aliases are stored by name
-inline std::string draw_option_name(draw_option_t option)
-{
-  switch (option) {
-#define OPT(name, ...) \
-  case name:           \
-    return #name;
+template <>
+struct enum_names<draw_option_t> {
+  static constexpr const char* what = "drawing option";
+  static constexpr const char* names[] = {
+#define OPT(name, ...) #name,
     DRAW_OPTIONS
 #undef OPT
-  }
-  return "";
-}
-inline std::optional<draw_option_t> draw_option_from_name(const std::string& name)
-{
-#define OPT(optName, ...) \
-  if (name == #optName) return optName;
-  DRAW_OPTIONS
-#undef OPT
-  return std::nullopt;
-}
+  };
+};
 
 // automatic placement of a legend or text: as close as possible to the corner of the frame where it fits best or to the given corner
 #define BOX_PLACEMENTS    \
@@ -163,26 +170,15 @@ enum box_placement_t : uint8_t {
   BOX_PLACEMENTS
 #undef PLACEMENT
 };
-// the placements are stored by name
-inline std::string box_placement_name(box_placement_t placement)
-{
-  switch (placement) {
-#define PLACEMENT(name) \
-  case name:            \
-    return #name;
+template <>
+struct enum_names<box_placement_t> {
+  static constexpr const char* what = "box placement";
+  static constexpr const char* names[] = {
+#define PLACEMENT(name) #name,
     BOX_PLACEMENTS
 #undef PLACEMENT
-  }
-  return "";
-}
-inline std::optional<box_placement_t> box_placement_from_name(const std::string& name)
-{
-#define PLACEMENT(placementName) \
-  if (name == #placementName) return placementName;
-  BOX_PLACEMENTS
-#undef PLACEMENT
-  return std::nullopt;
-}
+  };
+};
 
 // coordinate system of the position of a box or a shape: fractions of the pad (0 to 1), fractions of the frame ((0, 0) lower left,
 // (1, 1) upper right corner, beyond them outside of the frame; a 3d view: the pad within its margins, an empty layout cell and a pad
@@ -196,26 +192,15 @@ enum coordinates_t : uint8_t {
   COORDINATE_SYSTEMS
 #undef COORDINATES
 };
-// the coordinate systems are stored by name
-inline std::string coordinates_name(coordinates_t coordinates)
-{
-  switch (coordinates) {
-#define COORDINATES(name) \
-  case name:              \
-    return #name;
+template <>
+struct enum_names<coordinates_t> {
+  static constexpr const char* what = "coordinate system";
+  static constexpr const char* names[] = {
+#define COORDINATES(name) #name,
     COORDINATE_SYSTEMS
 #undef COORDINATES
-  }
-  return "";
-}
-inline std::optional<coordinates_t> coordinates_from_name(const std::string& name)
-{
-#define COORDINATES(coordinatesName) \
-  if (name == #coordinatesName) return coordinatesName;
-  COORDINATE_SYSTEMS
-#undef COORDINATES
-  return std::nullopt;
-}
+  };
+};
 
 class PanelLayout;
 
@@ -477,8 +462,11 @@ class Plot : public FillSetters<Plot>
   // keys <prefix>color, <prefix>alpha, <prefix><style> and <prefix><scale> (none without scale key, a width is rounded)
   static void ReadLayout(const boost::property_tree::ptree& tree, layout_t& layout, const std::string& prefix, const char* style, const char* scale = nullptr);
   static void PutLayout(boost::property_tree::ptree& tree, const layout_t& layout, const std::string& prefix, const char* style, const char* scale = nullptr);
-  static void ReadDrawOption(const boost::property_tree::ptree& tree, std::optional<draw_option_t>& option, const char* key);
-  static void PutDrawOption(boost::property_tree::ptree& tree, const std::optional<draw_option_t>& option, const char* key);
+  // an enum of enum_names stored by its name (an unknown name is ignored with a warning)
+  template <typename T>
+  static void ReadNamed(const boost::property_tree::ptree& tree, std::optional<T>& value, const char* key);
+  template <typename T>
+  static void PutNamed(boost::property_tree::ptree& tree, const std::optional<T>& value, const char* key);
   // a pad number of a saved plot (a number above 255 would wrap around and replace another pad), and lists of them: numbers separated by spaces
   static uint8_t CheckedPadID(int64_t padID);
   static std::vector<uint8_t> ReadPadList(const std::string& list, const std::string& key);
@@ -827,9 +815,15 @@ class Plot::Pad::LegendEntry : public MarkerSetters<LegendEntry>, public LineSet
   friend class LegendBox;
   friend class Data;
   friend class Pad;
-  enum class position_t : uint8_t { top,
-                                    before,
-                                    after };
+#define LEGEND_ROW_POSITIONS \
+  POSITION(top)              \
+  POSITION(before)           \
+  POSITION(after)
+  enum class position_t : uint8_t {
+#define POSITION(name) name,
+    LEGEND_ROW_POSITIONS
+#undef POSITION
+  };
   static void CheckSymbolElements(const std::string& symbolElements);
   // the rows a LegendBox makes itself: an extra row with its label, the row of a data item
   explicit LegendEntry(const std::optional<std::string>& label, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& symbolElements = {});
@@ -1701,22 +1695,32 @@ class Plot::Pad::Shape : public LineSetters<Shape>, public FillSetters<Shape>
   friend class PlotManager;
   friend class Pad;
 
-  enum class kind_t : uint8_t { line,
-                                arrow,
-                                vertical_line,
-                                horizontal_line,
-                                region,
-                                region_x,
-                                region_y,
-                                ellipse,
-                                polygon };
-  enum class layer_t : uint8_t { behind_data,
-                                 after_data,
-                                 on_top };
+#define SHAPE_KINDS     \
+  KIND(line)            \
+  KIND(arrow)           \
+  KIND(vertical_line)   \
+  KIND(horizontal_line) \
+  KIND(region)          \
+  KIND(region_x)        \
+  KIND(region_y)        \
+  KIND(ellipse)         \
+  KIND(polygon)
+  enum class kind_t : uint8_t {
+#define KIND(name) name,
+    SHAPE_KINDS
+#undef KIND
+  };
+#define SHAPE_LAYERS \
+  LAYER(behind_data) \
+  LAYER(after_data)  \
+  LAYER(on_top)
+  enum class layer_t : uint8_t {
+#define LAYER(name) name,
+    SHAPE_LAYERS
+#undef LAYER
+  };
   Shape(kind_t kind, const std::vector<double_t>& coordinates);
   boost::property_tree::ptree GetPropertyTree() const;
-  static const char* KindName(kind_t kind);  // as stored: "vertical_line"
-  static std::optional<kind_t> KindFromName(const std::string& name);
   static std::string KindLabel(kind_t kind);  // for messages: "vertical line", "region X"
   // the drawn object of a shape carries it as TObject::SetUniqueID, so that a double-click in show mode names it like the user added it:
   // its kind, its number among the shapes of this kind in the pad (the nth AddArrow), and the coordinate system it was given in
@@ -1837,6 +1841,37 @@ class Plot::Pad::LegendBox : public Plot::Pad::Box<LegendBox>
 
   void MergeLegendEntries(uint16_t nData);
 };
+
+template <>
+struct enum_names<Plot::Pad::Shape::kind_t> {
+  static constexpr const char* what = "shape kind";
+  static constexpr const char* names[] = {
+#define KIND(name) #name,
+    SHAPE_KINDS
+#undef KIND
+  };
+};
+template <>
+struct enum_names<Plot::Pad::Shape::layer_t> {
+  static constexpr const char* what = "shape layer";
+  static constexpr const char* names[] = {
+#define LAYER(name) #name,
+    SHAPE_LAYERS
+#undef LAYER
+  };
+};
+template <>
+struct enum_names<Plot::Pad::LegendEntry::position_t> {
+  static constexpr const char* what = "legend row position";
+  static constexpr const char* names[] = {
+#define POSITION(name) #name,
+    LEGEND_ROW_POSITIONS
+#undef POSITION
+  };
+};
+#undef SHAPE_KINDS
+#undef SHAPE_LAYERS
+#undef LEGEND_ROW_POSITIONS
 
 // the data source of the functions given in the plot definition (AddFunction, SetRefFunc) and of the graphs given by their points
 // (AddPoints): with it a formula is addressed like stored data, e.g. in a ratio: AddRatio({"h", "src"}, {"2*exp(-x)", kUserFunctions})
