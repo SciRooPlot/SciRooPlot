@@ -2,15 +2,16 @@
 scale and of the map, also fewer than ROOT's 20 (its default without levels); levels of later data (contour lines over a map) are their
 own and leave the scale alone unless they are more. The boxes of a 3d histogram, which ROOT colours from the whole palette, take the
 colours of the scale: the pad paints with a palette of one colour per level; levels given as values warn there (equal steps).
-Every 2d kind and the 3d histograms.
+Every 2d kind and the 3d histograms, also with hostile values (all zero, crossing zero, near the largest float, all one value).
 Covers: the frame takes the levels of the first data, a 3d histogram a palette of one colour per level; levels of 2d graphs and 2d
 functions (were ignored; contour lines over them gave the scale their levels).
 """
 
-from srptest import DATA_2D, Project, S, add_data, cases, check, describe, finish
+from srptest import DATA_2D, Project, S, add_data, cases, check, describe, finish, has_variant, source_of
 
 LEVELS = {"none": None, "five": 5, "thirty": 30, "values": [2.0, 5.0, 10.0, 30.0, 60.0]}
 KINDS = DATA_2D + ("hist3d", "profile3d")
+VARIANTS = ("normal", "zeros", "negative", "huge", "constant")  # hostile values: all zero, crossing zero, near the largest float, one value
 OVERLAY = [3.0, 20.0]  # levels of contour lines drawn over the map
 
 
@@ -19,15 +20,15 @@ def levels_of(hist):
 
 
 p = Project("colour_levels")
-p.inputs()
+p.inputs(VARIANTS)
 todo = cases(
-    {"kind": list(KINDS), "levels": list(LEVELS), "overlay": [False, True]},
-    valid=lambda c: not c["overlay"] or c["kind"] in DATA_2D,
-    always=lambda c: True,  # small: every case in the fast run too
+    {"kind": list(KINDS), "levels": list(LEVELS), "overlay": [False, True], "variant": list(VARIANTS)},
+    valid=lambda c: (not c["overlay"] or c["kind"] in DATA_2D) and has_variant(c["kind"], c["variant"]),
+    always=lambda c: c["variant"] == "normal",  # small: every case of plain data in the fast run too
 )
 for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "levels", "2d")
-    data = add_data(plot[1], case["kind"])
+    data = add_data(plot[1], case["kind"], source_of(case["variant"]), case["variant"])
     levels = LEVELS[case["levels"]]
     if levels is not None:
         data.SetContours(levels)

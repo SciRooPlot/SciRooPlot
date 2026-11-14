@@ -12,17 +12,53 @@ under the name ROOT gives the graph or histogram it makes; data that painted not
 with a 2d alias, a graph with points at one x drawn as a histogram, error bands and brackets of a graph without errors, boxes, contours and
 candles of a TH2Poly; lines down to zero at both ends of area of a graph; the steps of a histogram keeping its style with a fill colour
 filled by every alias that fills them; no warning about asymmetric errors where an alias shows none (text).
+Hostile data (no entries or points, a single one, a NaN value): every alias on every kind drawn as on plain data, without ROOT errors; where
+the alias falls back to the drawing without option, that of the same data (the default rule decides by the data: an empty histogram has
+no errors, a single point is drawn as a point); data without points, also a histogram drawn as a graph, is not drawn.
 """
 
 import re
 
-from srptest import ALIASES, DATA_KINDS, ROOT, Project, S, add_data, alias_table, base_of, cases, check, data_name, data_objects, describe, drawn_type, finish, in_chunks, is_data, message_name, no_scale, per_error_set, pixels, rgba
+from srptest import (
+    ALIASES,
+    DATA_KINDS,
+    ROOT,
+    Project,
+    S,
+    add_data,
+    alias_table,
+    base_of,
+    cases,
+    check,
+    data_name,
+    data_objects,
+    describe,
+    drawn_type,
+    finish,
+    has_variant,
+    in_chunks,
+    is_data,
+    message_name,
+    no_scale,
+    per_error_set,
+    pixels,
+    rgba,
+    source_of,
+)
 
 TABLE = alias_table()
 REPRESENTATIVE = ("hist", "graph_errors", "hist2d", "graph2d_errors")  # every alias in the fast run
 FLAT_ONLY = ("lego", "surf", "polar", "box", "cont", "candle", "violin")  # aliases a TH2Poly is drawn flat (and cartesian) for
 NEED_ERRORS = ("band", "band_smooth", "boxes_nomarkers", "brackets")  # aliases that draw only the errors of a graph
-WITHOUT_ERRORS = tuple(k for k, obj in data_objects().items() if obj.InheritsFrom("TGraph") and not any(obj.GetErrorX(i) > 0 or obj.GetErrorY(i) > 0 for i in range(obj.GetN())))
+VARIANTS = ("empty", "single", "nan")  # hostile data: no entries or points, one, a NaN value
+
+
+def without_errors(variant):
+    """the graph kinds that have no errors in a variant"""
+    return tuple(k for k, obj in data_objects(variant).items() if obj.InheritsFrom("TGraph") and not any(obj.GetErrorX(i) > 0 or obj.GetErrorY(i) > 0 for i in range(obj.GetN())))
+
+
+WITHOUT_ERRORS = {variant: without_errors(variant) for variant in ("normal", *VARIANTS)}
 
 
 def area_1d(case):
@@ -31,14 +67,14 @@ def area_1d(case):
     return case["alias"] == "area" and DATA_KINDS[case["kind"]][0] == 1 and "polar" not in DATA_KINDS[case["kind"]][2]
 
 
-def expected(kind, alias):
+def expected(kind, alias, variant="normal"):
     """(type the data is drawn as, None if the alias is not available, "default" if drawn as without a drawing option; option of the data;
     frame draws a colour scale; warnings)"""
     kindType = drawn_type(kind)
     entry = TABLE[alias][kindType]
     if entry == "-":
         return ("default" if kindType in ("hist1d", "graph") else None), "", False, 1
-    if kind in WITHOUT_ERRORS and alias in NEED_ERRORS:
+    if kind in WITHOUT_ERRORS[variant] and alias in NEED_ERRORS:
         return "default", "", False, 1
     drawnType = entry if entry in ("graph", "hist1d") else kindType
     opt = TABLE[alias][drawnType]
@@ -81,7 +117,7 @@ todo = cases(
 KEPT_FILL = ("hist", "hist_open", "hist_open_clipped")  # aliases filling the steps, drawn on a histogram keeping its input's style
 
 p = Project("aliases")
-p.inputs()
+p.inputs(("normal", *VARIANTS))
 for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "aliases", base_of(case["kind"]))
     add_data(plot[1], case["kind"]).SetDrawOption(getattr(S, case["alias"]))
@@ -113,6 +149,16 @@ for alias in REPEATED:
 for alias in KEPT_FILL:
     plot = S.Plot(f"kept_fill_{alias}", "aliases", "1d")
     add_data(plot[1], "hist").SetKeepInputStyle().SetFillColor(ROOT.kOrange).SetDrawOption(getattr(S, alias))
+    p.pm.AddPlot(plot)
+# hostile data: every alias on every kind with no entries or points, a single one, a NaN value
+variantCases = cases({"kind": list(DATA_KINDS), "alias": ALIASES, "variant": list(VARIANTS)}, valid=lambda c: has_variant(c["kind"], c["variant"]))
+for i, case in enumerate(variantCases):
+    plot = S.Plot(f"v{i}", "variants", base_of(case["kind"]))
+    add_data(plot[1], case["kind"], source_of(case["variant"]), case["variant"]).SetDrawOption(getattr(S, case["alias"]))
+    p.pm.AddPlot(plot)
+for kind, variant in {(c["kind"], c["variant"]) for c in variantCases if expected(c["kind"], c["alias"], c["variant"])[0] == "default"}:
+    plot = S.Plot(f"default_{kind}_{variant}", "variants", base_of(kind))
+    add_data(plot[1], kind, source_of(variant), variant)
     p.pm.AddPlot(plot)
 run = p.plot("aliases")
 
@@ -196,4 +242,26 @@ def compare(_, item):
 
 plots = [(f"c{i}", describe(case), case) for i, case in enumerate(todo)] + [(f"repeated_{alias}", f"a graph with points at one x drawn {alias}", None) for alias in REPEATED]
 in_chunks(plots, compare, size=150)  # up to four paints per plot
+
+variantRun = p.plot("variants")
+check("hostile data: no errors", not variantRun.errors(), " | ".join(variantRun.errors()[:5]))
+for i, case in enumerate(variantCases):
+    what = describe(case)
+    kind, alias, variant = case["kind"], case["alias"], case["variant"]
+    drawnType, data, _, _ = expected(kind, alias, variant)
+    drawn = variantRun.drawn(f"v{i}", "variants")
+    if variant == "empty" and (drawnType == "graph" or drawn_type(kind) in ("graph", "graph2d")):
+        check(f"no points: not drawn: {what}", not drawn, str([(o.ClassName(), opt) for o, opt in drawn]))
+        if drawn_type(kind) in ("graph", "graph2d"):
+            said = [m for m in variantRun.messages(f"v{i}", "variants") if f" {message_name(kind, variant, source_of(variant))} " in m]
+            check(f"no points: one warning saying it is not drawn: {what}", len(said) == 1 and "has no points: it is not drawn" in said[0], " | ".join(said))
+    elif not drawn:
+        check(f"plot made: {what}", False, " | ".join(variantRun.messages(f"v{i}", "variants")[:3]))
+    elif drawnType == "default":
+        ref = [(o.ClassName(), opt) for o, opt in variantRun.drawn(f"default_{kind}_{variant}", "variants")]
+        check(f"not drawable: drawn as the same data without a drawing option: {what}", [(o.ClassName(), opt) for o, opt in drawn] == ref, f"{[(o.ClassName(), opt) for o, opt in drawn]}, without an option {ref}")
+    else:
+        obj, opt = drawn[0]
+        want = per_error_set(data) if obj.InheritsFrom("TGraphMultiErrors") and drawnType is not None else data
+        check(f"drawn with the ROOT option of the table: {what}", opt == want, f"drawn with '{opt}', expected '{want}'")
 finish()

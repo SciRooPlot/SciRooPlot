@@ -4,16 +4,17 @@ on linear and log scales of its value axis: a log axis keeps a positive range (o
 positive), the colour scale of a map has two different ends unless every content is zero. Data with a NaN or infinite value is reported
 with a warning naming it, as data with contents beyond the largest float (ROOT finds axis ranges only below it) and a function NaN in
 part of its range. A plot that ROOT throws an exception on while painting is reported and loses only itself (an axis too narrow for ROOT
-with that reason). A TGraphMultiErrors without y error sets (ROOT crashes on it) is drawn as a TGraph, with a warning.
+with that reason). A TGraphMultiErrors without y error sets (ROOT crashes on it) is drawn as a TGraph, with a warning. Data without points
+(a graph, a 1d TEfficiency without events) first in its pad is not drawn and leaves the frame to the data after it.
 Covers: crashes on NaN points of TGraphMultiErrors and on empty 2d graphs, misplaced errors of
 2d graphs after removing NaN points, the whole run lost to one plot ROOT could not paint, a map of one value painted in the lowest
 colour (its scale had equal ends), a function NaN in part of its range drawn as an empty plot (NaN frame), a function NaN at one point
-(a removable singularity) taken for one ROOT cannot draw.
+(a removable singularity) taken for one ROOT cannot draw, the frame of an empty TEfficiency (0 to 1.1) hiding the data after it.
 """
 
 import math
 
-from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, cases, check, describe, finish, formula, has_variant, source_of
+from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, cases, check, close, describe, drawn_type, finish, formula, has_variant, source_of
 
 p = Project("robust_frames")
 p.inputs(VARIANTS)
@@ -54,6 +55,15 @@ for name in ("tiny", "noy"):
     plot[1].AddData(name, "rootbugs")
     p.pm.AddPlot(plot)
 
+# data without points first in its pad (not drawn) and the same kind after it: the frame of the data after it
+UNDRAWN = tuple(k for k in DATA_KINDS if drawn_type(k) in ("graph", "graph2d") and has_variant(k, "empty"))
+for kind in UNDRAWN:
+    for name, variants in ((f"empty_first_{kind}", ("empty", "normal")), (f"alone_{kind}", ("normal",))):
+        plot = S.Plot(name, "robust", base_of(kind))
+        for variant in variants:
+            add_data(plot[1], kind, source_of(variant), variant)
+        p.pm.AddPlot(plot)
+
 for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "robust", base_of(case["kind"]))
     add_data(plot[1], case["kind"], source_of(case["variant"]), case["variant"])
@@ -82,6 +92,10 @@ for i, case in enumerate(todo):
         else:
             ignored = [line for line in log if "The log scale of the Z axis of pad 1 is ignored" in line]
             check(f"log scale without positive values ignored with a warning: {what}", bool(ignored), "log scale off without warning")
+for kind in UNDRAWN:
+    first, alone = run.frame(f"empty_first_{kind}", "robust"), run.frame(f"alone_{kind}", "robust")
+    same = first is not None and alone is not None and all(close(a, b, 1e-9) for axis in ("X", "Y") for a, b in zip(first[axis], alone[axis]))
+    check(f"{kind} without points first in its pad: the frame of the data after it", same, f"{first} instead of {alone}")
 unpaintableErrors = [line for line in run.errors() if "a_unpaintable" in line]
 check("a plot ROOT cannot paint is made or reported", bool(run.pad("a_unpaintable", "robust")) or any("could not be painted" in line for line in unpaintableErrors), str(unpaintableErrors))
 check("contents beyond the largest float are reported by name", any(line.split("]", 1)[-1].split()[0] == "unpaintable:unpaintable" and "beyond the largest float" in line for line in run.warnings()), " | ".join(run.warnings()[:3]))

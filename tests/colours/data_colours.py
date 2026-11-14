@@ -3,12 +3,13 @@ entry n of the marker, line and fill lists (repeating) of its pad, else of pad 0
 where a fill style is set for the data, the pad or pad 0). Each colour setter sets only its own part (SetColor all three); data taking
 any of the three moves the next data on to the next entry, data setting all three or keeping the style of its input (SetKeepInputStyle,
 its colours as stored) does not, nor does the reference function of the pad. Alpha setters change only the transparency.
+Data that is not drawn (a graph without points) takes its entry too, so the data after it gets the colours it would get if it were drawn.
 Every data kind, with lists of the pad, of pad 0 and of both, separate marker, line and fill lists of different lengths, and plots
 without a base plot.
 Covers: each colour setter sets only its own part, marker and line of one data item from the same entry.
 """
 
-from srptest import DATA_KINDS, DEFAULT_COLORS, ROOT, Project, S, add_data, base_of, cases, check, colour_diff, data_objects, describe, finish, source_of
+from srptest import DATA_KINDS, DEFAULT_COLORS, ROOT, Project, S, add_data, base_of, cases, check, colour_diff, data_objects, describe, drawn_type, finish, source_of
 
 L3 = [ROOT.kRed + 1, "#00aa55", (0.2, 0.3, 0.9)]  # every colour form
 L3_PAD0 = [ROOT.kOrange + 7, ROOT.kCyan + 2, ROOT.kMagenta + 3]
@@ -81,26 +82,27 @@ for kind, obj in data_objects().items():
     ROOT.SetOwnership(obj, False)
     styled[kind] = obj
 p = Project("data_colours")
-p.inputs()
+p.inputs(("normal", "empty"))
 p.source("styled", styled)
 
 todo = cases(
-    {"kind": list(DATA_KINDS), "pads": list(PADS), "setup": list(SETUPS), "before": [1, 8]},
-    valid=lambda c: c["pads"] != "ref_func" or DATA_KINDS[c["kind"]][0] == 1,
-    always=lambda c: c["kind"] in ("hist", "graph") and c["before"] == 1,
+    {"kind": list(DATA_KINDS), "pads": list(PADS), "setup": list(SETUPS), "before": [1, 8], "drawn": ["drawn", "undrawn"]},
+    valid=lambda c: (c["pads"] != "ref_func" or DATA_KINDS[c["kind"]][0] == 1) and (c["drawn"] == "drawn" or drawn_type(c["kind"]) in ("graph", "graph2d")),
+    always=lambda c: c["kind"] in ("hist", "graph") and c["before"] == 1 and c["drawn"] == "drawn",
     named=[
-        {"kind": "hist", "pads": "srp", "setup": "marker", "before": 1, "why": "a colour setter sets only its own part"},
-        {"kind": "hist", "pads": "srp", "setup": "marker_line", "before": 1, "why": "a colour setter sets only its own part"},
-        {"kind": "hist", "pads": "parts", "setup": "none", "before": 8, "why": "the default colours of a data item stay together"},
-        {"kind": "tf3", "pads": "srp", "setup": "alpha", "before": 1, "why": "the faces of a 3d function transparent with the alpha"},
+        {"kind": "hist", "pads": "srp", "setup": "marker", "before": 1, "drawn": "drawn", "why": "a colour setter sets only its own part"},
+        {"kind": "hist", "pads": "srp", "setup": "marker_line", "before": 1, "drawn": "drawn", "why": "a colour setter sets only its own part"},
+        {"kind": "hist", "pads": "parts", "setup": "none", "before": 8, "drawn": "drawn", "why": "the default colours of a data item stay together"},
+        {"kind": "tf3", "pads": "srp", "setup": "alpha", "before": 1, "drawn": "drawn", "why": "the faces of a 3d function transparent with the alpha"},
+        {"kind": "graph", "pads": "srp", "setup": "none", "before": 1, "drawn": "undrawn", "why": "an empty graph before takes its colour"},
     ],
 )
 for i, case in enumerate(todo):
     setupPlot, withBase, *_ = PADS[case["pads"]]
     plot = S.Plot(f"c{i}", "colours", base_of(case["kind"])) if withBase else S.Plot(f"c{i}", "colours")
     setupPlot(plot)
-    for _ in range(case["before"]):
-        add_data(plot[1], case["kind"])
+    for _ in range(case["before"]):  # undrawn: graphs without points
+        add_data(plot[1], case["kind"], *(("inputs", "normal") if case["drawn"] == "drawn" else (source_of("empty"), "empty")))
     source = "styled" if case["setup"] == "keep" else source_of("normal")
     SETUPS[case["setup"]][0](add_data(plot[1], case["kind"], source))
     add_data(plot[1], case["kind"])
@@ -109,9 +111,10 @@ run = p.plot("colours")
 
 for i, case in enumerate(todo):
     what = describe(case)
-    drawn = [obj for obj, _ in run.drawn(f"c{i}", "colours") if not obj.GetName().startswith("0:")]  # 0: the reference function
-    if len(drawn) != case["before"] + 2:
-        check(f"plot made: {what}", False, f"{len(drawn)} data drawn | " + " | ".join(run.errors()[:2]))
+    # by data number (data that is not drawn keeps its number); 0: the reference function
+    drawn = {int(obj.GetName().split(":")[0]) - 1: obj for obj, _ in run.drawn(f"c{i}", "colours") if not obj.GetName().startswith("0:")}
+    if sorted(drawn) != (list(range(case["before"] + 2)) if case["drawn"] == "drawn" else [case["before"], case["before"] + 1]):
+        check(f"plot made: {what}", False, f"data {sorted(drawn)} drawn | " + " | ".join(run.errors()[:2]))
         continue
     _, withBase, *_ = PADS[case["pads"]]
     stylish = withBase  # the base plots set fill styles
@@ -137,10 +140,13 @@ for i, case in enumerate(todo):
     # the data before and after: entries 0, 1, ... and the next one, or the same if the data under test took none
     took = any(takes(case, part, stylish or setup == "fill_style") for part in ("marker", "line", "fill"))
     for position, entryUsed in ((0, 0), (entry + 1, entry + int(took))):
+        if position not in drawn:
+            continue
         obj = drawn[position]
         found = [colour_diff(expected(case, part, entryUsed, stylish), getattr(obj, f"Get{attr}Color")()) for part, attr in (("marker", "Marker"), ("line", "Line"), ("fill", "Fill")) if obj.InheritsFrom(f"TAtt{attr}") and expected(case, part, entryUsed, stylish) is not None]
         found = [f for f in found if f]
         check(f"data {position + 1} takes entry {entryUsed}: {what}", not found, " | ".join(found))
-check("no warnings", not run.warnings(), " | ".join(run.warnings()[:5]))
+others = [line for line in run.warnings() if "inputs_empty has no points: it is not drawn" not in line]
+check("no warnings but those of graphs without points", not others, " | ".join(others[:5]))
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
 finish()

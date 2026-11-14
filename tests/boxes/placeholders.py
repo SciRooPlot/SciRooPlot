@@ -9,8 +9,9 @@
 - in a legend label the data of its row, in a text the data named by number (<mean:2>, <mean:1@2> for data 1 of pad 2), the format in
   brackets ([.2f], [>8.2f], [d]); a placeholder without number in a text, a number without data, a malformed number or format and a word
   that is no placeholder are left as they are, with a warning (a known word followed by other text, <mean value>, is text)
-Cases: every data kind × every numeric placeholder × legend label or text × the frame at the data or an x range inside it, and named
-definitions for the descriptive ones.
+Cases: every data kind × every numeric placeholder × legend label or text × the frame at the data or an x range inside it × hostile data
+(no entries or points, a single one, a NaN value), and named definitions for the descriptive ones. Data that is not drawn (a graph without
+points) has no legend row; a text naming it keeps the placeholder, with a warning.
 Reference: the drawn objects read back (bins with their centre inside the frame, the points inside it) and the documented descriptions.
 Covers: <name> for every kind, axis titles in <projection>/<selection>, <stddev> and data numbers in texts, formats with '>' and
 look-alike typos, <mean> and <stddev> of a TH2Poly (0 from ROOT's empty
@@ -19,25 +20,26 @@ statistics of its grid), and the named cases.
 
 import math
 
-from srptest import DATA_KINDS, ROOT, Project, S, add_data, base_of, cases, check, data_name, describe, finish, write_tree
+from srptest import DATA_KINDS, ROOT, Project, S, add_data, base_of, cases, check, data_name, describe, drawn_type, finish, has_variant, source_of, write_tree
 
 import numpy as np
 
 NUMERIC = ("entries", "integral", "maximum", "minimum", "mean", "stddev")
 RANGE = (3.0, 7.0)  # an x range inside the data (bin edges of the inputs)
 
+VARIANTS = ("normal", "empty", "single", "nan")  # hostile data: no entries or points, one, a NaN value
 todo = cases(
-    {"kind": list(DATA_KINDS), "word": list(NUMERIC), "place": ["legend", "text"], "range": ["data", "inside"]},
-    valid=lambda c: c["range"] == "data" or DATA_KINDS[c["kind"]][0] == 1 and "polar" not in DATA_KINDS[c["kind"]][2],
-    always=lambda c: (c["place"], c["range"]) in (("legend", "data"), ("text", "inside")),
+    {"kind": list(DATA_KINDS), "word": list(NUMERIC), "place": ["legend", "text"], "range": ["data", "inside"], "variant": list(VARIANTS)},
+    valid=lambda c: (c["range"] == "data" or DATA_KINDS[c["kind"]][0] == 1 and "polar" not in DATA_KINDS[c["kind"]][2]) and has_variant(c["kind"], c["variant"]),
+    always=lambda c: c["variant"] == "normal" and (c["place"], c["range"]) in (("legend", "data"), ("text", "inside")),
 )
 
 p = Project("placeholders", bases=("1d", "1d_ratio", "2d"))
-p.inputs()
+p.inputs(VARIANTS)
 FORMAT = "[.9g]"
 for i, case in enumerate(todo):
     plot = S.Plot(f"n{i}", "numbers", base_of(case["kind"]))
-    data = add_data(plot[1], case["kind"])
+    data = add_data(plot[1], case["kind"], source_of(case["variant"]), case["variant"])
     word = f"<{case['word']}{FORMAT}>"
     if case["place"] == "legend":
         data.SetLegendLabel(f"value {word}")
@@ -212,12 +214,18 @@ for i, case in enumerate(todo):
     drawn = run.objects(name, "numbers")
     found = labels(name, "numbers")
     what = describe(case)
+    placeholder = f"<{word}{FORMAT}>" if case["place"] == "legend" else f"<{word}{FORMAT}:1>"
+    if case["variant"] == "empty" and drawn_type(kind) in ("graph", "graph2d"):
+        # a graph without points is not drawn: no legend row; a text naming it keeps the placeholder, with a warning
+        said = [m for m in run.messages(name, "numbers") if "there is no data 1 drawn in this pad" in m]
+        ok = found == [] if case["place"] == "legend" else found == [f"value {placeholder}"] and len(said) == 1
+        check(f"{what}: data not drawn: {'no legend row' if case['place'] == 'legend' else 'the placeholder left as it is, with a warning'}", ok, f"{found} {said}")
+        continue
     if not drawn or len(found) != 1:
         check(f"{what}: one label with the value", False, f"labels {found}, {len(drawn)} drawn")
         continue
     frame = run.frame(name, "numbers") or {"X": (-math.inf, math.inf), "Y": (-math.inf, math.inf)}
     want = reference(drawn[0], word, frame)
-    placeholder = f"<{word}{FORMAT}>" if case["place"] == "legend" else f"<{word}{FORMAT}:1>"
     warned = [line for line in run.messages(name, "numbers") if "is not available" in line]
     if want is None:
         check(f"{what}: left as it is, with a warning naming the data", found == [f"value {placeholder}"] and len(warned) == 1 and data_name(kind) in warned[0], f"{found} {warned}")

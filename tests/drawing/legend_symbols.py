@@ -10,13 +10,14 @@ the others as bars, and TLegend has one line for both), the *H, B and BAR option
 box of the view: lego, surf, the boxes and iso surfaces of 3d data, the markers, lines and triangles of 2d graphs), the parts of candles
 and violins, the solid arrowed error bars of asymmetric graphs, line and markers hidden by an opaque band (3L, 3PL, 4C), the outline of
 a hollow HIST E2 box (TLegend takes the fill colour), arrow heads, and the lines of 2d drawings (contours and meshes are many short
-pieces)."""
+pieces). Also for data with a NaN value; for empty data the legend rows: a graph without points is not drawn and has no row, a histogram
+without entries keeps its row (also drawn as a graph)."""
 
 import collections
 import hashlib
 import re
 
-from srptest import DATA_KINDS, WORK, Project, ROOT, S, add_data, cases, describe, drawn_type, finish, in_chunks
+from srptest import DATA_KINDS, WORK, Project, ROOT, S, add_data, cases, describe, drawn_type, finish, has_variant, in_chunks, source_of
 
 ALIASES_POINTS_LINES = ["default", "points", "points_xerr", "points_endcaps", "points_xerr_endcaps", "points_line", "points_arrows", "line", "curve", "curve_clipped"]
 ALIASES_1D = ALIASES_POINTS_LINES + ["hist", "hist_open", "hist_clipped", "hist_open_clipped", "bars", "hbars", "area", "area_smooth", "band", "band_smooth", "boxes", "boxes_nomarkers", "brackets"]
@@ -42,6 +43,9 @@ STYLES = {
     "solid_lw1": lambda d: d.SetColor(S.kRed + 1).SetFill(1001, S.kGreen + 2).SetLineWidth(1).SetMarker(20, 1, S.kRed + 1),
 }
 KINDS = tuple(DATA_KINDS)
+# hostile data: a NaN value (compared as plain data), no entries or points (only the rule for legend rows of undrawn data: nothing of
+# empty data shows beside the frame)
+VARIANTS = ("normal", "nan", "empty")
 OPTIONS = {
     "hist1d": ALIASES_1D + RAW_HIST,
     "graph": ALIASES_1D + RAW_GRAPH,
@@ -71,7 +75,7 @@ def compared(case):
     """the cases whose differences TLegend cannot avoid, or whose ROOT option does not follow its own drawing rules, are left out"""
     kind, option, style = case["kind"], case["option"], case["style"]
     what = drawn_type(kind)
-    if option not in OPTIONS[what]:
+    if option not in OPTIONS[what] or not has_variant(kind, case["variant"]):
         return False
     if what == "graph" and has_errors(kind) and option in ("F", "B", "3L", "3PL", "4C"):
         return False
@@ -87,11 +91,11 @@ def compared(case):
 
 
 p = Project("legend_symbols")
-p.inputs()
-todo = cases({"kind": KINDS, "option": list(dict.fromkeys(sum(OPTIONS.values(), []))), "style": list(STYLES)}, valid=compared)
+p.inputs(VARIANTS)
+todo = cases({"kind": KINDS, "option": list(dict.fromkeys(sum(OPTIONS.values(), []))), "style": list(STYLES), "variant": list(VARIANTS)}, valid=compared, always=lambda c: False)
 for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "legend", "1d" if drawn_type(case["kind"]) in ("hist1d", "graph", "function") else "2d")
-    data = add_data(plot[1], case["kind"]).SetLegendLabel("entry")
+    data = add_data(plot[1], case["kind"], source_of(case["variant"]), case["variant"]).SetLegendLabel("entry")
     if hasattr(S, case["option"]):
         data.SetDrawOption(getattr(S, case["option"]))
     elif case["option"] != "default":
@@ -214,6 +218,9 @@ def legend_check(i, case):
     dataElements = paint(f"c{i}", lambda o: not o.InheritsFrom("TLegend"))[0] - frame
     legendElements, entryOptions = paint(f"c{i}", lambda o: is_frame(o) or o.InheritsFrom("TLegend"))
     legendElements -= frame
+    if case["variant"] == "empty":  # a graph without points is not drawn and has no row; a histogram without entries keeps its row
+        graph = drawn_type(case["kind"]) in ("graph", "graph2d")
+        return f"empty data: {'no legend row' if graph else 'its legend row'}: {what}", (not entryOptions) == graph, f"legend rows {entryOptions}"
     option = entryOptions[0] if entryOptions else ""
     dataStyles, legendStyles = {e[0] for e in dataElements}, {e[0] for e in legendElements}
     onlyPlot, onlyLegend = dataStyles - legendStyles, legendStyles - dataStyles

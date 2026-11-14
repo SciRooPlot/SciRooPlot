@@ -18,6 +18,7 @@ from srptest import (
     ModifierExpected,
     Project,
     S,
+    ROOT,
     base_of,
     captured,
     cases,
@@ -29,6 +30,7 @@ from srptest import (
     family,
     finish,
     first_five,
+    has_variant,
     func_diff,
     graph_diff,
     graph_values,
@@ -57,38 +59,39 @@ PAIRS = [(k, k) for k in SAME] + [
     ("hist2d", "function2d"),
 ]
 SIDES = {"numer": lambda r: r.Numer(), "denom": lambda r: r.Denom(), "both": lambda r: r.Both(), "result": lambda r: r.Result()}
-VARIANT = "normal"
+VARIANTS = ("normal", "empty", "single", "nan")  # hostile data on both sides: no entries or points, one, a NaN value
 
 p = Project("ratiosides")
-p.inputs([VARIANT])
-inputs = data_objects(VARIANT)
+p.inputs(VARIANTS)
+inputs = {variant: data_objects(variant) for variant in VARIANTS}
 todo = cases(
-    {"pair": PAIRS, "side": list(SIDES), "mods": [(m,) for m in MODIFIERS] + list(COMBINATIONS)},
-    always=lambda c: c["pair"] == ("hist", "hist"),
+    {"pair": PAIRS, "side": list(SIDES), "mods": [(m,) for m in MODIFIERS] + list(COMBINATIONS), "variant": list(VARIANTS)},
+    valid=lambda c: all(has_variant(kind, c["variant"]) for kind in c["pair"]),
+    always=lambda c: c["pair"] == ("hist", "hist") and c["variant"] == "normal",
     named=[
-        {"pair": ("hist", "hist"), "side": "both", "mods": ("normalize",), "why": "both sides normalized"},
-        {"pair": ("hist", "hist"), "side": "numer", "mods": ("rebin_x",), "why": "numerator rebinned: other binning, interpolated"},
-        {"pair": ("profile", "profile"), "side": "both", "mods": ("rebin_x",), "why": "profiles divided as their means"},
-        {"pair": ("tf1", "tf1"), "side": "denom", "mods": ("normalize",), "why": "the denominator of a function numerator reported once"},
+        {"pair": ("hist", "hist"), "side": "both", "mods": ("normalize",), "variant": "normal", "why": "both sides normalized"},
+        {"pair": ("hist", "hist"), "side": "numer", "mods": ("rebin_x",), "variant": "normal", "why": "numerator rebinned: other binning, interpolated"},
+        {"pair": ("profile", "profile"), "side": "both", "mods": ("rebin_x",), "variant": "normal", "why": "profiles divided as their means"},
+        {"pair": ("tf1", "tf1"), "side": "denom", "mods": ("normalize",), "variant": "normal", "why": "the denominator of a function numerator reported once"},
     ],
 )
 
 
-def add_plot(name, kind, mods=(), source=None):
+def add_plot(name, kind, variant, mods=(), source=None):
     """the data alone (with modifiers) in a plot of its own, read through a data source of its own"""
-    p.pm.AddDataSource(source or name, p.path(f"{source_of(VARIANT)}.root"))
+    p.pm.AddDataSource(source or name, p.path(f"{source_of(variant)}.root"))
     plot = S.Plot(name, "sides", base_of(kind))
-    data = plot[1].AddData(ratio_input(kind, source or name, VARIANT))
+    data = plot[1].AddData(ratio_input(kind, source or name, variant))
     for mod in mods:
         MODIFIERS[mod](data)
     p.pm.AddPlot(plot)
 
 
-def add_ratio(name, pair, side=None, mods=()):
+def add_ratio(name, pair, variant, side=None, mods=()):
     for prefix in ("n", "d"):
-        p.pm.AddDataSource(f"{prefix}{name}", p.path(f"{source_of(VARIANT)}.root"))
+        p.pm.AddDataSource(f"{prefix}{name}", p.path(f"{source_of(variant)}.root"))
     plot = S.Plot(name, "sides", base_of(pair[0]))
-    ratio = plot[1].AddRatio(ratio_input(pair[0], f"n{name}", VARIANT), ratio_input(pair[1], f"d{name}", VARIANT))
+    ratio = plot[1].AddRatio(ratio_input(pair[0], f"n{name}", variant), ratio_input(pair[1], f"d{name}", variant))
     if side:
         SIDES[side](ratio)
         for mod in mods:
@@ -98,19 +101,19 @@ def add_ratio(name, pair, side=None, mods=()):
 
 bases, plain = {}, {}  # the inputs drawn alone without modifiers, the plain ratio of each pair
 for i, case in enumerate(todo):
-    num, den = case["pair"]
+    (num, den), variant = case["pair"], case["variant"]
     for kind in (num, den):
-        if kind not in bases:
-            bases[kind] = f"b{len(bases)}"
-            add_plot(bases[kind], kind)
+        if (kind, variant) not in bases:
+            bases[(kind, variant)] = f"b{len(bases)}"
+            add_plot(bases[(kind, variant)], kind, variant)
     if case["side"] in ("numer", "both"):
-        add_plot(f"on{i}", num, case["mods"])
+        add_plot(f"on{i}", num, variant, case["mods"])
     if case["side"] in ("denom", "both"):
-        add_plot(f"od{i}", den, case["mods"])
-    if case["side"] == "result" and case["pair"] not in plain:
-        plain[case["pair"]] = f"p{len(plain)}"
-        add_ratio(plain[case["pair"]], case["pair"])
-    add_ratio(f"r{i}", case["pair"], case["side"], case["mods"])
+        add_plot(f"od{i}", den, variant, case["mods"])
+    if case["side"] == "result" and (case["pair"], variant) not in plain:
+        plain[(case["pair"], variant)] = f"p{len(plain)}"
+        add_ratio(plain[(case["pair"], variant)], case["pair"], variant)
+    add_ratio(f"r{i}", case["pair"], variant, case["side"], case["mods"])
 run = p.plot("sides")
 
 
@@ -119,29 +122,42 @@ def drawn(name):
     return objs[0][0] if objs else None
 
 
-def name_of(kind, source):
+def name_of(kind, variant, source):
     """the name of the data (an input or a ratio) in messages of its modifiers"""
-    return message_name(kind, VARIANT, source)
+    return message_name(kind, variant, source)
 
 
-def operand(kind, source, alone, mods, warnings):
-    """an input as divided: drawn alone (plot alone) with its modifiers, a function with its exact values; the warnings of its modifiers
-    in the ratio (input read from source)"""
-    base = drawn(bases[kind])
-    exp = ModifierExpected(name_of(kind, source))
+def stand_in(kind, variant):
+    """an empty graph is not drawn alone (see frames/robust_frames.py): the input instead (no points either)"""
+    dim, cls, _ = DATA_KINDS[kind]
+    if variant != "empty" or not (cls.startswith("TGraph") or (cls == "TEfficiency" and dim == 1)):
+        return None
+    return ROOT.TGraphAsymmErrors() if cls == "TEfficiency" else inputs[variant][kind]
+
+
+def alone(name, kind, variant):
+    """the data drawn alone, or what stands in for an empty graph"""
+    return drawn(name) or stand_in(kind, variant)
+
+
+def operand(kind, variant, source, plot, mods, warnings):
+    """an input as divided: drawn alone (plot) with its modifiers, a function with its exact values; the warnings of its modifiers in the
+    ratio (input read from source)"""
+    base = alone(bases[(kind, variant)], kind, variant)
+    exp = ModifierExpected(name_of(kind, variant, source))
     ref = modifier_reference(base, mods, exp)
     warnings += [(exp.name, w) for w in exp.warnings]
-    obj = drawn(alone) if mods else base
+    obj = alone(plot, kind, variant) if mods else base
     if not DATA_KINDS[kind][1].startswith("TF"):
         return obj, None
-    return obj, Func(kind, VARIANT, obj, ref if mods else None)
+    return obj, Func(kind, variant, obj, ref if mods else None)
 
 
-def division(num, den, numFunc, denFunc, names, denMods, warnings, errors):
+def division(num, den, numFunc, denFunc, names, denMods, variant, warnings, errors):
     if den[1].InheritsFrom("TH1"):  # the axis of the denominator as modified (a rebin may leave out the last bins)
         denRange = (den[1].GetXaxis().GetXmin(), den[1].GetXaxis().GetXmax())
     else:  # a graph drawn alone has lost its x errors: those of the input
-        denInput = inputs.get(den[0])
+        denInput = inputs[variant].get(den[0])
         denRange = input_range(denInput) if denInput else None
         if denRange and "scale_x" in denMods:
             denRange = (denRange[0] * AXIS_FACTOR, denRange[1] * AXIS_FACTOR)
@@ -162,31 +178,54 @@ def compare(ref, obs):
     return hist_diff(ref, obs, 1e-6 if ref.ClassName().endswith("F") else 1e-9)
 
 
+def input_warnings(kind, variant, source, drawnAlone):
+    """the warnings of an input itself: a NaN value, a graph without points drawn alone"""
+    found = []
+    if variant in ("nan", "inf") and not DATA_KINDS[kind][1].startswith("TF"):
+        found.append((f" {kind}:{source} has", "NaN or infinite"))
+    if drawnAlone and stand_in(kind, variant) is not None:
+        found.append((f"Graph {kind}:{source} ", "has no points: it is not drawn"))
+    return found
+
+
 expectedWarnings, expectedErrors = [], []
-for pair, name in plain.items():  # the plain ratios themselves
-    numObj, denObj = drawn(bases[pair[0]]), drawn(bases[pair[1]])
-    numFunc = Func(pair[0], VARIANT, numObj) if DATA_KINDS[pair[0]][1].startswith("TF") else None
-    denFunc = Func(pair[1], VARIANT, denObj) if DATA_KINDS[pair[1]][1].startswith("TF") else None
-    _, warns = division((pair[0], numObj), (pair[1], denObj), numFunc, denFunc, (name_of(pair[0], f"n{name}"), name_of(pair[1], f"d{name}")), (), [], expectedErrors)
-    expectedWarnings += warns
+for (kind, variant), name in bases.items():
+    expectedWarnings += input_warnings(kind, variant, name, True)
+for (pair, variant), name in plain.items():  # the plain ratios themselves
+    numObj, denObj = alone(bases[(pair[0], variant)], pair[0], variant), alone(bases[(pair[1], variant)], pair[1], variant)
+    numFunc = Func(pair[0], variant, numObj) if DATA_KINDS[pair[0]][1].startswith("TF") else None
+    denFunc = Func(pair[1], variant, denObj) if DATA_KINDS[pair[1]][1].startswith("TF") else None
+    names = (name_of(pair[0], variant, f"n{name}"), name_of(pair[1], variant, f"d{name}"))
+    ref, warns = division((pair[0], numObj), (pair[1], denObj), numFunc, denFunc, names, (), variant, [], expectedErrors)
+    if ref is not None:
+        expectedWarnings += warns + input_warnings(pair[0], variant, f"n{name}", False) + input_warnings(pair[1], variant, f"d{name}", False)
+    if isinstance(ref, dict) and not ref["x"]:
+        expectedWarnings.append((f"Graph {names[0]} ", "has no points: it is not drawn"))
+    if ref is None:
+        expectedErrors.append(f"Plot {name} from group sides could not be created")
 for i, case in enumerate(todo):
     what = describe(case)
-    (num, den), side, mods = case["pair"], case["side"], case["mods"]
-    names = (name_of(num, f"nr{i}"), name_of(den, f"dr{i}"))
+    (num, den), side, mods, variant = case["pair"], case["side"], case["mods"], case["variant"]
+    names = (name_of(num, variant, f"nr{i}"), name_of(den, variant, f"dr{i}"))
     caseWarnings, caseErrors = [], []
     for kind, source, sideMods in ((num, f"on{i}", mods if side in ("numer", "both") else ()), (den, f"od{i}", mods if side in ("denom", "both") else ())):
         if sideMods:  # the input drawn alone with the modifiers
-            exp = ModifierExpected(name_of(kind, source))
-            modifier_reference(drawn(bases[kind]), sideMods, exp)
+            exp = ModifierExpected(name_of(kind, variant, source))
+            modifier_reference(alone(bases[(kind, variant)], kind, variant), sideMods, exp)
             expectedWarnings.extend((exp.name, w) for w in exp.warnings)
+            expectedWarnings.extend(input_warnings(kind, variant, source, True))
+    for kind, source in ((num, f"nr{i}"), (den, f"dr{i}")):
+        caseWarnings.extend(input_warnings(kind, variant, source, False))
     numMods = mods if side in ("numer", "both") else ()
     denMods = mods if side in ("denom", "both") else ()
-    numObj, numFunc = operand(num, f"nr{i}", f"on{i}", numMods, caseWarnings)
-    denObj, denFunc = operand(den, f"dr{i}", f"od{i}", denMods, caseWarnings)
-    ref, warns = division((num, numObj), (den, denObj), numFunc, denFunc, names, denMods, caseWarnings, caseErrors)
+    numObj, numFunc = operand(num, variant, f"nr{i}", f"on{i}", numMods, caseWarnings)
+    denObj, denFunc = operand(den, variant, f"dr{i}", f"od{i}", denMods, caseWarnings)
+    ref, warns = division((num, numObj), (den, denObj), numFunc, denFunc, names, denMods, variant, caseWarnings, caseErrors)
     caseWarnings += warns
-    if side == "result" and ref is not None:
-        base = drawn(plain[case["pair"]])
+    base = drawn(plain[(case["pair"], variant)]) if side == "result" else None
+    if side == "result" and base is None and isinstance(ref, dict) and not ref["x"]:
+        base = ROOT.TGraph()  # a ratio without points is not drawn alone: its modifiers act on a graph without points
+    if side == "result" and ref is not None and base is not None:
         exp = ModifierExpected(names[0])
         for found, text in (  # modifiers that are rarely meaningful on a ratio warn
             (any(m.startswith("rebin") for m in mods), "Rebinning ratio {} sums ratio values"),
@@ -196,7 +235,9 @@ for i, case in enumerate(todo):
         ):
             if found:
                 exp.warn(text.format(names[0]))
-        ref = modifier_reference(base, mods, exp)
+        modified = modifier_reference(base, mods, exp)
+        if not (isinstance(ref, dict) and not ref["x"]):  # without points it stays without points
+            ref = modified
         caseWarnings += [(exp.name, w) for w in exp.warnings]
         fam = family(base)
     else:
