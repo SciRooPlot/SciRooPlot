@@ -2548,11 +2548,11 @@ for i, (low, high) in enumerate([(1.0, 1.5), (1.5, 2.0), (2.0, 3.0), (3.0, 4.0),
     pad = plot[i + 1]
     pad.AddData("hInvMassGGVsPtMixed", "CaloQA", "mixed event") \\
        .ProjectX(low, high, True).ScaleX(1000.0).Normalize(False, 190.0, 240.0) \\
-       .SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineColor(kAzure - 9)
+       .SetDrawOption(hist).SetFill(1001, "#b9d3ee").SetLineColor("#b9d3ee")
     pad.AddData("hInvMassGGVsPt", "CaloQA", "same event") \\
        .ProjectX(low, high, True).ScaleX(1000.0).Normalize(False, 190.0, 240.0) \\
-       .SetMarker(kFullCircle, 1.0, kBlack).SetDefinesFrame()
-    pad.AddPoints([190.0, 240.0], [0.05, 0.05], "norm. region").SetDrawOption(line).SetLine(kSolid, 5.0, kRed + 1)
+       .SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(1.0).SetDefinesFrame()
+    pad.AddPoints([190.0, 240.0], [0.05, 0.05], "norm. region").SetDrawOption(line).SetLine(kSolid, 5.0, "#d6403a")
     pad.AddText(0.56, 0.93, f"{low:g} < #it{{p}}_{{T}} < {high:g} GeV/#it{{c}}")
 plot[1].AddLegend(0.56, 0.8)
 plot[0]['X'].SetRange(60.0, 240.0).SetNumDivisions(505).SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})")
@@ -2570,11 +2570,11 @@ for (size_t i = 0; i < ptBins.size(); ++i) {
   auto& pad = plot[i + 1];
   pad.AddData("hInvMassGGVsPtMixed", "CaloQA", "mixed event")
      .ProjectX(low, high, true).ScaleX(1000.0).Normalize(false, 190.0, 240.0)
-     .SetDrawOption(hist).SetFill(1001, kAzure - 9).SetLineColor(kAzure - 9);
+     .SetDrawOption(hist).SetFill(1001, "#b9d3ee").SetLineColor("#b9d3ee");
   pad.AddData("hInvMassGGVsPt", "CaloQA", "same event")
      .ProjectX(low, high, true).ScaleX(1000.0).Normalize(false, 190.0, 240.0)
-     .SetMarker(kFullCircle, 1.0, kBlack).SetDefinesFrame();
-  pad.AddPoints({190.0, 240.0}, {0.05, 0.05}, "norm. region").SetDrawOption(line).SetLine(kSolid, 5.0, kRed + 1);
+     .SetColor(kBlack).SetMarkerStyle(kFullCircle).SetMarkerSize(1.0).SetDefinesFrame();
+  pad.AddPoints({190.0, 240.0}, {0.05, 0.05}, "norm. region").SetDrawOption(line).SetLine(kSolid, 5.0, "#d6403a");
   pad.AddText(0.56, 0.93, Form("%g < #it{p}_{T} < %g GeV/#it{c}", low, high));
 }
 plot[1].AddLegend(0.56, 0.8);

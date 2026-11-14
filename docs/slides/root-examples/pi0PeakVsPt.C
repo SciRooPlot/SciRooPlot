@@ -56,18 +56,18 @@ void pi0PeakVsPt(const char* dataDir = "ExampleData", const char* output = "pi0P
       axis->SetTickLength(0.03);
     }
     same->GetXaxis()->SetRangeUser(60.0, 240.0);
-    same->GetXaxis()->SetNdivisions(503);
+    same->GetXaxis()->SetNdivisions(505);
     same->GetXaxis()->SetTitle("#it{m}_{#gamma#gamma} (MeV/#it{c}^{2})");
-    same->GetXaxis()->SetTitleOffset(1.2);
+    same->GetXaxis()->SetTitleOffset(1.0);
     same->GetYaxis()->SetTitle("pairs (norm. region = 1)");
-    same->GetYaxis()->SetTitleOffset(1.45);
+    same->GetYaxis()->SetTitleOffset(1.53);
     same->SetMinimum(0.0);
     same->SetMarkerStyle(kFullCircle);
     same->SetMarkerColor(kBlack);
     same->SetLineColor(kBlack);
-    same->SetLineWidth(4);
-    mixed->SetFillColor(kAzure - 9);
-    mixed->SetLineColor(kAzure - 9);
+    same->SetLineWidth(5);
+    mixed->SetFillColor(TColor::GetColor("#b9d3ee"));
+    mixed->SetLineColor(TColor::GetColor("#b9d3ee"));
     // the same-event pairs define the frame, the background is drawn below them
     same->Draw("AXIS");
     mixed->Draw("HIST SAME");
@@ -76,18 +76,20 @@ void pi0PeakVsPt(const char* dataDir = "ExampleData", const char* output = "pi0P
 
     auto line = new TLine(normLow, 0.05, normHigh, 0.05);  // 20 bins: 1/20 each
     keep.push_back(line);
-    line->SetLineColor(kRed + 1);
+    line->SetLineColor(TColor::GetColor("#d6403a"));
     line->SetLineWidth(5);
     line->Draw();
 
-    auto text = new TLatex(0.6, 0.88, Form("%g < #it{p}_{T} < %g GeV/#it{c}", low, high));
+    auto text = new TLatex(0.619, 0.871, Form("%g < #it{p}_{T} < %g GeV/#it{c}", low, high));
     keep.push_back(text);
     text->SetNDC();
     text->SetTextFont(43);
     text->SetTextSize(31);
+    text->SetTextAlign(12);
     text->Draw();
     if (i == 0) {
-      auto legend = new TLegend(0.6, 0.66, 0.96, 0.81);
+      auto legend = new TLegend(0.603, 0.642, 0.872, 0.798);
+      legend->SetMargin(0.2);
       keep.push_back(legend);
       legend->SetBorderSize(0);
       legend->SetFillStyle(0);
