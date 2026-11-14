@@ -8452,7 +8452,8 @@ bool PlotPainter::PlaceZTitle(TPad* pad, TAxis* zAxis, const vector<label_range_
 //**************************************************************************************************
 /**
  * The data of a pad that defines its axis frame (without a frame input): the most recently added data marked SetDefinesFrame, else the
- * first; an empty graph is not drawn and has no ranges, so the frame then comes from the first data that is not empty (if there is any).
+ * first; an empty graph (also a 1d TEfficiency without events, drawn as the graph it makes) is not drawn and has no ranges, so the frame
+ * then comes from the first data that is not empty (if there is any).
  */
 //**************************************************************************************************
 size_t PlotPainter::FrameDataIndex(const vector<shared_ptr<Plot::Pad::Data>>& data, const data_buffer_t& dataBuffer)
@@ -8464,6 +8465,13 @@ size_t PlotPainter::FrameDataIndex(const vector<shared_ptr<Plot::Pad::Data>>& da
     if (curData->GetType() == "ratio") return false;
     TObject* input = Input(*curData, dataBuffer);
     if (auto* graph2d = dynamic_cast<TGraph2D*>(input)) return graph2d->GetN() == 0;
+    if (auto* efficiency = dynamic_cast<TEfficiency*>(input); efficiency && efficiency->GetDimension() == 1) {
+      const TH1* total = efficiency->GetTotalHistogram();  // its graph has a point for every bin with events
+      for (int32_t bin = 1; bin <= total->GetNbinsX(); ++bin) {
+        if (total->GetBinContent(bin) > 0.) return false;
+      }
+      return true;
+    }
     auto* graph = dynamic_cast<TGraph*>(input);
     return graph && graph->GetN() == 0 && !dynamic_cast<TGraphPolar*>(graph);
   };
