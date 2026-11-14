@@ -310,7 +310,8 @@ double_t PlotPainter::ClippedBase(const TGraph* graph, bool logY)
 //**************************************************************************************************
 /**
  * A graph as a histogram, to draw it with a drawing option ROOT has only for histograms (the graph is deleted): none if it has no bins
- * (no points, or points at one x), with a warning naming the option and the fallback the graph is drawn with instead if warn is set.
+ * (no points, or points at one x), for points at one x with a warning naming the option and the fallback the graph is drawn with instead
+ * if warn is set (a graph without points is not drawn at all, which is said where it is left out).
  */
 //**************************************************************************************************
 TH1* PlotPainter::ToHist(TGraph* graph, draw_option_t option, draw_option_t fallback, bool warn, bool warnAsymmetric)
@@ -320,10 +321,7 @@ TH1* PlotPainter::ToHist(TGraph* graph, draw_option_t option, draw_option_t fall
   };
   SortGraph(graph);
   const int32_t n = graph->GetN();
-  if (n == 0) {
-    warnNoBins("it has no points");
-    return nullptr;
-  }
+  if (n == 0) return nullptr;
   // bin edges from the x errors (if the graph has them): the bins of neighbouring points must touch (within precision),
   // gaps between them become empty bins and overlaps are split in the middle; without x errors the edges are half way between the points;
   // a smooth curve goes through every bin, so for it gaps are split in the middle too (an empty bin would pull the curve down to zero)
