@@ -50,19 +50,21 @@ void etaPhiDataVsSim(const char* dataDir = "ExampleData", const char* output = "
     }
     hist->SetMinimum(zMin);
     hist->SetMaximum(zMax);
-    hist->GetXaxis()->SetTitleOffset(1.2);
+    hist->GetXaxis()->SetTitleOffset(1.0);
     hist->GetXaxis()->SetNdivisions(505);
-    hist->GetYaxis()->SetTitleOffset(1.1);
-    hist->GetZaxis()->SetTitleOffset(2.0);
+    hist->GetYaxis()->SetTitleOffset(0.89);
+    hist->GetZaxis()->SetTitleOffset(1.21);
+    hist->GetZaxis()->SetTickLength(0.0);
     if (i == 0) hist->GetXaxis()->SetTitle("");  // one x title, at the end of both axes
     if (i == 1) hist->GetYaxis()->SetLabelSize(0);
     if (i == 1) hist->GetYaxis()->SetTitle("");
     hist->Draw(i == 0 ? "COL" : "COLZ");
-    auto text = new TLatex(0.15, 0.88, labels[i]);
+    auto text = new TLatex(i == 0 ? 0.203 : 0.043, 0.877, labels[i]);
     keep.push_back(text);
     text->SetNDC();
     text->SetTextFont(43);
     text->SetTextSize(31);
+    text->SetTextAlign(12);
     text->Draw();
   }
   canvas.SaveAs(output);
