@@ -7,8 +7,9 @@ a plot cover no frame of another one, each panel's pad holds its frame, and the 
 The model of these rules (below) is computed from the documented lengths; it is checked against every name of the base-plot grammar
 <type>[_wide|_tall][_<columns>x<rows>][_ratio][_pull][_gap] (with BasePlotShape and the lengths of a PanelLayout), against generated
 layouts (grids with touching panels, gaps or spaces, wide and tall panels, ratio rows, own colour scales, colour-scale cells, spanning
-cells, strips and holes) and against the layouts of past bugs. Invalid arrangements throw naming the problem; unknown base-plot names
-and 2d base plots with ratio or pull panels are refused with an error.
+cells, strips and holes) and against the layouts of past bugs. Invalid arrangements throw naming the problem; an invalid value of a
+setter of a cell (Span, SpacingAbove, SpacingLeft) or of the whole layout is warned about and ignored; unknown base-plot names and 2d
+base plots with ratio or pull panels are refused with an error.
 Covers: spanning cells, BasePlotShape, colour scales in pixels, pull panels, holes, spacing per
 boundary.
 """
@@ -334,9 +335,13 @@ INVALID = {  # rows: the part of the message naming the problem
 }
 INVALID_SETTERS = {  # setters refusing a value when called
     "a panel of size 0": (lambda: S.Panel(0.0, 1.0), "positive and finite"),
-    "a span of 0 columns": (lambda: S.Panel().Span(0), "at least one column"),
-    "a negative space": (lambda: S.Panel().SpacingAbove(-1.0), "zero or positive"),
     "ColorScale(0)": (lambda: S.ColorScale(0), "counted from 1"),
+}
+# setters of a cell refusing a value: each warned about when set and ignored, the value set before stays
+INVALID_CELL_SETTERS = {
+    "Panel::Span": "S.Panel().Span(0)\nS.Panel().Span(1, 0)\n",
+    "Panel::SpacingAbove": "S.Panel().SpacingAbove(-1.0)\nS.Panel().SpacingAbove(float('nan'))\n",
+    "Panel::SpacingLeft": "S.Panel().SpacingLeft(float('inf'))\nS.Panel().SpacingLeft(-2.0)\n",
 }
 # lengths of the whole layout refusing a value: each warned about when set and ignored, the value set before stays (as for plots)
 INVALID_LENGTHS = {
@@ -444,6 +449,10 @@ lengths = python("import SciRooPlot as S\nsizes = S.PanelLayout()\n" + code)
 for setter, calls in INVALID_LENGTHS.items():
     warned = [line for line in lengths.warnings() if f"PanelLayout::{setter}" in line and "is ignored: it is" in line]
     check(f"PanelLayout::{setter} with an invalid length warns and keeps its value", len(warned) == sum(map(len, calls)) and lengths.rc == 0, lengths.tail())
+cells = python("import SciRooPlot as S\nprint(S.Panel().Span(0).SpacingAbove(-1.0).SpacingLeft(float('nan')) is not None)\n" + "".join(INVALID_CELL_SETTERS.values()))
+for setter, code in INVALID_CELL_SETTERS.items():
+    warned = [line for line in cells.warnings() if setter in line and "is ignored" in line]
+    check(f"{setter} with an invalid value warns", len(warned) == code.count("\n") + 1 and cells.rc == 0, cells.tail())
 refused = python("import SciRooPlot as S\n" + "".join(f"S.PlotManager.MakeBasePlot({name!r})\n" for name in REFUSED))
 for name in REFUSED:
     lines = [line for line in refused.errors() if f"base plot {name}:" in line or f"Base plot {name} " in line]

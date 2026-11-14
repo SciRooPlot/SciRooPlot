@@ -56,7 +56,8 @@ Panel& Panel::ColorScale()
 Panel& Panel::Span(uint8_t columns, uint8_t rows)
 {
   if (columns == 0 || rows == 0) {
-    logger::throw_invalid_argument("A panel must span at least one column and one row (got {} x {}).", columns, rows);
+    logger::warning("Panel::Span({}, {}) is ignored: a panel spans at least one column and one row.", columns, rows);
+    return *this;
   }
   mColumns = columns;
   mRows = rows;
@@ -65,15 +66,13 @@ Panel& Panel::Span(uint8_t columns, uint8_t rows)
 
 Panel& Panel::SpacingAbove(double_t pixel)
 {
-  if (!(pixel >= 0.) || !std::isfinite(pixel)) logger::throw_invalid_argument("Panel::SpacingAbove: the length must be zero or positive (got {}).", pixel);
-  mSpacingAbove = pixel;
+  if (PanelLayout::ValidLength("Panel::SpacingAbove", pixel, true)) mSpacingAbove = pixel;
   return *this;
 }
 
 Panel& Panel::SpacingLeft(double_t pixel)
 {
-  if (!(pixel >= 0.) || !std::isfinite(pixel)) logger::throw_invalid_argument("Panel::SpacingLeft: the length must be zero or positive (got {}).", pixel);
-  mSpacingLeft = pixel;
+  if (PanelLayout::ValidLength("Panel::SpacingLeft", pixel, true)) mSpacingLeft = pixel;
   return *this;
 }
 
