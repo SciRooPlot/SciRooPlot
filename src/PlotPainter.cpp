@@ -4148,7 +4148,13 @@ bool PlotPainter::PrepareRatioNumerator(item_state_t& state, data_ptr_t& numerat
           if constexpr (is_graph_1d<denom_type>()) {
             sampleAt("points", ptr->GetN(), [&](int32_t i) { return ptr->GetX()[i]; });
           } else if constexpr (is_hist_1d<denom_type>()) {
-            sampleAt("bin centres", ptr->GetNbinsX(), [&](int32_t i) { return ptr->GetXaxis()->GetBinCenter(i + 1); });
+            if (ptr->GetXaxis()->IsAlphanumeric()) {  // said here: the graph of the sampled function would be named in the message
+              logger::error("Cannot divide {} by {}: the x axis of {} is alphanumeric.", DataName(*data), DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()),
+                            DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()));
+              failed = true;
+            } else {
+              sampleAt("bin centres", ptr->GetNbinsX(), [&](int32_t i) { return ptr->GetXaxis()->GetBinCenter(i + 1); });
+            }
           } else if constexpr (is_func_1d<denom_type>()) {
             // function / function: sampled at the numerator's SetNpx points where both are defined (a formula of the plot
             // definition everywhere: then the range of the other function, of the ratio data or of the frame)
