@@ -23,6 +23,7 @@ PYTHON_ONLY = {
     ("Plot", "operator[]", 1): "described in the remark of the class",
     ("Pad", "operator[]", 1): "described in the remark of the class",
     ("Plot", "operator+=", 1): "described in the remark of the class",
+    ("Pad", "operator+=", 1): "described in the remark of the class",
 }
 # methods of the reference without a binding
 CPP_ONLY = {

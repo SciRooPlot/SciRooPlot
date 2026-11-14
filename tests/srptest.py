@@ -3241,6 +3241,10 @@ SETTER_STATEMENTS = {
         'p = Plot("{name}_base", "g", "1d")\np[1].AddData("h", "s").SetColor(633)\nq = Plot("{name}", "g", "1d")\nq[1].AddData("h2", "s").SetColor(600)\nq[1].AddText(0.2, 0.3, "t")\np += q\npm.AddPlot(p)',
         '{\n  Plot p("{name}_base", "g", "1d");\n  p[1].AddData("h", "s").SetColor(633);\n  Plot q("{name}", "g", "1d");\n  q[1].AddData("h2", "s").SetColor(600);\n  q[1].AddText(0.2, 0.3, "t");\n  p += q;\n  pm.AddPlot(p);\n}',
     ),
+    ("Pad", "__iadd__", ("arg0",)): (
+        'p = Plot("{name}", "g", "1d_ratio")\np[1].AddData("h", "s").SetColor(633)\np[1].AddText(0.2, 0.3, "t")\np[2] += p[1]\npm.AddPlot(p)',
+        '{\n  Plot p("{name}", "g", "1d_ratio");\n  p[1].AddData("h", "s").SetColor(633);\n  p[1].AddText(0.2, 0.3, "t");\n  p[2] += p[1];\n  pm.AddPlot(p);\n}',
+    ),
     ("Data", "__init__", ()): ('p = Plot("{name}", "g", "1d")\np[1].AddData("h2", "s2").SetLayout(Data().SetColor(633))\npm.AddPlot(p)', '{\n  Plot p("{name}", "g", "1d");\n  p[1].AddData("h2", "s2").SetLayout(Data().SetColor(633));\n  pm.AddPlot(p);\n}'),
     ("Ratio", "__init__", ("numerator", "denominator")): ('p = Plot("{name}", "g", "1d")\np[1].AddRatio(Ratio(Data("h", "s"), Data("h2", "s2")))\npm.AddPlot(p)', '{\n  Plot p("{name}", "g", "1d");\n  p[1].AddRatio(Ratio(Data("h", "s"), Data("h2", "s2")));\n  pm.AddPlot(p);\n}'),
     ("Ratio", "__init__", ("numeratorName", "numeratorDataSource", "denominatorName", "denominatorDataSource", "label")): (

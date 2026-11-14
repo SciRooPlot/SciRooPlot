@@ -33,7 +33,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
 
 ## Plot
-*plot[padID] gives the Pad (padID 0: defaults for all pads); also has the fill setters*
+*plot[padID] gives the Pad (padID 0: defaults for all pads); plot += other adds another plot; also has the fill setters*
 
 - `Plot()` — C++ only
 - `Plot(const std::string& name, const std::string& group = "", const std::optional<std::string>& basePlot = {})`
@@ -52,7 +52,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Plot& ShareAxis(char axis, const std::vector<uint8_t>& pads)`
 
 ## Plot::Pad
-*pad[axis] gives the Axis ('X', 'Y', 'Z', and 'C' for the content of a 3d histogram: its colour scale); pad(dataID) the Data (counting from 1); also has the fill setters*
+*pad[axis] gives the Axis ('X', 'Y', 'Z', and 'C' for the content of a 3d histogram: its colour scale); pad(dataID) the Data (counting from 1); pad += other adds another pad, e.g. plot[2] += plot[1] (its data after those of the pad); also has the fill setters*
 
 - `Pad()` — C++ only
 - `Data& operator()(uint16_t dataID)`

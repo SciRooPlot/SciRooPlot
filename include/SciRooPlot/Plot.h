@@ -598,6 +598,8 @@ class Plot::Pad : public FillSetters<Pad>
   Pad(Pad&&) = default;
   Pad& operator=(const Pad& other) = default;
   Pad& operator=(Pad&&) = default;
+  // adds the settings, data, boxes and shapes of the pad (its data after those of this pad: the data numbers of its legend rows and
+  // texts are shifted, placeholders naming other pads keep them), e.g. p[2] += p[1]
   void operator+=(const Pad& pad);
   // 'X', 'Y', 'Z', or 'C': the content of a 3d histogram, whose z axis is binned: its colour scale (range, title, title and label look,
   // SetColorScaleOffset/SetColorScaleWidth; the settings of Z are those of the binned axis only; ROOT colours the boxes linearly, so no log scale)

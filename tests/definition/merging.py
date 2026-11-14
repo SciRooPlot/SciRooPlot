@@ -11,7 +11,8 @@ The cases are those of round_trip.py (every overload on every object it can be c
   of values, contour levels, samples of functions) as if called on the data, the others (also the statistics box) not taken; SetLayout replaces the appearance
   the data had, ApplyLayout puts the layout's on top of it (a legend row merged like the styles). Every setter of Data is in LAYOUT or
   NOT_LAYOUT, so that a new one must be put into one of them.
-Covers: legend rows placed at or showing other data, the data of the implicit legend, placeholders naming data of a pad.
+Covers: legend rows placed at or showing other data, the data of the implicit legend, placeholders naming data of a pad, a pad added to
+another pad of the plot.
 """
 
 import os
@@ -130,6 +131,11 @@ NAMED = [
         "placeholders of texts naming data of their own pad and of other pads",
         'p = Plot("{name}", "g", "1d_ratio")\np[1].AddData("h", "s")\np[2].AddData("h", "s")\nq = Plot("{name}", "g", "1d_ratio")\nq[1].AddData("h2", "s2")\nq[2].AddData("h2", "s2")\nq[1].AddText(0.3, 0.5, "<mean:1> <mean:1@2>")\np += q\npm.AddPlot(p)',
         'p = Plot("{name}", "g", "1d_ratio")\np[1].AddData("h", "s")\np[2].AddData("h", "s")\np[1].AddData("h2", "s2")\np[2].AddData("h2", "s2")\np[1].AddText(0.3, 0.5, "<mean:2> <mean:2@2>")\npm.AddPlot(p)',
+    ),
+    (
+        "a pad added to another pad of the plot (p[2] += p[1]): its data after those of the pad, its texts naming them",
+        'p = Plot("{name}", "g", "1d_ratio")\np[1].AddData("h", "s")\np[1].AddText(0.3, 0.5, "<mean:1>")\np[2].AddData("h2", "s2")\np[2] += p[1]\npm.AddPlot(p)',
+        'p = Plot("{name}", "g", "1d_ratio")\np[1].AddData("h", "s")\np[1].AddText(0.3, 0.5, "<mean:1>")\np[2].AddData("h2", "s2")\np[2].AddData("h", "s")\np[2].AddText(0.3, 0.5, "<mean:2>")\npm.AddPlot(p)',
     ),
     (
         "an own gradient takes neither the alpha nor the number of colours of the gradient it replaces",
