@@ -353,6 +353,35 @@ class BorderSetters
   layout_t mBorder;
 };
 
+// position of a box or an image (or its automatic placement), its size and the coordinate system of both
+template <class Derived>
+class PositionSetters
+{
+ public:
+  Derived& SetPosition(double_t x, double_t y);
+  Derived& SetPadCoordinates();    // position and size as fractions of the pad (0 to 1)
+  Derived& SetFrameCoordinates();  // position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner; default, see Pad::SetDefaultBoxCoordinates)
+  Derived& SetUserCoordinates();   // position as axis values (size as fractions of the pad)
+  Derived& SetAutoPlacement(box_placement_t placement = best_corner);
+
+ protected:
+  double_t GetXPosition() const { return mX.value_or(0.); }
+  double_t GetYPosition() const { return mY.value_or(0.); }
+  const auto& GetWidth() const { return mWidth; }
+  const auto& GetHeight() const { return mHeight; }
+  const auto& GetPlacement() const { return mPlacement; }
+  const auto& GetCoordinateSystem() const { return mCoordinateSystem; }  // none: the default of the pad
+  bool IsAutoPlacement() const { return mPlacement.has_value(); }
+  void ReadPosition(const boost::property_tree::ptree& tree);
+  void PutPosition(boost::property_tree::ptree& tree) const;
+  std::optional<double_t> mX;
+  std::optional<double_t> mY;
+  std::optional<double_t> mWidth;
+  std::optional<double_t> mHeight;
+  std::optional<coordinates_t> mCoordinateSystem;
+  std::optional<box_placement_t> mPlacement;  // automatic placement (instead of the position given by x and y)
+};
+
 //**************************************************************************************************
 /**
  * Class for internal representation of a plot.
@@ -438,6 +467,8 @@ class Plot : public FillSetters<Plot>
   friend class TextSetters;
   template <class>
   friend class BorderSetters;
+  template <class>
+  friend class PositionSetters;
 
   // helpers (also used by the nested classes and the setter groups)
   static std::optional<std::string> NameError(const std::string& name, bool isGroup = false);
@@ -1499,7 +1530,7 @@ class Plot::Pad::Axis
  */
 //**************************************************************************************************
 template <class BoxType>
-class Plot::Pad::Box : public BorderSetters<BoxType>, public TextSetters<BoxType>, public FillSetters<BoxType>
+class Plot::Pad::Box : public PositionSetters<BoxType>, public BorderSetters<BoxType>, public TextSetters<BoxType>, public FillSetters<BoxType>
 {
  public:
   virtual ~Box() = default;
@@ -1509,12 +1540,7 @@ class Plot::Pad::Box : public BorderSetters<BoxType>, public TextSetters<BoxType
   Box& operator=(Box&& other) = default;
   void Print() const { Plot::Print(GetPropertyTree(), "Box"); }
 
-  BoxType& SetPosition(double_t x, double_t y);
   BoxType& SetSize(double_t width, double_t height);
-  BoxType& SetPadCoordinates();    // position and size as fractions of the pad (0 to 1)
-  BoxType& SetFrameCoordinates();  // position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner; default, see Pad::SetDefaultBoxCoordinates)
-  BoxType& SetUserCoordinates();   // position as axis values (size as fractions of the pad)
-  BoxType& SetAutoPlacement(box_placement_t placement = best_corner);
   BoxType& SetTransparent();
   BoxType& SetNoBox();
   BoxType& SetMargin(float_t margin);
@@ -1523,16 +1549,8 @@ class Plot::Pad::Box : public BorderSetters<BoxType>, public TextSetters<BoxType
  protected:
   boost::property_tree::ptree GetPropertyTree() const;
 
-  double_t GetXPosition() const { return (mPos.x) ? *mPos.x : 0.; }
-  double_t GetYPosition() const { return (mPos.y) ? *mPos.y : 0.; }
-  auto& GetWidth() const { return mPos.w; }
-  auto& GetHeight() const { return mPos.h; }
-  auto& GetPlacement() const { return mPos.placement; }
   auto& GetMargin() const { return mMargin; }
   auto& GetLineSpacing() const { return mLineSpacing; }
-
-  const auto& GetCoordinateSystem() const { return mPos.coordinates; }  // none: the default of the pad
-  bool IsAutoPlacement() const { return mPos.placement.has_value(); }
 
  private:
   // allow construction of Box base class only in context actually useful boxes
@@ -1543,18 +1561,8 @@ class Plot::Pad::Box : public BorderSetters<BoxType>, public TextSetters<BoxType
 
   auto GetThis() { return static_cast<BoxType*>(this); }
 
-  struct position_t {
-    std::optional<double_t> x;
-    std::optional<double_t> y;
-    std::optional<double_t> w;
-    std::optional<double_t> h;
-    std::optional<coordinates_t> coordinates;
-    std::optional<box_placement_t> placement;  // automatic placement (instead of the position given by x and y)
-  };
-
   std::optional<float_t> mMargin;
   std::optional<float_t> mLineSpacing;
-  position_t mPos;
 };
 
 //**************************************************************************************************
@@ -1609,7 +1617,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
  * as for texts; a size not given follows from the other one and the aspect ratio of the image.
  */
 //**************************************************************************************************
-class Plot::Pad::ImageBox
+class Plot::Pad::ImageBox : public PositionSetters<ImageBox>
 {
  public:
   ImageBox(double_t xPos, double_t yPos, const std::string& path);
@@ -1617,13 +1625,8 @@ class Plot::Pad::ImageBox
   explicit ImageBox(const boost::property_tree::ptree& imageBoxTree);
   void Print() const { Plot::Print(GetPropertyTree(), "ImageBox"); }
 
-  ImageBox& SetPosition(double_t x, double_t y);
   ImageBox& SetWidth(double_t width);    // fraction of the frame width, of the pad width in pad and user coordinates (no SetSize: one side may follow from the aspect ratio)
   ImageBox& SetHeight(double_t height);  // fraction of the frame height, of the pad height in pad and user coordinates
-  ImageBox& SetPadCoordinates();         // position and size as fractions of the pad (0 to 1)
-  ImageBox& SetFrameCoordinates();       // position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner; default, see Pad::SetDefaultBoxCoordinates)
-  ImageBox& SetUserCoordinates();        // position as axis values
-  ImageBox& SetAutoPlacement(box_placement_t placement = best_corner);
 
  protected:
   friend class PlotPainter;
@@ -1631,22 +1634,9 @@ class Plot::Pad::ImageBox
 
   boost::property_tree::ptree GetPropertyTree() const;
   const std::string& GetPath() const { return mPath; }
-  double_t GetXPosition() const { return mX.value_or(0.); }
-  double_t GetYPosition() const { return mY.value_or(0.); }
-  const auto& GetWidth() const { return mWidth; }
-  const auto& GetHeight() const { return mHeight; }
-  const auto& GetPlacement() const { return mPlacement; }
-  const auto& GetCoordinateSystem() const { return mCoordinates; }  // none: the default of the pad
-  bool IsAutoPlacement() const { return mPlacement.has_value(); }
 
  private:
   std::string mPath;  // as given (environment variables are expanded when the plot is drawn), a relative path made absolute
-  std::optional<double_t> mX;
-  std::optional<double_t> mY;
-  std::optional<double_t> mWidth;
-  std::optional<double_t> mHeight;
-  std::optional<coordinates_t> mCoordinates;
-  std::optional<box_placement_t> mPlacement;
 };
 
 //**************************************************************************************************

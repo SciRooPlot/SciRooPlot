@@ -4097,6 +4097,71 @@ auto Plot::Pad::Axis::SetTickOrientation(const string& tickOrientation) -> declt
 
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
+// IMPLEMENTATION class PositionSetters
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+
+template <class Derived>
+Derived& PositionSetters<Derived>::SetPosition(double_t x, double_t y)
+{
+  constexpr const char* what = std::is_same_v<Derived, Plot::Pad::ImageBox> ? "image" : "box";
+  bool valid = Plot::CheckFinite(x, fmt::format("{} position x", what));
+  valid = Plot::CheckFinite(y, fmt::format("{} position y", what)) && valid;
+  if (!valid) return static_cast<Derived&>(*this);
+  mX = x;
+  mY = y;
+  mPlacement = nullopt;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& PositionSetters<Derived>::SetPadCoordinates()
+{
+  mCoordinateSystem = pad_coordinates;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& PositionSetters<Derived>::SetFrameCoordinates()
+{
+  mCoordinateSystem = frame_coordinates;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& PositionSetters<Derived>::SetUserCoordinates()
+{
+  mCoordinateSystem = user_coordinates;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+Derived& PositionSetters<Derived>::SetAutoPlacement(box_placement_t placement)
+{
+  mX = nullopt;
+  mY = nullopt;
+  mPlacement = placement;
+  return static_cast<Derived&>(*this);
+}
+template <class Derived>
+void PositionSetters<Derived>::ReadPosition(const ptree& tree)
+{
+  read_from_tree(tree, mX, "x");
+  read_from_tree(tree, mY, "y");
+  read_from_tree(tree, mWidth, "w");
+  read_from_tree(tree, mHeight, "h");
+  Plot::ReadNamed(tree, mCoordinateSystem, "coordinate_system");
+  Plot::ReadNamed(tree, mPlacement, "placement");
+}
+template <class Derived>
+void PositionSetters<Derived>::PutPosition(ptree& tree) const
+{
+  put_in_tree(tree, mX, "x");
+  put_in_tree(tree, mY, "y");
+  put_in_tree(tree, mWidth, "w");
+  put_in_tree(tree, mHeight, "h");
+  Plot::PutNamed(tree, mCoordinateSystem, "coordinate_system");
+  Plot::PutNamed(tree, mPlacement, "placement");
+}
+
+//--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
 // IMPLEMENTATION class Box
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
@@ -4109,14 +4174,8 @@ auto Plot::Pad::Axis::SetTickOrientation(const string& tickOrientation) -> declt
 template <typename BoxType>
 Plot::Pad::Box<BoxType>::Box(double_t xPos, double_t yPos) : Box()
 {
-  bool valid = CheckFinite(xPos, "box position x");
-  valid = CheckFinite(yPos, "box position y") && valid;
-  if (!valid) {
-    SetAutoPlacement();
-    return;
-  }
-  mPos.x = xPos;
-  mPos.y = yPos;
+  this->SetAutoPlacement();  // kept if the position is not valid
+  this->SetPosition(xPos, yPos);
 }
 
 //**************************************************************************************************
@@ -4127,12 +4186,7 @@ Plot::Pad::Box<BoxType>::Box(double_t xPos, double_t yPos) : Box()
 template <typename BoxType>
 Plot::Pad::Box<BoxType>::Box(const ptree& boxTree) : Box()
 {
-  read_from_tree(boxTree, mPos.x, "x");
-  read_from_tree(boxTree, mPos.y, "y");
-  read_from_tree(boxTree, mPos.w, "w");
-  read_from_tree(boxTree, mPos.h, "h");
-  ReadNamed(boxTree, mPos.coordinates, "coordinate_system");
-  ReadNamed(boxTree, mPos.placement, "placement");
+  this->ReadPosition(boxTree);
   this->ReadBorder(boxTree);
   this->ReadFill(boxTree);
   this->ReadText(boxTree);
@@ -4149,12 +4203,7 @@ template <typename BoxType>
 ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
 {
   ptree boxTree;
-  put_in_tree(boxTree, mPos.x, "x");
-  put_in_tree(boxTree, mPos.y, "y");
-  put_in_tree(boxTree, mPos.w, "w");
-  put_in_tree(boxTree, mPos.h, "h");
-  PutNamed(boxTree, mPos.coordinates, "coordinate_system");
-  PutNamed(boxTree, mPos.placement, "placement");
+  this->PutPosition(boxTree);
   this->PutBorder(boxTree);
   this->PutFill(boxTree);
   this->PutText(boxTree);
@@ -4170,55 +4219,13 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
  */
 //**************************************************************************************************
 template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetPosition(double_t x, double_t y)
-{
-  bool valid = CheckFinite(x, "box position x");
-  valid = CheckFinite(y, "box position y") && valid;
-  if (!valid) return *GetThis();
-  mPos.x = x;
-  mPos.y = y;
-  mPos.placement = nullopt;
-  return *GetThis();
-}
-
-template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetSize(double_t width, double_t height)
 {
   bool valid = CheckNotNegative(width, "box width");
   valid = CheckNotNegative(height, "box height") && valid;
   if (!valid) return *GetThis();
-  mPos.w = width;
-  mPos.h = height;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetPadCoordinates()
-{
-  mPos.coordinates = pad_coordinates;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetFrameCoordinates()
-{
-  mPos.coordinates = frame_coordinates;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetUserCoordinates()
-{
-  mPos.coordinates = user_coordinates;
-  return *GetThis();
-}
-
-template <typename BoxType>
-BoxType& Plot::Pad::Box<BoxType>::SetAutoPlacement(box_placement_t placement)
-{
-  mPos.x = nullopt;
-  mPos.y = nullopt;
-  mPos.placement = placement;
+  this->mWidth = width;
+  this->mHeight = height;
   return *GetThis();
 }
 
@@ -4267,8 +4274,9 @@ Plot::Pad::ImageBox::ImageBox(double_t xPos, double_t yPos, const string& path) 
 {
   SetPosition(xPos, yPos);
 }
-Plot::Pad::ImageBox::ImageBox(const string& path) : mPath(path), mPlacement(best_corner)
+Plot::Pad::ImageBox::ImageBox(const string& path) : mPath(path)
 {
+  mPlacement = best_corner;
   const auto expandedPath = expand_path(path);
   if (expandedPath && std::filesystem::path(*expandedPath).is_relative()) mPath = std::filesystem::absolute(*expandedPath).lexically_normal().string();
 }
@@ -4279,12 +4287,7 @@ Plot::Pad::ImageBox::ImageBox(const ptree& imageBoxTree)
   } catch (const std::exception& e) {
     logger::throw_invalid_argument("Could not construct image box from ptree: {}", e.what());
   }
-  read_from_tree(imageBoxTree, mX, "x");
-  read_from_tree(imageBoxTree, mY, "y");
-  read_from_tree(imageBoxTree, mWidth, "w");
-  read_from_tree(imageBoxTree, mHeight, "h");
-  ReadNamed(imageBoxTree, mCoordinates, "coordinate_system");
-  ReadNamed(imageBoxTree, mPlacement, "placement");
+  ReadPosition(imageBoxTree);
 }
 
 //**************************************************************************************************
@@ -4296,12 +4299,7 @@ ptree Plot::Pad::ImageBox::GetPropertyTree() const
 {
   ptree boxTree;
   boxTree.put("path", mPath);
-  put_in_tree(boxTree, mX, "x");
-  put_in_tree(boxTree, mY, "y");
-  put_in_tree(boxTree, mWidth, "w");
-  put_in_tree(boxTree, mHeight, "h");
-  PutNamed(boxTree, mCoordinates, "coordinate_system");
-  PutNamed(boxTree, mPlacement, "placement");
+  PutPosition(boxTree);
   return boxTree;
 }
 
@@ -4310,16 +4308,6 @@ ptree Plot::Pad::ImageBox::GetPropertyTree() const
  * User accessors to change the position and size of the image.
  */
 //**************************************************************************************************
-auto Plot::Pad::ImageBox::SetPosition(double_t x, double_t y) -> decltype(*this)
-{
-  bool valid = CheckFinite(x, "image position x");
-  valid = CheckFinite(y, "image position y") && valid;
-  if (!valid) return *this;
-  mX = x;
-  mY = y;
-  mPlacement = nullopt;
-  return *this;
-}
 auto Plot::Pad::ImageBox::SetWidth(double_t width) -> decltype(*this)
 {
   if (CheckNotNegative(width, "image width")) mWidth = width;
@@ -4330,29 +4318,6 @@ auto Plot::Pad::ImageBox::SetHeight(double_t height) -> decltype(*this)
   if (CheckNotNegative(height, "image height")) mHeight = height;
   return *this;
 }
-auto Plot::Pad::ImageBox::SetPadCoordinates() -> decltype(*this)
-{
-  mCoordinates = pad_coordinates;
-  return *this;
-}
-auto Plot::Pad::ImageBox::SetFrameCoordinates() -> decltype(*this)
-{
-  mCoordinates = frame_coordinates;
-  return *this;
-}
-auto Plot::Pad::ImageBox::SetUserCoordinates() -> decltype(*this)
-{
-  mCoordinates = user_coordinates;
-  return *this;
-}
-auto Plot::Pad::ImageBox::SetAutoPlacement(box_placement_t placement) -> decltype(*this)
-{
-  mX = nullopt;
-  mY = nullopt;
-  mPlacement = placement;
-  return *this;
-}
-
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
 // IMPLEMENTATION class TextBox
@@ -5182,6 +5147,10 @@ auto Plot::Pad::Shape::SetRotation(double_t theta) -> decltype(*this)
 template class Plot::Pad::Box<Plot::Pad::TextBox>;
 template class Plot::Pad::Box<Plot::Pad::StatsBox>;
 template class Plot::Pad::Box<Plot::Pad::LegendBox>;
+template class PositionSetters<Plot::Pad::TextBox>;
+template class PositionSetters<Plot::Pad::StatsBox>;
+template class PositionSetters<Plot::Pad::LegendBox>;
+template class PositionSetters<Plot::Pad::ImageBox>;
 template class MarkerSetters<Plot::Pad::Data>;
 template class MarkerSetters<Plot::Pad::LegendEntry>;
 template class LineSetters<Plot::Pad::Data>;

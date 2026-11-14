@@ -301,14 +301,9 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `join_tree_t`: `"tree"` (same data source) or `{"tree", "dataSource"}` (Python: list)
 
 ## Plot::Pad::Box<BoxType>
-*common to TextBox, LegendBox and StatsBox, which also have the border, text and fill setters*
+*common to TextBox, LegendBox and StatsBox, which also have the position, border, text and fill setters*
 
-- `BoxType& SetPosition(double_t x, double_t y)`
 - `BoxType& SetSize(double_t width, double_t height)`
-- `BoxType& SetPadCoordinates()` — position and size as fractions of the pad (0 to 1)
-- `BoxType& SetFrameCoordinates()` — position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner; default, see Pad::SetDefaultBoxCoordinates)
-- `BoxType& SetUserCoordinates()` — position as axis values (size as fractions of the pad)
-- `BoxType& SetAutoPlacement(box_placement_t placement = best_corner)`
 - `BoxType& SetTransparent()`
 - `BoxType& SetNoBox()`
 - `BoxType& SetMargin(float_t margin)`
@@ -325,17 +320,12 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `TextBox& SetTextAlign(int16_t align)` — 11 to 33 (default 12) for the lines in the box; a single line at (x, y) is aligned at that point (21: centred above it)
 
 ## Plot::Pad::ImageBox
-*an image file (e.g. a logo); in pdf files only with ROOT 6.42 or newer*
+*an image file (e.g. a logo); in pdf files only with ROOT 6.42 or newer; also has the position setters*
 
 - `ImageBox(double_t xPos, double_t yPos, const std::string& path)` — C++ only
 - `ImageBox(const std::string& path)` — C++ only
-- `ImageBox& SetPosition(double_t x, double_t y)`
 - `ImageBox& SetWidth(double_t width)` — fraction of the frame width, of the pad width in pad and user coordinates (no SetSize: one side may follow from the aspect ratio)
 - `ImageBox& SetHeight(double_t height)` — fraction of the frame height, of the pad height in pad and user coordinates
-- `ImageBox& SetPadCoordinates()` — position and size as fractions of the pad (0 to 1)
-- `ImageBox& SetFrameCoordinates()` — position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner; default, see Pad::SetDefaultBoxCoordinates)
-- `ImageBox& SetUserCoordinates()` — position as axis values
-- `ImageBox& SetAutoPlacement(box_placement_t placement = best_corner)`
 
 ## Plot::Pad::StatsBox
 *placement and appearance of the statistics box of a data item (Data::SetStatsBox); has the setters of Box*
@@ -446,6 +436,15 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Derived& SetBorderStyle(int16_t style)`
 - `Derived& SetBorderWidth(float_t width)`
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
+
+## position setters
+*TextBox, LegendBox, StatsBox, ImageBox*
+
+- `Derived& SetPosition(double_t x, double_t y)`
+- `Derived& SetPadCoordinates()` — position and size as fractions of the pad (0 to 1)
+- `Derived& SetFrameCoordinates()` — position and size as fractions of the frame ((0, 0): lower left, (1, 1): upper right corner; default, see Pad::SetDefaultBoxCoordinates)
+- `Derived& SetUserCoordinates()` — position as axis values (size as fractions of the pad)
+- `Derived& SetAutoPlacement(box_placement_t placement = best_corner)`
 
 ## Panel
 *a cell of a PanelLayout, in units of the standard panel; `Gap()` separates independent panels, `Empty()` leaves a cell without axes, `Empty(width, height)` one with a size of its own, `Hole()` (or `Hole(width, height)`) an empty cell without pad (no pad number), `ColorScale()` (or `ColorScale(padID)`) a cell holding one colour scale for the panels sharing the z axis with the panel left of it (or with pad padID)*
