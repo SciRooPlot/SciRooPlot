@@ -3,7 +3,8 @@ window actions by xdotool and wmctrl): browsing with s and a, d moving the shown
 window going on with the next plot), q closing one window, x all, the window manager closing or minimizing windows, and the keys typed
 in the terminal. Prints PASS/FAIL per step; screenshots of the screen after some steps are in the work folder (ImageMagick's import).
 Not run by CTest: timing-dependent (a slow machine needs --wait 2) and it needs the tools below.
-Needs: Xvfb, openbox, xdotool, wmctrl (apt-get install xvfb openbox xdotool wmctrl imagemagick).
+Needs: Xvfb, openbox, xdotool, wmctrl, xwininfo (apt-get install xvfb openbox xdotool wmctrl imagemagick x11-utils).
+Also: show after a plot that could not be made opens one window, for the plot made after it.
 
 usage: SRP_PREFIX=<build or install> SRP_TESTS_WORK=<folder> PYTHONPATH=tests python3 tests/tools/interactive/windows.py [--wait 1]
 """
@@ -39,6 +40,13 @@ for name in PLOTS:
     plot[1].AddData("hist", "inputs", name)
     plot[1].AddLegend()
     p.pm.AddPlot(plot)
+# a plot that cannot be made (its data is missing) before one that can: show opens one window, for the plot made
+plot = S.S.Plot("broken", "fail", "1d")
+plot[1].AddData("nosuch", "inputs")
+p.pm.AddPlot(plot)
+plot = S.S.Plot("after", "fail", "1d")
+plot[1].AddData("hist", "inputs")
+p.pm.AddPlot(plot)
 p.plot()  # saves and selects the project
 
 
@@ -174,6 +182,20 @@ pump(4 * wait)
 step("x in the terminal closes every window", set())
 text = output.decode(errors="replace")
 check("plot ends normally, the terminal set back (canonical mode, echo)", "EXIT 0" in text and " icanon" in text and " echo " in text, text[-600:])
+os.close(fd)
+
+# show after a plot that could not be made, in the foreground of a terminal: one viewable window, the plot made after it
+pid, fd = pty.fork()
+if pid == 0:
+    os.execvp("bash", ["bash", "-c", f'"{S.PLOT}" fail ".+" show; echo "EXIT $?"'])
+output = b""
+pump(8 * wait)
+viewable = [line for line in sh("xwininfo -root -tree").splitlines() if '"after:fail"' in line]
+mapped = [wid for wid in (line.split()[0] for line in viewable) if "IsViewable" in sh(f"xwininfo -id {wid}")]
+check("show after a plot that could not be made: one viewable window, for the plot made after it", len(mapped) == 1 and windows() == {"after:fail"}, f"{len(mapped)} viewable of {len(viewable)} windows named after:fail, shown {sorted(windows())}")
+os.write(fd, b"x")
+pump(4 * wait)
+step("x closes the window of the plot made after the failing one", set())
 manager.terminate()
 server.terminate()
 finish()

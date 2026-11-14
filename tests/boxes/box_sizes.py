@@ -1,11 +1,12 @@
 """A box (legend, text, statistics box) is as large as what it shows, as painted in the image the plot is saved as: its rows lie inside
 its outline, apart from it (also rows with drawn parts below or above the line, such as #frac), which leaves them no more room than
 a margin; the outline of a box is a line (no shadow); a text of a font sized in pixels
-(precision 3) has the same size in pixels in any canvas, and so has its box where the smaller side of the pad is the same; at bitmapscale 2
-everything of a box is twice as large in pixels (within the few % rendered text grows more); an automatic box wider than the frame is
+(precision 3) has the same size in pixels in any canvas, and so has its box where the smaller side of the pad is the same; at bitmapscale s
+everything of a box is s times as large in pixels (within the few % rendered text grows more) and at the same place; an automatic box wider than the frame is
 warned about, so is a box at a position set for it that reaches beyond its pad (drawn, cut off at the pad).
 Cases: legends (one column, two columns), texts and statistics boxes × a font sized relative to the pad (42) or in pixels (43) × plain
-text, TLatex with drawn parts (#sqrt, #frac), unicode, three rows × a wide, square and tall canvas × bitmapscale 1 and 2.
+text, TLatex with drawn parts (#sqrt, #frac), unicode, three rows × a wide, square and tall canvas × bitmapscale 1, 2 and 3; at every
+bitmapscale a box is at the same place (scaled), also a legend placed by SciRooPlot.
 Reference: the png of the plot: the box's outline (drawn red) and its rows (black) found by their colour.
 Covers: a #sqrt row measured with a few pixels of garbage, shadows at bitmapscale 2, a legend row with #frac touching the bottom of the outline in a pad taller than wide, precision-3 texts in
 tall pads, boxes at bitmapscale 2, and the named cases.
@@ -24,7 +25,8 @@ CONTENTS = {
 }
 CANVASES = {"wide": (1000, 600), "square": (600, 600), "tall": (600, 1000)}
 FONTS = {42: 0.04, 43: 24.0}
-BOXES = ("legend", "legend_columns", "text", "stats")
+BOXES = ("legend", "legend_columns", "legend_auto", "text", "stats")  # legend_auto: placed by SciRooPlot
+SCALES = (1, 2, 3)
 
 
 def valid(case):
@@ -54,7 +56,7 @@ for i, case in enumerate(todo):
     elif case["box"] == "text":
         box = pad.AddText(0.2, 0.9, rows)
     else:
-        box = pad.AddLegend(0.2, 0.9)
+        box = pad.AddLegend() if case["box"] == "legend_auto" else pad.AddLegend(0.2, 0.9)
         for row in rows[1:] + (["fourth", "fifth"] if case["box"] == "legend_columns" else []):
             box.AddEntry(row)
         if case["box"] == "legend_columns":
@@ -83,14 +85,6 @@ p.pm.AddPlot(plot)
 plot = S.Plot("after_groups", "groups", "1d")
 plot[1].AddData("h", "s")
 p.pm.AddPlot(plot)
-
-images = {}
-for scale in (1, 2):
-    p.srp("bitmapscale", str(scale))
-    run = p.plot("sizes", mode="png")
-    check(f"bitmapscale {scale}: the plots are saved without errors", not run.errors(), " | ".join(run.errors()[:3]))
-    images[scale] = {i: bitmap(p.path("out", "sizes", f"b{i}.png")) for i in range(len(todo))}
-p.srp("bitmapscale", "1")
 
 
 def measure(img):
@@ -125,12 +119,22 @@ def measure(img):
     return {"box": (top, bottom, left, right), "sides": sides, "content": content, "outside": outsideBlack}
 
 
+measured = {}  # (case, scale): the measures of the box in its png (the pictures themselves are not kept: hundreds of large arrays)
+for scale in SCALES:
+    p.srp("bitmapscale", str(scale))
+    run = p.plot("sizes", mode="png")
+    check(f"bitmapscale {scale}: the plots are saved without errors", not run.errors(), " | ".join(run.errors()[:3]))
+    for i in range(len(todo)):
+        img = bitmap(p.path("out", "sizes", f"b{i}.png"))
+        measured[(i, scale)] = measure(img) if img is not None else None
+p.srp("bitmapscale", "1")
+
+
 found = {}
 for i, case in enumerate(todo):
     what = describe(case)
-    for scale in (1, 2):
-        img = images[scale][i]
-        m = measure(img) if img is not None else None
+    for scale in SCALES:
+        m = measured[(i, scale)]
         found[(i, scale)] = m
         where = f"{what} bitmapscale={scale}"
         if not m or not m["content"]:
@@ -144,17 +148,22 @@ for i, case in enumerate(todo):
         # also rows with drawn parts below or above the line (#frac), which TLegend does not centre in pads taller than wide
         check(f"{where}: the rows lie inside the outline, apart from it", min(gaps) >= 1 and not m["outside"], f"gaps left, right, top, bottom {gaps}; {m['outside']} black pixels just outside")
         # no more room than a margin: on each side at most the height of a row (the content height divided by the rows)
-        nRows = len(CONTENTS[case["content"]]) if case["box"] in ("text", "legend") else 3 if case["box"] == "legend_columns" else 4
+        nRows = len(CONTENTS[case["content"]]) if case["box"] in ("text", "legend", "legend_auto") else 3 if case["box"] == "legend_columns" else 4
         rowHeight = (cBottom - cTop + 1) / nRows
         check(f"{where}: the box leaves no more room around its rows than a margin", max(gaps) <= 1.6 * rowHeight + 2 * scale, f"gaps left, right, top, bottom {gaps} for rows of {rowHeight:.0f} pixels")
 
 for i, case in enumerate(todo):
-    one, two = found[(i, 1)], found[(i, 2)]
-    if not one or not two or not one["content"] or not two["content"]:
-        continue
-    sizes = [(m["box"][1] - m["box"][0], m["box"][3] - m["box"][2], m["content"][1] - m["content"][0], m["content"][3] - m["content"][2]) for m in (one, two)]
-    ok = all(abs(b - 2 * a) <= max(6, 0.04 * 2 * a) for a, b in zip(*sizes))  # rendered text grows by a few % more than its size (hinting)
-    check(f"{describe(case)}: at bitmapscale 2 the box and its rows are twice as large", ok, f"height, width of box and rows at scale 1 {sizes[0]}, at 2 {sizes[1]} pixels")
+    for scale in SCALES[1:]:
+        one, other = found[(i, 1)], found[(i, scale)]
+        if not one or not other or not one["content"] or not other["content"]:
+            continue
+        sizes = [(m["box"][1] - m["box"][0], m["box"][3] - m["box"][2], m["content"][1] - m["content"][0], m["content"][3] - m["content"][2]) for m in (one, other)]
+        ok = all(abs(b - scale * a) <= max(3 * scale, 0.04 * scale * a) for a, b in zip(*sizes))  # rendered text grows by a few % more than its size (hinting)
+        check(f"{describe(case)}: at bitmapscale {scale} the box and its rows are {scale} times as large", ok, f"height, width of box and rows at scale 1 {sizes[0]}, at {scale} {sizes[1]} pixels")
+        # the place of the box: its upper left corner scaled (an automatic legend chooses the same place), within the rounding of a pixel
+        corner = [(m["box"][0], m["box"][2]) for m in (one, other)]
+        moved = [abs(b - scale * a) for a, b in zip(*corner)]
+        check(f"{describe(case)}: at bitmapscale {scale} the box at the same place", max(moved) <= scale, f"upper left corner at scale 1 {corner[0]}, at {scale} {corner[1]} pixels")
 
 long = p.plot("long")
 for box in ("legend", "text"):

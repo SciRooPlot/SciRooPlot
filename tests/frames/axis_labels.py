@@ -5,19 +5,21 @@
 - the primary divisions ROOT paints on an x axis are the ones set, also in narrow panels (THistPainter scales them with the pad width
   where the setting has a max digits part; SciRooPlot raises them to give back the setting), in a side panel drawn with hbars and with
   divisions set by the user; single pads and 3d views keep the setting
+- the bin labels of an alphanumeric x axis are painted as high as the numbers of a numeric axis (ROOT draws them at 2/3 of the label
+  size, SciRooPlot compensates)
 - Axis::SetLabelAngle turns the alphanumeric labels of an x axis by that angle as painted (ROOT's orientations or one per label); numeric
   axes, y axes and the labels of hbars warn and are left as they are; Data::SetTextAngle turns the values written by TEXT (0 to 90, with
   a warning beyond) and the labels of points_text, and warns for data that writes no values
 Cases: a ratio layout (linear and log main pad) and panels side by side with labels at the shared edges × the flag on or off; layouts of
 one, two and three panels, an hbars side panel, 3d views × the divisions set or not; every angle of ROOT's orientations and others.
 Reference: the pixels of each pad painted alone at its edges; ROOT's scaling of the divisions; ROOT's angles of its label orientations.
-Covers: labels cut at the edge, divisions of narrow panels, label and text angles, labels measured as written (the exponent taken out, log
+Covers: labels cut at the edge, divisions of narrow panels, label and text angles, the size of bin labels as painted, labels measured as written (the exponent taken out, log
 decades as 10^{n}).
 """
 
 import numpy as np
 
-from srptest import ROOT, WORK, Project, S, cases, check, describe, finish
+from srptest import ROOT, WORK, Project, S, bitmap, cases, check, describe, finish
 
 p = Project("axis_labels", bases=("1d", "1d_ratio", "1d_2x1", "1d_3x1", "2d", "2d_2x1"))
 h = ROOT.TH1D("h", ";;", 50, 0.0, 10.0)
@@ -57,9 +59,24 @@ for name, (low, high, _, log) in WRITTEN.items():
     wide[name] = ROOT.TH1D(name, "", 20, edges)
     for b in range(1, 21):
         wide[name].SetBinContent(b, b)
+# labels written as numbers on a labelled axis and on a numeric one: ROOT draws bin labels at 2/3 of the label size, SciRooPlot
+# compensates (glyphs of the same height as the numbers of a numeric axis)
+digits = ROOT.TH1D("digits", "", 4, 0.5, 4.5)
+for b in range(1, 5):
+    digits.GetXaxis().SetBinLabel(b, str(b))
+    digits.SetBinContent(b, b)
+numbers = ROOT.TH1D("numbers", "", 4, 0.5, 4.5)
+for b in range(1, 5):
+    numbers.SetBinContent(b, b)
+wide["digits"], wide["numbers"] = digits, numbers
 wide["time_day"].GetXaxis().SetTimeDisplay(1)  # a time axis stored with the input: hourly labels, no power of ten to advise
 wide["time_day"].GetXaxis().SetTimeFormat("%H:%M")
 p.source("s", {"h": h, "lab": lab, "m": m, **wide})
+for name in ("digits", "numbers"):
+    plot = S.Plot(name, "label_sizes", "1d")
+    plot[1].AddData(name, "s").SetDrawOption(S.bars)
+    plot[1]["X"].SetNumDivisions(4)
+    p.pm.AddPlot(plot)
 
 # ---- labels at the edges of touching panels
 CLIP = {  # layout: (base plot, the edges checked: (pad, side, whether ROOT draws a label there))
@@ -157,6 +174,26 @@ for name, (_, _, exponent, log) in WRITTEN.items():
 
 run = p.plot()
 check("the plots are made without errors", not run.errors(), " | ".join(run.errors()[:3]))
+sizes = p.plot("label_sizes", mode="png")
+
+
+def label_height(name):
+    """the height in pixels of the x labels in the png: the dark rows of the band below the x axis line, between the frame's sides"""
+    img = bitmap(p.path("out", "label_sizes", f"{name}.png"))
+    if img is None:
+        return None
+    dark = (((img >> 16) & 0xFF) < 100) & (((img >> 8) & 0xFF) < 100) & ((img & 0xFF) < 100)
+    width = dark.shape[1]
+    axisRow = max(r for r in range(dark.shape[0]) if dark[r, width // 4 : 3 * width // 4].mean() > 0.9)  # the x axis: a dark line across
+    band = dark[axisRow + 3 : axisRow + 3 + dark.shape[0] // 8, width // 6 : 5 * width // 6]  # below the ticks, above the title
+    rows = [r for r in range(band.shape[0]) if band[r].any()]
+    first = rows[0] if rows else 0
+    label = [r for r in rows if r - first < band.shape[0] // 2 and all(band[k].any() for k in range(first, r + 1))]
+    return len(label)
+
+
+heights = {name: label_height(name) for name in ("digits", "numbers")}
+check("the labels of a labelled axis are as high as the numbers of a numeric axis (ROOT's 2/3 compensated)", None not in heights.values() and abs(heights["digits"] - heights["numbers"]) <= 1, f"{heights}")
 for name, (low, high, exponent, overlap) in WIDE.items():
     said = [m for m in run.messages(name, "wide") if "run into each other" in m]
     check(f"x labels from {low:g} to {high:g}{' with exponent' if exponent else ''}: {'warned once that they run into each other' if overlap else 'no warning'}", len(said) == (1 if overlap else 0), " | ".join(said))
