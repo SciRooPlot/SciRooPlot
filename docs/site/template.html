@@ -2590,8 +2590,8 @@ pm.AddDataSource("TrackQA_MC", "\${SCIROOPLOT_DATA_DIR}/ExampleData/AnalysisResu
 pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
 
 plot = Plot("trackingEfficiency", "detector/tracking", "1d")
-plot[1].AddRatio(["hPt", "TrackQA_MC"], ["hPtGen", "TrackQA_MC"]).SetCorrelated()
-plot[1]['X'].SetLog().SetRange(0.1, 10.0)
+plot[1].AddRatio(["hPt", "TrackQA_MC"], ["hPtGen", "TrackQA_MC"]).SetCorrelated().SetRangeX(0.1, 3.0)
+plot[1]['X'].SetLog().SetRange(0.1, 5.0)
 plot[1]['Y'].SetTitle("tracking efficiency").SetRange(0.0, 1.0).SetGrid()
 pm.AddPlot(plot)
 pm.SaveProject()`,
@@ -2600,8 +2600,8 @@ pm.AddDataSource("TrackQA_MC", "\${SCIROOPLOT_DATA_DIR}/ExampleData/AnalysisResu
 pm.AddBasePlot(PlotManager::MakeBasePlot("1d"));
 
 Plot plot("trackingEfficiency", "detector/tracking", "1d");
-plot[1].AddRatio({"hPt", "TrackQA_MC"}, {"hPtGen", "TrackQA_MC"}).SetCorrelated();
-plot[1]['X'].SetLog().SetRange(0.1, 10.0);
+plot[1].AddRatio({"hPt", "TrackQA_MC"}, {"hPtGen", "TrackQA_MC"}).SetCorrelated().SetRangeX(0.1, 3.0);
+plot[1]['X'].SetLog().SetRange(0.1, 5.0);
 plot[1]['Y'].SetTitle("tracking efficiency").SetRange(0.0, 1.0).SetGrid();
 pm.AddPlot(plot);
 pm.SaveProject();` },
