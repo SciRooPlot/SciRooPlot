@@ -134,6 +134,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A placeholder with a malformed data number or format (`<mean:1@>`, `<mean: 1>`, `<mean:-1>`, `<mean:1e3>`, `<mean[.2f]x>`) stayed in the label without a word | The same, with a warning saying how data and format are written | behaviour | Fix the placeholder. |
 | The printf integer format `i` in a placeholder (`<entries[i]>`) gave the error `Incompatible format string` | It formats as `d` | behaviour | Nothing. |
 | Data with a row of its own in a legend (its legend label) that was also added to that legend with `LegendBox::AddDataEntry` got two rows without a word | The same, with a warning | behaviour | Drop the `AddDataEntry` row unless both are meant. |
+| A region (`AddRegion`, `AddRegionX`, `AddRegionY`) behind the data (`SetBehindData`) with a line set (`SetLineColor`, `SetLine` ...) was drawn without its outline | Drawn with its outline, as in the other layers | behaviour | Nothing. |
 
 ### Files
 

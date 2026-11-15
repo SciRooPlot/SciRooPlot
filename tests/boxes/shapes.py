@@ -3,7 +3,7 @@ TPolyLine in their layer: behind the data (right after the frame), after the dat
 they leave the frame, the numbering, the default colours and the legend of the data as they are. Lines and regions over a whole axis span
 the final frame, also a log one; regions and polygons are cut at the frame; a shape without its default look gets ROOT's line in black,
 regions and polygons a translucent fill, ellipses no fill, arrows a head in the colour of their line; set styles are drawn as set (a
-polygon with a set line gets its outline as a second TPolyLine right after its fill).
+polygon with a set line gets its outline as a second TPolyLine right after its fill, a region with a set line option l, in every layer).
 Cases: every kind × every layer × a histogram, a graph, a map and a log axis giving the frame × the default or a set look, and the named
 cases (lines at the limits of a log axis, positions a log axis cannot show, shapes of a base plot and of pad 0, arrow heads, arcs).
 Reference: the primitives of the pad and the same plot without the shape.
@@ -45,7 +45,10 @@ def add_shape(pad, kind, frame):
     }[kind]()
 
 
-todo = cases({"kind": list(KINDS), "layer": list(LAYERS), "frame": list(FRAMES), "look": ["default", "set"]})
+todo = cases(
+    {"kind": list(KINDS), "layer": list(LAYERS), "frame": list(FRAMES), "look": ["default", "set"]},
+    named=[{"kind": "region", "layer": "behind", "frame": "hist", "look": "set", "why": "a region behind the data inserted after the frame keeps the option of its outline"}],
+)
 
 p = Project("shapes")
 h = ROOT.TH1D("h", "", 10, 0.0, 10.0)
@@ -155,6 +158,10 @@ for i, case in enumerate(todo):
         check(f"{what}: the plot is made", False, " | ".join(run.messages(name, "shapes")))
         continue
     prims = list(padObj.GetListOfPrimitives())
+    links, lnk = [], padObj.GetListOfPrimitives().FirstLink()
+    while lnk:
+        links.append(str(lnk.GetOption()))
+        lnk = lnk.Next()
     found = shapes_of(prims, list(plain.GetListOfPrimitives()))
     cls = KINDS[kind]
     drawn = [prims[k] for k in found]
@@ -164,6 +171,9 @@ for i, case in enumerate(todo):
         continue
     shape, where = drawn[0], found[0]
     outline = drawn[-1]
+    if kind.startswith("region"):
+        expected = "l" if case["look"] == "set" else ""
+        check(f"{what}: {'outlined' if expected else 'not outlined'} (option {expected!r})", links[where] == expected, f"{links[where]!r}")
     if outlined:
         points = lambda o: [(o.GetX()[k], o.GetY()[k]) for k in range(o.GetN())]  # noqa: E731
         check(f"{what}: the outline right after the fill, on its points", found[1] == where + 1 and points(outline) == points(shape) and shape.GetOption() == "f" and outline.GetOption() == "", f"{found} {shape.GetOption()!r} {outline.GetOption()!r}")

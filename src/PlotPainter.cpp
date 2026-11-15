@@ -5618,11 +5618,27 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
       drawn->SetBit(kCanDelete);    // owned by the pad
       const char* option = (drawn == object && regionOutline) ? "l" : ((drawn == object && kind == kind_t::polygon) ? "f" : "");
       if (insertAfter) {
-        pad_ptr->GetListOfPrimitives()->AddAfter(insertAfter, drawn);
-        insertAfter = drawn;
-        for (auto* link = pad_ptr->GetListOfPrimitives()->FirstLink(); link && *option; link = link->Next()) {  // AddAfter takes no option
-          if (link->GetObject() == drawn) link->SetOption(option);
+        // AddAfter makes a link without draw option (which then is the option of the object): with an option, the primitives after the
+        // insertion point are added anew behind the shape, with their options
+        TList* primitives = pad_ptr->GetListOfPrimitives();
+        if (*option) {
+          vector<std::pair<TObject*, TString>> tail;
+          TObjLink* after = primitives->FirstLink();
+          while (after->GetObject() != insertAfter)
+            after = after->Next();
+          for (TObjLink* link = after->Next(); link;) {
+            TObjLink* next = link->Next();
+            tail.emplace_back(link->GetObject(), link->GetOption());
+            primitives->Remove(link);
+            link = next;
+          }
+          primitives->Add(drawn, option);
+          for (const auto& [later, laterOption] : tail)
+            primitives->Add(later, laterOption);
+        } else {
+          primitives->AddAfter(insertAfter, drawn);
         }
+        insertAfter = drawn;
       } else {
         pad_ptr->GetListOfPrimitives()->Add(drawn, option);
       }
