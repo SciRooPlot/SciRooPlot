@@ -2283,7 +2283,7 @@ const CLASS_LABEL = { "PlotManager": "PlotManager", "Plot": "Plot", "Plot::Pad":
   "Plot::Pad::Ratio": "Ratio", "Plot::Pad::Box<BoxType>": "Boxes (legends, texts, stats)", "Plot::Pad::TextBox": "TextBox", "Plot::Pad::StatsBox": "StatsBox",
   "Plot::Pad::LegendBox": "LegendBox", "Plot::Pad::ImageBox": "ImageBox", "Plot::Pad::Shape": "Shape", "Plot::Pad::LegendEntry": "LegendEntry",
   "marker setters": "Marker setters", "line setters": "Line setters", "fill setters": "Fill setters", "text setters": "Text setters",
-  "border setters": "Border setters", "Panel": "Panel", "PanelLayout": "PanelLayout", "BasePlotShape": "BasePlotShape", "Enumerations": "Enumerations" };
+  "border setters": "Border setters", "position setters": "Position setters", "Panel": "Panel", "PanelLayout": "PanelLayout", "BasePlotShape": "BasePlotShape", "Enumerations": "Enumerations" };
 const clsId = c => "api-" + CLASS_LABEL[c].split(" ")[0].toLowerCase();
 const METHODS = {};   // name -> [{cls, sig, note}]
 API.forEach(c => c.items.forEach(m => (METHODS[m.name] = METHODS[m.name] || []).push({ cls: c.cls, sig: m.sig, note: m.note })));
