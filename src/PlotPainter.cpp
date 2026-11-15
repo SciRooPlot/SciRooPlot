@@ -1773,6 +1773,13 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
 
   // first data is only used to define the axes
   if (dataIndex == 0) {
+    if constexpr (is_func<data_type>()) {
+      // the frame of a function comes from the samples it is drawn with
+      if (data->GetNpx()) data_ptr->SetNpx(*data->GetNpx());
+      if constexpr (is_func_2d<data_type>() || is_func_3d<data_type>()) {
+        if (data->GetNpy()) data_ptr->SetNpy(*data->GetNpy());
+      }
+    }
     SetUpFrame(state, data_ptr, polarGridOption);
   } else {
     // data drawn in 3d needs the 3d frame of a first data drawn in 3d, flat data a flat frame: ROOT paints a 3d view over a flat map
