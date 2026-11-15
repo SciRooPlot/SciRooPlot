@@ -542,7 +542,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     const bool styleSet = data.GetFillStyle() || pad.GetDefaultFillStyles() || padDefaults.GetDefaultFillStyles();
     return (padDefaults.GetDefaultFillColors() || !styleSet) ? padDefaults.GetDefaultFillColors() : defaultColors;
   };
-  if (!padDefaults.GetShapes().empty()) logger::warning("The shapes of pad 0 are not drawn: pad 0 only holds the defaults of the pads.");
   mFrameRanges.clear();
   mFrameHists.clear();
   mScaleHists.clear();

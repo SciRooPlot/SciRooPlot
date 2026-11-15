@@ -991,8 +991,8 @@ void PlotManager::AddPlot(Plot plot)
     return;
   }
   // pad 0 only holds the defaults for all pads, nothing added to it is drawn
-  if (auto pad0 = plot.GetPads().find(0); pad0 != plot.GetPads().end() && (!pad0->second.GetData().empty() || pad0->second.GetFrame() || !pad0->second.GetLegendBoxes().empty() || !pad0->second.GetTextBoxes().empty() || !pad0->second.GetImageBoxes().empty())) {
-    logger::warning("Plot {}: data, frames, legends, texts and images added to pad 0 are not drawn (pad 0 holds the defaults for all pads, the pads are counted from 1).", Plot::Label(plot));
+  if (auto pad0 = plot.GetPads().find(0); pad0 != plot.GetPads().end() && (!pad0->second.GetData().empty() || pad0->second.GetFrame() || !pad0->second.GetLegendBoxes().empty() || !pad0->second.GetTextBoxes().empty() || !pad0->second.GetImageBoxes().empty() || !pad0->second.GetShapes().empty())) {
+    logger::warning("Plot {}: data, frames, legends, texts, images and shapes added to pad 0 are not drawn (pad 0 holds the defaults for all pads, the pads are counted from 1).", Plot::Label(plot));
   }
   // Filter, Define, Join and Entries select the rows of a tree or table: without Project*, Profile* or Scatter nothing is requested from it
   auto warnUnusedRequest = [&plot](const Plot::Pad::Data::data_info_t& info, const string& name) {

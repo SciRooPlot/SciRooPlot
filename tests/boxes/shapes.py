@@ -12,7 +12,7 @@ Covers: shapes in their layers, a line at the limit of a log axis, and the named
 
 import math
 
-from srptest import ROOT, Project, S, cases, check, close, describe, finish
+from srptest import ROOT, Project, S, captured, cases, check, close, describe, finish
 
 KINDS = {  # kind: drawn class
     "line": "TLine",
@@ -122,7 +122,7 @@ p.pm.AddPlot(plot)
 plot = S.Plot("pad0", "named", "1d")
 plot[1].AddData("h", "s")
 plot[0].AddVerticalLine(5.0)
-p.pm.AddPlot(plot)
+_, pad0Said = captured(lambda: p.pm.AddPlot(plot))
 plot = S.Plot("styles", "named", "1d")
 plot[1].AddData("h", "s")
 plot[1].AddArrow((2.0, 2.0), (4.0, 4.0)).SetArrowHead("<|>").SetArrowSize(0.05).SetLine(ROOT.kSolid, 3.0, ROOT.kBlue + 1)
@@ -243,7 +243,7 @@ messages = run.messages("log_not_positive", "named")
 check("log y: a line the axis cannot show is left out, warned", not of("log_not_positive", "TLine") and any("Shape 2 (horizontal_line) of pad 1 is not drawn: its position is not positive on a log axis" in m for m in messages), " | ".join(messages))
 check("log y: a polygon with a point the axis cannot show is left out, warned", any("Shape 4 (polygon) of pad 1 is not drawn: a point is not positive" in m for m in messages), " | ".join(messages))
 check("a shape of the base plot is drawn", len([o for o in of("from_base", "TLine") if close(o.GetY1(), 5.0)]) == 1)
-check("shapes of pad 0 are not drawn, warned", not of("pad0", "TLine") and any("shapes of pad 0 are not drawn" in m for m in run.warnings()), " | ".join(run.warnings()))
+check("shapes of pad 0 are not drawn, warned when the plot is added", not of("pad0", "TLine") and "shapes added to pad 0 are not drawn" in pad0Said, pad0Said)
 arrows, ellipses, boxes = of("styles", "TArrow"), of("styles", "TEllipse"), of("styles", "TBox")
 check("an arrow with its head, size and line", arrows and arrows[0].GetOption() == "<|>" and close(arrows[0].GetArrowSize(), 0.05, 1e-6) and arrows[0].GetLineColor() == ROOT.kBlue + 1 and arrows[0].GetLineWidth() == 3)
 check("an ellipse with its arc and rotation", ellipses and (ellipses[0].GetPhimin(), ellipses[0].GetPhimax(), ellipses[0].GetTheta()) == (0.0, 180.0, 30.0))

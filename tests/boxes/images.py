@@ -138,7 +138,7 @@ check(
     " | ".join(messages("no_image")),
 )
 check("an image beyond its pad: warned, the plot made without it", special.canvas("beyond_pad", "special") and not image("beyond_pad") and any("does not fit into its pad" in m for m in messages("beyond_pad")), " | ".join(messages("beyond_pad")))
-check("an image in pad 0: warned", any("pad0" in m and "images added to pad 0" in m for m in special.warnings()), " | ".join(special.warnings()))
+check("an image in pad 0: warned", any("pad0" in m and "added to pad 0 are not drawn" in m for m in special.warnings()), " | ".join(special.warnings()))
 check("an image of a base plot is drawn in its plots", bool(image("from_base")))
 check("a relative path is taken from where the plot is defined", bool(image("relative")), " | ".join(messages("relative")))
 
