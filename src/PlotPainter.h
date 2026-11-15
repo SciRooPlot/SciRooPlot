@@ -463,6 +463,8 @@ class PlotPainter
   std::set<uint8_t> mScalesInCells;     // pads whose colour scale a ColorScale() cell shows instead of the pad
   // the pads drawing a map: the command setting their palette
   std::map<uint8_t, std::string> mMapPalettes;
+  // per pad, the shapes behind the data that the web canvas moves into the layer of the data (their drawn IDs)
+  std::map<uint8_t, std::set<uint32_t>> mWebBehindShapes;
   // on screen: the free user-defined line styles that stand in for styles 2-4 (their dash strings from gStyle), 0 if there is none
   std::array<Style_t, 3> mScreenDashStyles{};
   std::set<std::pair<const TObject*, size_t>> mReportedStoredRanges;  // input axes whose stored range a projection of this plot does not apply (reported once)

@@ -548,6 +548,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   mScaleHists.clear();
   mContentScales.clear();
   mMapPalettes.clear();
+  mWebBehindShapes.clear();
   // the panels of a z group whose colour scale a ColorScale() cell shows draw none of their own (a panel in no z group: its own scale is shown)
   mScalesInCells.clear();
   for (const auto& [padID, pad] : plot.GetPads()) {
@@ -961,7 +962,10 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   //   (ROOT: each its own), unless drawn SAME0
   // - it evaluates a formula function itself, but not all that ROOT can (TMath::DegToRad): the values of a function sampled by ROOT
   //   are used instead (the web canvas only samples functions it has compiled, which one read from a file is not before its first use)
-  const string webOnce =
+  // - it draws a lego of fill colour 0 or 1 (none set) white with red sides, ROOT white or light grey (17 for 1) with darker sides
+  // - it draws data in the layer of the frame and boxes, lines, arrows and polygons above it: the shapes behind the data are put into
+  //   that layer (option FRAME; a polygon as a graph)
+  string webOnce =
     " if (auto* self = gPad->GetListOfPrimitives()->FindObject(\"web_canvas\")) { static_cast<TNamed*>(self)->SetName(\"web_canvas_adapted\");"
     " if (gPad->GetFillStyle() == 0 || gPad->GetFillStyle() == 4000) { gPad->SetFillStyle(1001); gPad->SetFillColor(0); }"
     " auto save = [](TObject* obj) { if (auto* func = dynamic_cast<TF1*>(obj); func && func->GetNdim() == 1 && !func->HasSave()) func->Save(func->GetXmin(), func->GetXmax(), 0, 0, 0, 0); };"
@@ -969,13 +973,33 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     " if (!pad) continue; for (auto* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) { auto* hist = dynamic_cast<TH1*>(link->GetObject());"
     " save(link->GetObject()); auto* graph = dynamic_cast<TGraph*>(link->GetObject()); if (TList* funcs = hist ? hist->GetListOfFunctions() : graph ? graph->GetListOfFunctions() : nullptr) for (auto* func : *funcs) save(func);"
     " if (!hist) continue; TString option = link->GetOption(); option.ToUpper();"
+    " if (hist->GetDimension() == 2 && hist->GetFillColor() <= 1 && (option.Contains(\"LEGO1\") || option.Contains(\"LEGO3\"))) hist->SetFillColor(hist->GetFillColor() ? 17 : 10);"
     R"code( TPRegexp x0("(^|\\s)X0(\\s|$)"); if (hist->GetDimension() == 1 && x0.Match(option)) { x0.Substitute(option, " ", "g");)code"
     R"code( TPRegexp("(^|\\s)(E[0-6]?)(\\s|$)").Substitute(option, "$1$2X0$3"); link->SetOption(option); })code"
     R"code( TPRegexp same("(^|\\s)SAME(\\s|$)"); if (hist->GetDimension() == 2 && hist->TestBit(TH1::kUserContour) && same.Match(option)) { same.Substitute(option, "$1SAME0$2"); link->SetOption(option); })code"
     " if (!(TString(hist->GetName()).BeginsWith(\"axis_hist_pad_\") || TString(hist->GetName()).BeginsWith(\"color_scale_pad_\"))) continue;"
     " if (const Int_t n = hist->GetXaxis()->GetNdivisions(); n > 1000) hist->GetXaxis()->SetNdivisions(n % 1000000 - n % 100 + Int_t(std::max(1, n % 100) * pad->GetAbsWNDC()), kTRUE);"
     " if (hist->GetDimension() != 2) continue; if (option.Contains(\"AXIG\") || option.Contains(\"AXIS\")) { option.ReplaceAll(\"Z\", \"\"); link->SetOption(option); }"
-    " if (auto* palette = dynamic_cast<TPaletteAxis*>(hist->GetListOfFunctions()->FindObject(\"palette\"))) palette->GetAxis()->SetNdivisions(hist->GetZaxis()->GetNdivisions() % 1000000); } } }";
+    " if (auto* palette = dynamic_cast<TPaletteAxis*>(hist->GetListOfFunctions()->FindObject(\"palette\"))) palette->GetAxis()->SetNdivisions(hist->GetZaxis()->GetNdivisions() % 1000000); } }";
+  if (!mWebBehindShapes.empty()) {
+    // the primitives of the pad are added anew with their options (a link made without option takes the one of its object)
+    webOnce +=
+      " auto behind = [](TPad* pad, std::set<UInt_t> drawnIDs) { TList* primitives = pad->GetListOfPrimitives(); std::vector<std::pair<TObject*, TString>> items; std::vector<TObject*> replaced;"
+      " for (auto* link = primitives->FirstLink(); link; link = link->Next()) { TObject* obj = link->GetObject(); TString option = link->GetOption();"
+      " if (drawnIDs.count(obj->GetUniqueID())) { if (auto* line = dynamic_cast<TPolyLine*>(obj)) { auto* graph = new TGraph(line->Size(), line->GetX(), line->GetY());"
+      " line->TAttLine::Copy(*graph); line->TAttFill::Copy(*graph); graph->SetUniqueID(line->GetUniqueID()); graph->SetBit(kCanDelete);"
+      " option = option.Contains(\"f\", TString::kIgnoreCase) ? \"F\" : \"L\"; replaced.push_back(obj); obj = graph; }"
+      " else option = Form(\"%s FRAME\", obj->InheritsFrom(TArrow::Class()) ? static_cast<TArrow*>(obj)->GetOption() : option.Data()); }"
+      " items.emplace_back(obj, option); }"
+      " primitives->Clear(\"nodelete\"); for (const auto& [obj, option] : items) primitives->Add(obj, option); for (TObject* obj : replaced) delete obj; };";
+    for (const auto& [padID, drawnIDs] : mWebBehindShapes) {
+      string list;
+      for (const uint32_t drawnID : drawnIDs)
+        list += fmt::format("{}{}u", list.empty() ? "" : ", ", drawnID);
+      webOnce += fmt::format(" if (auto* pad = dynamic_cast<TPad*>(gPad->GetPrimitive(\"Pad_{}\"))) behind(pad, {{{}}});", padID, list);
+    }
+  }
+  webOnce += " }";
   // and at every paint (the browser reports back the options it drew with, and the z range it found):
   // - it colours the data of a pad by the z range of its frame only if the option of the frame gives it (HMIN, HMAX: JSROOT only),
   //   since the frame of 2d data is an empty histogram, and draws no colour scale for one without it
@@ -983,12 +1007,19 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   //   and counts the minus sign as a digit (one more where a negative label has as many digits as allowed)
   // - a polar graph paints its title unless the setup of its pad switches titles off, but the web canvas decides about the titles of
   //   a pad before running its setup, and has one setting for all pads
+  // - it prefers to evaluate a function itself over the values sampled by ROOT, and takes the title as the formula of a function
+  //   without one (compiled, or changed by a modifier): those draw their sampled values (force_saved, which the browser does not report)
   string webEachPaint;
   optional<int32_t> webMaxDigits;
   bool webNegativeLabels{};
+  bool webSampledFunctions{};
   for (auto* padLink = canvas_ptr->GetListOfPrimitives()->FirstLink(); padLink; padLink = padLink->Next()) {
     auto* pad = dynamic_cast<TPad*>(padLink->GetObject());
     if (!pad) continue;
+    for (auto* link = pad->GetListOfPrimitives()->FirstLink(); link && !webSampledFunctions; link = link->Next()) {
+      auto* func = dynamic_cast<TF1*>(link->GetObject());
+      webSampledFunctions = func && !func->GetFormula();
+    }
     std::set<TObject*> frames;
     for (auto* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
       auto* frame = dynamic_cast<TH1*>(link->GetObject());
@@ -1012,6 +1043,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   }
   const bool webTitles = std::none_of(padSetups.begin(), padSetups.end(), [](const auto& padSetup) { return padSetup.second.find("SetOptTitle(0)") != string::npos; });
   if (webMaxDigits) webEachPaint += fmt::format(" gStyle->SetAxisMaxDigits({});", *webMaxDigits + (webNegativeLabels ? 1 : 0));
+  if (webSampledFunctions) {
+    webEachPaint +=
+      " for (auto* padLink = gPad->GetListOfPrimitives()->FirstLink(); padLink; padLink = padLink->Next()) if (auto* pad = dynamic_cast<TPad*>(padLink->GetObject()))"
+      " for (auto* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) if (auto* func = dynamic_cast<TF1*>(link->GetObject());"
+      " func && !func->GetFormula() && !TString(link->GetOption()).Contains(\";force_saved\")) link->SetOption(TString(link->GetOption()) + \";force_saved\");";
+  }
   TExec* webExec = new TExec(
     "web_canvas",
     fmt::format("if (gPad->GetCanvas()->IsWeb()) {{ gROOT->ProcessLine(Form(\"{{ auto* w = (TWebCanvas*)%p; w->SetPaletteDelivery(3); if (!w->IsFixedSize()) w->SetCanvasSize({}, {}); }}\", (void*)gPad->GetCanvas()->GetCanvasImp())); gStyle->SetOptTitle({});{}{} }}",
@@ -5612,6 +5649,9 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
     const bool regionOutline = kind != kind_t::polygon && isRegion && (shape->GetLineColor() || shape->GetLineStyle() || shape->GetLineWidth() || shape->GetLineAlpha());
     if (outline) line->Copy(*dynamic_cast<TAttLine*>(outline));
     const uint32_t drawnID = Shape::EncodeDrawnID({kind, number, coordinates});
+    // the web canvas draws data in the layer of the frame and shapes above it: there, shapes behind the data join that layer (an
+    // ellipse cannot; one in fractions of the pad stays, since the frame layer would cut it)
+    if (layer == Shape::layer_t::behind_data && cutAtFrame && kind != kind_t::ellipse) mWebBehindShapes[padID].insert(drawnID);
     for (TObject* drawn : {object, outline}) {
       if (!drawn) continue;
       drawn->SetUniqueID(drawnID);  // for the position reported by a double-click in show mode

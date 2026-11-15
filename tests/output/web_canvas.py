@@ -9,12 +9,15 @@ ranges it drew without a zoom (as after every drawing). The browser (JSROOT) get
 2d frame and colour scale in their options (HMIN, HMAX), also after the browser reported its options, one colour scale per frame, data
 with levels of its own drawn SAME0, x errors left out with X0 right after E, the x divisions of a pad as ROOT scales them by its width,
 the divisions of a colour scale those of the z axis, the max digits of the axes (one more where a negative label has as many digits),
-no titles where a polar graph switches them off, sampled values for functions, and a white canvas. Skipped where ROOT is built without
-its web canvas.
+no titles where a polar graph switches them off, sampled values for functions, drawn for those without a formula (also after the
+browser reported its options), the fill colour ROOT draws legos without one with, the shapes behind the data in the layer of the data
+(before it; a polygon as graph), but not an ellipse or a shape in fractions of the pad, and a white canvas. Skipped where ROOT is built
+without its web canvas.
 Covers: palettes per pad and for the whole canvas, text formats and candle ranges set in a later pad, by pad 0 or not at all, the
 default and a set canvas size, y ranges of histogram and graph frames, linear and log, set and with room above the data; maps in one
 pad, in panels with a colour-scale cell and with levels of their own; points in a narrow panel, a polar graph, a formula function
-evaluated with TMath, axes with and without negative labels.
+evaluated with TMath, axes with and without negative labels, every drawn class of shape behind the data, in fractions of the frame and of the
+pad, and after the data, legos with and without a fill colour, functions with and without a formula.
 """
 
 import json
@@ -171,6 +174,25 @@ p.pm.AddPlot(plot)
 plot = S.Plot("polar", "browser", "1d")
 add_data(plot[1], "graph_polar")
 p.pm.AddPlot(plot)
+plot = S.Plot("shapes", "browser", "1d")
+add_data(plot[1], "hist")
+plot[1].AddRegion((0.1, 0.1), (0.3, 0.9)).SetFrameCoordinates().SetLineColor(ROOT.kRed).SetBehindData()
+plot[1].AddLine((0.1, 0.5), (0.9, 0.5)).SetFrameCoordinates().SetLineColor(ROOT.kRed).SetBehindData()
+plot[1].AddArrow((0.4, 0.2), (0.6, 0.4)).SetFrameCoordinates().SetLineColor(ROOT.kRed).SetBehindData()
+plot[1].AddPolygon([(0.5, 0.1), (0.9, 0.1), (0.7, 0.6)]).SetFrameCoordinates().SetLineColor(ROOT.kRed).SetBehindData()
+plot[1].AddEllipse((0.5, 0.5), 0.1, 0.1).SetFrameCoordinates().SetLineColor(ROOT.kBlue).SetBehindData()
+plot[1].AddRegion((0.01, 0.01), (0.05, 0.05)).SetPadCoordinates().SetLineColor(ROOT.kBlue).SetBehindData()
+plot[1].AddRegion((0.6, 0.6), (0.8, 0.8)).SetFrameCoordinates().SetLineColor(ROOT.kBlue)
+p.pm.AddPlot(plot)
+plot = S.Plot("legos", "browser", "2d_2x1_gap")
+add_data(plot[1], "hist2d").SetDrawOption(S.lego)
+add_data(plot[2], "hist2d").SetDrawOption(S.lego_noborders).SetFillColor(ROOT.kRed)
+p.pm.AddPlot(plot)
+plot = S.Plot("functions", "browser", "1d")
+add_data(plot[1], "hist")
+add_data(plot[1], "tf1_cpp")
+add_data(plot[1], "tf1")
+p.pm.AddPlot(plot)
 
 run = p.plot()
 check("the plots are made without errors", run.rc == 0 and not run.errors(), "\n".join(run.errors()))
@@ -240,18 +262,26 @@ def ndivisions(n):
     return lambda w: (n % 1000000 - n % 100 + int(max(1, n % 100) * w)) if n > 1000 else n
 
 
-for name in ("map", "panels", "narrow", "positive", "polar"):
+for name in ("map", "panels", "narrow", "positive", "polar", "shapes", "legos", "functions"):
     canvas = run.canvas(name, "browser")
     canvas.Draw()
     pads = {f"Pad_{i}": canvas.GetPad(i) for i in range(1, 4) if canvas.GetPad(i)}
     written = {}  # z ranges and divisions as written, before the browser sees the canvas
+    fills = {}  # fill colours of the data as written
     for padName, pad in pads.items():
         for obj in pad.GetListOfPrimitives():
             if obj.InheritsFrom("TH1") and (obj.GetName().startswith("axis_hist_pad_") or obj.GetName().startswith("color_scale_pad_")):
                 written.setdefault((padName, obj.GetName()), (obj.GetMinimumStored(), obj.GetMaximumStored(), obj.GetXaxis().GetNdivisions(), obj.GetZaxis().GetNdivisions(), pad.GetAbsWNDC()))
+            if obj.InheritsFrom("TH2") and obj.GetName()[:1].isdigit():
+                fills[(padName, obj.GetName())] = obj.GetFillColor()
     snap = snapshot(canvas, 3)
     for padName, pad in pads.items():
         ROOT.SrpTestWebReply.Report(canvas.GetCanvasImp(), pad)  # the browser reports its options and ranges
+        lnk = pad.GetListOfPrimitives().FirstLink()
+        while lnk:  # and the option it drew a function with, without the extras of the web canvas
+            if lnk.GetObject().InheritsFrom("TF1"):
+                lnk.SetOption(str(lnk.GetOption()).split(";")[0])
+            lnk = lnk.Next()
     again = snapshot(canvas, 3)
     for which, current in (("drawn", snap), ("after the report of the browser", again)):
         canvasSnap = current.get("fSnapshot", {})
@@ -291,4 +321,30 @@ for name in ("map", "panels", "narrow", "positive", "polar"):
                     check(f"data with levels of its own are drawn SAME0 ({which})", "SAME0" in option, option)
                 if obj["_typename"] == "TF1":
                     check(f"a function has its sampled values ({which})", len(obj.get("fSave", [])) > 0, f"{len(obj.get('fSave', []))} values")
+                    if name == "functions":
+                        formula = obj.get("fFormula") is not None
+                        check(
+                            f"a function {'with' if formula else 'without'} a formula draws {'its formula' if formula else 'its sampled values'} ({which})",
+                            (";force_saved" in option) != formula,
+                            option,
+                        )
+                if (padName, obj.get("fName")) in fills and "LEGO" in option.upper():
+                    painted = fills[(padName, obj["fName"])]
+                    want = {0: 10, 1: 17}.get(painted, painted)
+                    check(f"a lego of fill colour {painted} is drawn in colour {want} ({which})", obj["fFillColor"] == want, f"{obj['fFillColor']}")
+            if name == "shapes":
+                data = next((k for k, (_, obj) in enumerate(objects) if obj.get("fName", "")[:1].isdigit()), len(objects))
+                behind = [(k, option, obj) for k, (option, obj) in enumerate(objects) if obj.get("fLineColor") == ROOT.kRed]
+                kinds = sorted((obj["_typename"], option) for _, option, obj in behind)
+                check(
+                    f"the shapes behind the data are drawn in the layer of the data, before it ({which})",
+                    kinds == sorted([("TBox", "l FRAME"), ("TLine", " FRAME"), ("TArrow", "|> FRAME"), ("TGraph", "F"), ("TGraph", "L")]) and all(k < data for k, _, _ in behind),
+                    f"{kinds}, data at {data}",
+                )
+                others = [(obj["_typename"], option) for option, obj in objects if obj.get("fLineColor") == ROOT.kBlue]
+                check(
+                    f"an ellipse, a shape in fractions of the pad and shapes after the data stay above it ({which})",
+                    len(others) == 3 and not any("FRAME" in option.upper() for _, option in others),
+                    f"{others}",
+                )
 finish()
