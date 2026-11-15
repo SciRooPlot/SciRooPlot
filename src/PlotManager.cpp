@@ -1464,6 +1464,8 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     logger::error("No output directory was specified: set one with SetOutputDirectory before writing plots in mode '{}'.", mode);
     return false;
   }
+  // likewise a missing parent of the output directory, before anything is painted
+  if (!isInteractiveMode && mode != "print" && !CreateOutputDirectory()) return false;
   // plotting uses multi-threading, the classic canvas and fewer ROOT messages; the settings of the calling program are restored afterwards
   const bool wasMTEnabled = ROOT::IsImplicitMTEnabled();
   const bool wasWebDisplay = gROOT->IsWebDisplay();

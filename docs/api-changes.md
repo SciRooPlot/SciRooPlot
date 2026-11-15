@@ -141,6 +141,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | The frame (axis ranges, colour scale) of a function drawn with `Data::SetNpx` / `SetNpy` that gives the frame came from samples at the default number of points: a narrow peak was cut at the top of the frame | It comes from the samples the function is drawn with | behaviour | Nothing. |
 | Statistics boxes took the text font and size of the pad (`Pad::SetDefaultTextFont`, `SetDefaultTextSize`) but not its text colour and alpha (`SetDefaultTextColor`, `SetDefaultTextAlpha`); the colour scale of a 3d histogram took the colour but not the alpha | Both follow the text colour and alpha of the pad, as legends, texts and axes | behaviour | Nothing. |
 | Shapes added to pad 0 were warned about at every paint (every output mode), in other words than data, legends, texts and images on pad 0 | One warning when the plot is added, with the others | behaviour | Nothing. |
+| An output directory whose parent does not exist was reported for every plot, after the plot was painted | Reported once, before anything is painted, as an output directory that is not set | behaviour | Nothing. |
 
 ### Files
 
