@@ -135,6 +135,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | The printf integer format `i` in a placeholder (`<entries[i]>`) gave the error `Incompatible format string` | It formats as `d` | behaviour | Nothing. |
 | Data with a row of its own in a legend (its legend label) that was also added to that legend with `LegendBox::AddDataEntry` got two rows without a word | The same, with a warning | behaviour | Drop the `AddDataEntry` row unless both are meant. |
 | A region (`AddRegion`, `AddRegionX`, `AddRegionY`) behind the data (`SetBehindData`) with a line set (`SetLineColor`, `SetLine` ...) was drawn without its outline | Drawn with its outline, as in the other layers | behaviour | Nothing. |
+| A pad holding only images (`AddImage`) was not drawn ("Nothing to be drawn in pad …"), while a pad with only a text or legend was | It is drawn with its images | behaviour | Nothing. |
 
 ### Files
 
