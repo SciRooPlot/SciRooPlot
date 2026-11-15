@@ -137,6 +137,8 @@ sources = {
     "corrupt": [p.path("corrupt.root"), b],
     "no_match": [p.path("in", "nothing*.root"), b],
     "no_folder": [folders + ":XX_*", b],
+    "corrupt_folders": [p.path("corrupt.root") + ":XX_*", b],
+    "missing_folder": [folders + ":XX", b],
     "colon": [colon],
     "colon_folder": [colon + ":sub"],
     "cycles": [cycles],
@@ -187,6 +189,8 @@ case("a broken symlink: the other inputs are read", [("h", "broken", 2)])
 case("a corrupt file: the other inputs are read", [("h", "corrupt", 2)])
 case("no file matching a wildcard: the other inputs are read", [("h", "no_match", 2)])
 case("no folder matching a wildcard: the other inputs are read", [("h", "no_folder", 2)])
+case("a corrupt file with a wildcard for folders: the other inputs are read", [("h", "corrupt_folders", 2)])
+case("a folder missing in a file: the other inputs are read", [("h", "missing_folder", 2)])
 case("a directory with ':' in its name", [("h", "colon", 401), ("sub/h", "colon", 402), ("h", "colon:sub", 402)])
 case("a folder of a file in a directory with ':' in its name", [("h", "colon_folder", 402)])
 case("the latest cycle of a key", [("hc", "cycles", 502), ("Graph", "cycles", 504)])
@@ -243,12 +247,15 @@ for what, text in (
     ("a symlinked directory inside a directory input is reported", f"Skipping symlinked directory {os.path.join(linkdir, 'sub')} (data source linkdir)"),
     ("no file matching a wildcard is reported", f"No files match {p.path('in', 'nothing*.root')} (data source no_match)"),
     ("no folder matching a wildcard is reported", "No folders match XX_*"),
+    ("a corrupt file with a wildcard for folders is reported", f"Cannot open input file {p.path('corrupt.root')} (data source corrupt_folders)"),
+    ("a folder missing in a file is reported with its data source", f"Subdirectory XX not found in file {folders} (data source missing_folder)"),
 ):
     once, lines = reported_once(text)
     check(f"{what}, once", once, f"{len(lines)} lines: {lines[:2]}")
+check("a corrupt file with a wildcard for folders: not searched for folders", not [line for line in warnings if "No folders match" in line and "corrupt.root" in line], "")
 check("data of an undefined data source: the reason is given", "missing undefined:h (data source not defined)" in run.log, "")
 expectedErrors = ("cannot be created", "could not be created")
-errors = [line for line in run.errors() if not any(e in line for e in expectedErrors) and "corrupt.root" not in line]  # ROOT reports the corrupt file too
+errors = [line for line in run.errors() if not any(e in line for e in expectedErrors) and "corrupt.root" not in line and "Subdirectory XX not found" not in line]  # ROOT reports the corrupt file too
 check("no other errors", not errors, " | ".join(errors[:5]))
 lazy = p.plot("lazy")
 check("tables and text files not requested are not read", lazy.objects("only_hist", "lazy") and not [line for line in lazy.lines("WARN") + lazy.errors() if re.search("table|README|csv", line, re.I)], " | ".join(lazy.lines("WARN") + lazy.errors()))

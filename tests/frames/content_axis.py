@@ -1,7 +1,7 @@
 """The 'C' axis of a pad is the content of a 3d histogram (its z axis is binned): a range on it (both ends, or one) is the minimum and maximum
 of the frame and of the data, with the colour levels spread over it; its title is the title of the colour scale; a log scale on it is
 warned about (ROOT colours the boxes linearly) and not applied; the settings of 'Z' stay on the binned z axis and do not reach the colour
-scale; a 'C' axis in a pad without a 3d histogram is warned about.
+scale; the colour scale takes the text colour and alpha of the pad; a 'C' axis in a pad without a 3d histogram is warned about.
 Cases: every 3d histogram kind × a range on 'C' (both ends, minimum, maximum), a title on 'C', a log 'C', a range and title on 'Z', and the
 named cases.
 Reference: the frame and data read back (minimum, maximum, colour levels, the colour scale's axis title, the z axis: the bins holding
@@ -9,10 +9,10 @@ the range).
 Covers: the content axis of 3d histograms.
 """
 
-from srptest import DATA_3D, DATA_KINDS, Project, S, add_data, cases, check, close, data_objects, describe, finish
+from srptest import DATA_3D, DATA_KINDS, Project, S, add_data, cases, check, close, data_objects, describe, finish, rgba
 
 KINDS = tuple(k for k in DATA_3D if "binned" in DATA_KINDS[k][2])
-SETTINGS = {"range": (5.0, 400.0), "min_only": (50.0, None), "max_only": (None, 300.0), "title": None, "log": None, "z_axis": None}
+SETTINGS = {"range": (5.0, 400.0), "min_only": (50.0, None), "max_only": (None, 300.0), "title": None, "log": None, "z_axis": None, "pad_text": None}
 todo = cases({"kind": list(KINDS), "setting": list(SETTINGS)}, always=lambda c: True)
 
 p = Project("content_axis")
@@ -35,6 +35,8 @@ for i, case in enumerate(todo):
         pad["C"].SetTitle("content title")
     elif setting == "log":
         pad["C"].SetLog()
+    elif setting == "pad_text":
+        pad.SetDefaultTextColor(S.kRed).SetDefaultTextAlpha(0.3)
     else:
         pad["Z"].SetRange(2.0, 8.0).SetTitle("binned z").SetLabelSize(0.06)
     p.pm.AddPlot(plot)
@@ -70,6 +72,10 @@ for i, case in enumerate(todo):
     elif setting == "log":
         padObj = run.pad(f"c{i}", "content")
         check(f"{what}: a log scale warned about, not applied", not padObj.GetLogz() and any("The log scale of the C axis of pad 1 is ignored" in m for m in run.messages(f"c{i}", "content")), " | ".join(run.messages(f"c{i}", "content")))
+    elif setting == "pad_text":
+        scale = palette.GetAxis() if palette else None  # (a TGaxis: its title in the text attributes)
+        colours = {"labels": rgba(scale.GetLabelColor()), "title": rgba(scale.GetTextColor())} if scale else {}
+        check(f"{what}: the colour scale in the text colour and alpha of the pad", bool(colours) and all(c == rgba(632, 0.3) for c in colours.values()), str(colours))
     else:
         z = frame.GetZaxis()
         shown = (z.GetBinLowEdge(z.GetFirst()), z.GetBinUpEdge(z.GetLast()))

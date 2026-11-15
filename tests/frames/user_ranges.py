@@ -4,7 +4,8 @@ bins of a histogram the frame shows whole bins (ROOT): it ends at the edges of t
 functions have no bins: their frame ends exactly at the values.
 Also: no histogram bin outside the frame is drawn, and widening x around all the data leaves the automatic y range as it is. A formula of
 the plot definition without a range of its own that gives the frame spans the pad range (it has no range but ROOT's default 0 to 1): it is
-drawn across the whole frame, and the automatic y range (colour scale) is that of the drawn function.
+drawn across the whole frame, and the automatic y range (colour scale) is that of the drawn function, also of a function drawn
+with many samples (SetNpx).
 Covers: range beyond the axis, exact ends on graph frames, log y headroom, bins outside the frame, formulas spanning the pad range."""
 
 from srptest import BINNED_AXES, DATA_1D, DATA_2D, DATA_KINDS, ROOT, Project, S, add_data, cases, check, close, describe, finish, formula
@@ -65,6 +66,10 @@ for i, (kind, x, log) in enumerate(FORMULA_CASES):
     if kind in DATA_2D:
         plot[1]["Y"].SetRange(*x)
     p.pm.AddPlot(plot)
+# a narrow peak drawn with many samples (SetNpx): the frame comes from the samples it is drawn with
+plot = S.Plot("narrow_peak", "ranges", "1d")
+plot[1].AddFunction("TMath::Gaus(x, 0.5003, 0.0002)").SetNpx(10000)
+p.pm.AddPlot(plot)
 run = p.plot("ranges")
 
 for i, case in enumerate(todo):
@@ -131,5 +136,9 @@ for i, (kind, x, log) in enumerate(FORMULA_CASES):
         covered = low <= min(values) + 1e-6 * span and high >= max(values) - 1e-6 * span
     check(f"automatic value range is that of the drawn function: {what}", covered, f"range {low:.6g} to {high:.6g}, function {min(values):.6g} to {max(values):.6g}")
 
+frame = run.frame("narrow_peak", "ranges")
+funcs = [obj for obj in run.objects("narrow_peak", "ranges") if obj.InheritsFrom("TF1")]
+peak = 0.99 * funcs[0].GetMaximum() if funcs else None  # (the frame of 1000 samples reached 0.64)
+check("a function sampled at SetNpx points gives the frame: its peak inside", bool(frame) and peak is not None and frame["Y"][1] >= peak, f"frame up to {frame['Y'][1] if frame else None}, peak {peak}")
 check("no errors from the run", not run.errors(), " | ".join(run.errors()[:3]))
 finish()

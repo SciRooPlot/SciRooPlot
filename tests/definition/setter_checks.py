@@ -5,7 +5,8 @@ one of its parameters (srptest.SETTER_INVALID: not a number, values outside of w
 not exist ...), the other parameters plain. Reference: the same call with the plain value on the same object, defined and plotted.
 - the call raises (the plot is not made), or it gives exactly one message more than the plain call, either when the plot is defined
   or when it is plotted (loading the saved plot may say again what was said when it was defined): an invalid value is ignored, what was
-  set before stays;
+  set before stays (a setter reported when set: the plain call followed by the invalid one gives the plot of the plain call; a
+  legend row for pad or data 0 is not added; a setter of several values with one invalid sets none);
   named: the same tree joined again, a selection of the entries (Filter) of data that is not projected, pad margins leaving no room
   for the frame (also one margin beside that of the base plot); margins with room are drawn as set, whatever the order of setting;
   the messages give the value as written (a float not widened to double);
@@ -64,7 +65,10 @@ for case in S.setter_cases()[0]:
                 given = list(case["values"])
                 given[i] = bad
                 host = S.SETTER_HOSTS[case["cls"]][case["host"]][0]
-                cases.append({**plain, "plainCase": plain, "param": param, "bad": bad, "valid": valid, "py": host.replace("{call}", S.call(case["method"], given, "py"))})
+                badCall = S.call(case["method"], given, "py")
+                # the plain call followed by the invalid one: the plot of the plain call alone, where the value is reported when set
+                after = host.replace("{call}", S.call(case["method"], case["values"], "py") + badCall)
+                cases.append({**plain, "plainCase": plain, "param": param, "bad": bad, "valid": valid, "py": host.replace("{call}", badCall), "after": after})
 # named: a Join of the same tree again is ignored with a warning
 join = 'p = Plot("{name}", "g", "1d")\np[1].AddData("t", "s").Project1D("x").Join("t2", ["k1"]){again}\npm.AddPlot(p)'
 plain = {"py": join.replace("{again}", ""), "label": "Data.Join(tree, keys) on tree"}
@@ -89,9 +93,13 @@ for case in plains + cases:
     method = case["label"].split("(")[0].split(".")[1]
     if method in S.SELECTIONS:
         names = ("t", "t2") if method in REQUESTS else ("h3", "h3")
-        case["py"] = case["py"].replace('AddData("h", "s")', f'AddData("{names[0]}", "s")').replace('AddRatio("h", "s", "h2", "s2")', f'AddRatio("{names[0]}", "s", "{names[1]}", "s2")')
+        for key in ("py", "after"):
+            if key in case:
+                case[key] = case[key].replace('AddData("h", "s")', f'AddData("{names[0]}", "s")').replace('AddRatio("h", "s", "h2", "s2")', f'AddRatio("{names[0]}", "s", "{names[1]}", "s2")')
 for case in plains + cases:  # every plot draws something (a pad without data warns)
-    case["py"] = case["py"].replace('p = Plot("{name}", "g", "1d")\n', 'p = Plot("{name}", "g", "1d")\np[1].AddData("h", "s")\n')
+    for key in ("py", "after"):
+        if key in case:
+            case[key] = case[key].replace('p = Plot("{name}", "g", "1d")\n', 'p = Plot("{name}", "g", "1d")\np[1].AddData("h", "s")\n')
 
 # a call repeated with another value: the plot is the one with only the second call; one that adds something keeps the first
 ADDERS = ("Filter", "Define", "Join", "AddSymbolOf", "ApplyLayout")  # ApplyLayout merges the layout into what is set
@@ -220,8 +228,39 @@ def label(case):
     return f"{case['label']} with {case['param']}={case['bad']!r}"
 
 
+# an invalid value of a setter reported where it is set is ignored there: after the plain call, the saved plot is that of the plain call
+# alone (Add..., projections and normalisations make what they make without the invalid part; SetGroup normalizes the group it is given);
+# named: a row of a legend for pad or data 0 is not added
+NORMALIZING = ("SetGroup",)
+ignoredPm = S.S.PlotManager("ignored")
+namespace = dict(vars(S.S), pm=ignoredPm, nan=NAN, inf=INF)
+for case in cases:
+    method = case["label"].split("(")[0].split(".")[1]
+    if "after" in case and method.startswith("Set") and method not in NORMALIZING and not case["valid"] and not case["raised"] and new_messages(case, case["plainCase"], "defined"):
+        for suffix, code in (("_after", case["after"]), ("_plain", case["plainCase"]["py"])):
+            S.captured(lambda code=code, suffix=suffix: exec(code.replace("{name}", case["name"] + suffix), namespace))  # noqa: S102
+        case["checkIgnored"] = True
+for padID, dataID in ((1, 0), (0, 1)):
+    for suffix, row in (("_after", f".AddDataEntry({padID}, {dataID})"), ("_plain", "")):
+        S.captured(lambda suffix=suffix, row=row: exec(f'p = Plot("entry_{padID}_{dataID}{suffix}", "g", "1d")\np[1].AddData("h", "s")\np[1].AddLegend(){row}\npm.AddPlot(p)', namespace))  # noqa: S102
+# named: a setter of several values with one of them invalid sets none of them (the other value differs from the one set before)
+for suffix, calls in (("_after", ".SetDimensions(800, 600).SetDimensions(1000, -1, True)"), ("_plain", ".SetDimensions(800, 600)")):
+    S.captured(lambda suffix=suffix, calls=calls: exec(f'p = Plot("dimensions{suffix}", "g", "1d")\np[1].AddData("h", "s")\np{calls}\npm.AddPlot(p)', namespace))  # noqa: S102
+ignoredFile = os.path.join(S.WORK, "ignored.info")
+ignoredPm.SavePlots(file=ignoredFile)
+ignoredSaved = {key.split(":")[0]: {k: v for k, v in values.items() if k != "name"} for key, values in S.info_plots(ignoredFile).items()}
+for padID, dataID in ((1, 0), (0, 1)):
+    after, alone = ignoredSaved.get(f"entry_{padID}_{dataID}_after"), ignoredSaved.get(f"entry_{padID}_{dataID}_plain")
+    S.check(f"LegendBox.AddDataEntry({padID}, {dataID}): no row added", bool(after) and after == alone, str(after)[:300])
+after, alone = ignoredSaved.get("dimensions_after"), ignoredSaved.get("dimensions_plain")
+S.check("Plot.SetDimensions(1000, -1) after SetDimensions(800, 600): nothing set", bool(after) and after == alone, str({k: (after.get(k), alone.get(k)) for k in set(after) | set(alone) if after.get(k) != alone.get(k)} if after and alone else "not saved"))
+
 for case in cases:
     plain = case["plainCase"]
+    if case.get("checkIgnored"):
+        after, alone = ignoredSaved.get(case["name"] + "_after"), ignoredSaved.get(case["name"] + "_plain")
+        diff = {k: (after.get(k), alone.get(k)) for k in set(after) | set(alone) if after.get(k) != alone.get(k)} if after and alone else "not saved"
+        S.check(f"{label(case)}: ignored where set (the value set before stays)", bool(after) and after == alone, str(diff)[:300])
     if case["valid"]:
         new = {phase: new_messages(case, plain, phase) for phase in ("defined", "loaded", "made")} if not case["raised"] else {}
         S.check(f"{label(case)}: accepted without a message", not case["raised"] and case["made"] is not None and not any(new.values()), f"{case['raised']!r} {new}")

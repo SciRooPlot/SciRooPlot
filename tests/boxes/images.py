@@ -1,7 +1,8 @@
 """An image (Pad::AddImage) is drawn at its place with the size asked for: as wide as set (a fraction of the frame, or of the pad in pad
 coordinates; 0.2 by default), as high as its aspect ratio gives in pixels, or as high as set, or both; the picture fills that box in the
 image the plot is saved as. A relative path is taken from where the plot is defined, an image of a base plot is drawn in its plots. A
-missing file, an image beyond its pad and an image in pad 0 are warned about and left out, the plot is made. The image is in every file
+missing file, an image beyond its pad and an image in pad 0 are warned about and left out, the plot is made; a pad holding
+only an image is drawn. The image is in every file
 format that can hold one (svg, eps, png); a pdf holds none before ROOT 6.42, which is said once per run.
 Cases: png and jpg pictures wide and tall × the size set by width, height, both or neither × pad and frame coordinates × a wide and a
 tall canvas (the sizes that reach beyond the pad: warned and left out), and the named cases.
@@ -68,6 +69,9 @@ with open(f"{WORK}/text.png", "w") as textFile:
 plot("no_image", lambda pl: pl[1].AddImage(0.3, 0.8, f"{WORK}/text.png"))
 plot("beyond_pad", lambda pl: pl[1].AddImage(0.9, 0.8, picture).SetPadCoordinates().SetWidth(0.3))
 plot("pad0", lambda pl: pl[0].AddImage(0.3, 0.8, picture))
+alone = S.Plot("only_image", "special", "1d")  # a pad holding nothing but an image, as one holding only a text
+alone[1].AddImage(0.3, 0.8, picture)
+p.pm.AddPlot(alone)
 base = S.PlotManager.MakeBasePlot("1d")
 base.SetName("1d_logo")
 base[1].AddImage(0.7, 0.95, picture).SetWidth(0.1)
@@ -140,6 +144,7 @@ check(
 check("an image beyond its pad: warned, the plot made without it", special.canvas("beyond_pad", "special") and not image("beyond_pad") and any("does not fit into its pad" in m for m in messages("beyond_pad")), " | ".join(messages("beyond_pad")))
 check("an image in pad 0: warned", any("pad0" in m and "added to pad 0 are not drawn" in m for m in special.warnings()), " | ".join(special.warnings()))
 check("an image of a base plot is drawn in its plots", bool(image("from_base")))
+check("a pad holding only an image is drawn with it", bool(image("only_image")) and not any("Nothing to be drawn" in m for m in messages("only_image")), " | ".join(messages("only_image")))
 check("a relative path is taken from where the plot is defined", bool(image("relative")), " | ".join(messages("relative")))
 
 for fmt, marker in (("svg", b"<image"), ("eps", b"/WT"), ("png", None)):  # eps: ROOT writes the pixels as a cell array

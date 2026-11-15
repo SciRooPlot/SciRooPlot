@@ -4,8 +4,8 @@ The file holds the plots of round_trip.py (every key the definition writes). For
 the value replaced by a word that is no number (junk) or followed by a letter (trailing), the key misspelt (a letter added), and the key
 of a part (a pad, a data item, an axis, FRAME, legend_entry ...) changed (its number or letter replaced, or a suffix added). The changed
 plot is loaded together with an unchanged one. Reference: what was written:
-- the value is read as written (a text), or loading reports it naming the key or the value (the plot is then left out), never
-  silently read as something else or dropped;
+- the value is read as written (a text), or loading reports it naming the key or the value and the plot is left out (also for an
+  unknown name of a coordinate system, placement, drawing option, layer or shape kind), never read as something else or dropped;
 - a misspelt key, and a part under a changed key, are read as before (the key names its kind) or reported naming the key;
 - the unchanged plot loads in every case, and the file as written names no key as unknown (also where repeated parts, the rows of a
   legend, hold different keys).
@@ -103,7 +103,7 @@ for (kind, isNode), (name, n, key, value) in sorted(places.items()):
         else:
             # read as written: a loaded plot holds the changed value at this key (the name of a plot: under that name)
             readAsWritten = any(k.split("/")[-1] == key and v == written for name, plot in plots.items() if name != "intact" for k, v in plot.items())
-            ok = readAsWritten or reported
+            ok = readAsWritten or (reported and plotName not in plots)  # reported: the plot is left out
         S.check(f"{key} ({kind}) {change}: read as written or reported naming it", ok, f"{line.strip()!r}: {printed.strip()[:300]!r}")
         S.check(f"{key} ({kind}) {change}: the unchanged plot loads", "intact" in plots, printed.strip()[:300])
 unchanged = S.S.PlotManager("unchanged")
