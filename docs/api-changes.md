@@ -144,6 +144,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | An output directory whose parent does not exist was reported for every plot, after the plot was painted | Reported once, before anything is painted, as an output directory that is not set | behaviour | Nothing. |
 | An input file with a folder wildcard (`file.root:DF_*`) that cannot be opened gave ROOT's errors, "Cannot open input file" and "No folders match"; a missing folder (`file.root:folder`) was reported without the data source | One warning "Cannot open input file … (data source …)"; the missing folder names its data source | behaviour | Nothing. |
 | `Plot::SetDimensions(width, height)` with one invalid size kept the other; legend symbols with letters other than L, P, F, E (`LegendEntry::SetSymbolElements`, `LegendBox::SetDefaultSymbolElements`) were warned about but used; `LegendBox::AddDataEntry` with pad or data 0 was taken without a word (reported when plotting as missing data) | Warned about and ignored where set, as the other setters | input validation | Give valid values. |
+| Python `histo` and `histo2d` with a range or bin edges put entries with a NaN value or weight into the overflow and counted them as entries (`<entries>`, `SetShowOverflowBins`) | They are left out, with a warning naming how many | behaviour | Nothing. |
 
 ### Files
 
