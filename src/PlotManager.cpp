@@ -1440,6 +1440,10 @@ bool PlotManager::LoadPlots(const string& name, const string& group, const optio
 //**************************************************************************************************
 bool PlotManager::GeneratePlots(const string& mode, const string& name, const string& group)
 {
+  if (mode == "list") {
+    logger::error("Mode 'list' is one of the plot command: in a program, ListPlots() lists the plots.");
+    return false;
+  }
   if (!is_valid_plot_mode(mode)) {
     logger::error("Invalid plot mode '{}' (srp help lists the modes).", mode);
     return false;
