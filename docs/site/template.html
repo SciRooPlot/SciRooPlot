@@ -1039,8 +1039,8 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
     <section><h4>Pads, axes, boxes</h4><table>
       <tr><td><code>plot[1]</code>, <code>plot[2]</code> …</td><td>pads from 1; <code>plot[0]</code> = all pads</td></tr>
       <tr><td><code>['X'].SetRange(0, 10).SetTitle("…")</code></td><td>also <code>SetLog()</code>, <code>SetNumDivisions(n)</code></td></tr>
-      <tr><td><code>AddLegend(x, y)</code> <code>.SetNumColumns(2)</code></td><td>upper left corner, pad fraction</td></tr>
-      <tr><td><code>AddText(x, y, "…")</code> <code>.SetFrameCoordinates()</code></td><td>pad fraction / frame fraction / axis units (<code>SetUserCoordinates()</code>)</td></tr>
+      <tr><td><code>AddLegend(x, y)</code> <code>.SetNumColumns(2)</code></td><td>upper left corner, frame fraction</td></tr>
+      <tr><td><code>AddText(x, y, "…")</code> <code>.SetPadCoordinates()</code></td><td>frame fraction (default) / pad fraction / axis units (<code>SetUserCoordinates()</code>)</td></tr>
       <tr><td><code>AddImage(x, y, "logo.png")</code> <code>.SetWidth(0.3)</code></td><td>image; in pdf from ROOT 6.42</td></tr>
       <tr><td><code>"&lt;mean[.2f]&gt;"</code> <code>"&lt;entries&gt;"</code> <code>"&lt;integral&gt;"</code> <code>"&lt;title&gt;"</code></td><td>numbers in labels</td></tr>
       <tr><td><code>#it{p}_{T}</code> <code>#sqrt{s}</code> <code>#pi^{0}</code></td><td>ROOT's TLatex</td></tr></table></section>

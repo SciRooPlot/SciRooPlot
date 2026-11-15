@@ -199,7 +199,21 @@ def main():
     # the drawing option aliases and placements are part of the interface too
     block = texts["Plot.h"][texts["Plot.h"].index("#define DRAW_OPTIONS") : texts["Plot.h"].index("enum draw_option_t")]
     aliases = re.findall(r"OPT\((\w+)", block)
-    out += ["## Enumerations", "", "- `draw_option_t`: " + ", ".join(f"`{a}`" for a in aliases), "- `box_placement_t`: `best_corner`, `top_left`, `top_right`, `bottom_right`, `bottom_left`", ""]
+
+    def values(macro, entry):
+        """the names listed in the X macro of an enumeration of Plot.h"""
+        text = texts["Plot.h"]
+        start = text.index(f"#define {macro}")
+        return re.findall(rf"{entry}\((\w+)\)", text[start : text.index("enum", start)])
+
+    out += [
+        "## Enumerations",
+        "",
+        "- `draw_option_t`: " + ", ".join(f"`{a}`" for a in aliases),
+        "- `box_placement_t`: " + ", ".join(f"`{v}`" for v in values("BOX_PLACEMENTS", "PLACEMENT")),
+        "- `coordinates_t`: " + ", ".join(f"`{v}`" for v in values("COORDINATE_SYSTEMS", "COORDINATES")),
+        "",
+    ]
     # the skill names the version it describes, so agents can compare it with the installed one
     version = re.search(r"project\(\s*SciRooPlot\s+VERSION\s+([\d.]+)", (ROOT / "CMakeLists.txt").read_text())[1]
     skill = re.sub(r"^Describes SciRooPlot \S+", f"Describes SciRooPlot {version}", SKILL.read_text(), count=1, flags=re.M)

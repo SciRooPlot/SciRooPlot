@@ -1685,8 +1685,8 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
 
 //**************************************************************************************************
 /**
- * Representation of an image (e.g. a logo) drawn in a pad. Its position is the upper left corner (in pad or user coordinates),
- * as for texts; a size not given follows from the other one and the aspect ratio of the image.
+ * Representation of an image (e.g. a logo) drawn in a pad. Its position is the upper left corner (in frame coordinates by default,
+ * or pad or user coordinates), as for texts; a size not given follows from the other one and the aspect ratio of the image.
  */
 //**************************************************************************************************
 class Plot::Pad::ImageBox : public PositionSetters<ImageBox>
