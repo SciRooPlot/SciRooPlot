@@ -936,8 +936,10 @@ auto Plot::SetBasePlot(const string& basePlot) -> decltype(*this)
 
 auto Plot::SetDimensions(int32_t width, int32_t height, bool fixAspectRatio) -> decltype(*this)
 {
-  SetWidth(width);
-  SetHeight(height);
+  // nothing is set if one of the sizes is invalid, as for the other setters of several values
+  if (!CheckPixels(width, "width of plot " + mName) || !CheckPixels(height, "height of plot " + mName)) return *this;
+  mPlotDimensions.width = width;
+  mPlotDimensions.height = height;
   mPlotDimensions.fixAspectRatio = fixAspectRatio;
   return *this;
 }
@@ -4559,6 +4561,12 @@ Plot::Pad::LegendEntry& Plot::Pad::LegendBox::AddEntry(const string& label)
 
 Plot::Pad::LegendEntry& Plot::Pad::LegendBox::AddDataEntry(uint8_t padID, uint16_t dataID)
 {
+  if (padID == 0 || dataID == 0) {
+    logger::warning("AddDataEntry({}, {}) is ignored: pads and data are numbered from 1.", padID, dataID);
+    static thread_local LegendEntry ignored;  // what is set on it goes nowhere
+    ignored = LegendEntry();
+    return ignored;
+  }
   LegendEntry& entry = mLegendEntriesUser.emplace_back(LegendEntry(nullopt, dataID));
   entry.mRefPadID = padID;
   return entry;
@@ -4595,8 +4603,7 @@ auto Plot::Pad::LegendBox::SetOrderTopDown(bool topDown) -> decltype(*this)
 
 auto Plot::Pad::LegendBox::SetDefaultSymbolElements(const string& symbolElements) -> decltype(*this)
 {
-  LegendEntry::CheckSymbolElements(symbolElements);
-  mSymbolElementsDefault = symbolElements;
+  if (LegendEntry::CheckSymbolElements(symbolElements)) mSymbolElementsDefault = symbolElements;
   return *this;
 }
 
@@ -4899,16 +4906,17 @@ auto Plot::Pad::LegendEntry::AddSymbolOf(const vector<uint16_t>& dataIDs) -> dec
 }
 
 // the letters of the symbol of a legend row (TLegendEntry): L line, P marker, F fill, E error bars
-void Plot::Pad::LegendEntry::CheckSymbolElements(const string& symbolElements)
+bool Plot::Pad::LegendEntry::CheckSymbolElements(const string& symbolElements)
 {
   if (symbolElements.find_first_not_of("LPFElpfe") != string::npos) {
-    logger::warning("Legend symbol '{}' contains letters other than L (line), P (marker), F (fill) and E (error bars).", symbolElements);
+    logger::warning("The legend symbol '{}' is ignored: it contains letters other than L (line), P (marker), F (fill) and E (error bars).", symbolElements);
+    return false;
   }
+  return true;
 }
 auto Plot::Pad::LegendEntry::SetSymbolElements(const string& symbolElements) -> decltype(*this)
 {
-  CheckSymbolElements(symbolElements);
-  mSymbolElements = symbolElements;
+  if (CheckSymbolElements(symbolElements)) mSymbolElements = symbolElements;
   return *this;
 }
 

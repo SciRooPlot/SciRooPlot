@@ -926,7 +926,7 @@ class Plot::Pad::LegendEntry : public MarkerSetters<LegendEntry>, public LineSet
     LEGEND_ROW_POSITIONS
 #undef POSITION
   };
-  static void CheckSymbolElements(const std::string& symbolElements);
+  static bool CheckSymbolElements(const std::string& symbolElements);  // false (with a warning) for letters other than L, P, F, E
   // the rows a LegendBox makes itself: an extra row with its label, the row of a data item
   explicit LegendEntry(const std::optional<std::string>& label, const std::optional<uint16_t>& refDataID = {}, const std::optional<std::string>& symbolElements = {});
   void operator+=(const LegendEntry& legendEntry);
