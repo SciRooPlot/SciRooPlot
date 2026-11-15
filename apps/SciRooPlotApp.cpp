@@ -233,14 +233,14 @@ int RunCommand(const string& command, const string& project, const string& prope
       return 1;
     }
     std::error_code existsError;
-    if (!std::filesystem::exists(fileName, existsError)) {
+    if (util::is_missing_local_file(fileName, existsError)) {  // a remote file is opened through ROOT, as the inputs of data sources
       logger::error("Could not find file {}.", fileName);
       return 1;
     }
     TFile* file{};
     {
       auto quiet = util::ignore_root_messages_below(kFatal);  // a file that is not a ROOT file is reported below
-      file = TFile::Open(fileName.data());
+      file = util::open_input_file(fileName).release();
     }
     if (!file || file->IsZombie()) {
       logger::error("Cannot read {}: srp open shows ROOT files.", fileName);

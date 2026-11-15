@@ -173,6 +173,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A program that set a locale with a decimal comma reset `screenscale` and `bitmapscale` with decimals (1.5) to 1 in `settings.info` | The settings are read independent of the locale and kept | CLI | Set the scales again if they were reset. |
 | `srp print` of a remote file (`root://…`, `https://…`), which data sources read, failed with "Could not find file" | Remote files are listed, read through ROOT as the inputs of data sources | CLI | Nothing. |
 | Mode `list` (`plot <group> <name> list`) listed each plot as ` - <name> in group <group>` | ` - <name> from group <group>`, as the messages name a plot | CLI | Adapt scripts that read the list. |
+| `srp open` of a remote file (`root://…`, `https://…`), which data sources and `srp print` read, failed with "Could not find file" | The file is opened through ROOT | CLI | Nothing. |
 
 ## 3.3.3 → 4.0.0
 
