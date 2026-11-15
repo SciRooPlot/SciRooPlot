@@ -606,7 +606,7 @@ void Plot::ReadNamed(const ptree& tree, optional<T>& value, const char* key)
 {
   if (auto name = tree.get_optional<string>(key)) {
     value = enum_from_name<T>(*name);
-    if (!value) logger::warning("Unknown {} '{}' is ignored.", enum_names<T>::what, *name);
+    if (!value) logger::throw_invalid_argument("Bad value '{}' of {}: not a known {}", *name, key, enum_names<T>::what);
   }
 }
 template <typename T>
@@ -1671,7 +1671,7 @@ Plot::Pad::Pad(const ptree& padTree)
       if (const string kind = content.second.get<string>("kind", ""); enum_from_name<Shape::kind_t>(kind)) {
         mShapes.push_back(std::make_shared<Shape>(content.second));
       } else {
-        logger::warning("Unknown shape kind {} is ignored.", kind);
+        logger::throw_invalid_argument("Bad value '{}' of {}.kind: not a known shape kind", kind, content.first);
       }
     }
     if (str_contains(content.first, "IMAGE")) {
