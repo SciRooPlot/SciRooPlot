@@ -5718,7 +5718,7 @@ bool PlotPainter::DrawBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<P
                           get_first(box->GetTextAlpha(), pad.GetDefaultTextAlpha(), padDefaults.GetDefaultTextAlpha())};
     const coordinates_t coordinates = get_first_or(frame_coordinates, box->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
     TPave* generated = GenerateBox(box, coordinates, text, pad_ptr);
-    if (generated) generated->SetUniqueID(coordinates);  // a double-click in show mode reports the position as given
+    if (generated) generated->SetUniqueID(generated->GetUniqueID() | coordinates);  // a double-click in show mode reports the position as given
     return generated;
   };
   TPave* pave = std::visit(generate, boxVariant);
@@ -6107,10 +6107,12 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     const double_t borderX = mScale * box->GetBorderWidth().value_or(0.) / padWidthPixel;
     const double_t borderY = mScale * box->GetBorderWidth().value_or(0.) / padHeightPixel;
     auto [upperLeftX, upperLeftY] = PlaceBox(*box, coordinates, pad, totalWidthNDC, totalHeightNDC, borderX, borderY, (isLegend) ? "legend" : "text");
+    bool alignedAtPosition{};
     if constexpr (!isLegend) {
       // a single line placed at a position is aligned at it as ROOT aligns a TLatex at its point (the tens 1, 2, 3: left, centre, right;
       // the units 1, 2, 3: bottom, centre, top), otherwise the position is the upper left corner of the box
       if (const auto& align = box->GetTextAlign(); align && nLines == 1 && !box->IsAutoPlacement()) {
+        alignedAtPosition = true;
         upperLeftX -= 0.5 * (std::clamp(*align / 10, 1, 3) - 1) * totalWidthNDC;
         upperLeftY += 0.5 * (3 - std::clamp(*align % 10, 1, 3)) * totalHeightNDC;
       }
@@ -6138,6 +6140,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       TPaveText* paveText = new TPaveText(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "NDC NB");
       paveText->SetMargin(relMarginWidth);
       paveText->SetTextAlign(box->GetTextAlign().value_or(kHAlignLeft + kVAlignCenter));
+      if (alignedAtPosition) paveText->SetUniqueID(kAlignedAtPosition);  // a double-click in show mode reports the alignment point
       paveText->SetBorderSize(1);
       paveText->SetTextFont(textFont);
       paveText->SetTextSize(textSize);

@@ -2994,7 +2994,10 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
     return ndc;
   };
   // the coordinate system a box was drawn with (TObject::SetUniqueID)
-  auto boxCoordinates = [](uint32_t uniqueID) { return (uniqueID <= static_cast<uint32_t>(user_coordinates)) ? static_cast<coordinates_t>(uniqueID) : pad_coordinates; };
+  auto boxCoordinates = [](uint32_t uniqueID) {
+    uniqueID &= ~PlotPainter::kAlignedAtPosition;
+    return (uniqueID <= static_cast<uint32_t>(user_coordinates)) ? static_cast<coordinates_t>(uniqueID) : pad_coordinates;
+  };
   // fractions with 3 digits, axis values with 4
   auto number = [](double_t value, coordinates_t coordinates) { return (coordinates == user_coordinates) ? fmt::format("{:.4g}", value) : fmt::format("{:.3g}", value); };
   // a hint at the content: the start of the first line or row
@@ -3036,10 +3039,18 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
     } else {
       return nullopt;  // e.g. the colour scale
     }
-    // the upper left corner, as AddText(x, y, ...), AddLegend(x, y) and SetPosition(x, y) take it
+    // the upper left corner, as AddText(x, y, ...), AddLegend(x, y) and SetPosition(x, y) take it; for a single-line text aligned at
+    // its position (SetTextAlign) the alignment point
     const auto coordinates = boxCoordinates(box->GetUniqueID());
-    const double_t x = given(box->GetX1NDC(), true, coordinates);
-    const double_t y = given(box->GetY2NDC(), false, coordinates);
+    double_t xNDC = box->GetX1NDC();
+    double_t yNDC = box->GetY2NDC();
+    if (auto* text = dynamic_cast<TPaveText*>(box); text && (box->GetUniqueID() & PlotPainter::kAlignedAtPosition)) {
+      const int16_t align = text->GetTextAlign();
+      xNDC += 0.5 * (std::clamp(align / 10, 1, 3) - 1) * (box->GetX2NDC() - box->GetX1NDC());
+      yNDC -= 0.5 * (3 - std::clamp(align % 10, 1, 3)) * (box->GetY2NDC() - box->GetY1NDC());
+    }
+    const double_t x = given(xNDC, true, coordinates);
+    const double_t y = given(yNDC, false, coordinates);
     return line(what, number(x, coordinates) + ", " + number(y, coordinates));
   }
 

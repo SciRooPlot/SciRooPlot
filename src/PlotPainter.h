@@ -233,6 +233,8 @@ class PlotPainter
   static const std::vector<color_t>& DefaultColors();
   // the frame of a pad as fractions of the pad (x1, y1, x2, y2); a 3d view: the pad within its margins; an empty layout cell: the pad
   static std::array<double_t, 4> FrameInPad(const TVirtualPad* pad);
+  // added to the coordinate system kept as unique ID of a single-line text whose position is its alignment point (SetTextAlign)
+  static constexpr uint32_t kAlignedAtPosition = 16;
   // the red, green and blue of nColors spread evenly over a gradient
   static std::vector<std::tuple<double_t, double_t, double_t>> GradientRGB(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints);
 

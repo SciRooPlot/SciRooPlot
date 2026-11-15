@@ -137,6 +137,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A region (`AddRegion`, `AddRegionX`, `AddRegionY`) behind the data (`SetBehindData`) with a line set (`SetLineColor`, `SetLine` ...) was drawn without its outline | Drawn with its outline, as in the other layers | behaviour | Nothing. |
 | A pad holding only images (`AddImage`) was not drawn ("Nothing to be drawn in pad …"), while a pad with only a text or legend was | It is drawn with its images | behaviour | Nothing. |
 | Data drawn as plain `CONT` (ROOT fills it as `CONT0`; also the alias `cont_fillz`, `CONTZ`) got a line in its legend row, and boxes placed automatically took it for contour lines and covered the filled map | No symbol in the legend row, as `cont_fill`; automatic boxes avoid it as a map | behaviour | Nothing. |
+| The position printed in mode `show` for a double-clicked single-line text with `SetTextAlign` was the upper left corner of its box, while `AddText(x, y, …)` puts the alignment point of such a text at (x, y): copied back, the text moved | The alignment point, as `AddText` takes it | behaviour | Nothing. |
 
 ### Files
 
