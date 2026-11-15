@@ -3433,6 +3433,22 @@ void PlotPainter::Paints3dGraph(const string& option, bool& triangles, bool& poi
 
 //**************************************************************************************************
 /**
+ * Filled contours: CONT0, CONT4 and plain CONT, which ROOT paints as CONT0 (CONT1 to CONT3 and CONT5 are lines).
+ */
+//**************************************************************************************************
+bool PlotPainter::IsFilledContour(const string& option)
+{
+  TString upper(option);
+  upper.ToUpper();
+  for (Ssiz_t pos = upper.Index("CONT"); pos != kNPOS; pos = upper.Index("CONT", pos + 4)) {
+    const char next = (pos + 4 < upper.Length()) ? upper[pos + 4] : '\0';
+    if (next < '0' || next > '9' || next == '0' || next == '4') return true;
+  }
+  return false;
+}
+
+//**************************************************************************************************
+/**
  * A flat polar drawing (COL with POL, see THistPainter::PaintColorLevels): x is the angle, y the radius of a disc filling the frame,
  * each cell a TCrown outlined with the line attributes of the data.
  */
@@ -5303,7 +5319,8 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
     takeToken("POL");  // polar coordinates, not a symbol
     // coloured by the palette (also LEGO2, SURF1-4, the filled contours, the boxes of 3d histograms coloured by the content and the
     // coloured triangles of 2d graphs)
-    for (const char* token : {"COL", "Z", "LEGO2", "SURF1", "SURF2", "SURF3", "SURF4", "CONT0", "CONT1", "CONT4", "BOX2", "ISO", "TRI1", "TRI2"}) {
+    if (IsFilledContour(option)) return {};
+    for (const char* token : {"COL", "Z", "LEGO2", "SURF1", "SURF2", "SURF3", "SURF4", "CONT1", "BOX2", "ISO", "TRI1", "TRI2"}) {
       if (str_contains(option, token)) return {};
     }
     if (isGraph2D) {
@@ -6492,12 +6509,12 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   // (TGraphPainter::PaintGrapHist and Smooth)
   auto fillBaseY = [&]() { return (pad->GetLogy()) ? pad->GetUymin() : std::clamp(0., pad->GetUymin(), pad->GetUymax()); };
 
-  // contour lines of 2d data (CONT, CONT1 to CONT3; CONT0 and CONT4 fill, COL is a map): only the cells a line passes through, i.e. where a
+  // contour lines of 2d data (CONT1 to CONT3; CONT, CONT0 and CONT4 fill, COL is a map): only the cells a line passes through, i.e. where a
   // level lies between the values at the corners of the cell (widened by half a cell for the width of the lines); the levels are those of
   // the painted histogram (that of a 2d function is made when it is painted); without levels the whole range counts as before
   auto isLineContour = [pad](TObject* obj) {
     const TString option = str_upper(DrawOption(pad, obj));
-    return option.Contains("CONT") && !option.Contains("CONT0") && !option.Contains("CONT4") && !option.Contains("COL");
+    return option.Contains("CONT") && !IsFilledContour(option.Data()) && !option.Contains("COL");
   };
   auto markContourLines = [&](TH1* levelsFrom, const std::function<double_t(double_t, double_t)>& valueAt, double_t xMin, double_t yMin, double_t xMax, double_t yMax) {
     const int32_t nLevels = (levelsFrom) ? levelsFrom->GetContour() : 0;

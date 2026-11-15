@@ -283,6 +283,7 @@ class PlotPainter
   void ApplyAxisSettings(pad_state_t& padState, char axisLabel, const std::optional<std::vector<std::array<double_t, 3>>>& graphPositivePoints,
                          const std::optional<std::vector<std::array<double_t, 5>>>& polyPositiveBins, const std::optional<double_t>& graphPositiveMinimumX);
   static void Paints3dGraph(const std::string& option, bool& triangles, bool& points);
+  static bool IsFilledContour(const std::string& option);
   static bool IsFlatPolar(const std::string& option);
   static bool IsColorBoxes3d(const std::string& option);
   static bool IsView3d(const std::string& option);
