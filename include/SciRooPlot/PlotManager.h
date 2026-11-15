@@ -38,7 +38,6 @@
 
 class TCanvas;
 class TDirectory;
-class TFile;
 class TChain;
 class TKey;
 class TObject;
