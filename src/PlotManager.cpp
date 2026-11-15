@@ -764,11 +764,16 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
   };
 
   // folders matching the (wildcard) path within a root file, e.g. DF_* or run*/sub
-  auto expandFolders = [&](const string& fileName, const string& folderPattern) {
-    auto file = open_input_file(fileName);
+  // (nullopt for a file that cannot be opened, reported here, ROOT's own messages left out)
+  auto expandFolders = [&](const string& fileName, const string& folderPattern) -> std::optional<vector<string>> {
+    std::unique_ptr<TFile> file;
+    {
+      auto quiet = ignore_root_messages_below(kFatal);
+      file = open_input_file(fileName);
+    }
     if (!file || file->IsZombie()) {
       logger::warning("Cannot open input file {} (data source {}).", fileName, dataSource);
-      return vector<string>{};
+      return std::nullopt;
     }
     return MatchFolders(file.get(), folderPattern);
   };
@@ -784,9 +789,10 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
     const InputID file = fileID(filePart);
     if (hasWildcard(folderPath)) {
       const auto folders = expandFolders(expand_path(filePart).value_or(""), folderPath);
+      if (!folders) return;
       // inputs that do not contain the folder of a restricted data source are simply not part of it
-      if (folders.empty() && !isRestricted) logger::warning("No folders match {} in {} (data source {}).", folderPath, filePart, dataSource);
-      for (const auto& folder : folders) {
+      if (folders->empty() && !isRestricted) logger::warning("No folders match {} in {} (data source {}).", folderPath, filePart, dataSource);
+      for (const auto& folder : *folders) {
         addInput(file, filePart, folder);
       }
     } else {
@@ -1886,7 +1892,7 @@ void PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
           if (!folder) {
             // inputs that do not contain the folder of a restricted data source (dataSource:some/folder) are simply not part of it
             if (isRestricted) continue;
-            logger::error("Subdirectory {} not found in file {}.", folderPath, fileName);
+            logger::error("Subdirectory {} not found in file {} (data source {}).", folderPath, fileName, baseSource);
             continue;
           }
         }
