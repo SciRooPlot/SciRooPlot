@@ -27,9 +27,9 @@ requirements:
     - ${{ compiler('cxx') }}
     - ${{ stdlib('c') }}
   host:
-    - root_base >=6.36.04
-    - libboost-devel >=1.74
-    - fmt >=8.0.0
+    - root_base
+    - libboost-devel
+    - fmt
     - pybind11 >=2.9
     - python
   run:
@@ -48,6 +48,7 @@ tests:
       include:
         - SciRooPlot/Plot.h
         - SciRooPlot/PlotManager.h
+        - SciRooPlot/PanelLayout.h
         - SciRooPlot/Logger.h
       lib:
         - SciRooPlot
