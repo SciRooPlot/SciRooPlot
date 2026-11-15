@@ -139,6 +139,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Data drawn as plain `CONT` (ROOT fills it as `CONT0`; also the alias `cont_fillz`, `CONTZ`) got a line in its legend row, and boxes placed automatically took it for contour lines and covered the filled map | No symbol in the legend row, as `cont_fill`; automatic boxes avoid it as a map | behaviour | Nothing. |
 | The position printed in mode `show` for a double-clicked single-line text with `SetTextAlign` was the upper left corner of its box, while `AddText(x, y, …)` puts the alignment point of such a text at (x, y): copied back, the text moved | The alignment point, as `AddText` takes it | behaviour | Nothing. |
 | The frame (axis ranges, colour scale) of a function drawn with `Data::SetNpx` / `SetNpy` that gives the frame came from samples at the default number of points: a narrow peak was cut at the top of the frame | It comes from the samples the function is drawn with | behaviour | Nothing. |
+| Statistics boxes took the text font and size of the pad (`Pad::SetDefaultTextFont`, `SetDefaultTextSize`) but not its text colour and alpha (`SetDefaultTextColor`, `SetDefaultTextAlpha`); the colour scale of a 3d histogram took the colour but not the alpha | Both follow the text colour and alpha of the pad, as legends, texts and axes | behaviour | Nothing. |
 
 ### Files
 

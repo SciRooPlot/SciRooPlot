@@ -1441,7 +1441,8 @@ void PlotPainter::StyleContentScale(pad_state_t& padState)
     if (auto titleSize = LayoutValue(pad, padDefaults, &Plot::Pad::layout_values_t::titleSize)) zAxis->SetTitleSize(*titleSize);
     if (auto titleOffset = LayoutValue(pad, padDefaults, &Plot::Pad::layout_values_t::titleOffsetZ)) zAxis->SetTitleOffset(*titleOffset);
     bool ownTitleOffset = zAxis->GetTitleOffset() != 0.f;  // a fixed distance from the layout
-    optional<float_t> titleAlpha, labelAlpha, axisAlpha;
+    // texts in the alpha of the pad, as other axes
+    optional<float_t> titleAlpha = padState.textAlpha, labelAlpha = padState.textAlpha, axisAlpha;
     for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
       const auto& content = *contentSettings;
       if (content.GetTitleFont()) zAxis->SetTitleFont(*content.GetTitleFont());
@@ -2134,8 +2135,8 @@ void PlotPainter::DrawStatsBox(item_state_t& state, T data_ptr, TH1* statsHist)
     auto statsBox = (data->GetStatsBox()) ? data->GetStatsBox() : std::make_shared<const Plot::Pad::StatsBox>();
     stats->SetTextFont(statsBox->GetTextFont().value_or(textFont.value_or(43)));
     stats->SetTextSize(statsBox->GetTextSize().value_or(textSize.value_or(24.f)));
-    if (statsBox->GetTextColor()) stats->SetTextColor(statsBox->GetTextColor()->ToIndex());
-    if (statsBox->GetTextAlpha()) stats->SetTextColor(TColor::GetColorTransparent(stats->GetTextColor(), *statsBox->GetTextAlpha()));
+    // the text colour and alpha of the box, else those of the pad, as for legends and texts
+    stats->SetTextColor(ColorWithAlpha(stats->GetTextColor(), get_first(statsBox->GetTextColor(), padState.textColor), get_first(statsBox->GetTextAlpha(), padState.textAlpha)));
     stats->SetLineColor(data_ptr->GetLineColor());
     stats->SetLineWidth(1);
     stats->SetBorderSize(1);
