@@ -9137,18 +9137,23 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
       } else if (word == "integral") {
         value = hist->Integral();
       } else if (auto* poly = dynamic_cast<TH2Poly*>(hist); poly && (word == "mean" || word == "stddev")) {
-        // from the polygons at their centres: ROOT's statistics of a TH2Poly read the cells of its TH2 grid, which hold nothing
-        double_t sumW{}, sumWX{}, sumWX2{};
-        for (int32_t bin = 1; bin <= poly->GetNumberOfBins(); ++bin) {
-          auto* polyBin = static_cast<TH2PolyBin*>(poly->GetBins()->At(bin - 1));
-          const double_t x = 0.5 * (polyBin->GetXMin() + polyBin->GetXMax());
-          const double_t w = polyBin->GetContent();
-          sumW += w;
-          sumWX += w * x;
-          sumWX2 += w * x * x;
+        // from the polygons at their centres: ROOT's statistics of a TH2Poly read the cells of its TH2 grid, which hold nothing;
+        // the spread in a second pass around the mean (sumWX2 / sumW - mean² cancels to a residue where it should be 0)
+        auto sumOverPolygons = [poly](auto term) {
+          double_t sum{};
+          for (int32_t bin = 1; bin <= poly->GetNumberOfBins(); ++bin) {
+            auto* polyBin = static_cast<TH2PolyBin*>(poly->GetBins()->At(bin - 1));
+            sum += polyBin->GetContent() * term(0.5 * (polyBin->GetXMin() + polyBin->GetXMax()));
+          }
+          return sum;
+        };
+        const double_t sumW = sumOverPolygons([](double_t) { return 1.; });
+        const double_t mean = (sumW != 0.) ? sumOverPolygons([](double_t x) { return x; }) / sumW : 0.;
+        if (word == "mean") {
+          value = mean;
+        } else {
+          value = (sumW != 0.) ? std::sqrt(std::max(sumOverPolygons([mean](double_t x) { return (x - mean) * (x - mean); }) / sumW, 0.)) : 0.;
         }
-        const double_t mean = (sumW != 0.) ? sumWX / sumW : 0.;
-        value = (word == "mean") ? mean : ((sumW != 0.) ? std::sqrt(std::max(sumWX2 / sumW - mean * mean, 0.)) : 0.);
       } else if (word == "mean") {
         value = hist->GetMean();
       } else if (word == "stddev") {
