@@ -4115,7 +4115,12 @@ void PlotPainter::RemoveInvalid(item_state_t& state, ObjT* ptr, const string& na
         ++nBeyondFloat;  // ROOT finds minima and maxima (axis ranges, colour scales) only below the largest float
       }
     }
-    if (nInvalid) Warn(state, "{} has {} with NaN or infinite values, which are drawn as zero.", name, plural(nInvalid, "bin"));
+    if (nInvalid) {
+      // the statistics summed up while filling (a profile: x of every fill) still hold the cleared bins: ROOT takes them from the bins when the sum is 0
+      std::array<double_t, TH1::kNstat> noStats{};
+      ptr->PutStats(noStats.data());
+      Warn(state, "{} has {} with NaN or infinite values, which are drawn as zero.", name, plural(nInvalid, "bin"));
+    }
     if (nBeyondFloat) {
       Warn(state, "{} has {} with contents beyond the largest float (3.4e38): ROOT finds axis ranges only below it, so they are wrong (a log scale fails).", name,
            plural(nBeyondFloat, "bin"));
