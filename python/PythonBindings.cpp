@@ -375,6 +375,7 @@ void exportPanelLayout(py::module_& m)
 
 // the setter groups of Plot.h (MarkerSetters, LineSetters, ...) for the classes that have them; through a lambda per setter,
 // so that each class returns itself to Python (a Ratio its own type, not the Data the forwarded setters of Data would give)
+// and no member pointer of a base behind the vptr is called (GCC's vptr sanitizer wrongly reports that as an invalid object)
 template <class Self, class... Options>
 void defMarkerSetters(py::class_<Self, Options...>& cls)
 {
@@ -423,6 +424,16 @@ void defBorderSetters(py::class_<Self, Options...>& cls)
     .def("SetBorderAlpha", [](Self& self, float_t alpha) -> Self& { return self.SetBorderAlpha(alpha); }, arg("alpha"), ref_int)
     .def("SetBorderStyle", [](Self& self, int16_t style) -> Self& { return self.SetBorderStyle(style); }, arg("style"), ref_int)
     .def("SetBorderWidth", [](Self& self, float_t width) -> Self& { return self.SetBorderWidth(width); }, arg("width"), ref_int);
+}
+template <class Self, class... Options>
+void defPositionSetters(py::class_<Self, Options...>& cls)
+{
+  cls
+    .def("SetPosition", [](Self& self, double_t x, double_t y) -> Self& { return self.SetPosition(x, y); }, arg("x"), arg("y"), ref_int)
+    .def("SetPadCoordinates", [](Self& self) -> Self& { return self.SetPadCoordinates(); }, ref_int)
+    .def("SetFrameCoordinates", [](Self& self) -> Self& { return self.SetFrameCoordinates(); }, ref_int)
+    .def("SetUserCoordinates", [](Self& self) -> Self& { return self.SetUserCoordinates(); }, ref_int)
+    .def("SetAutoPlacement", [](Self& self, box_placement_t placement) -> Self& { return self.SetAutoPlacement(placement); }, arg("placement") = best_corner, ref_int);
 }
 
 void exportPlot(py::module_& m)
@@ -722,15 +733,12 @@ void exportAxis(py::module_& m)
 
 void exportImageBox(py::module_& m)
 {
-  py::class_<ImageBox>(m, "ImageBox")
+  py::class_<ImageBox> imageBox(m, "ImageBox");
+  imageBox
     .def("Print", &ImageBox::Print)
-    .def("SetPosition", &ImageBox::SetPosition, arg("x"), arg("y"), ref_int)
     .def("SetWidth", &ImageBox::SetWidth, arg("width"), ref_int)
-    .def("SetHeight", &ImageBox::SetHeight, arg("height"), ref_int)
-    .def("SetPadCoordinates", &ImageBox::SetPadCoordinates, ref_int)
-    .def("SetFrameCoordinates", &ImageBox::SetFrameCoordinates, ref_int)
-    .def("SetUserCoordinates", &ImageBox::SetUserCoordinates, ref_int)
-    .def("SetAutoPlacement", &ImageBox::SetAutoPlacement, arg("placement") = best_corner, ref_int);
+    .def("SetHeight", &ImageBox::SetHeight, arg("height"), ref_int);
+  defPositionSetters(imageBox);
 }
 
 void exportTextBox(py::module_& m)
@@ -741,12 +749,8 @@ void exportTextBox(py::module_& m)
     .def("SetText", overload_cast<const string&>(&TextBox::SetText), arg("text"), ref_int)
     .def("SetText", overload_cast<const vector<string>&>(&TextBox::SetText), arg("lines"), ref_int)
     .def("SetTextAlign", &TextBox::SetTextAlign, arg("align"), ref_int)
-    .def("SetPosition", &TextBox::SetPosition, arg("x"), arg("y"), ref_int)
-    .def("SetSize", &TextBox::SetSize, arg("width"), arg("height"), ref_int)
-    .def("SetPadCoordinates", &TextBox::SetPadCoordinates, ref_int)
-    .def("SetFrameCoordinates", &TextBox::SetFrameCoordinates, ref_int)
-    .def("SetUserCoordinates", &TextBox::SetUserCoordinates, ref_int)
-    .def("SetAutoPlacement", &TextBox::SetAutoPlacement, arg("placement") = best_corner, ref_int);
+    .def("SetSize", &TextBox::SetSize, arg("width"), arg("height"), ref_int);
+  defPositionSetters(textBox);
   defBorderSetters(textBox);
   defTextSetters(textBox);
   defFillSetters(textBox);
@@ -763,12 +767,8 @@ void exportStatsBox(py::module_& m)
   statsBox
     .def(py::init<>())
     .def("Print", &StatsBox::Print)
-    .def("SetPosition", &StatsBox::SetPosition, arg("x"), arg("y"), ref_int)
-    .def("SetSize", &StatsBox::SetSize, arg("width"), arg("height"), ref_int)
-    .def("SetPadCoordinates", &StatsBox::SetPadCoordinates, ref_int)
-    .def("SetFrameCoordinates", &StatsBox::SetFrameCoordinates, ref_int)
-    .def("SetUserCoordinates", &StatsBox::SetUserCoordinates, ref_int)
-    .def("SetAutoPlacement", &StatsBox::SetAutoPlacement, arg("placement") = best_corner, ref_int);
+    .def("SetSize", &StatsBox::SetSize, arg("width"), arg("height"), ref_int);
+  defPositionSetters(statsBox);
   defBorderSetters(statsBox);
   defTextSetters(statsBox);
   defFillSetters(statsBox);
@@ -805,12 +805,8 @@ void exportLegendBox(py::module_& m)
     .def("SetDefaultFillAlpha", &LegendBox::SetDefaultFillAlpha, arg("alpha"), ref_int)
     .def("SetDefaultFillStyle", &LegendBox::SetDefaultFillStyle, arg("style"), ref_int)
     .def("SetSymbolColScale", &LegendBox::SetSymbolColScale, arg("scale"), ref_int)
-    .def("SetPosition", &LegendBox::SetPosition, arg("x"), arg("y"), ref_int)
-    .def("SetSize", &LegendBox::SetSize, arg("width"), arg("height"), ref_int)
-    .def("SetPadCoordinates", &LegendBox::SetPadCoordinates, ref_int)
-    .def("SetFrameCoordinates", &LegendBox::SetFrameCoordinates, ref_int)
-    .def("SetUserCoordinates", &LegendBox::SetUserCoordinates, ref_int)
-    .def("SetAutoPlacement", &LegendBox::SetAutoPlacement, arg("placement") = best_corner, ref_int);
+    .def("SetSize", &LegendBox::SetSize, arg("width"), arg("height"), ref_int);
+  defPositionSetters(legendBox);
   defBorderSetters(legendBox);
   defTextSetters(legendBox);
   defFillSetters(legendBox);
