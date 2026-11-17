@@ -229,12 +229,21 @@ void PlotPainter::LimitToFrame(TAxis* axis, const TAxis* frameAxis)
 //**************************************************************************************************
 TGraph* PlotPainter::ToGraph(const TH1* hist)
 {
-  auto* graph = new TGraphErrors();
+  // errors other than the normal ones (Poisson: SetBinErrorOption) are asymmetric, as ROOT draws them for the histogram
+  const bool asymmetric = hist->GetBinErrorOption() != TH1::kNormal;
+  TGraph* graph = (asymmetric) ? static_cast<TGraph*>(new TGraphAsymmErrors()) : new TGraphErrors();
   for (int32_t bin = 1; bin <= hist->GetNbinsX(); ++bin) {
-    if (hist->GetBinContent(bin) == 0. && hist->GetBinError(bin) == 0.) continue;  // empty bins are not drawn for histograms either
+    const double_t errorLow = (asymmetric) ? hist->GetBinErrorLow(bin) : hist->GetBinError(bin);
+    const double_t errorUp = (asymmetric) ? hist->GetBinErrorUp(bin) : errorLow;
+    if (hist->GetBinContent(bin) == 0. && errorLow == 0. && errorUp == 0.) continue;  // empty bins are not drawn for histograms either
     const int32_t point = graph->GetN();
     graph->SetPoint(point, hist->GetBinCenter(bin), hist->GetBinContent(bin));
-    graph->SetPointError(point, 0.5 * hist->GetBinWidth(bin), hist->GetBinError(bin));
+    const double_t halfWidth = 0.5 * hist->GetBinWidth(bin);
+    if (asymmetric) {
+      static_cast<TGraphAsymmErrors*>(graph)->SetPointError(point, halfWidth, halfWidth, errorLow, errorUp);
+    } else {
+      static_cast<TGraphErrors*>(graph)->SetPointError(point, halfWidth, errorLow);
+    }
   }
   graph->SetName(hist->GetName());
   graph->SetTitle(hist->GetTitle());

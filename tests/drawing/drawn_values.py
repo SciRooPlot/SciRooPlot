@@ -1,6 +1,6 @@
 """What is drawn shows the values of the input, also when an alias draws it as the other type:
 - a histogram drawn as a graph (points_line, bars, brackets, the clipped steps ...) has a point at the centre of each bin it draws (in its
-  range, not empty) with the content, half the bin width as x error and the bin error as y error, and keeps the statistics box and the
+  range, not empty) with the content, half the bin width as x error and the bin errors as y errors (asymmetric for Poisson errors), and keeps the statistics box and the
   placeholders of the histogram; its clipped steps have the frame of the steps they clip;
 - a graph drawn as a histogram (hist, bars, text ...) has a bin per point holding its value and the mean of its y errors, the bins
   touching where the x errors of neighbouring points meet, an empty bin in a gap between them (for area_smooth, whose curve goes
@@ -47,6 +47,8 @@ converted = cases(
         {"kind": "graph", "alias": "hist", "variant": "unsorted", "why": "a graph in no order of x drawn as a histogram"},
         {"kind": "graph_errors", "alias": "area_smooth", "variant": "normal", "why": "no empty bins in the gaps between x errors under a smooth curve"},
         {"kind": "graph_bent", "alias": "area_smooth", "variant": "normal", "why": "no empty bins in the gaps between asymmetric x errors under a smooth curve"},
+        {"kind": "hist_poisson", "alias": "points_line", "variant": "normal", "why": "the asymmetric errors of a histogram with Poisson errors drawn as a graph"},
+        {"kind": "hist_poisson", "alias": "brackets", "variant": "zeros", "why": "empty bins of a histogram with Poisson errors drawn as a graph keep their upper errors"},
     ],
 )
 
@@ -122,15 +124,15 @@ run = p.plot()
 def bins_drawn(h):
     """the bins of a drawn histogram ROOT shows a marker for: in its range, not empty"""
     axis = h.GetXaxis()
-    return [b for b in range(axis.GetFirst(), axis.GetLast() + 1) if h.GetBinContent(b) != 0 or h.GetBinError(b) != 0]
+    return [b for b in range(axis.GetFirst(), axis.GetLast() + 1) if h.GetBinContent(b) != 0 or h.GetBinError(b) != 0 or h.GetBinErrorUp(b) != 0]
 
 
 def as_graph(h, xErrors):
     """the points a histogram drawn as a graph must have (the x errors half the bin width, if the alias draws them)"""
     found = bins_drawn(h)
     half = [0.5 * h.GetBinWidth(b) if xErrors else 0.0 for b in found]
-    errors = [h.GetBinError(b) for b in found]
-    return {"x": [h.GetBinCenter(b) for b in found], "y": [h.GetBinContent(b) for b in found], "ErrorXlow": half, "ErrorXhigh": half, "ErrorYlow": errors, "ErrorYhigh": errors}
+    low, high = ([h.GetBinErrorLow(b) for b in found], [h.GetBinErrorUp(b) for b in found]) if h.GetBinErrorOption() else ([h.GetBinError(b) for b in found],) * 2
+    return {"x": [h.GetBinCenter(b) for b in found], "y": [h.GetBinContent(b) for b in found], "ErrorXlow": half, "ErrorXhigh": half, "ErrorYlow": low, "ErrorYhigh": high}
 
 
 def as_hist(g, alias):

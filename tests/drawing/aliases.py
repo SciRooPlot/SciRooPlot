@@ -14,7 +14,9 @@ candles of a TH2Poly; lines down to zero at both ends of area of a graph; the st
 filled by every alias that fills them; no warning about asymmetric errors where an alias shows none (text).
 Hostile data (no entries or points, a single one, a NaN value): every alias on every kind drawn as on plain data, without ROOT errors; where
 the alias falls back to the drawing without option, that of the same data (the default rule decides by the data: an empty histogram has
-no errors, a single point is drawn as a point); data without points, also a histogram drawn as a graph, is not drawn.
+no errors, a single point is drawn as a point); data without points, also a histogram drawn as a graph, is not drawn, but for the
+clipped aliases of a histogram (the steps or curve ROOT draws, cut at the frame: an empty histogram has them at zero) and a histogram with
+Poisson errors (ROOT draws the upper error of every empty bin).
 """
 
 import re
@@ -250,7 +252,8 @@ for i, case in enumerate(variantCases):
     kind, alias, variant = case["kind"], case["alias"], case["variant"]
     drawnType, data, _, _ = expected(kind, alias, variant)
     drawn = variantRun.drawn(f"v{i}", "variants")
-    if variant == "empty" and (drawnType == "graph" or drawn_type(kind) in ("graph", "graph2d")):
+    shownEmpty = drawn_type(kind) == "hist1d" and (alias.endswith("_clipped") or kind == "hist_poisson")  # see the docstring
+    if variant == "empty" and not shownEmpty and (drawnType == "graph" or drawn_type(kind) in ("graph", "graph2d")):
         check(f"no points: not drawn: {what}", not drawn, str([(o.ClassName(), opt) for o, opt in drawn]))
         if drawn_type(kind) in ("graph", "graph2d"):
             said = [m for m in variantRun.messages(f"v{i}", "variants") if f" {message_name(kind, variant, source_of(variant))} " in m]

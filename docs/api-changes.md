@@ -21,6 +21,12 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 |---|---|---|---|
 | `PlotManager::GetProjectProperty(property)` read any project variable set with `srp set <project> <name> <value>` (an empty text if not set or misspelt) | Removed: `PlotManager::Setting(name, default, description = "", choices = {})` declares a setting of the project and returns the value set with `srp set`, otherwise the default, as `bool` (a switch, set `on`/`off`), `int`, `double` or text | removed | Replace `GetProjectProperty("x")` by `Setting("x", <default>)`; run the program once, then set the value again with `srp set`. |
 
+### Plot definitions: changed defaults and behaviour
+
+| Old | New | Kind | Action |
+|---|---|---|---|
+| A histogram with Poisson errors (`TH1::SetBinErrorOption(TH1::kPoisson)`) drawn as a graph (`points_line`, `points_arrows`, `brackets`) got symmetric errors, and its empty bins (an upper error of 1.84) were left out | Its asymmetric errors, as ROOT draws them for the histogram (`points`); empty bins with their upper error | behaviour | Nothing. |
+
 ### Input validation
 
 | Old | New | Kind | Action |

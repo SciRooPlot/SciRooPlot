@@ -145,6 +145,7 @@ DATA_KINDS = {
     "hist_var": (1, "TH1D", {"binned"}),
     "hist_noerrors": (1, "TH1D", {"binned"}),
     "hist_counts": (1, "TH1D", {"binned"}),
+    "hist_poisson": (1, "TH1D", {"binned"}),
     "hist_labels": (1, "TH1D", {"binned", "labels"}),
     "profile": (1, "TProfile", {"binned"}),
     "profile_spread": (1, "TProfile", {"binned"}),
@@ -211,7 +212,7 @@ def has_variant(kind, variant):
     if variant == "undefined":
         return cls == "TF1"
 
-    if cls == "TEfficiency":
+    if cls == "TEfficiency" or kind == "hist_poisson":
         return variant in COUNTS_VARIANTS
     if cls.startswith("TF"):
         return variant in FUNCTION_VARIANTS and not ("formula" in props and variant in NPX and variant != "normal")
@@ -474,10 +475,12 @@ def data_objects(variant="normal"):
         g2a.SetPointError(m, 0.1, 0.2, 0.2, 0.1, abs(0.05 * value(n, x, y)), abs(0.15 * value(n, x, y)))
     for graph, name in ((g2, "graph2d"), (g2e, "graph2d_errors"), (g2a, "graph2d_asymm")):
         graph.SetName(name)
+    hpo = hc.Clone("hist_poisson")  # counts with Poisson errors (asymmetric, also for empty bins)
+    hpo.SetBinErrorOption(ROOT.TH1.kPoisson)
     hl = h.Clone("hist_labels")
     for b in range(1, hl.GetNbinsX() + 1):
         hl.GetXaxis().SetBinLabel(b, f"bin {chr(ord('a') + b - 1)}")
-    objects = {"hist": h, "hist_labels": hl, "hist_noerrors": hn, "hist_counts": hc, "hist_var": hv, "profile": p, "profile_spread": ps, "efficiency": eff, "efficiency_weighted": effW}
+    objects = {"hist": h, "hist_labels": hl, "hist_noerrors": hn, "hist_counts": hc, "hist_poisson": hpo, "hist_var": hv, "profile": p, "profile_spread": ps, "efficiency": eff, "efficiency_weighted": effW}
     objects.update({"thn": thn, "thn_sparse": sparse, "graph": g, "graph_errors": ge, "graph_asymm": ga, "graph_bent": gb, "graph_multi": gm, "graph_polar": gp})
     objects.update({"hist2d": h2, "hist2d_var": h2v, "profile2d": p2, "hist2poly": poly, "efficiency2d": eff2, "thn_sparse2d": sparse2, "thn2d": thn2})
     objects.update({"graph2d": g2, "graph2d_errors": g2e, "graph2d_asymm": g2a, "hist3d": h3, "hist3d_var": h3v, "profile3d": p3})
