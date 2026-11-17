@@ -9138,6 +9138,10 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
 
     string replaceStr = matchStr;
     optional<double_t> value;  // the number shown by the placeholders of numbers
+    const bool isText = (word == "name" || word == "title" || word == "source" || word == "projection" || word == "selection");
+    if (isText && ((*match)[2].matched || (*match)[5].matched)) {
+      logger::warning("Placeholder {}: <{}> is a text, a format in brackets applies to numbers only. It is ignored.", matchStr, word);
+    }
     if (word == "name" || word == "source" || word == "projection" || word == "selection") {
       // from the definition of the data (the drawn object is named "<index>:<name>[<request>]:<data source>[<projection>]"):
       // its name, data source, what is filled (variables in the notation of TTree::Draw, "y:x") and which entries or bins

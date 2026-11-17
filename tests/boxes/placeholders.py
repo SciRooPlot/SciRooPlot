@@ -8,7 +8,8 @@
   drawn object; an empty one takes one separating space with it
 - in a legend label the data of its row, in a text the data named by number (<mean:2>, <mean:1@2> for data 1 of pad 2), the format in
   brackets ([.2f], [>8.2f], [d]); a placeholder without number in a text, a number without data, a malformed number or format and a word
-  that is no placeholder are left as they are, with a warning (a known word followed by other text, <mean value>, is text)
+  that is no placeholder are left as they are, with a warning (a known word followed by other text, <mean value>, is text); a format
+  given to a text (<name[.2f]>) is ignored with a warning
 Cases: every data kind × every numeric placeholder × legend label or text × the frame at the data or an x range inside it × hostile data
 (no entries or points, a single one, a NaN value), and named definitions for the descriptive ones. Data that is not drawn (a graph without
 points) has no legend row; a text naming it keeps the placeholder, with a warning.
@@ -140,6 +141,13 @@ plot = S.Plot("bad_format", "texts", "1d")
 plot[1].AddData("h", "s", "<mean[q]>")
 plot[1].AddLegend()
 p.pm.AddPlot(plot)
+TEXT_WORDS = ("name", "title", "source", "projection", "selection")
+for word in TEXT_WORDS:  # a format given to a text: before and after the data number
+    plot = S.Plot(f"text_format_{word}", "texts", "1d")
+    plot[1].AddData("h", "s", f"<{word}[.2f]>")
+    plot[1].AddLegend()
+    plot[1].AddText(0.3, 0.5, f"<{word}:1[d]>")
+    p.pm.AddPlot(plot)
 
 run = p.plot()
 check("the plots are made", all(run.canvas(f"n{i}", "numbers") for i in range(len(todo))), " | ".join(run.errors()[:3]))
@@ -262,5 +270,8 @@ for name in ("stats_title", "stats_title_graph"):
     title = stats[0].GetListOfLines().First().GetTitle() if stats else None
     want = "h s 1000" if name == "stats_title" else "h s"
     check(f"{name}: the title of the statistics box reads {want!r}", title == want, f"{title!r}")
+for word in TEXT_WORDS:
+    said = [m for m in run.messages(f"text_format_{word}", "texts") if f"<{word}> is a text, a format in brackets applies to numbers only" in m]
+    check(f"a format given to <{word}>, which is a text: warned about where given (legend and text)", len(said) == 2, said)
 check("a format that does not fit is an error, the placeholder left as it is", labels("bad_format", "texts") == ["<mean[q]>"] and any("Placeholder <mean[q]>: [q] is not a format for a number" in m for m in run.messages("bad_format", "texts")), f"{labels('bad_format', 'texts')}")
 finish()
