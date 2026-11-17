@@ -277,7 +277,7 @@ check("an object beside a nameless one is added", drawnHere.get("a") == "2.0", o
 check("a second object of the same name replaces the first, with a warning", drawnHere.get("b") == "4.0" and "Data source twice receives a second object named h" in out.text, out.tail())
 check("GeneratePlots without an output directory: one error for all plots, naming SetOutputDirectory", out.text.count("No output directory was specified") == 1 and "SetOutputDirectory" in out.text, out.tail())
 check("GeneratePlots with the parent of the output directory missing: one error for all plots, before painting", out.text.count("of output directory does not exist") == 1 and "could not be created" not in out.text, out.tail())
-check("GeneratePlots list in a program: refused, naming ListPlots", "LIST False" in out.stdout and "ListPlots()" in out.text, out.tail())
+check("GeneratePlots list in a program: refused, naming ListPlots", "LIST False" in out.stdout and "Mode 'list' exists only for the plot command: in a program, ListPlots() lists the plots" in out.text, out.tail())
 check("GeneratePlots print without an output directory shows the definitions", "PRINTED True" in out.stdout and "Settings of plot" in out.text, out.tail())
 check("a sub-list named like an object beside it: one warning in SciRooPlot's words, no ROOT error", "the list clash/x cannot be stored beside the object of the same name" in out.text and "mkdir" not in out.text and "Could not create folder" not in out.text, out.tail())
 check("the replace warning names the path in the data source", "Data source lists receives a second object named l/x" in out.text, out.tail())
