@@ -8,7 +8,7 @@ once and the function drawn over its range. A 2d function in a 3d view is drawn 
 Cases: every data kind of a flat frame × a range on x or y (2d data, graphs) inside the data × the data first in its pad or after a
 wider histogram that gives the frame, and the named cases.
 Reference: the input objects (bins holding the range ends, points inside it).
-Covers: a data range without bins or points, the range of a 2d graph (y ignored, x lost in the saved canvas), the range of functions in 3d
+Covers: a data range without bins or points (also with the clipped aliases), the range of a 2d graph (y ignored, x lost in the saved canvas), the range of functions in 3d
 views (cut to the coordinates of the view), a range beyond a function sampled over its range (warned once), and the named cases.
 """
 
@@ -76,6 +76,13 @@ for i, case in enumerate(viewCases):
 plot = S.Plot("no_bins", "named", "1d")
 plot[1].AddData("hist", "inputs").SetRangeX(20.0, 30.0)
 p.pm.AddPlot(plot)
+# the same after other data giving the frame, with each kind of drawing a histogram has (the clipped aliases draw a graph of the steps)
+NO_BINS_ALIASES = ("points", "hist", "hist_clipped", "hist_open_clipped", "curve_clipped", "points_line")
+for alias in NO_BINS_ALIASES:
+    plot = S.Plot(f"no_bins_{alias}", "named", "1d")
+    plot[1].AddData("hist", "inputs")
+    plot[1].AddData("hist", "inputs").SetRangeX(20.0, 30.0).SetDrawOption(getattr(S, alias))
+    p.pm.AddPlot(plot)
 plot = S.Plot("no_points", "named", "1d")
 plot[1].AddData("graph", "inputs").SetRangeX(20.0, 30.0)
 p.pm.AddPlot(plot)
@@ -159,6 +166,9 @@ warned = [m for m in run.messages("no_bins", "named") if "contains none of its b
 drawn = run.objects("no_bins", "named")
 ax = drawn[0].GetXaxis() if drawn else None
 check("a range without any bin of the data: warned, the whole data drawn", len(warned) == 1 and ax is not None and (ax.GetFirst(), ax.GetLast()) in ((1, ax.GetNbins()), (0, 0)), f"{warned} {(ax.GetFirst(), ax.GetLast()) if ax else None}")
+for alias in NO_BINS_ALIASES:
+    warned = [m for m in run.messages(f"no_bins_{alias}", "named") if "contains none of its" in m]  # its bins, or its points as a graph
+    check(f"a range without any bin of data after the frame data, drawn as {alias}: warned once", len(warned) == 1, warned)
 warned = [m for m in run.messages("no_points", "named") if "contains none of its points" in m]
 drawn = [o for o in run.objects("no_points", "named") if o.InheritsFrom("TGraph")]
 check("a range without any point of a graph: warned, all points drawn", len(warned) == 1 and drawn and drawn[0].GetN() == inputs["graph"].GetN(), f"{warned} {drawn[0].GetN() if drawn else None}")

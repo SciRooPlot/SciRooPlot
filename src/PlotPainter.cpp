@@ -4468,7 +4468,9 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       logger::warning("The y range of {} is not applied with drawing option {}: it is cut at the frame.", DataName(*data), enum_name(clippedAlias));
     }
     if (!pad_ptr->GetView()) {
-      if (data->GetMinRangeX() || data->GetMaxRangeX()) SetBinRange(histogram->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX());
+      if ((data->GetMinRangeX() || data->GetMaxRangeX()) && !SetBinRange(histogram->GetXaxis(), data->GetMinRangeX(), data->GetMaxRangeX())) {
+        logger::warning("The x range of {} contains none of its bins: all bins are drawn.", DataName(*data));
+      }
       LimitToFrame(histogram->GetXaxis(), axisHist_ptr->GetXaxis());  // the bins of the histogram that are drawn (also for its statistics and placeholders)
     }
     TGraph* graph = ToClippedGraph(histogram, clippedAlias, pad_ptr->GetLogy());
