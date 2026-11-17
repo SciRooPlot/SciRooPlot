@@ -12,7 +12,7 @@ The cases are those of round_trip.py (every overload on every object it can be c
   the data had, ApplyLayout puts the layout's on top of it (a legend row merged like the styles). Every setter of Data is in LAYOUT or
   NOT_LAYOUT, so that a new one must be put into one of them.
 Covers: legend rows placed at or showing other data, the data of the implicit legend, placeholders naming data of a pad, a pad added to
-another pad of the plot.
+another pad of the plot, a pad assigned another pad while references to its old content are held.
 """
 
 import os
@@ -136,6 +136,11 @@ NAMED = [
         "a pad added to another pad of the plot (p[2] += p[1]): its data after those of the pad, its texts naming them",
         'p = Plot("{name}", "g", "1d_ratio")\np[1].AddData("h", "s")\np[1].AddText(0.3, 0.5, "<mean:1>")\np[2].AddData("h2", "s2")\np[2] += p[1]\npm.AddPlot(p)',
         'p = Plot("{name}", "g", "1d_ratio")\np[1].AddData("h", "s")\np[1].AddText(0.3, 0.5, "<mean:1>")\np[2].AddData("h2", "s2")\np[2].AddData("h", "s")\np[2].AddText(0.3, 0.5, "<mean:2>")\npm.AddPlot(p)',
+    ),
+    (
+        "a pad assigned another pad (p[1] = p[2]): its content replaced; references taken from the old content stay usable, apart from the plot",
+        'p = Plot("{name}", "g", "1d_ratio")\nd = p[1].AddData("h", "s")\nt = p[1].AddText(0.3, 0.5, "a")\nx = p[1]["X"]\np[2].AddData("h2", "s2")\np[1] = p[2]\nd.SetColor(2).Print()\nt.SetTextColor(2).Print()\nx.SetLog().Print()\npm.AddPlot(p)',
+        'p = Plot("{name}", "g", "1d_ratio")\np[1].AddData("h2", "s2")\np[2].AddData("h2", "s2")\npm.AddPlot(p)',
     ),
     (
         "an own gradient takes neither the alpha nor the number of colours of the gradient it replaces",

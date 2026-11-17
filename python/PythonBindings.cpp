@@ -442,6 +442,15 @@ void defPositionSetters(py::class_<Self, Options...>& cls)
 
 void exportPlot(py::module_& m)
 {
+  // plot[padID] = pad: Python may still hold references into the old content of the pad (data, boxes, shapes, axes), so it is moved
+  // out instead of overwritten and kept as long as the plot (such references stay valid, they no longer belong to the plot)
+  auto assignPad = [](py::object selfObject, uint8_t padID, const Pad& pad) {
+    Plot& self = selfObject.cast<Plot&>();
+    Pad replacement = pad;  // copied first: pad may be this very pad (p[2] += p[1] assigns p[2] to itself)
+    auto* old = new Pad(std::move(self[padID]));
+    self[padID] = std::move(replacement);
+    py::detail::keep_alive_impl(selfObject, py::capsule(old, [](void* kept) { delete static_cast<Pad*>(kept); }));
+  };
   py::class_<Plot> plot(m, "Plot");
   plot
     .def(py::init<const string&, const string&, const optional<string>&>(), arg("name"), arg("group") = "", arg("basePlot") = nullopt)
@@ -449,7 +458,7 @@ void exportPlot(py::module_& m)
     .def(py::init<const Plot&, const string&, const optional<string>&>(), arg("other"), arg("name"), arg("group") = nullopt)
     .def("Print", overload_cast<>(&Plot::Print, py::const_))
     .def("__getitem__", [](Plot& self, uint8_t padID) -> Pad& { return self[padID]; }, ref_int)
-    .def("__setitem__", [](Plot& self, uint8_t padID, const Pad& pad) { self[padID] = pad; }, arg("padID"), arg("pad"))  // also after p[2] += p[1] (a self-assignment)
+    .def("__setitem__", assignPad, arg("padID"), arg("pad"))
     .def("__iadd__", [](Plot& self, const Plot& other) -> Plot& { self += other; return self; }, py::is_operator())
     .def("__add__", [](const Plot& a, const Plot& b) -> Plot { return a + b; }, py::is_operator())
     .def("GetPad", &Plot::GetPad, arg("padID"), ref_int)
