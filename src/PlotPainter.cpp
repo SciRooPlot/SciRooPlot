@@ -826,7 +826,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       // ranges stored with an input are what data marked SetDefinesFrame is there for: they are kept for its copy that draws the frame
       const bool keepStoredRanges = (dataIndex == 0) && data->GetDefinesFrame() && data->GetType() != "ratio";
       TObject* input = (dataIndex == 0 && emptyFrame) ? emptyFrame.get() : Input(*data, dataBuffer);
-      optional<data_ptr_t> rawData = InputClone(input, DataName(*data), data->GetProjInfo(), keepStoredRanges);
+      optional<data_ptr_t> rawData = InputClone(input, DataName(data->GetName(), data->GetDataSource(), data->GetLegendLabel()), data->GetProjInfo(), keepStoredRanges);  // a ratio: its numerator
 
       if (!rawData) {
         fail = true;
@@ -3606,6 +3606,14 @@ string PlotPainter::DataName(const string& name, const string& dataSource, const
   const size_t nPoints = std::count(xValues.begin(), xValues.end(), ',') + 1;
   return fmt::format("points ({} at x = {} to {})", nPoints, xValues.substr(0, xValues.find(',')), (lastComma == string::npos) ? xValues : xValues.substr(lastComma + 1));
 }
+// a ratio by its numerator and denominator
+string PlotPainter::DataName(const Plot::Pad::Data& data)
+{
+  const string name = DataName(data.GetName(), data.GetDataSource(), data.GetLegendLabel());
+  if (data.GetType() != "ratio") return name;
+  const auto& ratio = static_cast<const Plot::Pad::Ratio&>(data);
+  return name + " / " + DataName(ratio.GetDenomName(), ratio.GetDenomDataSource());
+}
 
 //**************************************************************************************************
 /**
@@ -4196,7 +4204,7 @@ bool PlotPainter::PrepareRatioNumerator(item_state_t& state, data_ptr_t& numerat
   bool failed{};
   std::visit([&](auto* ptr) { DropStoredFunctions(state, ptr, "division"); }, numerator);
   auto ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-  state.numeratorMeans = PrepareOperand(state, numerator, ratio->GetNumModify(), DataName(*data));
+  state.numeratorMeans = PrepareOperand(state, numerator, ratio->GetNumModify(), DataName(data->GetName(), data->GetDataSource(), data->GetLegendLabel()));
   if (auto* func = std::get_if<TF1*>(&numerator)) {
     if (optional<data_ptr_t> denom = DenominatorClone(*ratio, dataBuffer)) {
       state.repeated = true;  // reported when it is divided by
@@ -4227,7 +4235,7 @@ bool PlotPainter::PrepareRatioNumerator(item_state_t& state, data_ptr_t& numerat
             sampleAt("points", ptr->GetN(), [&](int32_t i) { return ptr->GetX()[i]; });
           } else if constexpr (is_hist_1d<denom_type>()) {
             if (ptr->GetXaxis()->IsAlphanumeric()) {  // said here: the graph of the sampled function would be named in the message
-              logger::error("Cannot divide {} by {}: the x axis of {} is alphanumeric.", DataName(*data), DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()),
+              logger::error("Cannot divide {} by {}: the x axis of {} is alphanumeric.", DataName(data->GetName(), data->GetDataSource(), data->GetLegendLabel()), DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()),
                             DataName(ratio->GetDenomName(), ratio->GetDenomDataSource()));
               failed = true;
             } else {

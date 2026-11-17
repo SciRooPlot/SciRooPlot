@@ -296,7 +296,7 @@ class PlotPainter
   template <typename... Args>
   static void Warn(const item_state_t& state, Args&&... args);
   static std::string DataName(const std::string& name, const std::string& dataSource, const std::optional<std::string>& label = std::nullopt);
-  static std::string DataName(const Plot::Pad::Data& data) { return DataName(data.GetName(), data.GetDataSource(), data.GetLegendLabel()); }
+  static std::string DataName(const Plot::Pad::Data& data);
   template <typename ObjT>
   void DropStoredFunctions(item_state_t& state, ObjT* ptr, const char* reason);
   template <typename PtrT>

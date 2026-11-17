@@ -165,7 +165,8 @@ def compare(i, case):
     binomial = case["correlated"]
     if binomial and profiles:
         binomial = False
-        caseWarnings.append((f"SetCorrelated of ratio {message_name(case['num'], case['num_variant'], f'n{i}')} ", "is ignored: binomial errors are not defined for the mean values of a profile"))
+        # a ratio is named by its numerator and denominator
+        caseWarnings.append((f"SetCorrelated of ratio {message_name(case['num'], case['num_variant'], f'n{i}')} / {message_name(case['den'], case['den_variant'], f'd{i}')} ", "is ignored: binomial errors are not defined for the mean values of a profile"))
     funcs = {k: Func(case[k], case[f"{k}_variant"], numObj if k == "num" else denObj) for k in ("num", "den") if DATA_KINDS[case[k]][1].startswith("TF")}
     ref = division_reference(numObj, denObj, funcs.get("num"), funcs.get("den"), binomial, exp)
     caseWarnings += [(exp.num, w) for w in exp.warnings]
