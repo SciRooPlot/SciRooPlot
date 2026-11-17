@@ -3,9 +3,10 @@ kind at the top, in directories, lists, stacks (their histograms) and multigraph
 only what is there; also for files below a folder with ':' in its name, and for a directory hidden by a newer key of data of its name
 (as the reader finds it); a name written in several cycles once, the value of a map under its key. A missing file, a file that is no
 ROOT file and a path not in the file fail with exit status 1 and one error. srp open without a file, with a missing file or one that is
-no ROOT file, and srp open and srp colorwheel without a graphical display (X11 only) end with exit status 1 and one error.
+no ROOT file, and srp open and srp colorwheel without a graphical display (X11 only) end with exit status 1 and one error. srp
+colorwheel <file> writes an image file without ROOT's messages, and refuses a name that is no image file.
 Covers: stack and multigraph members, file below a folder with ':', several cycles of a name, map values, srp open and colorwheel
-without a file or display."""
+without a file or display, colorwheel into a file."""
 
 import os
 import subprocess
@@ -135,6 +136,18 @@ if sys.platform.startswith("linux"):  # X11: without DISPLAY there is no display
         except subprocess.TimeoutExpired:
             ok, detail = False, "still running after a minute"
         check(f"srp {args[0]} without a graphical display: exit 1, one error saying so", ok, detail)
+
+# srp colorwheel <file> writes the wheel as an image without ROOT's messages; a name that is no image file (ROOT would write PostScript)
+# ends with exit status 1 and one error, nothing written
+for name, ok in (("wheel.png", True), ("wheel.pdf", True), ("wheel", False), ("wheel.txt", False)):
+    target = os.path.join(folder, name)
+    out = run(SRP, "colorwheel", target, timeout=120)
+    if ok:
+        good = out.rc == 0 and os.path.isfile(target) and os.path.getsize(target) > 0 and "Info in <" not in out.text and not out.errors()
+        check(f"srp colorwheel {name}: written, without ROOT's messages", good, out.tail())
+    else:
+        good = out.rc == 1 and len(out.errors()) == 1 and "give a file name ending in" in out.errors()[0] and not os.path.exists(target)
+        check(f"srp colorwheel {name}: exit 1, one error, nothing written", good, out.tail())
 
 # a remote file, read through ROOT as the inputs of data sources (file:// goes through the same path as root:// and https://)
 for start in ("", ":dir"):

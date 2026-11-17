@@ -40,6 +40,7 @@
 #include <boost/version.hpp>
 
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <ctime>
 #include <filesystem>
@@ -256,6 +257,16 @@ int RunCommand(const string& command, const string& project, const string& prope
     app->Run();
   } else if (command == "colorwheel") {
     const string fileName = project;  // optional: save the wheel instead of showing it
+    if (!fileName.empty()) {
+      // ROOT writes PostScript for any other ending
+      static const std::set<string> imageEndings = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff", ".xpm", ".svg", ".pdf", ".eps", ".ps"};
+      string ending = std::filesystem::path(fileName).extension().string();
+      std::transform(ending.begin(), ending.end(), ending.begin(), [](unsigned char c) { return std::tolower(c); });
+      if (!imageEndings.count(ending)) {
+        logger::error("Cannot write the colour wheel to {}: give a file name ending in .png, .pdf, .svg, .eps, .jpg or .gif.", fileName);
+        return 1;
+      }
+    }
     std::unique_ptr<TApplication> app;
     if (fileName.empty()) {
       app = OpenWindowApplication("colorwheel");
@@ -274,7 +285,10 @@ int RunCommand(const string& command, const string& project, const string& prope
       canvas->SetCanvasSize(800, 800);  // the drawing area, without the window frame
       std::error_code removeError;
       std::filesystem::remove(fileName, removeError);  // ROOT reports a failed write but returns nothing: the file must be new
-      canvas->SaveAs(fileName.data());
+      {
+        auto quiet = util::ignore_root_messages_below(kWarning);  // ROOT's "Info in <TCanvas::Print>: ... has been created"
+        canvas->SaveAs(fileName.data());
+      }
       std::error_code existsError;
       if (!std::filesystem::is_regular_file(fileName, existsError)) {
         logger::error("Could not write the colour wheel to {}.", fileName);
