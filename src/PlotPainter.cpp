@@ -7432,6 +7432,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   double_t* denomEyLow = denominator->GetEYlow();
   double_t* denomEyHigh = denominator->GetEYhigh();
   auto multiErrors = MultiErrorSums(numerator);
+  auto* bent = dynamic_cast<TGraphBentErrors*>(numerator);
 
   // the denominator is interpolated only where the graphs have different x values
   bool doInterpol = (numN > denomN);
@@ -7605,6 +7606,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
         }
       }
       numY[i] = numY[i] / denomY[i];
+      if (bent) ScaleBentDisplacements(bent, 1, i, 1. / denomY[i]);
       if (denomY[i] < 0. && numEyLow && numEyHigh) {
         std::swap(numEyLow[i], numEyHigh[i]);  // a negative denominator turns the ratio upside down
         SwapMultiErrors(numerator, multiErrors, i);
@@ -7828,10 +7830,12 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
   double_t* eyLow = numerator->GetEYlow();    // asymmetric and bent errors
   double_t* eyHigh = numerator->GetEYhigh();  // (nullptr for symmetric errors)
   auto multiErrors = MultiErrorSums(numerator);
+  auto* bent = dynamic_cast<TGraphBentErrors*>(numerator);
   vector<int32_t> undefined;  // points where the function is zero: removed (see Divide(TGraph*, TGraph*))
   for (int32_t i = 0; i < numerator->GetN(); ++i) {
     const double_t denom = denominator->Eval(x[i]);
     if (!denom) undefined.push_back(i);
+    if (bent && denom) ScaleBentDisplacements(bent, 1, i, 1. / denom);
     const double_t absDenom = std::abs(denom);  // errors must stay positive
     y[i] = (denom) ? y[i] / denom : 0.;
     if (ey) {
@@ -8001,10 +8005,12 @@ void PlotPainter::ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFact
   double_t* errorsLow = (axis == 0) ? graph->GetEXlow() : graph->GetEYlow();     // asymmetric and bent errors
   double_t* errorsHigh = (axis == 0) ? graph->GetEXhigh() : graph->GetEYhigh();  // (nullptr for symmetric errors)
   auto multiErrors = (axis == 1) ? MultiErrorSums(graph) : nullopt;
+  auto* bent = dynamic_cast<TGraphBentErrors*>(graph);
   // a negative factor (Normalize of values summing up below zero) turns the values upside down: errors stay positive, low and high swap
   const double_t errorFactor = std::abs(scaleFactor);
   for (int32_t i{}; i < graph->GetN(); ++i) {
     values[i] *= scaleFactor;
+    if (bent) ScaleBentDisplacements(bent, axis, i, scaleFactor);
     if (errors) errors[i] *= errorFactor;
     if (errorsLow) errorsLow[i] *= errorFactor;
     if (errorsHigh) errorsHigh[i] *= errorFactor;
@@ -8014,6 +8020,22 @@ void PlotPainter::ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFact
     }
   }
   ScaleMultiErrors(graph, multiErrors);
+}
+
+//**************************************************************************************************
+/**
+ * The error bars of a TGraphBentErrors are displaced along the other axis (the x bars along y, the y bars along x). Values of an axis
+ * scaled by a factor (point i) scale the displacements along that axis, and a negative factor swaps low and high of its own bars, with
+ * their displacements.
+ */
+//**************************************************************************************************
+void PlotPainter::ScaleBentDisplacements(TGraphBentErrors* graph, int16_t axis, int32_t i, double_t factor)
+{
+  double_t* alongLow = (axis == 0) ? graph->GetEYlowd() : graph->GetEXlowd();
+  double_t* alongHigh = (axis == 0) ? graph->GetEYhighd() : graph->GetEXhighd();
+  alongLow[i] *= factor;
+  alongHigh[i] *= factor;
+  if (factor < 0.) std::swap((axis == 0) ? graph->GetEXlowd()[i] : graph->GetEYlowd()[i], (axis == 0) ? graph->GetEXhighd()[i] : graph->GetEYhighd()[i]);
 }
 
 //**************************************************************************************************

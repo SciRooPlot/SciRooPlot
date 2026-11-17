@@ -40,6 +40,7 @@ class TH2;
 class TH3;
 class TGraph;
 class TGraph2D;
+class TGraphBentErrors;
 class TProfile;
 class TProfile2D;
 class TF1;
@@ -331,6 +332,7 @@ class PlotPainter
   static void RemoveGraphPoint(TGraph2D* graph, int32_t i);
   static bool RemoveGraphPointsOutside(TGraph* graph, std::optional<double_t> minX, std::optional<double_t> maxX, std::optional<double_t> minY, std::optional<double_t> maxY, bool keepAll = false);
   static void ScaleGraphAxis(TGraph* graph, int16_t axis, double_t scaleFactor);
+  static void ScaleBentDisplacements(TGraphBentErrors* graph, int16_t axis, int32_t i, double_t factor);
   using multi_error_sums_t = std::pair<std::vector<double_t>, std::vector<double_t>>;
   static std::optional<multi_error_sums_t> MultiErrorSums(TGraph* graph);
   static void SwapMultiErrors(TGraph* graph, std::optional<multi_error_sums_t>& sums, int32_t i);

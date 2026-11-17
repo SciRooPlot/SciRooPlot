@@ -380,7 +380,7 @@ def data_objects(variant="normal"):
             graph.SetPoint(n, x, y)
         ge.SetPointError(n, 0.2, abs(0.1 * y))
         ga.SetPointError(n, 0.2, 0.2, abs(0.05 * y), abs(0.15 * y))
-        gb.SetPointError(n, 0.1, 0.3, abs(0.15 * y), abs(0.05 * y), 0.0, 0.0, -0.05, 0.05)  # the ends of the y errors bent in x
+        gb.SetPointError(n, 0.1, 0.3, abs(0.15 * y), abs(0.05 * y), 0.1, -0.1, -0.05, 0.05)  # the x errors bent in y, the y errors in x
         gm.SetPointEX(n, 0.2, 0.2)
         gm.SetPointEY(n, 0, abs(0.05 * y), abs(0.05 * y))
         gm.SetPointEY(n, 1, abs(0.1 * y), abs(0.1 * y))
@@ -1118,6 +1118,9 @@ def graph_values(graph):
     if graph.GetEY() or graph.GetEYlow():  # a TGraph has no errors (its getters give -1)
         for e in ("ErrorXlow", "ErrorXhigh", "ErrorYlow", "ErrorYhigh"):
             values[e] = [getattr(graph, f"Get{e}")(i) for i in range(n)]
+    if graph.InheritsFrom("TGraphBentErrors"):  # the displacements of the error bars (of x along y, of y along x)
+        for e in ("EXlowd", "EXhighd", "EYlowd", "EYhighd"):
+            values[e] = [getattr(graph, f"Get{e}")()[i] for i in range(n)]
     if graph.InheritsFrom("TGraphMultiErrors"):
         for d in range(graph.GetNYErrors()):
             values[f"ey{d}low"] = [graph.GetErrorYlow(i, d) for i in range(n)]
@@ -1440,7 +1443,7 @@ def reference_graph(base, mods, exp):
             v[key] = [value * factor for value in v[key]]
 
     if "scale_x" in mods:
-        scale(["x", "ErrorXlow", "ErrorXhigh"], AXIS_FACTOR)
+        scale(["x", "ErrorXlow", "ErrorXhigh", "EYlowd", "EYhighd"], AXIS_FACTOR)
     smooth = 3 if "smooth_3" in mods else (1 if "smooth" in mods else 0)
     if smooth:
         if n < 4:
@@ -1491,8 +1494,11 @@ def flip(v, axis, factor):
     v[axis] = [value * factor for value in v[axis]]
     for key in [k for k in v if k != axis and (k.startswith((f"Error{axis.upper()}", f"e{axis}")))]:
         v[key] = [abs(factor) * value for value in v[key]]
+    other = "x" if axis == "y" else "y"  # bent error bars of the other axis are displaced along this one: with the values
+    for key in [k for k in (f"E{other.upper()}lowd", f"E{other.upper()}highd") if k in v]:
+        v[key] = [value * factor for value in v[key]]
     if factor < 0:
-        pairs = [(f"Error{axis.upper()}low", f"Error{axis.upper()}high")] + [(k, k[:-3] + "high") for k in v if k.startswith(f"e{axis}") and k.endswith("low")]
+        pairs = [(f"Error{axis.upper()}low", f"Error{axis.upper()}high"), (f"E{axis.upper()}lowd", f"E{axis.upper()}highd")] + [(k, k[:-3] + "high") for k in v if k.startswith(f"e{axis}") and k.endswith("low")]
         for low, high in [p for p in pairs if p[0] in v]:
             v[low], v[high] = v[high], v[low]
 
@@ -1672,7 +1678,7 @@ def divide_points(num, den, binomial, exp):
         if found is None:
             return None
         values, errors = found
-    out = {"x": [], "y": [], "lo": [], "hi": [], "index": [], "multi": [] if num.multi else None}
+    out = {"x": [], "y": [], "lo": [], "hi": [], "index": [], "den": [], "multi": [] if num.multi else None}
     for i, (x, y, d) in enumerate(zip(num.x, num.y, values)):
         if not d:
             continue
@@ -1698,6 +1704,7 @@ def divide_points(num, den, binomial, exp):
         out["lo"].append(lo)
         out["hi"].append(hi)
         out["index"].append(i)
+        out["den"].append(d)
         if num.multi:
             oldLow, oldHigh = num.lo[i], num.hi[i]
             if d < 0:
@@ -1915,6 +1922,10 @@ def result_graph(ratio, num, numObj):
         v["ErrorYlow"], v["ErrorYhigh"] = ratio["lo"], ratio["hi"]
         v["ErrorXlow"] = [num.exlow[i] if num.exlow else 0.0 for i in ratio["index"]]
         v["ErrorXhigh"] = [num.exhigh[i] if num.exhigh else 0.0 for i in ratio["index"]]
+    if numObj is not None and numObj.InheritsFrom("TGraphBentErrors"):  # the x error bars displaced along y with the values, the y bars swapped with their errors
+        for side in ("low", "high"):
+            v[f"EX{side}d"] = [getattr(numObj, f"GetEX{side}d")()[i] / d for i, d in zip(ratio["index"], ratio["den"])]
+        v["EYlowd"], v["EYhighd"] = ([getattr(numObj, f"GetEY{s if d > 0 else t}d")()[i] for i, d in zip(ratio["index"], ratio["den"])] for s, t in (("low", "high"), ("high", "low")))
     if ratio["multi"] is not None:
         for d in range(len(num.multi)):
             v[f"ey{d}low"] = [m[d][0] for m in ratio["multi"]]
@@ -1979,9 +1990,12 @@ def divide_by_function_graph(numObj, func, binomial, exp):
         swap = d < 0 and "ErrorYlow" in v and not numObj.GetEY()
         for k in [k for k in v if k.startswith(("ErrorY", "ey"))]:
             out[k][n] = v[k][i] / abs(d)
+        for k in [k for k in ("EXlowd", "EXhighd") if k in v]:  # bent x error bars displaced along y with the values
+            out[k][n] = v[k][i] / d
         if swap:
-            for low, high in [("ErrorYlow", "ErrorYhigh")] + [(f"ey{d}low", f"ey{d}high") for d in range(numObj.GetNYErrors() if numObj.InheritsFrom("TGraphMultiErrors") else 0)]:
-                out[low][n], out[high][n] = out[high][n], out[low][n]
+            for low, high in [("ErrorYlow", "ErrorYhigh"), ("EYlowd", "EYhighd")] + [(f"ey{d}low", f"ey{d}high") for d in range(numObj.GetNYErrors() if numObj.InheritsFrom("TGraphMultiErrors") else 0)]:
+                if low in out:
+                    out[low][n], out[high][n] = out[high][n], out[low][n]
     if binomial:
         exp.warn(f"Binomial errors are not supported for the division of {exp.num} by function {exp.den}")
     return out
