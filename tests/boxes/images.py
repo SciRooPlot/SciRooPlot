@@ -1,7 +1,8 @@
 """An image (Pad::AddImage) is drawn at its place with the size asked for: as wide as set (a fraction of the frame, or of the pad in pad
 coordinates; 0.2 by default), as high as its aspect ratio gives in pixels, or as high as set, or both; the picture fills that box in the
 image the plot is saved as. A relative path is taken from where the plot is defined, an image of a base plot is drawn in its plots. A
-missing file, an image beyond its pad and an image in pad 0 are warned about and left out, the plot is made; a pad holding
+missing file, an image beyond its pad and an image in pad 0 are warned about and left out, the plot is made; an empty path is refused
+when the image is added; a pad holding
 only an image is drawn. The image is in every file
 format that can hold one (svg, eps, png); a pdf holds none before ROOT 6.42, which is said once per run.
 Cases: png and jpg pictures wide and tall × the size set by width, height, both or neither × pad and frame coordinates × a wide and a
@@ -12,7 +13,7 @@ Covers: images placed and sized, and the named cases.
 
 import os
 
-from srptest import ROOT, WORK, Project, S, bitmap, cases, check, describe, finish
+from srptest import ROOT, WORK, Project, S, bitmap, captured, cases, check, describe, finish
 
 PICTURES = {"wide_png": (300, 100, "png"), "tall_png": (90, 270, "png"), "wide_jpg": (300, 100, "jpg")}
 COLOUR = (0x12, 0x80, 0xC0)
@@ -68,6 +69,9 @@ with open(f"{WORK}/text.png", "w") as textFile:
     textFile.write("not an image\n")
 plot("no_image", lambda pl: pl[1].AddImage(0.3, 0.8, f"{WORK}/text.png"))
 plot("beyond_pad", lambda pl: pl[1].AddImage(0.9, 0.8, picture).SetPadCoordinates().SetWidth(0.3))
+for args in (("",), (0.3, 0.8, ""), (S.top_right, "")):  # an empty path: refused when added, with a reason
+    raised, _ = captured(lambda args=args: S.Plot("empty_path", "special", "1d")[1].AddImage(*args))
+    check(f"AddImage{args!r} (an empty path): refused naming the reason", isinstance(raised, ValueError) and "path of its file" in str(raised), repr(raised))
 plot("pad0", lambda pl: pl[0].AddImage(0.3, 0.8, picture))
 alone = S.Plot("only_image", "special", "1d")  # a pad holding nothing but an image, as one holding only a text
 alone[1].AddImage(0.3, 0.8, picture)

@@ -4261,6 +4261,7 @@ Plot::Pad::ImageBox::ImageBox(double_t xPos, double_t yPos, const string& path) 
 }
 Plot::Pad::ImageBox::ImageBox(const string& path) : mPath(path)
 {
+  if (path.empty()) logger::throw_invalid_argument("An image needs the path of its file: the path is empty.");
   mPlacement = best_corner;
   const auto expandedPath = expand_path(path);
   if (expandedPath && std::filesystem::path(*expandedPath).is_relative()) mPath = std::filesystem::absolute(*expandedPath).lexically_normal().string();
