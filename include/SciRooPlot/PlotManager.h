@@ -143,7 +143,7 @@ class PlotManager
 
  private:
   std::string DeclareSetting(const std::string& name, const std::string& type, const std::string& defaultValue, const std::string& description, const std::vector<std::string>& choices);
-  bool GeneratePlot(const Plot& plot, const std::string& mode = "pdf");
+  bool GeneratePlot(Plot& plot, const std::string& mode = "pdf");
   std::unique_ptr<TCanvas> Paint(PlotPainter& painter, Plot& toPaint);
   std::unique_ptr<TCanvas> ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, const std::map<char, std::vector<Plot::shared_group_t>>& sharedAxes);
   Plot* FindBasePlot(const std::string& name);
@@ -175,7 +175,7 @@ class PlotManager
   static std::string UserDataFile(const std::string& projectName, const PlotManager* manager);
   static bool IsValidDataSourceName(const std::string& dataSource);
   void ForgetBufferedData(const std::string& dataSource);
-  bool SaveDataToRootFile() const;
+  bool SaveDataToRootFile(const std::set<std::pair<std::string, std::string>>& keys) const;
 
   std::string mProjectName;
   std::string mPlotsRootFile{"Plots.root"};
@@ -243,6 +243,7 @@ class PlotManager
   // the containers ReadData is searching (one inside the other), so a container holding itself is searched once
   std::set<const TObject*> mContainersOnPath;
   std::shared_ptr<Plot::Pad::Data> RefFuncDrawnIn(Plot& plot, uint8_t padID);
+  std::vector<std::tuple<std::string, std::string, Plot::Pad::Data::data_info_t>> GetNeededData(Plot& plot);
   std::vector<std::tuple<std::string, std::string, Plot::Pad::Data::data_info_t>> GetMissingData(Plot& plot);
   void FillBuffer();
   using required_data_t = std::map<std::string, std::unordered_map<std::string, std::set<std::string>>>;  // data source -> folder -> names still to find

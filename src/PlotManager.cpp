@@ -292,10 +292,10 @@ void PlotManager::ReserveColorIndices(TCanvas* canvas)
 
 //**************************************************************************************************
 /**
- * Save buffered data .root file.
+ * Save the buffered data of the selected plots (keys: data source and name with the suffix of its request) to the data .root file.
  */
 //**************************************************************************************************
-bool PlotManager::SaveDataToRootFile() const
+bool PlotManager::SaveDataToRootFile(const set<std::pair<string, string>>& keys) const
 {
   if (!CreateOutputDirectory()) return false;
   TFile outputFile((mOutputDirectory + "/" + mDataRootFile).data(), "RECREATE");
@@ -314,14 +314,17 @@ bool PlotManager::SaveDataToRootFile() const
     // the folder of a restricted data source (dataSource:some/folder) becomes subdirectories
     string sourcePath = dataSource;
     std::replace(sourcePath.begin(), sourcePath.end(), ':', '/');
-    TDirectory* sourceDir = outputFile.mkdir(sourcePath.data(), "", true);
-    if (!sourceDir) {
-      logger::error("Could not create directory {} in {}.", sourcePath, mDataRootFile);
-      continue;
-    }
+    TDirectory* sourceDir = nullptr;
     const bool isUserDefined = is_user_defined(dataSource);
     for (const auto& [dataName, dataPtr] : sorted(*buffer)) {
-      if (!*dataPtr) continue;
+      if (!*dataPtr || !keys.count({dataSource, dataName})) continue;
+      if (!sourceDir) {
+        sourceDir = outputFile.mkdir(sourcePath.data(), "", true);
+        if (!sourceDir) {
+          logger::error("Could not create directory {} in {}.", sourcePath, mDataRootFile);
+          break;
+        }
+      }
       // the name is the path of the data within its source, for tree projections followed by the request {...};
       // only that path becomes subdirectories, since request expressions and user-defined functions may contain '/' and ':'
       const size_t pathEnd = (isUserDefined) ? string::npos : dataName.rfind('/', dataName.find('{'));
@@ -1744,7 +1747,12 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     if (mode == "file") {
       saved = SavePlotsToRootFile();
     } else if (mode == "data") {
-      saved = SaveDataToRootFile();
+      set<std::pair<string, string>> keys;
+      for (auto plot : selectedPlots) {
+        for (const auto& [dataSource, name, dataInfo] : GetNeededData(*plot))
+          keys.emplace(dataSource, name + dataInfo.GetNameSuffix());
+      }
+      saved = SaveDataToRootFile(keys);
     }
     return allCreated && saved;
   } catch (const std::exception& e) {
@@ -2154,31 +2162,37 @@ shared_ptr<Plot::Pad::Data> PlotManager::RefFuncDrawnIn(Plot& plot, uint8_t padI
  * Determine which of a plot's required data entries are missing from the buffer.
  */
 //**************************************************************************************************
-vector<tuple<string, string, Plot::Pad::Data::data_info_t>> PlotManager::GetMissingData(Plot& plot)
+vector<tuple<string, string, Plot::Pad::Data::data_info_t>> PlotManager::GetNeededData(Plot& plot)
 {
-  vector<tuple<string, string, Plot::Pad::Data::data_info_t>> missing;
-  auto checkKey = [&](const string& dataSource, const string& name, const Plot::Pad::Data::data_info_t& dataInfo) {
-    auto sourceIt = mDataBuffer.find(dataSource);
-    if (sourceIt != mDataBuffer.end()) {
-      auto nameIt = sourceIt->second.find(name + dataInfo.GetNameSuffix());
-      if (nameIt != sourceIt->second.end() && nameIt->second) return;  // found and not null
-    }
-    missing.emplace_back(dataSource, name, dataInfo);
-  };
-
+  vector<tuple<string, string, Plot::Pad::Data::data_info_t>> needed;
   for (auto& [padID, pad] : plot.GetPads()) {
-    if (auto refFunc = RefFuncDrawnIn(plot, padID)) checkKey(refFunc->GetDataSource(), refFunc->GetName(), refFunc->GetDataInfo());
+    if (auto refFunc = RefFuncDrawnIn(plot, padID)) needed.emplace_back(refFunc->GetDataSource(), refFunc->GetName(), refFunc->GetDataInfo());
     if (padID != 0 && pad.GetFrame()) {
-      checkKey(pad.GetFrame()->GetDataSource(), pad.GetFrame()->GetName(), pad.GetFrame()->GetDataInfo());
+      needed.emplace_back(pad.GetFrame()->GetDataSource(), pad.GetFrame()->GetName(), pad.GetFrame()->GetDataInfo());
     }
     if (padID == 0) continue;  // data of pad 0 is not drawn (AddPlot warns about it), so it is not needed either
     for (const auto& data : pad.GetData()) {
-      checkKey(data->GetDataSource(), data->GetName(), data->GetDataInfo());
+      needed.emplace_back(data->GetDataSource(), data->GetName(), data->GetDataInfo());
       if (data->GetType() == "ratio") {
         const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-        checkKey(ratio->GetDenomDataSource(), ratio->GetDenomName(), ratio->GetDenomDataInfo());
+        needed.emplace_back(ratio->GetDenomDataSource(), ratio->GetDenomName(), ratio->GetDenomDataInfo());
       }
     }
+  }
+  return needed;
+}
+
+vector<tuple<string, string, Plot::Pad::Data::data_info_t>> PlotManager::GetMissingData(Plot& plot)
+{
+  vector<tuple<string, string, Plot::Pad::Data::data_info_t>> missing;
+  for (auto& item : GetNeededData(plot)) {
+    const auto& [dataSource, name, dataInfo] = item;
+    auto sourceIt = mDataBuffer.find(dataSource);
+    if (sourceIt != mDataBuffer.end()) {
+      auto nameIt = sourceIt->second.find(name + dataInfo.GetNameSuffix());
+      if (nameIt != sourceIt->second.end() && nameIt->second) continue;  // found and not null
+    }
+    missing.push_back(std::move(item));
   }
   return missing;
 }
@@ -2188,7 +2202,7 @@ vector<tuple<string, string, Plot::Pad::Data::data_info_t>> PlotManager::GetMiss
  * Generates plot.
  */
 //**************************************************************************************************
-bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
+bool PlotManager::GeneratePlot(Plot& plot, const string& mode)
 {
   const bool isInteractiveMode = (mode == "show" || mode == "spread");
 
@@ -2214,7 +2228,7 @@ bool PlotManager::GeneratePlot(const Plot& plot, const string& mode)
     Plot::Print(fullPlot.GetPropertyTree(), "");
     return true;
   }
-  if (mode == "data") return true;  // the input data is written as read, nothing is painted
+  if (mode == "data") return GetMissingData(plot).empty();  // the input data is written as read, nothing is painted
 
   // the personal scale settings only change the number of pixels of plots on screen and of bitmap files, vector files do not depend on them
   const bool isBitmapMode = (mode == "png") || (mode == "jpg") || str_starts_with(mode, "gif");

@@ -2,10 +2,12 @@
 and its path in it (a data source restricted to a folder, source:folder, and a path in a name become subdirectories), equal to the object
 in the input file, for every data kind of srptest read from a file in every variant (every value at least once in the fast run); a
 function of the plot definition under its data source, named by its formula. Keys are written in a fixed order: the same plots give the
-same file. The plots themselves are not painted.
-Covers: a data source restricted to a folder, a path in a name, functions of the plot definition, the fixed key order."""
+same file. The plots themselves are not painted. Only the data of the selected plots is written, also when the process read other data
+before; a plot whose data is missing is reported with its reasons and the run fails, as in the other modes.
+Covers: a data source restricted to a folder, a path in a name, functions of the plot
+definition, the fixed key order, missing data, data read by earlier calls in the same process."""
 
-from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, cases, check, data_objects, describe, finish, func_diff, graph_diff, has_variant, hist_diff, source_of
+from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, captured, cases, check, data_objects, describe, finish, func_diff, graph_diff, has_variant, hist_diff, source_of
 from srptest import formula as formula_of
 
 p = Project("data_file")
@@ -32,6 +34,10 @@ p.pm.AddDataSource("inner", p.path("folders.root") + ":a")
 plot = S.Plot("paths", "data", "1d")
 plot[1].AddData("a/b/h", "folders")
 plot[1].AddData("b/h", "inner")
+p.pm.AddPlot(plot)
+plot = S.Plot("missing", "missing", "1d")
+plot[1].AddData("nothere", "folders")
+plot[1].AddData("h", "undefined")
 p.pm.AddPlot(plot)
 
 
@@ -93,4 +99,16 @@ if written:
     first = names
     p.plot("data", ".+", "data")
     check("the same plots give the keys in the same order", keys(p.path("out", "Data.root")) == first)
+
+run = p.plot("missing", ".+", "data")
+expected = ("missing folders:nothere (not found in the inputs of folders)", "missing undefined:h (data source not defined)")
+check("missing data in mode data: the plot is reported with the reasons", all(e in run.log for e in expected), " | ".join(run.errors()[:4]))
+check("missing data in mode data: the run fails", run.rc != 0, run.rc)
+
+# data read by an earlier call of the same process is not written with the selected plots
+p.pm.SetOutputDirectory(p.path("in_process"))
+captured(lambda: p.pm.GeneratePlots("png", "paths", "data"))
+created, _ = captured(lambda: p.pm.GeneratePlots("data", "formula", "data"))
+names = keys(p.path("in_process", "Data.root"))
+check("only the data of the selected plots, not that of earlier calls", created is True and not any(name.startswith(("folders", "inner")) for name in names), names)
 finish()
