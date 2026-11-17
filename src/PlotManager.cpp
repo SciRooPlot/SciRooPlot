@@ -311,9 +311,11 @@ bool PlotManager::SaveDataToRootFile(const set<std::pair<string, string>>& keys)
     return view;
   };
   for (const auto& [dataSource, buffer] : sorted(mDataBuffer)) {
-    // the folder of a restricted data source (dataSource:some/folder) becomes subdirectories
+    // the folder of a restricted data source (dataSource:some/folder) becomes subdirectories (an empty or trailing folder adds none)
     string sourcePath = dataSource;
     std::replace(sourcePath.begin(), sourcePath.end(), ':', '/');
+    while (!sourcePath.empty() && sourcePath.back() == '/')
+      sourcePath.pop_back();
     TDirectory* sourceDir = nullptr;
     const bool isUserDefined = is_user_defined(dataSource);
     for (const auto& [dataName, dataPtr] : sorted(*buffer)) {

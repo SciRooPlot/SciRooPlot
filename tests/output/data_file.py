@@ -4,7 +4,7 @@ in the input file, for every data kind of srptest read from a file in every vari
 function of the plot definition under its data source, named by its formula. Keys are written in a fixed order: the same plots give the
 same file. The plots themselves are not painted. Only the data of the selected plots is written, also when the process read other data
 before; a plot whose data is missing is reported with its reasons and the run fails, as in the other modes.
-Covers: a data source restricted to a folder, a path in a name, functions of the plot
+Covers: a data source restricted to a folder (also given with a trailing slash, or empty), a path in a name, functions of the plot
 definition, the fixed key order, missing data, data read by earlier calls in the same process."""
 
 from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, captured, cases, check, data_objects, describe, finish, func_diff, graph_diff, has_variant, hist_diff, source_of
@@ -34,6 +34,10 @@ p.pm.AddDataSource("inner", p.path("folders.root") + ":a")
 plot = S.Plot("paths", "data", "1d")
 plot[1].AddData("a/b/h", "folders")
 plot[1].AddData("b/h", "inner")
+p.pm.AddPlot(plot)
+plot = S.Plot("folder_forms", "folders", "1d")
+plot[1].AddData("h", "folders:a/")
+plot[1].AddData("a/h", "folders:")
 p.pm.AddPlot(plot)
 plot = S.Plot("missing", "missing", "1d")
 plot[1].AddData("nothere", "folders")
@@ -99,6 +103,14 @@ if written:
     first = names
     p.plot("data", ".+", "data")
     check("the same plots give the keys in the same order", keys(p.path("out", "Data.root")) == first)
+
+run = p.plot("folders", ".+", "data")
+check("a folder given with a trailing slash or empty: no errors", not run.errors(), " | ".join(run.errors()[:3]))
+written = ROOT.TFile.Open(p.path("out", "Data.root"))
+names = keys(p.path("out", "Data.root")) if written else []
+check("a folder given with a trailing slash or empty: written below the data source", bool(written) and "folders/a/h" in names, names)
+if written:
+    written.Close()
 
 run = p.plot("missing", ".+", "data")
 expected = ("missing folders:nothere (not found in the inputs of folders)", "missing undefined:h (data source not defined)")
