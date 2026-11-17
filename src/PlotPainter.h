@@ -327,6 +327,7 @@ class PlotPainter
   std::optional<data_ptr_t> GetDataClone(TObject* obj);
   std::optional<data_ptr_t> GetProjection(TObject* obj, Plot::Pad::Data::proj_info_t projInfo);
 
+  static void RemoveGraphPoints(TGraph* graph, const std::function<bool(int32_t)>& remove);
   static void SortGraph(TGraph* graph);
   static void RemoveGraphPoint(TGraph* graph, int32_t i);
   static void RemoveGraphPoint(TGraph2D* graph, int32_t i);

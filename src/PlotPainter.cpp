@@ -4134,17 +4134,21 @@ void PlotPainter::RemoveInvalid(item_state_t& state, ObjT* ptr, const string& na
       Warn(state, "{} has {} with contents beyond the largest float (3.4e38): ROOT finds axis ranges only below it, so they are wrong (a log scale fails).", name,
            plural(nBeyondFloat, "bin"));
     }
-  } else if constexpr (is_graph_1d<ptr_type>() || is_graph_2d<ptr_type>()) {
+  } else if constexpr (is_graph_1d<ptr_type>()) {
+    int32_t nInvalid{};
+    RemoveGraphPoints(ptr, [&](int32_t i) {
+      const bool invalid = !std::isfinite(ptr->GetPointX(i)) || !std::isfinite(ptr->GetPointY(i)) || !std::isfinite(ptr->GetErrorXlow(i)) ||
+                           !std::isfinite(ptr->GetErrorXhigh(i)) || !std::isfinite(ptr->GetErrorYlow(i)) || !std::isfinite(ptr->GetErrorYhigh(i));
+      nInvalid += invalid;
+      return invalid;
+    });
+    if (nInvalid) Warn(state, "{} has {} with NaN or infinite values, which are not drawn.", name, plural(nInvalid, "point"));
+  } else if constexpr (is_graph_2d<ptr_type>()) {
+    // point by point: TGraph2D::RemovePoint also drops the triangulation and histogram made from the points
     int32_t nInvalid{};
     for (int32_t i = ptr->GetN() - 1; i >= 0; --i) {
-      bool invalid{};
-      if constexpr (is_graph_2d<ptr_type>()) {
-        invalid = !std::isfinite(ptr->GetX()[i]) || !std::isfinite(ptr->GetY()[i]) || !std::isfinite(ptr->GetZ()[i]) ||
-                  !std::isfinite(ptr->GetErrorX(i)) || !std::isfinite(ptr->GetErrorY(i)) || !std::isfinite(ptr->GetErrorZ(i));
-      } else {
-        invalid = !std::isfinite(ptr->GetPointX(i)) || !std::isfinite(ptr->GetPointY(i)) || !std::isfinite(ptr->GetErrorXlow(i)) ||
-                  !std::isfinite(ptr->GetErrorXhigh(i)) || !std::isfinite(ptr->GetErrorYlow(i)) || !std::isfinite(ptr->GetErrorYhigh(i));
-      }
+      const bool invalid = !std::isfinite(ptr->GetX()[i]) || !std::isfinite(ptr->GetY()[i]) || !std::isfinite(ptr->GetZ()[i]) ||
+                           !std::isfinite(ptr->GetErrorX(i)) || !std::isfinite(ptr->GetErrorY(i)) || !std::isfinite(ptr->GetErrorZ(i));
       if (invalid) {
         RemoveGraphPoint(ptr, i);
         ++nInvalid;
@@ -7473,8 +7477,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
       }
       if (!filled->GetN()) {
         if (verbose && numN) logger::warning("{} is zero at every point of {}: the ratio has no values.", denominator->GetName(), numerator->GetName());
-        for (int32_t i = numN - 1; i >= 0; --i)
-          RemoveGraphPoint(numerator, i);
+        RemoveGraphPoints(numerator, [](int32_t) { return true; });
         return true;
       }
       denominator = filled;
@@ -7619,9 +7622,7 @@ bool PlotPainter::Divide(TGraph* numerator, TGraph* denominator, bool binomialEr
   if (verbose && !undefined.empty() && static_cast<int32_t>(undefined.size()) == numN) {
     logger::warning("{} is zero at every point of {}: the ratio has no values.", denominator->GetName(), numerator->GetName());
   }
-  for (auto it = undefined.rbegin(); it != undefined.rend(); ++it) {
-    RemoveGraphPoint(numerator, *it);
-  }
+  RemoveGraphPoints(numerator, [&undefined](int32_t i) { return std::binary_search(undefined.begin(), undefined.end(), i); });
   return true;
 }
 
@@ -7852,9 +7853,7 @@ bool PlotPainter::Divide(TGraph* numerator, TF1* denominator, bool binomialError
     }
   }
   ScaleMultiErrors(numerator, multiErrors);
-  for (auto it = undefined.rbegin(); it != undefined.rend(); ++it) {
-    RemoveGraphPoint(numerator, *it);
-  }
+  RemoveGraphPoints(numerator, [&undefined](int32_t i) { return std::binary_search(undefined.begin(), undefined.end(), i); });
   if (!undefined.empty() && verbose) {
     logger::warning("Function {} is zero at {} of {}: they are left out of the ratio.", denominator->GetName(), plural(undefined.size(), "point"), numerator->GetName());
   }
@@ -7886,6 +7885,41 @@ void PlotPainter::RemoveGraphPoint(TGraph* graph, int32_t i)
     for (int32_t k = i; k < multi->GetN(); ++k)
       multi->SetPointEY(k, e, low[k + 1], high[k + 1]);
   }
+}
+
+//**************************************************************************************************
+/**
+ * Removes the points i of a graph for which remove(i) is true, the others keeping their order: in one pass over the arrays of the graph
+ * (values, errors, displacements of bent errors), a TGraphMultiErrors point by point (see RemoveGraphPoint).
+ */
+//**************************************************************************************************
+void PlotPainter::RemoveGraphPoints(TGraph* graph, const std::function<bool(int32_t)>& remove)
+{
+  const int32_t n = graph->GetN();
+  vector<int32_t> kept;
+  kept.reserve(n);
+  for (int32_t i = 0; i < n; ++i) {
+    if (!remove(i)) kept.push_back(i);
+  }
+  if (static_cast<int32_t>(kept.size()) == n) return;
+  if (dynamic_cast<TGraphMultiErrors*>(graph)) {
+    for (int32_t i = n - 1, k = static_cast<int32_t>(kept.size()) - 1; i >= 0; --i) {  // from the back: the indices before stay valid
+      if (k >= 0 && kept[k] == i) {
+        --k;
+      } else {
+        RemoveGraphPoint(graph, i);
+      }
+    }
+    return;
+  }
+  vector<double_t*> arrays{graph->GetX(), graph->GetY(), graph->GetEX(), graph->GetEY(), graph->GetEXlow(), graph->GetEXhigh(), graph->GetEYlow(), graph->GetEYhigh()};
+  if (auto* bent = dynamic_cast<TGraphBentErrors*>(graph)) arrays.insert(arrays.end(), {bent->GetEXlowd(), bent->GetEXhighd(), bent->GetEYlowd(), bent->GetEYhighd()});
+  for (double_t* values : arrays) {
+    if (!values) continue;  // the arrays a class does not have (TGraph's getters give nullptr)
+    for (size_t k = 0; k < kept.size(); ++k)
+      values[k] = values[kept[k]];
+  }
+  graph->Set(static_cast<int32_t>(kept.size()));  // keeps the first points of every array of the class
 }
 
 //**************************************************************************************************
@@ -7965,9 +7999,7 @@ bool PlotPainter::RemoveGraphPointsOutside(TGraph* graph, optional<double_t> min
       ++i;
     if (i == graph->GetN()) return false;
   }
-  for (int32_t i = graph->GetN() - 1; i >= 0; --i) {  // from the back, so that the indices of the remaining points stay valid
-    if (outside(i)) RemoveGraphPoint(graph, i);
-  }
+  RemoveGraphPoints(graph, outside);
   return true;
 }
 
