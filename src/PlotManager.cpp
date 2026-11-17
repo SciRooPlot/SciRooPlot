@@ -2232,6 +2232,25 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& mode)
   }
   if (mode == "data") return GetMissingData(plot).empty();  // the input data is written as read, nothing is painted
 
+  // a range whose ends were set one by one (SetMinRange, SetMaxRange, also one in the base plot and one in the plot) can end up inverted:
+  // it is ignored, as SetRange ignores an inverted one
+  for (auto& [padID, pad] : fullPlot.mPads) {
+    for (auto& [axisLabel, axis] : pad.mAxes) {
+      if (axis.mRange.min && axis.mRange.max && *axis.mRange.min >= *axis.mRange.max) {
+        logger::warning("Plot {}: the range [{}, {}] of axis {} in pad {} is ignored: its minimum is not below its maximum.", Plot::Label(fullPlot), *axis.mRange.min, *axis.mRange.max, axisLabel, padID);
+        axis.mRange = {};
+      }
+    }
+    for (auto& data : pad.mData) {
+      for (auto [range, axisName] : {std::pair{&data->mRangeX, 'x'}, std::pair{&data->mRangeY, 'y'}}) {
+        if (range->min && range->max && *range->min >= *range->max) {
+          logger::warning("Plot {}: the {} range [{}, {}] of {} is ignored: its minimum is not below its maximum.", Plot::Label(fullPlot), axisName, *range->min, *range->max, DataLocation(data->GetDataSource(), data->GetName()));
+          *range = {};
+        }
+      }
+    }
+  }
+
   // the personal scale settings only change the number of pixels of plots on screen and of bitmap files, vector files do not depend on them
   const bool isBitmapMode = (mode == "png") || (mode == "jpg") || str_starts_with(mode, "gif");
   PlotPainter painter(isInteractiveMode ? Config::Get().ScreenScale() : (isBitmapMode ? Config::Get().BitmapScale() : 1.), isInteractiveMode);

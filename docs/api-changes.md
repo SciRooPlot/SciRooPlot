@@ -21,6 +21,12 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 |---|---|---|---|
 | `PlotManager::GetProjectProperty(property)` read any project variable set with `srp set <project> <name> <value>` (an empty text if not set or misspelt) | Removed: `PlotManager::Setting(name, default, description = "", choices = {})` declares a setting of the project and returns the value set with `srp set`, otherwise the default, as `bool` (a switch, set `on`/`off`), `int`, `double` or text | removed | Replace `GetProjectProperty("x")` by `Setting("x", <default>)`; run the program once, then set the value again with `srp set`. |
 
+### Input validation
+
+| Old | New | Kind | Action |
+|---|---|---|---|
+| A range whose ends were set one by one (`Axis::SetMinRange`/`SetMaxRange`, `Data::SetMinRangeX`/`SetMaxRangeX`/`SetMinRangeY`/`SetMaxRangeY`, also one end in the base plot) with the minimum not below the maximum was drawn as given: an inverted y frame without a message, on x a message that the range holds no bins | Such a range is ignored with a warning naming plot, pad and axis or data, as `SetRange` ignores an inverted one | input validation | Fix the range the warning names. |
+
 ### Files
 
 | Old | New | Kind | Action |

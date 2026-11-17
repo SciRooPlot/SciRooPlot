@@ -8,7 +8,8 @@ not exist ...), the other parameters plain. Reference: the same call with the pl
   set before stays (a setter reported when set: the plain call followed by the invalid one gives the plot of the plain call; a
   legend row for pad or data 0 is not added; a setter of several values with one invalid sets none);
   named: the same tree joined again, a selection of the entries (Filter) of data that is not projected, pad margins leaving no room
-  for the frame (also one margin beside that of the base plot); margins with room are drawn as set, whatever the order of setting;
+  for the frame (also one margin beside that of the base plot); margins with room are drawn as set, whatever the order of setting; a
+  range whose ends are set one by one and end up inverted (of an axis or data, also one end in the base plot);
   the messages give the value as written (a float not widened to double);
 - values that mean something in ROOT (VALID: ROOT's default palette, a digit 0 of an alignment, ticks on the other side, no reference
   function, the forms of functions) give no message;
@@ -20,7 +21,7 @@ The messages of the style setters name what was set (the width of SetFrameBorder
 as "legend default line width"), and a style setter given several invalid values names each of them.
 Style numbers (markers, lines, fills) are not checked: ROOT draws an unknown style in its default style.
 Covers: the same tree joined again, a selection of data that is not projected, pad margins without room for the
-frame, calls replacing each other.
+frame, ranges inverted by single-end setters, calls replacing each other.
 """
 
 import os
@@ -86,6 +87,18 @@ for given, bad, good, valid in (
 ):
     plain = {"py": f'p = Plot("{{name}}", "g", "1d")\np[1].{good}\npm.AddPlot(p)', "label": f"Pad.{given}"}
     cases.append({**plain, "plainCase": plain, "param": "margins", "bad": bad, "valid": valid, "py": f'p = Plot("{{name}}", "g", "1d")\np[1].{bad}\npm.AddPlot(p)'})
+# named: a range whose ends are set one by one, inverted by the second end (said when plotted): of an axis, of data in x and y, and one end
+# in the base plot (base_range: y up to 10), the other in the plot
+for given, bad, good, base in (
+    ("Axis.SetMinRange(min) beside the maximum set before", 'p[1]["Y"].SetRange(0, 10).SetMinRange(20)', 'p[1]["Y"].SetRange(0, 10).SetMinRange(5)', "1d"),
+    ("Axis.SetMaxRange(max) beside the minimum set before", 'p[1]["X"].SetRange(2, 8).SetMaxRange(1)', 'p[1]["X"].SetRange(2, 8).SetMaxRange(9)', "1d"),
+    ("Data.SetMinRangeX(min) beside the maximum set before", 'p[1].GetData(1).SetRangeX(2, 8).SetMinRangeX(9)', 'p[1].GetData(1).SetRangeX(2, 8).SetMinRangeX(3)', "1d"),
+    ("Data.SetMaxRangeY(max) beside the minimum set before", 'p[1].GetData(1).SetRangeY(6, 14).SetMaxRangeY(5)', 'p[1].GetData(1).SetRangeY(6, 14).SetMaxRangeY(13)', "1d"),
+    ("Axis.SetMinRange(min) beside the maximum of the base plot", 'p[1]["Y"].SetMinRange(20)', 'p[1]["Y"].SetMinRange(5)', "base_range"),
+):
+    head = f'p = Plot("{{name}}", "g", "{base}")\np[1].AddData("h", "s")\n'
+    plain = {"py": f"{head}{good}\npm.AddPlot(p)", "label": given}
+    cases.append({**plain, "plainCase": plain, "param": "range", "bad": bad, "valid": False, "py": f"{head}{bad}\npm.AddPlot(p)"})
 plains = list({id(case["plainCase"]): case["plainCase"] for case in cases}.values())
 # projections need data that can be projected: a 3d histogram for those of histograms, the trees for the requests
 REQUESTS = ("Project1D", "Project2D", "Profile1D", "Profile2D", "Scatter")
@@ -164,6 +177,10 @@ for source, (hist, tree) in {"s": ("h", "t"), "s2": ("h2", "t2")}.items():
     S.write_objects(p.path(f"{source}.root"), {hist: h, "h3": h3} if source == "s" else {hist: h, "h": h.Clone("h"), "h3": h3})
     S.write_tree(p.path(f"{source}.root"), columns, tree)
     p.pm.AddDataSource(source, p.path(f"{source}.root"))
+baseRange = S.S.PlotManager.MakeBasePlot("1d")
+baseRange.SetName("base_range")
+baseRange[1]["Y"].SetMaxRange(10)
+p.pm.AddBasePlot(baseRange)
 namespace = dict(vars(S.S), pm=p.pm, nan=NAN, inf=INF)
 start = S.S.Plot("c_start", "g", "1d")  # made first: the messages before it are those of reading the data
 start[1].AddData("h", "s")
