@@ -27,6 +27,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 |---|---|---|---|
 | A histogram with Poisson errors (`TH1::SetBinErrorOption(TH1::kPoisson)`) drawn as a graph (`points_line`, `points_arrows`, `brackets`) got symmetric errors, and its empty bins (an upper error of 1.84) were left out | Its asymmetric errors, as ROOT draws them for the histogram (`points`); empty bins with their upper error | behaviour | Nothing. |
 | The bent error bars of a `TGraphBentErrors` kept their displacements when the graph was scaled (`ScaleX`, `ScaleY`, `Scale`, `Normalize`) or divided in a ratio | The displacements follow the axis they are measured along: scaled with it, divided by the denominator | behaviour | Nothing. |
+| A data name starting with `/` (`AddData("/h", "src")`, also a ratio denominator) was not found | It is read from the top of its data source, with a warning | behaviour | Drop the leading `/`. |
 
 ### Input validation
 

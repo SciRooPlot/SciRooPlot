@@ -537,6 +537,7 @@ class Plot : public FillSetters<Plot>
   static bool CheckAlpha(float_t alpha, const std::string& what);
   static std::string Shown(double value);  // for messages: a float_t as it was given
   static bool CheckFinite(double value, const std::string& what);
+  static std::string DataPath(const std::string& name, const std::string& dataSource);  // the path of data in its source: no leading '/'
   static bool CheckNotNegative(double value, const std::string& what);
   static bool CheckFraction(double value, const std::string& what);  // 0 to 1
   static bool CheckCount(int64_t count, const std::string& what);    // at least one

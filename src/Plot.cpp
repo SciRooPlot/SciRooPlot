@@ -208,6 +208,15 @@ bool Plot::CheckFinite(double value, const string& what)
   logger::warning("The {} ({}) is ignored: it is not a finite number.", what, Shown(value));
   return false;
 }
+string Plot::DataPath(const string& name, const string& dataSource)
+{
+  // a path inside a data source starts at its top: a leading '/' is dropped (the data would not be found under that name)
+  if (name.empty() || name[0] != '/' || dataSource == kUserFunctions || dataSource == kUserGraphs) return name;
+  const size_t start = name.find_first_not_of('/');
+  const string path = (start == string::npos) ? string() : name.substr(start);
+  logger::warning("The name {} of data in {} starts with '/': it is read as {}.", name, dataSource, path);
+  return path;
+}
 bool Plot::CheckMarkerStyle(int16_t style, const string& what)
 {
   // ROOT draws markers 1 to 49, from 50 on the same with thicker lines (width 2 for 50 to 67, 3 for 68 to 85 ...); absurd widths crash it
@@ -2323,7 +2332,7 @@ Plot::Pad::Data::Data(const string& name, const string& dataSource, const option
   mType = "data";
 
   mLegend.label = legendLabel;
-  mName = name;
+  mName = DataPath(name, dataSource);
   mDataSource = dataSource;  // can be restricted to a folder (dataSource:some/folder), which stays part of the data source
 }
 
@@ -2336,8 +2345,8 @@ auto Plot::Pad::Data::operator()(const string& name, const optional<string>& dat
 {
   Data data = *this;
   data.mType = "data";
-  data.mName = name;
   if (dataSource) data.mDataSource = *dataSource;
+  data.mName = DataPath(name, data.mDataSource);
   return data;
 }
 
@@ -3526,9 +3535,9 @@ Plot::Pad::Ratio::Ratio(const Data& numerator, const Data& denominator)
 //**************************************************************************************************
 Plot::Pad::Ratio::Ratio(const string& name, const string& dataSource, const string& denomName,
                         const string& denomDataSource, const optional<string>& label)
-  : Data(name, dataSource, label), mDenomName(denomName),
-    mDenomDataSource(denomDataSource.empty() ? dataSource : denomDataSource), mCorrelated(false)
+  : Data(name, dataSource, label), mDenomDataSource(denomDataSource.empty() ? dataSource : denomDataSource), mCorrelated(false)
 {
+  mDenomName = DataPath(denomName, mDenomDataSource);
   SetType("ratio");
 }
 

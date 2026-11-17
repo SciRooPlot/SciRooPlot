@@ -6,7 +6,8 @@ reached by several paths (a symlink, a hard link, ./ in the path) is read once, 
 cannot be read (a broken symlink, a corrupt file, an unset environment variable, a relative path, no file or folder matching a wildcard)
 is reported and the other inputs are still read; a symlinked directory inside a directory input is skipped with a warning. Of several
 cycles of a key the latest counts; a directory hidden by a newer key of its name is still reached by a path, the search and wildcards. Tables of a directory are read only when they are requested, and a restricted data source
-(src:folder) leaves tables out. Data of an unknown data source is reported missing with the reason, and a data source with an
+(src:folder) leaves tables out. A name starting with '/' is read from the top of its data source, with a warning where the data is
+added. Data of an unknown data source is reported missing with the reason, and a data source with an
 illegal name is refused. Inputs added after GeneratePlots (appended or replaced) and input files rewritten since are read by the next
 GeneratePlots; without a change the data is not read again.
 Covers: the same file through a symlink in a directory source, or ./, chained once, tables read only when requested;
@@ -18,7 +19,7 @@ import os
 import re
 
 import numpy as np
-from srptest import ROOT, Project, S, check, finish, missing, one_bin, python
+from srptest import ROOT, Project, S, captured, check, finish, missing, one_bin, python
 
 p = Project("data_sources")
 
@@ -193,6 +194,9 @@ case("a corrupt file with a wildcard for folders: the other inputs are read", [(
 case("a folder missing in a file: the other inputs are read", [("h", "missing_folder", 2)])
 case("a directory with ':' in its name", [("h", "colon", 401), ("sub/h", "colon", 402), ("h", "colon:sub", 402)])
 case("a folder of a file in a directory with ':' in its name", [("h", "colon_folder", 402)])
+# a name starting with '/' (the top of its data source): read without it, said where the data is added
+_, said = captured(lambda: case("a name starting with '/': read from the top of its data source", [("/h", "colon", 401), ("//sub/h", "colon", 402)]))
+check("a name starting with '/': a warning where the data is added, for each", said.count("starts with '/'") == 2, said)
 case("the latest cycle of a key", [("hc", "cycles", 502), ("Graph", "cycles", 504)])
 case(
     "a directory hidden by a newer key of its name: the key by name, the directory by a path and by the search",
