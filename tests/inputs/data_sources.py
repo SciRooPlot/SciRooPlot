@@ -259,8 +259,8 @@ for what, text in (
 check("a corrupt file with a wildcard for folders: not searched for folders", not [line for line in warnings if "No folders match" in line and "corrupt.root" in line], "")
 check("data of an undefined data source: the reason is given", "missing undefined:h (data source not defined)" in run.log, "")
 expectedErrors = ("cannot be created", "could not be created")
-errors = [line for line in run.errors() if not any(e in line for e in expectedErrors) and "corrupt.root" not in line and "Subdirectory XX not found" not in line]  # ROOT reports the corrupt file too
-check("no other errors", not errors, " | ".join(errors[:5]))
+errors = [line for line in run.errors() if not any(e in line for e in expectedErrors) and "Subdirectory XX not found" not in line]
+check("no other errors (ROOT's own on a corrupt file are left out: SciRooPlot reports it)", not errors, " | ".join(errors[:5]))
 lazy = p.plot("lazy")
 check("tables and text files not requested are not read", lazy.objects("only_hist", "lazy") and not [line for line in lazy.lines("WARN") + lazy.errors() if re.search("table|README|csv", line, re.I)], " | ".join(lazy.lines("WARN") + lazy.errors()))
 check("only the requested data is read: the reading summary", "Reading 1 data item from" in lazy.log, " | ".join(lazy.lines("INFO")))

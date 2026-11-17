@@ -1875,7 +1875,10 @@ void PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
         logger::warning("Input file {} not found{} (data source {}).", fileName, existsError ? " (" + existsError.message() + ")" : "", baseSource);
         continue;
       }
-      openFile.file = open_input_file(fileName);
+      {
+        auto quiet = ignore_root_messages_below(kFatal);  // reported below, ROOT's own messages left out
+        openFile.file = open_input_file(fileName);
+      }
       if (!openFile.file || openFile.file->IsZombie()) {
         logger::warning("Cannot open input file {} (data source {}).", fileName, baseSource);
         openFile.file.reset();
