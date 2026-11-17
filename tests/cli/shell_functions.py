@@ -1,7 +1,8 @@
 """The shell functions of env.sh, in bash and zsh: the script must be sourced; sourced, plot and srp work also in scripts. At the prompt,
 plot gets its patterns unexpanded (.* is not a list of dot files), also after && and inside braces after ||, keeps its exit status, and
 file globbing works again afterwards, also after plot in a pipeline. srp makes relative program and output paths absolute (add, set),
-keeps other values and paths starting with ~ or a variable as written; srp cd goes to the program folder; srp cd and srp out of an
+keeps other values and paths starting with ~ or a variable as written; srp cd goes to the program folder; srp edit opens the sources of
+the program (a C++ program: of its CMake source folder, else of its own folder); srp cd and srp out of an
 unknown project, srp out without an output folder or before it exists fail with a message. The srp program alone refuses the
 commands that need env.sh, unknown commands and a missing command, with exit status 1. In zsh without a terminal, env.sh registers the
 completion silently also with an insecure directory in fpath.
@@ -83,6 +84,30 @@ grep note "$SCIROOPLOT_CONFIG_PATH/projects.info" """,
     out = shell("srp out proj; echo status $?", sh, config=config)
     check(f"{sh}: srp out before the output folder exists fails with a message", out.stdout.strip() == "status 1" and "does not exist yet" in out.stderr, out.tail())
     run(SRP, "unset", "proj", "outdir", config=config)
+
+# srp edit opens the sources of the program: the .py files of its folder, for a C++ program those of the source folder of its CMake
+# build, else of its own folder (not those of neighbouring folders)
+stub = config_folder("opener")
+with open(os.path.join(stub, "xdg-open"), "w") as f:
+    f.write('#!/bin/sh\necho "OPENED $*"\n')
+os.chmod(os.path.join(stub, "xdg-open"), 0o755)
+tree = config_folder("edit")
+for path in ("py/def.py", "py/helper.py", "cpp/main.cpp", "cpp/build/prog", "loose/prog/prog", "loose/prog/main.cpp", "loose/other/a.cpp"):
+    os.makedirs(os.path.join(tree, os.path.dirname(path)), exist_ok=True)
+    open(os.path.join(tree, path), "w").close()
+for path in ("cpp/build/prog", "loose/prog/prog"):
+    os.chmod(os.path.join(tree, path), 0o755)
+with open(os.path.join(tree, "cpp", "build", "CMakeCache.txt"), "w") as f:
+    f.write(f"CMAKE_HOME_DIRECTORY:INTERNAL={os.path.join(tree, 'cpp')}\n")
+edits = {"py/def.py": ("py/def.py", "py/helper.py"), "cpp/build/prog": ("cpp/main.cpp",), "loose/prog/prog": ("loose/prog/main.cpp",)}
+editConfig = config_folder("config_edit")
+for k, program in enumerate(edits):
+    run(SRP, "add", f"e{k}", os.path.join(tree, program), config=editConfig)
+for sh in SHELLS:
+    for k, (program, wanted) in enumerate(edits.items()):
+        out = shell(f"srp edit e{k}", sh, config=editConfig, env={"PATH": f"{stub}:{os.environ['PATH']}"})
+        opened = sorted(os.path.relpath(os.path.normpath(line.split(" ", 1)[1]), tree) for line in out.stdout.splitlines() if line.startswith("OPENED "))
+        check(f"{sh}: srp edit of {program} opens the sources of the program", opened == sorted(wanted), f"{opened} {out.tail()}")
 
 # an insecure directory in fpath (group or world writable, as Homebrew's on macOS): compinit cannot ask without a terminal
 if "zsh" in SHELLS:

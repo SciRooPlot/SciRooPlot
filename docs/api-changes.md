@@ -52,6 +52,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Mode `data` with missing data reported only the number of plots affected, wrote the rest and succeeded (`plot` exited with 0, `GeneratePlots` returned true) | Each plot with missing data is reported with what is missing and why, and the run fails, as in the other modes | behaviour | Scripts relying on the exit code of `plot … data`: check it. |
 | Mode `data` wrote all data read so far by the process, also that of plots selected by earlier `GeneratePlots` calls | Only the data of the selected plots | behaviour | Nothing. |
 | `srp colorwheel <file>` with a name not ending in an image format wrote PostScript under that name; ROOT's info line was shown | Refused with an error; ROOT's line left out | CLI | Name the file `.png`, `.pdf`, `.svg`, `.eps`, `.jpg` or `.gif`. |
+| `srp edit` of a C++ program opened the sources in every folder next to the program's folder (also those of other projects) | The sources of the CMake source folder of its build (`srp init-cpp`: the folder above `build/`), else of its own folder | CLI | Nothing. |
 
 ## 4.0.0 → 4.1.0
 
