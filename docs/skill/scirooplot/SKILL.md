@@ -34,7 +34,7 @@ srp example-cpp <project> [<dir>]   # commented example plots with example data 
 srp add <project> <program> [<outdir>]   # register an existing program
 srp select <project>                # make it the current project
 srp set <project> outdir <dir>      # where files are saved (subfolders per group)
-srp set <project> <key> <value>     # own variables, read in code via pm.GetProjectProperty("<key>")
+srp set <project> <name> <value>    # a setting the program declares and reads: pm.Setting("<name>", <default>, "<description>")
 srp projects [<project>] | srp settings | srp help
 srp verbosity (debug|log|info|warning|error|silent) ; srp plotmode (show|pdf|png|...) ; srp matchmode (exact|contains)
 ```
@@ -253,7 +253,7 @@ pm.AddBasePlot(layout);
 ```
 Cells: `Panel(w, h)` scales a panel; `Gap()` between panels makes them independent (own axes); `Empty()` / `Empty(w, h)` leaves a pad for text; `Hole()` a blank cell without pad number (e.g. a corner beside a ratio panel); `Panel().ColorScale()` reserves room for the panel's own colour scale, while a `ColorScale()` cell holds one scale for the z group of the panel left of it (`ColorScale(padID)`: of that panel). `.Span(columns, rows)` lets a cell cover several columns/rows, listed once in the row where it starts, e.g. `{{Empty(1, 0.2).Span(3)}, {Panel(), Panel(), Panel()}}` for a common legend strip, rows of it filled with `legend.AddDataEntry(padID, dataID)`. `.SpacingAbove(px)`/`.SpacingLeft(px)` sets a touching cell off from the cells above/left of it, for the whole boundary, instead of `SetPanelSpacing` (e.g. `Panel(1, 0.37).SpacingAbove(12)` for a ratio panel). The source of `PlotManager::MakeBasePlot` is the full worked example.
 
-**Keep inputs out of the code.** Machine-specific paths go into project variables (`srp set <project> inputDir /path`, `pm.GetProjectProperty("inputDir")`) or environment variables in the data source strings (`${HOME}/...`); the data source names stay stable across machines. In-memory objects (a graph computed in the program) are registered with `pm.AddDataSource("glauber", &graph)` and used like file data.
+**Keep inputs out of the code.** Machine-specific paths go into project settings (`pm.Setting("inputDir", "/data", "folder of the inputs")` in the program, `srp set <project> inputDir /path` on each machine) or environment variables in the data source strings (`${HOME}/...`); the data source names stay stable across machines. In-memory objects (a graph computed in the program) are registered with `pm.AddDataSource("glauber", &graph)` and used like file data.
 
 **Let the plot show numbers.** Label placeholders (`"<mean[.2f]>"`, `"<entries>"`, `"<integral[.2e]>"`) and `points_text` save hand-copied values; `AddColorOverview("colors", "overview")` renders SciRooPlot's default colour sequence with names and indices (`AddColorOverview("colors", "overview", "1d_mine", 1)`: the colours that pad of a base plot gives its data) (`plot overview colors`), `srp colorwheel` shows all of ROOT's named colours.
 

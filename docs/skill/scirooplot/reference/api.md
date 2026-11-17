@@ -26,7 +26,11 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `void ListPlots()`
 - `void ClearDataBuffer()`
 - `void ClearCanvasRegistry()`
-- `std::string GetProjectProperty(const std::string& property)`
+- `bool Setting(const std::string& name, bool defaultValue, const std::string& description = "")`
+- `int Setting(const std::string& name, int defaultValue, const std::string& description = "")`
+- `double Setting(const std::string& name, double defaultValue, const std::string& description = "")`
+- `std::string Setting(const std::string& name, const std::string& defaultValue, const std::string& description = "", const std::vector<std::string>& choices = {})`
+- `std::string Setting(const std::string& name, const char* defaultValue, const std::string& description = "", const std::vector<std::string>& choices = {})`
 - `void SetOutputDirectory(const std::string& path)`
 - `void SetPlotsRootFile(const std::string& fileName)`
 - `void SetDataRootFile(const std::string& fileName)`

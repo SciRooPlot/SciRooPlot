@@ -1,9 +1,10 @@
 """plot (the shell function of env.sh) runs the program of the current project before plotting exactly when its stored definitions are
 older than the program, than a Python file next to it or one folder below (a module it imports), or, for a C++ program in a CMake build
-folder, than the program rebuilt from changed sources; never when nothing changed or only other files did. It then plots what the program
+folder, than the program rebuilt from changed sources, or when srp set gave a setting the program declares another value; never when
+nothing changed, only other files did or a setting was set to the value it had. It then plots what the program
 saved. A failing program stops plot with a non-zero exit status before anything is plotted; a program that saved another project's
 definitions is named in a warning; a missing program is named in a warning and the stored definitions are used. In bash and zsh.
-Covers: a changed imported module, C++ program in a build folder other than build/, program of another
+Covers: a changed imported module, a changed setting, C++ program in a build folder other than build/, program of another
 project, failing program."""
 
 import os
@@ -18,9 +19,10 @@ from SciRooPlot import *
 from helper import LABEL
 from sub.deeper import EXTRA
 pm = PlotManager({project!r})
+LEVEL = pm.Setting("level", "low", "", ["low", "high"])
 pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
 plot = Plot("p", "g", "1d")
-plot[1].AddFunction("x", LABEL + EXTRA)
+plot[1].AddFunction("x", LABEL + EXTRA + LEVEL)
 pm.AddPlot(plot)
 pm.SaveProject()
 """
@@ -31,6 +33,8 @@ CHANGES = {
     "module_below": ("sub/deeper.py", True),
     "data_file": ("notes.txt", False),
     "module_two_below": ("sub/subsub/unused.py", False),
+    "setting": ("srp set level high", True),
+    "setting_same_value": ("srp set level low", False),
 }
 
 
@@ -59,7 +63,10 @@ def plots_info(config, project):
     return (os.stat(path).st_mtime, open(path).read()) if os.path.exists(path) else (None, "")
 
 
-todo = cases({"shell": list(SHELLS), "change": list(CHANGES)}, named=[{"shell": "bash", "change": "module", "why": "a changed module re-runs the program"}])
+todo = cases(
+    {"shell": list(SHELLS), "change": list(CHANGES)},
+    named=[{"shell": "bash", "change": "module", "why": "a changed module re-runs the program"}, {"shell": "bash", "change": "setting", "why": "a setting set to another value re-runs the program"}],
+)
 for i, case in enumerate(todo):
     what = describe(case)
     config = config_folder(f"config{i}")
@@ -68,17 +75,20 @@ for i, case in enumerate(todo):
     first = shell("plot g p list", case["shell"], config=config)
     stamp, _ = plots_info(config, "proj")
     path, reruns = CHANGES[case["change"]]
-    if path:
+    srpArgs = path.split()[1:] if path and path.startswith("srp ") else None
+    if path and not srpArgs:
         with open(os.path.join(folder, path), "a") as f:
             f.write("LABEL = 'second'\n" if path == "helper.py" else "\n")
-    touch(folder, os.path.join(config, "proj", "plots.info"), os.path.join(folder, path) if path else None)
+    touch(folder, os.path.join(config, "proj", "plots.info"), os.path.join(folder, path) if path and not srpArgs else None)
+    if srpArgs:
+        run(SRP, srpArgs[0], "proj", *srpArgs[1:], config=config)
     stamp = os.stat(os.path.join(config, "proj", "plots.info")).st_mtime
     out = shell("plot g p list", case["shell"], config=config)
     stamp2, text = plots_info(config, "proj")
     check(f"first plot runs the program: {what}", first.rc == 0 and stamp is not None and " - p from group g" in first.stdout, first.tail())
     check(f"program run {'again' if reruns else 'not again'}: {what}", (stamp2 != stamp) == reruns and out.rc == 0 and " - p from group g" in out.stdout and not out.warnings(), out.tail())
-    if case["change"] == "module":
-        check(f"plots what the re-run program saved: {what}", "second" in text, text[-200:])
+    if case["change"] in ("module", "setting"):
+        check(f"plots what the re-run program saved: {what}", ("second" if case["change"] == "module" else "high") in text, text[-200:])
 
 for sh in SHELLS:
     config = config_folder(f"config_{sh}_failing")

@@ -31,16 +31,23 @@ def program(name):
     return path
 
 
+# the settings.info a program declaring two text settings saves
+SETTINGS = 'var\n{\n    type text\n    default ""\n}\nuser\n{\n    type text\n    default ""\n}\n'
+
+
 def setup(state="normal"):
-    """a configuration with projects A (selected, variable var=1) and B (var=1), each with a plots.info in its folder"""
+    """a configuration with projects A (selected, setting var=1) and B (var=1), each with a plots.info and the settings var and user
+    declared in its folder"""
     counter[0] += 1
     config = config_folder(f"config{counter[0]}")
     for name in ("B", "A"):
         run(SRP, "add", name, program(name), os.path.join(PROGRAMS, name, "out"), config=config)
-        run(SRP, "set", name, "var", "1", config=config)
         os.makedirs(os.path.join(config, name), exist_ok=True)
         with open(os.path.join(config, name, "plots.info"), "w") as f:
             f.write("p\n{\n}\n")
+        with open(os.path.join(config, name, "settings.info"), "w") as f:
+            f.write(SETTINGS)
+        run(SRP, "set", name, "var", "1", config=config)
     if state == "none":
         with open(os.path.join(config, "projects.info")) as f:
             text = f.read()
@@ -189,7 +196,6 @@ pm.LoadPlots()
 pm.SaveDataSources()
 pm.LoadDataSources()
 pm.SaveProject()
-pm.GetProjectProperty("outdir")
 named = PlotManager("U")
 named.SavePlots()
 named.LoadDataSources()
@@ -197,7 +203,7 @@ named.LoadDataSources()
 cwd = config_folder("cwd_unnamed")
 out = python(UNNAMED, cwd=cwd, env={"SCIROOPLOT_CONFIG_PATH": ""})
 unnamed = [e for e in out.errors() if "No project and no file given; cannot " in e or "No project given; cannot " in e]
-check("no project and no file: every file operation refused with one error saying so", len(unnamed) == 6 and len(out.errors()) == 8, out.tail())
+check("no project and no file: every file operation refused with one error saying so", len(unnamed) == 5 and len(out.errors()) == 7, out.tail())
 check(
     "a project without config path: the file operations name the config path",
     any("No valid config path; cannot save the plots of project U" in e for e in out.errors()) and any("No valid config path; cannot load the data sources of project U" in e for e in out.errors()),
@@ -247,6 +253,8 @@ out = python(
 import subprocess
 from SciRooPlot import *
 pm = PlotManager("A")
+pm.Setting("var", "")
+pm.Setting("user", "")
 for args in (["add", "D", {program("D")!r}], ["set", "A", "user", "x"], ["select", "D"], ["verbosity", "warning"]):
     subprocess.run([{SRP!r}, *args], capture_output=True)
 pm.SetOutputDirectory({os.path.join(PROGRAMS, "A", "out2")!r})

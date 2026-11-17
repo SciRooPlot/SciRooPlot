@@ -127,7 +127,14 @@ class PlotManager
   void ClearDataBuffer();
   void ClearCanvasRegistry();
 
-  std::string GetProjectProperty(const std::string& property) const;
+  // A setting of the project: declared here, it is set on the command line (srp set <project> <name> <value>, which checks the value
+  // and tab-completes names, on/off and choices) and returned, otherwise its default. Changing it makes plot run the program again.
+  // bool: a switch set on or off; choices restrict a text setting to these values.
+  bool Setting(const std::string& name, bool defaultValue, const std::string& description = "");
+  int Setting(const std::string& name, int defaultValue, const std::string& description = "");
+  double Setting(const std::string& name, double defaultValue, const std::string& description = "");
+  std::string Setting(const std::string& name, const std::string& defaultValue, const std::string& description = "", const std::vector<std::string>& choices = {});
+  std::string Setting(const std::string& name, const char* defaultValue, const std::string& description = "", const std::vector<std::string>& choices = {});
 
   void SetOutputDirectory(const std::string& path);
   // names of the ROOT files written to the output directory in the modes file (plots) and data (input data)
@@ -135,6 +142,7 @@ class PlotManager
   void SetDataRootFile(const std::string& fileName);
 
  private:
+  std::string DeclareSetting(const std::string& name, const std::string& type, const std::string& defaultValue, const std::string& description, const std::vector<std::string>& choices);
   bool GeneratePlot(const Plot& plot, const std::string& mode = "pdf");
   std::unique_ptr<TCanvas> Paint(PlotPainter& painter, Plot& toPaint);
   std::unique_ptr<TCanvas> ApplySharedAxes(PlotPainter& painter, Plot& fullPlot, const std::map<char, std::vector<Plot::shared_group_t>>& sharedAxes);
@@ -177,6 +185,7 @@ class PlotManager
   std::string mOutputDirectory;
   std::vector<Plot> mPlots;
   std::vector<Plot> mBasePlots;
+  boost::property_tree::ptree mSettings;                       // declared with Setting, in their order
   std::set<std::string> mMissingBasePlots;                     // reported once each
   std::set<std::string> mNonAsciiTexts;                        // reported once each (bitmap modes)
   std::map<std::string, std::set<std::string>> mNotFoundData;  // data source -> names not found in any of its inputs (last reading)

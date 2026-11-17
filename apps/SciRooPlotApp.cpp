@@ -178,7 +178,7 @@ int RunCommand(const string& command, const string& project, const string& prope
     heading("Project properties");
     row("srp get <project> <property>", "print a property");
     row("srp set <project> <property> <value>", "set a property");
-    row("srp unset <project> <property>", "clear a property");
+    row("srp unset <project> <property>", "clear a property (a setting: its default)");
     heading("Project folders");
     row("srp confdir [<project>]", "print the config folder");
     row("srp cd [<project>]", "go to the program folder");
@@ -221,8 +221,8 @@ int RunCommand(const string& command, const string& project, const string& prope
     row("SCIROOPLOT_CONFIG_PATH", "config folder (default ~/.SciRooPlot)");
     heading("Arguments");
     row("<project>", "a project name (@current: selected project)");
-    row("<property>", "program | outdir | <variable>");
-    row("<variable>", "your own, read with GetProjectProperty");
+    row("<property>", "program | outdir | <setting>");
+    row("<setting>", "declared and read by the program with Setting");
     row("<group> <name>", "regular expressions for plot groups and names");
     row("<mode>", "one of the plot modes");
     row("<level>", "debug | log | info | warning | error | silent");
@@ -395,13 +395,21 @@ int RunCommand(const string& command, const string& project, const string& prope
         const std::time_t time = fileStat.fMtime;
         std::tm localTime{};
         char buffer[32];
-        if (localtime_r(&time, &localTime) && std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", &localTime)) lastSaved = buffer;
+        if (time == 0) {  // made older than the program by srp set
+          lastSaved = "before a setting changed (plot runs the program again)";
+        } else if (localtime_r(&time, &localTime) && std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", &localTime)) {
+          lastSaved = buffer;
+        }
       }
-      // program and output folder first, then the user's variables as stored, then what the program saved
+      // program and output folder first, then the settings the program declares, values left from settings it no longer declares,
+      // then what the program saved
       auto properties = Config::Get().Properties(name);
+      const ptree settings = Config::Get().DeclaredSettings(name);
       size_t width = 12;
       for (const auto& [property, value] : properties)
         width = std::max(width, property.size());
+      for (const auto& [setting, declaration] : settings)
+        width = std::max(width, setting.size());
       const auto row = rows(static_cast<int>(width));
       const bool markCurrent = project.empty() && name == Config::Get().CurrentProject();
       heading(fmt::format("Project {}{}", name, markCurrent ? "  (current)" : ""));
@@ -410,8 +418,22 @@ int RunCommand(const string& command, const string& project, const string& prope
         row(property, it == properties.end() || it->second.empty() ? "-" : it->second);
         if (it != properties.end()) properties.erase(it);
       }
+      // the value (with the default where it differs), the descriptions aligned behind
+      vector<std::tuple<string, string, string>> settingRows;
+      size_t valueWidth = 0;
+      for (const auto& [setting, declaration] : settings) {
+        const string defaultValue = declaration.get<string>("default", "");
+        auto it = properties.find(setting);
+        const string value = (it == properties.end() || it->second.empty()) ? defaultValue : it->second;
+        const string shown = (value.empty() ? "-" : value) + ((value == defaultValue) ? "" : "  (default " + (defaultValue.empty() ? "-" : defaultValue) + ")");
+        valueWidth = std::max(valueWidth, shown.size());
+        settingRows.emplace_back(setting, shown, declaration.get<string>("description", ""));
+        if (it != properties.end()) properties.erase(it);
+      }
+      for (const auto& [setting, shown, description] : settingRows)
+        row(setting, description.empty() ? shown : fmt::format("{:<{}}  {}", shown, valueWidth, description));
       for (const auto& [property, value] : properties)
-        if (!value.empty()) row(property, value);
+        if (!value.empty()) row(property, value + "  (not a setting of the program: srp unset removes it)");
       row("plots", fmt::format("{} in {}", nPlots, util::plural(groups.size(), "group")));
       row("data sources", fmt::format("{} with {}", nDataSources, util::plural(nInputs, "input")));
       row("last saved", lastSaved);
@@ -441,13 +463,16 @@ int RunCommand(const string& command, const string& project, const string& prope
       if (path.empty() && !Config::Get().Property(project, property).empty()) return 1;  // the path could not be expanded (reported)
       std::cout << path << std::endl;
     } else {
-      std::cout << Config::Get().Property(project, property) << std::endl;
+      const auto declaration = Config::Get().DeclaredSetting(project, property);
+      if (!declaration) return 1;
+      const string value = Config::Get().Property(project, property);
+      std::cout << (value.empty() ? declaration->get<string>("default", "") : value) << std::endl;
     }
   } else if (command == "unset") {
     if (!Config::GetMutable().SetProperty(project, property, "")) return 1;
   } else if (command == "set") {
     if (Config::Get().Exists(project) && !property.empty() && setting.empty()) {
-      logger::error("Specify new setting for {}.", project);
+      logger::error("Specify a value for {} of {}.", property, project);
       return 1;
     }
     if (!Config::GetMutable().SetProperty(project, property, setting)) return 1;

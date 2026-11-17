@@ -144,7 +144,7 @@ def methods(section: str, class_name: str):
         if not match:
             continue
         name = match["name"]
-        if name in SKIP_NAMES or name.startswith("Get") and name not in {"GetAxis", "GetData", "GetLegend", "GetLegendEntry", "GetText", "GetShape", "GetImage", "GetProjectProperty", "GetPad"}:
+        if name in SKIP_NAMES or name.startswith("Get") and name not in {"GetAxis", "GetData", "GetLegend", "GetLegendEntry", "GetText", "GetShape", "GetImage", "GetPad"}:
             continue  # plain getters are not part of the user interface
         ret = (match["ret"] or "").strip()
         if re.match(r"\s*static\s", decl):

@@ -1017,7 +1017,7 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
       <tr><td><kbd>s</kbd> <kbd>a</kbd> <kbd>d</kbd> <kbd>q</kbd> <kbd>x</kbd></td><td>next, previous, detach, close, close all</td></tr>
       <tr><td><code>srp projects</code> <code>select</code></td><td>projects and their plots, switch</td></tr>
       <tr><td><code>srp init-py</code> <code>example-py</code> <code>add</code></td><td>start a project</td></tr>
-      <tr><td><code>srp set &lt;p&gt; outdir|&lt;var&gt; &lt;value&gt;</code></td><td>output folder, project variables</td></tr>
+      <tr><td><code>srp set &lt;p&gt; outdir|&lt;setting&gt; &lt;value&gt;</code></td><td>output folder, project settings</td></tr>
       <tr><td><code>srp plotmode pdf</code>, <code>verbosity</code>, <code>matchmode contains</code></td><td>defaults</td></tr></table></section>
     <section><h4>Data</h4><table>
       <tr><td><code>AddDataSource("src", "/path/*.root")</code></td><td>files, folders, wildcards, CSV</td></tr>
@@ -1788,9 +1788,9 @@ const REF = [
   <div><span class="st">3</span><b>Switch</b><code>srp select talk</code><p>now <code>plot</code> works on <code>talk</code>; tab completion offers its plots. <code>srp projects</code> lists all projects.</p></div>
 </div>
 <div class="tablewrap"><table class="cmd"><thead><tr><th>Task</th><th>Command</th></tr></thead><tbody>
-<tr><td>See which project is selected and what it uses</td><td><code>srp projects @current</code>: program, output folder, variables, number of plots and inputs, last saved (<code>srp projects</code>: of every project)</td></tr>
+<tr><td>See which project is selected and what it uses</td><td><code>srp projects @current</code>: program, output folder, settings, number of plots and inputs, last saved (<code>srp projects</code>: of every project)</td></tr>
 <tr><td>Change where its plots go</td><td><code>srp set @current outdir ~/thesis/figures</code> (<code>@current</code> is the selected project)</td></tr>
-<tr><td>Store a path for the code</td><td><code>srp set @current inputDir /data/2024</code>, read with <code>pm.GetProjectProperty("inputDir")</code></td></tr>
+<tr><td>Store a path for the code</td><td><code>srp set @current inputDir /data/2024</code>, read with <code>pm.Setting("inputDir", "/data")</code></td></tr>
 <tr><td>Go to its folder, open its program or its output folder</td><td><code>srp cd</code>, <code>srp edit</code>, <code>srp out</code></td></tr>
 <tr><td>Rename or forget it</td><td><code>srp rename thesis phd</code>, <code>srp remove talk</code> (your program and plots stay; only the registration goes)</td></tr>
 <tr><td>Where the definitions are stored</td><td><code>srp confdir @current</code>: the folder with the saved plots and data sources of the project</td></tr>
@@ -1823,9 +1823,9 @@ const REF = [
 <tr><td>Start a project</td><td><code>srp init-py &lt;project&gt;</code> or <code>srp init-cpp &lt;project&gt;</code> (minimal), <code>srp example-py &lt;project&gt;</code> (the commented example plots with their data)</td></tr>
 <tr><td>Use a program you already have</td><td><code>srp add &lt;project&gt; &lt;program&gt; [&lt;outdir&gt;]</code></td></tr>
 <tr><td>Plot from a notebook, <code>python3 -c</code> or stdin (no program to register)</td><td><code>pm.SetOutputDirectory("plots")</code>, then <code>pm.GeneratePlots("pdf", ".+", ".+")</code> in the same session: mode, name and group</td></tr>
-<tr><td>See and switch projects</td><td><code>srp projects [&lt;project&gt;]</code> (program, output folder, variables, plots and inputs), <code>srp select &lt;project&gt;</code></td></tr>
+<tr><td>See and switch projects</td><td><code>srp projects [&lt;project&gt;]</code> (program, output folder, settings, plots and inputs), <code>srp select &lt;project&gt;</code></td></tr>
 <tr><td>Set where files go</td><td><code>srp set &lt;project&gt; outdir &lt;dir&gt;</code></td></tr>
-<tr><td>Store a path for your code</td><td><code>srp set &lt;project&gt; inputDir &lt;dir&gt;</code>, read with <code>pm.GetProjectProperty("inputDir")</code></td></tr>
+<tr><td>Switch parts of the plots or store a path for your code</td><td><code>srp set &lt;project&gt; &lt;setting&gt; &lt;value&gt;</code> for a setting the program declares and reads with <code>pm.Setting("syst", True, "draw systematics")</code> or <code>pm.Setting("inputDir", "/data")</code>; <kbd>Tab</kbd> completes names and values, <code>plot</code> runs the program again after a change</td></tr>
 <tr><td>Open the project</td><td><code>srp cd</code> (its folder), <code>srp edit</code> (its program), <code>srp out</code> (its output folder, in the file manager)</td></tr>
 <tr><td>Fewer or more messages</td><td><code>srp verbosity warning</code> … <code>debug</code></td></tr>
 <tr><td>Change defaults</td><td><code>srp plotmode pdf</code>, <code>srp matchmode contains</code>, <code>srp screenscale 0.8</code> (window size), <code>srp bitmapscale 2</code> (PNG resolution), <code>srp settings</code> (all); what each one does: <a href="#ref-settings">Settings</a></td></tr>
@@ -1835,7 +1835,7 @@ const REF = [
   { id: "settings", g: "basics", t: "Settings: what srp changes", body: `<p>Three places decide how things turn out, and it helps to keep them apart:</p>
 <div class="tablewrap"><table><thead><tr><th>What</th><th>Where</th><th>Applies to</th></tr></thead><tbody>
 <tr><td>How plots look: colours, markers, fonts, sizes, layouts</td><td>your code: data, <a href="#ref-templates">templates</a>, <a href="#layouts">base plots</a></td><td>everyone who runs the program</td></tr>
-<tr><td>Where a project's program, output and input folders are</td><td><code>srp add</code>, <code>srp set &lt;project&gt; …</code></td><td>one project on this computer</td></tr>
+<tr><td>Where a project's program, output and input folders are, and the settings its program declares</td><td><code>srp add</code>, <code>srp set &lt;project&gt; …</code></td><td>one project on this computer</td></tr>
 <tr><td>How you work: default output, name matching, window size, messages</td><td><code>srp &lt;setting&gt; &lt;value&gt;</code></td><td>all projects on this computer</td></tr>
 </tbody></table></div>
 <p><code>srp settings</code> lists the current settings. Each one is stored in your configuration folder and kept until you change it:</p>
@@ -1849,8 +1849,9 @@ const REF = [
 <tr><td><code>srp color dark</code></td><td>the colours of the <b>messages in your terminal</b>, not of the plots: <code>bright</code> suits a dark terminal, <code>dark</code> a light one, <code>off</code> plain text</td><td><code>bright</code> <code>dark</code> <code>off</code></td></tr>
 </tbody></table></div>
 <p class="small muted">The colours of the data come from your code: set them per data (<a href="#styles">Styles</a>), once per kind of data (<a href="#ref-templates">templates</a>), or as the colour sequence of a plot or pad (<code>SetDefaultColors</code>; without it SciRooPlot's own). <code>srp clean</code> forgets projects whose code is gone (the folder of the program, or for a C++ project the sources above its build folder); <code>srp reset</code> forgets all projects (your programs and plots stay where they are).</p>` },
-  { id: "project", g: "basics", t: "Projects across machines and files", body: `<p>Keep machine-specific paths out of the code: store them as project variables or use environment variables in the input paths, so data source names stay the same everywhere.</p>
-<div class="code"><pre data-plain-code="sh">srp set myProject inputDir /data/2024     # then in the code: pm.GetProjectProperty("inputDir")</pre></div>
+  { id: "project", g: "basics", t: "Projects across machines and files", body: `<p>Keep machine-specific paths out of the code: store them in project settings or use environment variables in the input paths, so data source names stay the same everywhere. The program declares a setting with its default and gets the value given with <code>srp set</code>; a bool default makes a switch (<code>on</code>/<code>off</code>), a list of choices restricts a text. <code>srp set</code> checks the value, <kbd>Tab</kbd> completes the names and values, <code>srp projects</code> lists them, and <code>plot</code> runs the program again after a value changed.</p>
+<div class="code"><pre data-plain-code="sh">srp set myProject inputDir /data/2024     # the code declares and reads it: pm.Setting("inputDir", "/data", "folder of the inputs")
+srp set myProject syst off                # pm.Setting("syst", True, "draw systematic uncertainties")</pre></div>
 <div class="code"><pre data-snip="project"></pre></div>
 <p>When <code>DefinePlots</code> grows, split it into files, one function per group of plots that takes the <code>PlotManager</code>; the main file calls them. <code>plot</code> re-runs the program when it changed; a Python program also when a <code>.py</code> file next to it or one folder below changed.</p>` },
   { id: "agents", g: "basics", t: "With an AI coding agent", body: `<p>SciRooPlot ships an agent skill: the workflow, the API and the common pitfalls in condensed form, with the method reference generated from the headers, so an agent writes plot definitions that match the current version.</p>
@@ -2015,13 +2016,13 @@ plot[1].AddData("ncoll", "calc", "Glauber").SetDrawOption(points_line);
 pm.AddPlot(plot);` },
   project: { py: `SRC_DIR = str(Path(__file__).resolve().parent) + "/"
 pm = PlotManager("myProject")                          # the project name given to srp
-inputs = pm.GetProjectProperty("inputDir")
+inputs = pm.Setting("inputDir", "/data", "folder of the inputs")  # srp set myProject inputDir <folder>
 pm.AddDataSource("run", inputs + "/run.root")
 pm.AddDataSource("home", "\${HOME}/results/ana.root")     # environment variables work in paths
 pm.AddDataSource("local", SRC_DIR + "../data/table.csv")  # relative to the program
 pm.AddDataSource("glauber", graph("ncoll", [5.0, 20.0, 40.0], [1500.0, 750.0, 260.0]))  # made in the program`,
     cpp: `PlotManager pm("myProject");                         // the project name given to srp
-const std::string inputs = pm.GetProjectProperty("inputDir");
+const std::string inputs = pm.Setting("inputDir", "/data", "folder of the inputs");  // srp set myProject inputDir <folder>
 pm.AddDataSource("run", inputs + "/run.root");
 pm.AddDataSource("home", "\${HOME}/results/ana.root");     // environment variables work in paths
 pm.AddDataSource("local", SRC_DIR "../data/table.csv");     // relative to the program

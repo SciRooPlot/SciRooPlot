@@ -637,8 +637,8 @@
         cmd-table(
           [#prompt `srp set <project> outdir <path>`], [Where exported plots are stored (one subfolder per group).],
           [#prompt `srp set <project> program <path>`], [The program `plot` runs to update the plot definitions.],
-          [#prompt `srp set <project> <var> <value>`], [Your own variables, e.g. the input path on this machine, read via `pm.GetProjectProperty("<var>")`.],
-          [#prompt `srp get|unset <project> <var>`], [Read or remove a property.],
+          [#prompt `srp set <project> <name> <value>`], [A setting the program declares and reads with `pm.Setting("<name>", <default>)`.],
+          [#prompt `srp get|unset <project> <name>`], [Read a property, or go back to the default.],
         ),
       )
       #v(-0.4em)
@@ -1907,7 +1907,7 @@
     ]),
     ([Same code on every machine], [
       - Keep machine-specific paths out of the code: `srp set @current inputDir /data/run3` once on each machine.
-      - The code reads it with `pm.GetProjectProperty("inputDir")` and builds the input paths from it.
+      - The code reads it with `pm.Setting("inputDir", "/data")` and builds the input paths from it.
     ]),
     ([Share with ROOT-only colleagues], [
       - `macro` writes a ROOT macro (`.C`) per plot that redraws it without SciRooPlot.
@@ -1951,7 +1951,7 @@
         [#names("ClearDataBuffer()", "ClearCanvasRegistry()")], [Free the buffered input data, or clear the cache of already-generated canvases.],
         [`SetOutputDirectory(path)`], [Set the output directory for generated files.],
         [#names("SetPlotsRootFile(fileName)", "SetDataRootFile(fileName)")], [Names of the ROOT files written in the modes `file` and `data` (default: `Plots.root`, `Data.root`).],
-        [`GetProjectProperty(property)`], [Read a project variable set via `srp set <project> <property> <value>`.],
+        [`Setting(name, default, description = "", choices = {})`], [Declare a setting and get the value given via `srp set <project> <name> <value>`.],
         [`SaveProject()`], [Persist the current project to disk.],
       ), text-size: 11.5pt)
     ],

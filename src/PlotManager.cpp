@@ -4321,16 +4321,69 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
 
 //**************************************************************************************************
 /**
- * Get a project variable (set via 'srp set <project> <property> <value>').
+ * Declare a setting of the project and get its value: the one set via 'srp set <project> <name> <value>', otherwise the default.
+ * SaveProject saves the declarations, so that srp can check and complete the values.
  */
 //**************************************************************************************************
-string PlotManager::GetProjectProperty(const string& property) const
+bool PlotManager::Setting(const string& name, bool defaultValue, const string& description)
 {
-  if (mProjectName.empty()) {
-    logger::error("No project given; cannot read the project property {}.", property);
-    return "";
+  return DeclareSetting(name, "switch", defaultValue ? "on" : "off", description, {}) == "on";
+}
+
+int PlotManager::Setting(const string& name, int defaultValue, const string& description)
+{
+  return Config::ParseInteger(DeclareSetting(name, "integer", std::to_string(defaultValue), description, {})).value_or(defaultValue);
+}
+
+double PlotManager::Setting(const string& name, double defaultValue, const string& description)
+{
+  return Config::ParseNumber(DeclareSetting(name, "number", util::number_to_string(defaultValue), description, {})).value_or(defaultValue);
+}
+
+string PlotManager::Setting(const string& name, const string& defaultValue, const string& description, const vector<string>& choices)
+{
+  return DeclareSetting(name, "text", defaultValue, description, choices);
+}
+
+string PlotManager::Setting(const string& name, const char* defaultValue, const string& description, const vector<string>& choices)
+{
+  return Setting(name, string(defaultValue ? defaultValue : ""), description, choices);
+}
+
+// the value set for the project if the declaration allows it, otherwise the default; a declaration that is not valid is reported and not saved
+string PlotManager::DeclareSetting(const string& name, const string& type, const string& defaultValue, const string& description, const vector<string>& choices)
+{
+  if (auto illegal = find_illegal_name_char(name); illegal || name.empty()) {
+    logger::error("Setting name '{}' {}: the setting is not declared.", name, illegal ? "contains illegal character '" + *illegal + "'" : "is empty");
+    return defaultValue;
   }
-  return Config::Get().Property(mProjectName, property);
+  if (Config::kReservedNames.count(name)) {
+    logger::error("Setting name {} is reserved for srp: the setting is not declared.", name);
+    return defaultValue;
+  }
+  ptree declaration;
+  declaration.put("type", type);
+  declaration.put("default", defaultValue);
+  if (!description.empty()) declaration.put("description", description);
+  for (const auto& choice : choices)
+    declaration.add("choice", choice);
+  if (const string allowed = Config::AllowedSettingValues(declaration, defaultValue); !allowed.empty()) {
+    logger::error("The default '{}' of setting {} is not {}: the setting is not declared.", defaultValue, name, allowed);
+    return defaultValue;
+  }
+  if (auto declared = mSettings.find(name); declared != mSettings.not_found()) {
+    if (declared->second != declaration) logger::warning("Setting {} is declared again, differently: the last declaration is saved.", name);
+    declared->second = declaration;
+  } else {
+    mSettings.push_back({name, declaration});
+  }
+  const string value = mProjectName.empty() ? "" : Config::Get().Property(mProjectName, name);
+  if (value.empty()) return defaultValue;
+  if (const string allowed = Config::AllowedSettingValues(declaration, value); !allowed.empty()) {
+    logger::warning("The value '{}' set for setting {} of project {} is not {}: the default '{}' is used.", value, name, mProjectName, allowed, defaultValue);
+    return defaultValue;
+  }
+  return value;
 }
 
 //**************************************************************************************************
@@ -4360,6 +4413,12 @@ void PlotManager::SaveProject() const
 
   SaveDataSources();
   SavePlots();
+  // the settings declared, for srp (none: a file from an earlier run is removed)
+  if (!mSettings.empty()) {
+    WriteInfoFile(mSettings, Config::Get().SettingsFile(mProjectName), "settings");
+  } else if (fs::remove(Config::Get().SettingsFile(mProjectName), ec); ec) {
+    logger::warning("Cannot remove {}: srp still offers the settings the program no longer declares.", Config::Get().SettingsFile(mProjectName));
+  }
 
   if (!Config::Get().Exists(mProjectName)) {
     // not registered yet (e.g. the program was run before srp add): a project without program would block the registration

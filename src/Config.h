@@ -68,6 +68,18 @@ class Config
   std::filesystem::path ProjectPath(const std::string& projectName) const;
   std::string PlotsFile(const std::string& projectName) const;
   std::string DataSourcesFile(const std::string& projectName) const;
+  std::string SettingsFile(const std::string& projectName) const;
+
+  // the settings the program of a project declares (PlotManager::Setting), saved with its plot definitions: per name its
+  // type (switch, integer, number or text), default, description and choices
+  boost::property_tree::ptree DeclaredSettings(const std::string& projectName) const;  // empty if there are none (an unreadable file is reported)
+  std::optional<boost::property_tree::ptree> DeclaredSetting(const std::string& projectName, const std::string& name, bool report = true) const;
+  static std::string AllowedSettingValues(const boost::property_tree::ptree& declaration, const std::string& value);  // empty if the value is one of them
+  static std::optional<int> ParseInteger(const std::string& value);
+  static std::optional<double> ParseNumber(const std::string& value);  // finite
+  // names a setting cannot have: the properties of every project and the rows srp projects adds
+  inline static const std::set<std::string> kReservedNames{"program", "outdir", "plots"};
+
   const std::string& CurrentProject() const { return mCurrentProject; }
   bool ProjectsFileUnreadable() const { return mProjectsUnreadable; }  // projects.info exists but could not be read
 
@@ -95,7 +107,7 @@ class Config
   bool DeleteProjectDir(const std::string& projectName) const;
   static std::string ForeignEntries(const std::filesystem::path& projectPath);  // names in it SciRooPlot did not write, comma separated
   // the files SciRooPlot writes into a project's directory, and the one macOS adds
-  inline static const std::set<std::string> kProjectFiles{"plots.info", "dataSources.info", "tabcomp.csv", "UserData.root", ".DS_Store"};
+  inline static const std::set<std::string> kProjectFiles{"plots.info", "dataSources.info", "settings.info", "tabcomp.csv", "UserData.root", ".DS_Store"};
   std::vector<std::string> RemoveProjects(const std::vector<std::string>& projectNames, const std::string& nextCurrent);
   bool SaveProjects();  // writes the projects at once (before the files of a project are changed on disk)
   bool ProjectsReadable() const;

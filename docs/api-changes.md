@@ -13,6 +13,26 @@ What changed for users between released versions of SciRooPlot, and what to chan
 
 Names are given for C++; the Python name is the same unless stated. Saved definitions (`plots.info`, `dataSources.info`) are not converted: after updating, re-run the plotting program of each project once. `plot` re-runs a Python program only if a `.py` file is newer than `plots.info`, so touch the program or delete `plots.info`.
 
+## 4.1.0 → master
+
+### Plot definitions: renamed, removed, changed signatures
+
+| Old | New | Kind | Action |
+|---|---|---|---|
+| `PlotManager::GetProjectProperty(property)` read any project variable set with `srp set <project> <name> <value>` (an empty text if not set or misspelt) | Removed: `PlotManager::Setting(name, default, description = "", choices = {})` declares a setting of the project and returns the value set with `srp set`, otherwise the default, as `bool` (a switch, set `on`/`off`), `int`, `double` or text | removed | Replace `GetProjectProperty("x")` by `Setting("x", <default>)`; run the program once, then set the value again with `srp set`. |
+
+### Files
+
+| Old | New | Kind | Action |
+|---|---|---|---|
+| A project folder held `plots.info`, `dataSources.info`, `tabcomp.csv`, `UserData.root` | Also `settings.info`: the settings the program declares, written by `SaveProject` (removed when it declares none) | file format | Nothing. |
+
+### Command line
+
+| Old | New | Kind | Action |
+|---|---|---|---|
+| `srp set <project> <name> <value>` stored any name and value besides `program` and `outdir`; `plot` did not run the program again after a change | Only settings the program declares (`PlotManager::Setting`), with a value they allow (`on`/`off`, an integer, a finite number, one of the choices); `srp get` prints the value or the default, `srp unset` goes back to the default (and removes a value of a setting no longer declared); `plot` runs the program again after a value changed; tab completion offers the settings (in zsh with their descriptions) and the values of switches and choices; `srp projects` lists them with value, default and description | CLI | Declare the names in the program (`Setting`) and run it once before setting them. |
+
 ## 4.0.0 → 4.1.0
 
 ### Plot definitions: renamed, removed, changed signatures

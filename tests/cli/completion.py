@@ -4,9 +4,11 @@ reference: completion matches with the shell's POSIX ERE, plot with std::regex, 
 in every combination of matchmode and matchcase: a group word offers the main groups (all groups once it holds a slash) starting with a
 match (any match in contains mode), a name word the names of the plots plot selects for the complete group word, trailing slashes
 included. bash inserts a single match and keeps the typed word when the matches do not all start with it. srp: the commands, plot modes and
-setting values it offers are exactly those srp help documents, and srp accepts each of them; the projects offered are the registered ones (also with a ~ in SCIROOPLOT_CONFIG_PATH that the shell did not expand).
+setting values it offers are exactly those srp help documents, and srp accepts each of them; the projects offered are the registered ones (also with a ~ in SCIROOPLOT_CONFIG_PATH that the shell did not expand);
+the properties offered for a project are program, outdir and the settings its program declares, with their descriptions, and the values
+offered for a setting are on and off of a switch or the choices of a text, each accepted by srp set.
 Completing 3000 plots takes well below two seconds.
-Covers: regex dialect, trailing slash, projects with a brace in a property, completion speed."""
+Covers: regex dialect, trailing slash, projects with a brace in a setting value, descriptions and choices with quotes, braces and a backslash, completion speed."""
 
 import os
 import re
@@ -20,11 +22,13 @@ NAME_WORDS = [("QA\\d", ""), ("QA\\d", "p\\d"), ("ab", "h_\\d"), ("ab", "h\\W"),
 SETTINGS = {"exact": ("exact", "sensitive"), "contains": ("contains", "sensitive"), "exact_icase": ("exact", "insensitive"), "contains_icase": ("contains", "insensitive")}
 
 
-def define(config, project, plots):
-    """a project whose plots.info and plot list hold plots (pairs of name and group) of one function each"""
+def define(config, project, plots, declare=""):
+    """a project whose plots.info and plot list hold plots (pairs of name and group) of one function each, and the settings declare
+    declares"""
     code = f"""
 from SciRooPlot import *
 pm = PlotManager({project!r})
+{declare}
 pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
 for name, group in {plots!r}:
     plot = Plot(name, group, "1d")
@@ -45,8 +49,16 @@ def quote(text):
     return "'" + text.replace("'", "'\\''") + "'"
 
 
+# the settings of project comp: name, default, description, choices (values with quotes, braces, a backslash and spaces)
+DECLARED = [
+    ("syst", True, "draw systematic uncertainties", None),
+    ("energy", "5.02", 'collision energy {in TeV}: "sqrt s" \\ per pair', ["5.02", "13.6", 'a {b} "c"']),
+    ("nBins", 50, "", None),
+    ("zz", "", "", None),
+    ("yy", "", "", None),
+]
 config = config_folder("config")
-define(config, "comp", PLOTS)
+define(config, "comp", PLOTS, "\n".join(f"pm.Setting({n!r}, {d!r}, {t!r}{'' if c is None else f', {c!r}'})" for n, d, t, c in DECLARED))
 # the reference for group words: one plot in every group and in every main group
 refConfig = config_folder("config_reference")
 groups = sorted({g for _, g in PLOTS})
@@ -154,7 +166,7 @@ for sh in SHELLS[1:]:  # the lists zsh offers come from the same helper
     out = shell('_scirooplot_helper load_srp_lists; printf "%s\\n" "${general_commands[@]}" "${project_commands[@]}" "${file_commands[@]}"', sh, config=config, interactive=True)
     check(f"{sh}: srp offers the commands of srp help", set(out.stdout.split()) == commands, f"{sorted(set(out.stdout.split()) ^ commands)}")
 
-# the projects offered: the registered ones and @current, also with braces in a property value
+# the projects offered: the registered ones and @current, also with braces in a setting value
 run(SRP, "add", "second", "/tmp/second/def.py", config=config)
 run(SRP, "set", "comp", "zz", "{x}", config=config)
 run(SRP, "set", "comp", "yy", "a {", config=config)
@@ -163,9 +175,31 @@ for sh in SHELLS:
     check(f"{sh}: the projects offered are the registered ones", sorted(out.stdout.split()) == ["@current", "comp", "second"], out.tail())
 got, out = bash_complete("srp", "select", "")
 check("srp select offers the projects", sorted(got) == ["@current", "comp", "second"], f"{got}")
-got, out = bash_complete("srp", "get", "comp", "")
-check("srp get offers the properties program and outdir", sorted(got) == ["outdir", "program"], f"{got}")
 run(SRP, "select", "comp", config=config)
+
+# the properties offered: program, outdir and the settings the program declares, with their descriptions (zsh shows them); the values
+# of a setting: on and off of a switch, the choices of a text, and srp set accepts each of them
+names = [n for n, _, _, _ in DECLARED]
+for command, project in (("get", "comp"), ("set", "@current"), ("unset", "comp")):
+    got, out = bash_complete("srp", command, project, "")
+    check(f"srp {command} {project} offers program, outdir and the settings declared", got == ["program", "outdir", *names], f"{got}")
+got, out = bash_complete("srp", "get", "second", "")
+check("srp get offers program and outdir for a project without settings", got == ["program", "outdir"], f"{got}")
+for sh in SHELLS:
+    out = shell('_scirooplot_helper load_srp_lists; _scirooplot_helper load_project_settings comp; for n in "${setting_names[@]}"; do echo "$n"; done; for d in "${setting_descriptions[@]}"; do echo "D:$d"; done', sh, config=config, interactive=True)
+    lines = out.stdout.splitlines()
+    want = names + [f"D:{t}" for _, _, t, _ in DECLARED]
+    check(f"{sh}: the settings offered with their descriptions as declared", lines == want, f"{lines}")
+for name, default, _, choices in DECLARED:
+    offered = choices or (["on", "off"] if isinstance(default, bool) else [])
+    got, out = bash_complete("srp", "set", "comp", name, "")
+    check(f"srp set comp {name} offers {offered or 'nothing'}", got == offered, f"{got}")
+    for sh in SHELLS[1:]:
+        out = shell(f'_scirooplot_helper load_srp_lists; _scirooplot_helper load_project_settings @current {name}; for v in "${{setting_values[@]}}"; do echo "$v"; done', sh, config=config, interactive=True)
+        check(f"{sh}: srp set comp {name} offers {offered or 'nothing'}", out.stdout.splitlines() == offered, out.tail())
+    refused = [v for v in offered if run(SRP, "set", "comp", name, v, config=config).rc != 0]
+    check(f"srp set comp {name} accepts every value offered", not refused, f"refused {refused}")
+    run(SRP, "unset", "comp", name, config=config)
 
 # a configuration path with a ~ the shell did not expand (SCIROOPLOT_CONFIG_PATH='~/cfg'): the home folder, as srp reads it
 for sh in SHELLS:

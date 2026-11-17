@@ -38,6 +38,7 @@
 #include <sys/file.h>
 #include <unistd.h>
 #include <utility>
+#include <utime.h>
 #include <vector>
 
 #include "Validation.h"
@@ -723,6 +724,76 @@ std::string Config::DataSourcesFile(const string& projectName) const
   return mPath / projectName / "dataSources.info";
 }
 
+std::string Config::SettingsFile(const string& projectName) const
+{
+  if (projectName.empty() || mPath.empty()) return {};
+  return mPath / projectName / "settings.info";
+}
+
+ptree Config::DeclaredSettings(const string& projectName) const
+{
+  ptree settings;
+  const string file = SettingsFile(projectName);
+  if (std::error_code ec; file.empty() || !std::filesystem::exists(file, ec)) {
+    return settings;
+  }
+  try {
+    read_info(file, settings);
+  } catch (const std::exception& e) {
+    logger::error("Cannot read the settings of project {}: {}.", projectName, util::without_final_period(e.what()));
+    settings.clear();
+  }
+  return settings;
+}
+
+std::optional<ptree> Config::DeclaredSetting(const string& projectName, const string& name, bool report) const
+{
+  const ptree settings = DeclaredSettings(projectName);
+  if (const auto declaration = settings.find(name); declaration != settings.not_found()) {
+    return declaration->second;
+  }
+  if (report) {
+    vector<string> names;
+    for (const auto& [declared, ignored] : settings)
+      names.push_back(declared);
+    logger::error("Project {} has no setting {}{}.", projectName, name,
+                  names.empty() ? ": its program declares none, or has not run yet (plot runs it)" : " (settings: " + util::join_strings(names, ", ") + ")");
+  }
+  return std::nullopt;
+}
+
+string Config::AllowedSettingValues(const ptree& declaration, const string& value)
+{
+  vector<string> choices;
+  for (const auto& [key, choice] : declaration)
+    if (key == "choice") choices.push_back(choice.data());
+  if (!choices.empty()) return (std::find(choices.begin(), choices.end(), value) == choices.end()) ? "one of " + util::join_strings(choices, ", ") : "";
+  const string type = declaration.get<string>("type", "text");
+  if (type == "switch") return (value == "on" || value == "off") ? "" : "on or off";
+  if (type == "integer") return ParseInteger(value) ? "" : "an integer";
+  if (type == "number") return ParseNumber(value) ? "" : "a number";
+  return "";
+}
+
+std::optional<int> Config::ParseInteger(const string& value)
+{
+  try {
+    return util::string_to_type<int>(value);
+  } catch (const std::exception&) {
+  }
+  return std::nullopt;
+}
+
+std::optional<double> Config::ParseNumber(const string& value)
+{
+  try {  // independent of the locale, as the scales
+    const double number = util::string_to_type<double>(value);
+    if (std::isfinite(number)) return number;
+  } catch (const std::exception&) {
+  }
+  return std::nullopt;
+}
+
 // a project name without illegal characters
 bool Config::CheckProjectName(const string& projectName)
 {
@@ -822,6 +893,28 @@ bool Config::SetProperty(const string& projectName, const string& property, cons
   if (property == "program" && !CheckProgram(value)) return false;
   if (property == "outdir" && !value.empty() && !CheckPath(value)) return false;
   auto& properties = mProjects[projectName].mProperties;
+  if (property != "program" && property != "outdir") {
+    // a setting the program declares; a value left from a setting it no longer declares can still be unset
+    const bool leftover = value.empty() && !Property(projectName, property).empty();
+    const auto declaration = DeclaredSetting(projectName, property, !leftover);
+    if (!declaration && !leftover) return false;
+    if (declaration) {
+      if (const string allowed = value.empty() ? "" : AllowedSettingValues(*declaration, value); !allowed.empty()) {
+        logger::error("Invalid {} '{}' of project {} ({}).", property, value, projectName, allowed);
+        return false;
+      }
+      // the program runs again at the next plot when the value changes what it reads: its stored definitions are made older than it
+      const string defaultValue = declaration->get<string>("default", "");
+      const string previous = Property(projectName, property);
+      if ((value.empty() ? defaultValue : value) != (previous.empty() ? defaultValue : previous)) {
+        const string plotsFile = PlotsFile(projectName);
+        struct utimbuf epoch{};
+        if (std::error_code ec; std::filesystem::exists(plotsFile, ec) && utime(plotsFile.c_str(), &epoch) != 0) {
+          logger::warning("Cannot mark the plots of project {} as outdated: touch its program to run it again at the next plot.", projectName);
+        }
+      }
+    }
+  }
   properties[property] = value;
   mTouchedProperties[projectName].insert(property);
   return true;

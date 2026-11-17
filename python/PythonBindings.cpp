@@ -328,7 +328,11 @@ void exportPlotManager(py::module_& m)
     .def("SetPlotsRootFile", &PlotManager::SetPlotsRootFile, arg("fileName"))
     .def("SetDataRootFile", &PlotManager::SetDataRootFile, arg("fileName"))
     .def("SaveProject", &PlotManager::SaveProject)
-    .def("GetProjectProperty", &PlotManager::GetProjectProperty, arg("property"))
+    // bool first: a Python bool is also an int
+    .def("Setting", py::overload_cast<const string&, bool, const string&>(&PlotManager::Setting), arg("name"), arg("defaultValue"), arg("description") = "")
+    .def("Setting", py::overload_cast<const string&, int, const string&>(&PlotManager::Setting), arg("name"), arg("defaultValue"), arg("description") = "")
+    .def("Setting", py::overload_cast<const string&, double, const string&>(&PlotManager::Setting), arg("name"), arg("defaultValue"), arg("description") = "")
+    .def("Setting", py::overload_cast<const string&, const string&, const string&, const vector<string>&>(&PlotManager::Setting), arg("name"), arg("defaultValue"), arg("description") = "", arg("choices") = vector<string>{})
     .def_static("MakeBasePlot", &PlotManager::MakeBasePlot, arg("name") = "1d", py::arg_v("sizes", PanelLayout(), "PanelLayout()"), py::arg_v("shape", BasePlotShape(), "BasePlotShape()"));
 }
 

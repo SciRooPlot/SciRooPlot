@@ -57,6 +57,9 @@ echo glob *.txt
 
     # relative paths of srp add and srp set
     cfg = config_folder(f"config_paths_{sh}")
+    os.makedirs(os.path.join(cfg, "rel"))
+    with open(os.path.join(cfg, "rel", "settings.info"), "w") as f:  # as saved by a program declaring two text settings
+        f.write('var\n{\n    type text\n    default ""\n}\nnote\n{\n    type text\n    default ""\n}\n')
     out = shell(
         """srp add rel prog/def.py out >/dev/null
 srp get rel program; srp get rel outdir
