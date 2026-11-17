@@ -160,10 +160,16 @@ PanelLayout& PanelLayout::SetPanelSize(double_t pixel)
 
 PanelLayout& PanelLayout::SetMargins(double_t top, double_t bottom, double_t left, double_t right)
 {
-  if (ValidLength("PanelLayout::SetMargins", top, true)) mMarginTop = top;
-  if (ValidLength("PanelLayout::SetMargins", bottom, true)) mMarginBottom = bottom;
-  if (ValidLength("PanelLayout::SetMargins", left, true)) mMarginLeft = left;
-  if (ValidLength("PanelLayout::SetMargins", right, true)) mMarginRight = right;
+  // one invalid margin: none is set (as Pad::SetMargins)
+  bool valid = ValidLength("PanelLayout::SetMargins", top, true);
+  valid = ValidLength("PanelLayout::SetMargins", bottom, true) && valid;
+  valid = ValidLength("PanelLayout::SetMargins", left, true) && valid;
+  valid = ValidLength("PanelLayout::SetMargins", right, true) && valid;
+  if (!valid) return *this;
+  mMarginTop = top;
+  mMarginBottom = bottom;
+  mMarginLeft = left;
+  mMarginRight = right;
   return *this;
 }
 

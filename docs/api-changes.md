@@ -34,6 +34,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 |---|---|---|---|
 | A range whose ends were set one by one (`Axis::SetMinRange`/`SetMaxRange`, `Data::SetMinRangeX`/`SetMaxRangeX`/`SetMinRangeY`/`SetMaxRangeY`, also one end in the base plot) with the minimum not below the maximum was drawn as given: an inverted y frame without a message, on x a message that the range holds no bins | Such a range is ignored with a warning naming plot, pad and axis or data, as `SetRange` ignores an inverted one | input validation | Fix the range the warning names. |
 | `Data::Scale`, `ScaleX`, `ScaleY`, `ScaleZ` with a factor that is not positive were reported at every plot made with the data and replaced a factor set before | Refused with a warning where set; a factor set before stays | input validation | Nothing. |
+| `PanelLayout::SetMargins` with one invalid margin set the other three | Sets none of them, as `Pad::SetMargins` | input validation | Nothing. |
 
 ### Files
 

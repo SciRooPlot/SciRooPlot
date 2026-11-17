@@ -8,7 +8,8 @@ The model of these rules (below) is computed from the documented lengths; it is 
 <type>[_wide|_tall][_<columns>x<rows>][_ratio][_pull][_gap] (with BasePlotShape and the lengths of a PanelLayout), against generated
 layouts (grids with touching panels, gaps or spaces, wide and tall panels, ratio rows, own colour scales, colour-scale cells, spanning
 cells, strips and holes) and against the layouts of past bugs. Invalid arrangements throw naming the problem; an invalid value of a
-setter of a cell (Span, SpacingAbove, SpacingLeft) or of the whole layout is warned about and ignored; unknown base-plot names and 2d
+setter of a cell (Span, SpacingAbove, SpacingLeft) or of the whole layout is warned about and ignored (SetMargins with one invalid margin
+sets none); unknown base-plot names and 2d
 base plots with ratio or pull panels are refused with an error.
 Covers: spanning cells, BasePlotShape, colour scales in pixels, pull panels, holes, spacing per
 boundary.
@@ -415,6 +416,15 @@ plot = S.Plot("lengths_ignored", chunks.add("lengths_ignored"), "lengths_ignored
 fill(plot, base_rows("1d", SHAPE), DEFAULT)
 p.pm.AddPlot(plot)
 plots["lengths_ignored"] = ("base plot 1d with layout lengths that are not valid", base_rows("1d", SHAPE), DEFAULT)
+# a setter of several lengths with one invalid sets none of them (as Pad::SetMargins)
+sizes = S.PanelLayout().SetMargins(50.0, 60.0, -1.0, 70.0)
+base = S.PlotManager.MakeBasePlot("1d", sizes)
+base.SetName("margins_one_invalid")
+p.pm.AddBasePlot(base)
+plot = S.Plot("margins_one_invalid", chunks.add("margins_one_invalid"), "margins_one_invalid")
+fill(plot, base_rows("1d", SHAPE), DEFAULT)
+p.pm.AddPlot(plot)
+plots["margins_one_invalid"] = ("base plot 1d with SetMargins of one invalid margin: none set", base_rows("1d", SHAPE), DEFAULT)
 layouts = [(f"layout {describe(case)}", generated_rows(case), generated_lengths(case)) for case in generated]
 layouts += [(f"layout of {what}", rows, EXPLICIT_LENGTHS.get(what, DEFAULT)) for what, rows in EXPLICIT.items()]
 for i, (what, rows, lengths) in enumerate(layouts):
