@@ -3063,7 +3063,7 @@ SETTER_INVALID = {
     "nGroupZ": [0],
     "nx": [0, -5],
     "ny": [0],
-    "scaleFactor": [math.nan, math.inf],
+    "scaleFactor": [math.nan, math.inf, 0.0, -1.0],
     "min": [math.nan],
     "max": [math.nan],
     "frameFraction": [1.0, -0.5, math.nan],

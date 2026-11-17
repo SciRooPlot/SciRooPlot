@@ -2902,7 +2902,12 @@ auto Plot::Pad::Data::NormalizeToMaximum(optional<double_t> min, optional<double
 }
 auto Plot::Pad::Data::Scale(double_t scaleFactor) -> decltype(*this)
 {
-  if (CheckFinite(scaleFactor, "scale factor of " + GetName())) mModify.scaleFactor = scaleFactor;
+  if (!CheckFinite(scaleFactor, "scale factor of " + GetName())) return *this;
+  if (scaleFactor <= 0.) {
+    logger::warning("Scale({:g}) of {} is ignored: the factor must be positive.", scaleFactor, mName);
+    return *this;
+  }
+  mModify.scaleFactor = scaleFactor;
   return *this;
 }
 auto Plot::Pad::Data::Smooth(uint16_t nIterSmooth) -> decltype(*this)
@@ -2968,17 +2973,32 @@ auto Plot::Pad::Data::RebinXYZ(uint16_t nGroupX, uint16_t nGroupY, uint16_t nGro
 }
 auto Plot::Pad::Data::ScaleX(double_t scaleFactor) -> decltype(*this)
 {
-  if (CheckFinite(scaleFactor, "x scale factor of " + GetName())) mModify.scaleAxisX = scaleFactor;
+  if (!CheckFinite(scaleFactor, "x scale factor of " + GetName())) return *this;
+  if (scaleFactor <= 0.) {
+    logger::warning("ScaleX({:g}) of {} is ignored: the factor must be positive.", scaleFactor, mName);
+    return *this;
+  }
+  mModify.scaleAxisX = scaleFactor;
   return *this;
 }
 auto Plot::Pad::Data::ScaleY(double_t scaleFactor) -> decltype(*this)
 {
-  if (CheckFinite(scaleFactor, "y scale factor of " + GetName())) mModify.scaleAxisY = scaleFactor;
+  if (!CheckFinite(scaleFactor, "y scale factor of " + GetName())) return *this;
+  if (scaleFactor <= 0.) {
+    logger::warning("ScaleY({:g}) of {} is ignored: the factor must be positive.", scaleFactor, mName);
+    return *this;
+  }
+  mModify.scaleAxisY = scaleFactor;
   return *this;
 }
 auto Plot::Pad::Data::ScaleZ(double_t scaleFactor) -> decltype(*this)
 {
-  if (CheckFinite(scaleFactor, "z scale factor of " + GetName())) mModify.scaleAxisZ = scaleFactor;
+  if (!CheckFinite(scaleFactor, "z scale factor of " + GetName())) return *this;
+  if (scaleFactor <= 0.) {
+    logger::warning("ScaleZ({:g}) of {} is ignored: the factor must be positive.", scaleFactor, mName);
+    return *this;
+  }
+  mModify.scaleAxisZ = scaleFactor;
   return *this;
 }
 auto Plot::Pad::Data::Project(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)

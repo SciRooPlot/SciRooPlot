@@ -3653,19 +3653,14 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
   // only modifiers that change something keep the stored fits (not DivideBinWidth(false), Scale(1), Rebin(1), Smooth(0), nor a
   // scale factor that is not positive, which is ignored below)
   auto changes = [](const auto& value, auto neutral) { return value && *value != neutral; };
-  auto scales = [](const optional<double_t>& factor) { return factor && *factor > 0. && *factor != 1.; };
+  auto scales = [](const optional<double_t>& factor) { return factor && *factor != 1.; };
   if (m.scaleBinWidthNorm || m.normMaximum || m.cumulative || m.divideBinWidth.value_or(false) || scales(m.scaleFactor) ||
       changes(m.rebinGroupX, 1) || changes(m.rebinGroupY, 1) || changes(m.rebinGroupZ, 1) || scales(m.scaleAxisX) ||
       scales(m.scaleAxisY) || scales(m.scaleAxisZ) || changes(m.nIterSmooth, 0))
     DropStoredFunctions(state, ptr, "modifiers of the data");
-  // multiplies a factor of Scale (axis 0) or ScaleX/Y/Z into product; a factor that is not positive is ignored
-  auto multiplyFactor = [&](optional<double_t>& product, const optional<double_t>& factor, char axis = 0) {
-    if (!factor) return;
-    if (*factor <= 0.) {
-      ignored(fmt::format("Scale{}({:g})", (axis) ? string(1, axis) : "", *factor), "the factor must be positive");
-      return;
-    }
-    product = product.value_or(1.) * *factor;
+  // multiplies a factor of Scale or ScaleX/Y/Z into product (the setters take positive factors only)
+  auto multiplyFactor = [&](optional<double_t>& product, const optional<double_t>& factor) {
+    if (factor) product = product.value_or(1.) * *factor;
   };
 
   auto scaleAxis = [&](int16_t axisIndex, const optional<double_t>& factor) {
@@ -3679,11 +3674,6 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     } else if constexpr (is_graph_2d<ptr_type>()) {
       if (axisIndex == 2) return;  // z is the value Scale() targets for a 2d graph
     } else if constexpr (is_func<ptr_type>()) {
-      return;
-    }
-    string axisLetter = GetAxisStr(axisIndex);
-    if (*factor <= 0.) {
-      ignored(fmt::format("Scale{}({:g})", axisLetter, *factor), "the factor must be positive");
       return;
     }
     if constexpr (is_hist_1d<ptr_type>()) {
@@ -3954,9 +3944,9 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     }
     multiplyFactor(scaleFactor, m.scaleFactor);
     if constexpr (is_hist_1d<ptr_type>()) {
-      multiplyFactor(scaleFactor, m.scaleAxisY, 'y');
+      multiplyFactor(scaleFactor, m.scaleAxisY);
     } else if constexpr (is_hist_2d<ptr_type>()) {
-      multiplyFactor(scaleFactor, m.scaleAxisZ, 'z');
+      multiplyFactor(scaleFactor, m.scaleAxisZ);
     }
     if (scaleFactor) ptr->Scale(*scaleFactor);
   } else if constexpr (is_graph_1d<ptr_type>()) {
@@ -4019,7 +4009,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       }
     }
     multiplyFactor(scaleFactor, m.scaleFactor);
-    multiplyFactor(scaleFactor, m.scaleAxisY, 'y');
+    multiplyFactor(scaleFactor, m.scaleAxisY);
     if (scaleFactor) ScaleGraphAxis(ptr, 1, *scaleFactor);
   } else if constexpr (is_graph_2d<ptr_type>()) {
     warnUnsupported(m.rebinGroupX.has_value(), "RebinX");
@@ -4051,7 +4041,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       }
     }
     multiplyFactor(scaleFactor, m.scaleFactor);
-    multiplyFactor(scaleFactor, m.scaleAxisZ, 'z');
+    multiplyFactor(scaleFactor, m.scaleAxisZ);
     if (scaleFactor) ScaleGraphAxis(ptr, 2, *scaleFactor);
   } else if constexpr (is_func<ptr_type>()) {
     warnUnsupported(m.rebinGroupX.has_value(), "RebinX");
@@ -4067,14 +4057,14 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       warnUnsupported(m.scaleAxisZ.has_value(), "ScaleZ");
     }
     optional<double_t> domainX, domainY, domainZ, contentFactor;
-    multiplyFactor(domainX, m.scaleAxisX, 'x');
-    if constexpr (is_func_2d<ptr_type>() || is_func_3d<ptr_type>()) multiplyFactor(domainY, m.scaleAxisY, 'y');
-    if constexpr (is_func_3d<ptr_type>()) multiplyFactor(domainZ, m.scaleAxisZ, 'z');
+    multiplyFactor(domainX, m.scaleAxisX);
+    if constexpr (is_func_2d<ptr_type>() || is_func_3d<ptr_type>()) multiplyFactor(domainY, m.scaleAxisY);
+    if constexpr (is_func_3d<ptr_type>()) multiplyFactor(domainZ, m.scaleAxisZ);
     multiplyFactor(contentFactor, m.scaleFactor);
     if constexpr (is_func_1d<ptr_type>()) {
-      multiplyFactor(contentFactor, m.scaleAxisY, 'y');
+      multiplyFactor(contentFactor, m.scaleAxisY);
     } else if constexpr (is_func_2d<ptr_type>()) {
-      multiplyFactor(contentFactor, m.scaleAxisZ, 'z');
+      multiplyFactor(contentFactor, m.scaleAxisZ);
     }
     const double_t domainFactorX = domainX.value_or(1.);
     const double_t domainFactorY = domainY.value_or(1.);
