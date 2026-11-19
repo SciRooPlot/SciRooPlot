@@ -12,7 +12,7 @@ Project initialization:    srp init-cpp <project> [<dir>] | srp init-py <project
                            srp add <project> <program> [<outdir>]                                    (register an existing program)
 Project configuration:     srp get (<project>|@current) <property> | srp set ... <property> <value> | srp unset ... <property>
                            property = program | outdir | <setting>   (settings are declared and read by the program, pm.Setting("<name>", <default>, ...))
-Project access:            srp confdir [<project>] (config folder) | srp cd [<project>] (program folder) | srp edit [<project>] | srp out [<project>] (output folder in the file manager)
+Project access:            srp confdir [<project>] (config folder) | srp cd [<project>] (program folder) | srp edit [<project>] (source files) | srp out [<project>] (output folder in the file manager)
 Settings:                  srp settings | srp color (bright|dark|off) | srp verbosity (debug|log|info|warning|error|silent) | srp plotmode <mode> (any mode of plot, e.g. show|spread|pdf|png|gif+<centiseconds>; the default of plot, initially show)
                            srp matchmode (exact|contains) | srp matchcase (sensitive|insensitive) | srp screenscale <factor> | srp bitmapscale <factor>
 Maintenance:               srp info | srp update [--reinstall] | srp clean | srp reset | srp help
