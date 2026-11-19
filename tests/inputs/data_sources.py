@@ -3,7 +3,7 @@ also with wildcards: every matching folder), a directory (every ROOT and table f
 (alphabetically: run10.root before run2.root), environment variables, paths with spaces, unicode and parentheses, symlinked files and
 directories. Within a data source the first input holding a name wins, and trees found in several inputs are chained; the same file
 reached by several paths (a symlink, a hard link, ./ in the path) is read once, with a warning naming the skipped spelling. An input that
-cannot be read (a broken symlink, a corrupt file, an unset environment variable, a relative path, no file or folder matching a wildcard)
+cannot be read (a broken symlink, a corrupt file, an unset environment variable, a relative or empty path, no file or folder matching a wildcard)
 is reported and the other inputs are still read; a symlinked directory inside a directory input is skipped with a warning. Of several
 cycles of a key the latest counts; a directory hidden by a newer key of its name is still reached by a path, the search and wildcards. Tables of a directory are read only when they are requested, and a restricted data source
 (src:folder) leaves tables out. A name starting with '/' is read from the top of its data source, with a warning where the data is
@@ -275,6 +275,7 @@ pm.AddDataSource("", {a!r})
 pm.AddDataSource("bad/name", {a!r})
 pm.AddDataSource("unset", ["${{SRP_TESTS_NOT_SET_ANYWHERE}}/a.root", {b!r}])
 pm.AddDataSource("relative", ["in/a.root", {b!r}])
+pm.AddDataSource("empty", "")
 pm.AddBasePlot(S.PlotManager.MakeBasePlot("1d"))
 pm.AddDataSource("s", {a!r})
 pm.AddDataSource("r", {a!r})
@@ -308,7 +309,8 @@ values = {(step, name): value for step, name, value in re.findall(r"^VALUE (\w+)
 check("a data source without a name is refused", "Specify a name for the data source." in out.text, out.tail())
 check("a data source with an illegal character is refused", "Data source 'bad/name' contains illegal character '/'." in out.text, out.tail())
 check("an unset environment variable is reported by name", "Environment variable SRP_TESTS_NOT_SET_ANYWHERE used in path ${SRP_TESTS_NOT_SET_ANYWHERE}/a.root is not set." in out.text, out.tail())
-check("a relative path is reported and skipped", "The path of an input must not be relative. Skipping in/a.root." in out.text, out.tail())
+check("a relative path is reported and skipped", "Skipping input 'in/a.root'" in out.text and "the path must not be relative" in out.text, out.tail())
+check("an empty path is reported as such, naming the data source", "Skipping input '' (data source empty): the path is empty." in out.text, out.tail())
 check("the first GeneratePlots", values.get(("first", "t")) == "10.0" and values.get(("first", "h")) == "1.0" and values.get(("first", "b")) == "None", str(values))
 check("a second GeneratePlots without changes gives the same", all(values.get(("unchanged", n)) == values.get(("first", n)) for n in "thb"), str(values))
 check("a file appended: the tree chained over both by the next GeneratePlots", values.get(("added", "t")) == "20.0", str(values))
