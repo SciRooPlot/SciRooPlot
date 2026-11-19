@@ -3678,7 +3678,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     }
     if constexpr (is_hist_1d<ptr_type>()) {
       if (axisIndex == 2) {
-        Warn(state, "Cannot scale z axis of 1d histogram {} (no such axis).", ptr->GetName());
+        warnUnsupported(true, "ScaleZ");
         return;
       }
       ScaleAxis(ptr, axisIndex, *factor);
@@ -3692,7 +3692,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       ScaleAxis(ptr, axisIndex, *factor);
     } else if constexpr (is_graph_1d<ptr_type>()) {
       if (axisIndex == 2) {
-        Warn(state, "Cannot scale z axis of graph {} (graphs have no z-axis).", ptr->GetName());
+        warnUnsupported(true, "ScaleZ");
         return;
       }
       ScaleGraphAxis(ptr, axisIndex, *factor);

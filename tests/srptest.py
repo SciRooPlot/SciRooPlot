@@ -1318,7 +1318,7 @@ def reference_hist(base, mods, exp):
         if "XYZ".index(axis) == dim:
             content *= AXIS_FACTOR  # the value axis
         elif "XYZ".index(axis) > dim:
-            exp.warn(f"Cannot scale z axis of 1d histogram {exp.name}")
+            exp.unsupported("ScaleZ", cls)
         elif poly:
             exp.unsupported(f"Scale{axis}", cls)
         else:
@@ -1436,7 +1436,7 @@ def reference_graph(base, mods, exp):
     if "cumulative" in mods or "cumulative_backward" in mods:
         exp.unsupported("Cumulative", cls)
     if "scale_z" in mods:
-        exp.warn(f"Cannot scale z axis of graph {exp.name}")
+        exp.unsupported("ScaleZ", cls)
 
     def scale(keys, factor):
         for key in [k for k in keys if k in v]:
