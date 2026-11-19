@@ -551,7 +551,7 @@ class Plot : public FillSetters<Plot>
   // keys <prefix>color, <prefix>alpha, <prefix><style> and <prefix><scale> (none without scale key, a width is rounded)
   static void ReadLayout(const boost::property_tree::ptree& tree, layout_t& layout, const std::string& prefix, const char* style, const char* scale = nullptr);
   static void PutLayout(boost::property_tree::ptree& tree, const layout_t& layout, const std::string& prefix, const char* style, const char* scale = nullptr);
-  // an enum of enum_names stored by its name (an unknown name is ignored with a warning)
+  // an enum of enum_names stored by its name (an unknown name stops loading the plot)
   template <typename T>
   static void ReadNamed(const boost::property_tree::ptree& tree, std::optional<T>& value, const char* key);
   template <typename T>
