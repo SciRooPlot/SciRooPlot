@@ -2,7 +2,7 @@
 plot gets its patterns unexpanded (.* is not a list of dot files), also after && and inside braces after ||, keeps its exit status, and
 file globbing works again afterwards, also after plot in a pipeline. srp makes relative program and output paths absolute (add, set),
 keeps other values and paths starting with ~ or a variable as written; srp cd goes to the program folder; srp edit opens the sources of
-the program (a C++ program: of its CMake source folder, else of its own folder); srp cd and srp out of an
+the program (a C++ program: of its CMake source folder, else of its own folder), and fails with a message without any; srp cd and srp out of an
 unknown project, srp out without an output folder or before it exists fail with a message. The srp program alone refuses the
 commands that need env.sh, unknown commands and a missing command, with exit status 1. In zsh without a terminal, env.sh registers the
 completion silently also with an insecure directory in fpath.
@@ -86,7 +86,7 @@ grep note "$SCIROOPLOT_CONFIG_PATH/projects.info" """,
     run(SRP, "unset", "proj", "outdir", config=config)
 
 # srp edit opens the sources of the program: the .py files of its folder, for a C++ program those of the source folder of its CMake
-# build, else of its own folder (not those of neighbouring folders)
+# build, else of its own folder (not those of neighbouring folders); without source files it says so
 stub = config_folder("opener")
 with open(os.path.join(stub, "xdg-open"), "w") as f:
     f.write('#!/bin/sh\necho "OPENED $*"\n')
@@ -103,11 +103,18 @@ edits = {"py/def.py": ("py/def.py", "py/helper.py"), "cpp/build/prog": ("cpp/mai
 editConfig = config_folder("config_edit")
 for k, program in enumerate(edits):
     run(SRP, "add", f"e{k}", os.path.join(tree, program), config=editConfig)
+os.makedirs(os.path.join(tree, "bare"), exist_ok=True)
+open(os.path.join(tree, "bare", "prog"), "w").close()
+os.chmod(os.path.join(tree, "bare", "prog"), 0o755)
+run(SRP, "add", f"e{len(edits)}", os.path.join(tree, "bare", "prog"), config=editConfig)
 for sh in SHELLS:
     for k, (program, wanted) in enumerate(edits.items()):
         out = shell(f"srp edit e{k}", sh, config=editConfig, env={"PATH": f"{stub}:{os.environ['PATH']}"})
         opened = sorted(os.path.relpath(os.path.normpath(line.split(" ", 1)[1]), tree) for line in out.stdout.splitlines() if line.startswith("OPENED "))
         check(f"{sh}: srp edit of {program} opens the sources of the program", opened == sorted(wanted), f"{opened} {out.tail()}")
+    # a program without source files next to it: an error saying so, nothing opened
+    out = shell(f"srp edit e{len(edits)}; echo status $?", sh, config=editConfig, env={"PATH": f"{stub}:{os.environ['PATH']}"})
+    check(f"{sh}: srp edit of a program without sources says so", "OPENED" not in out.stdout and "status 0" not in out.stdout and "no source files found" in out.stderr, out.tail())
 
 # an insecure directory in fpath (group or world writable, as Homebrew's on macOS): compinit cannot ask without a terminal
 if "zsh" in SHELLS:
