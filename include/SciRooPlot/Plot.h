@@ -539,6 +539,7 @@ class Plot : public FillSetters<Plot>
   static bool CheckFinite(double value, const std::string& what);
   static std::string DataPath(const std::string& name, const std::string& dataSource);  // the path of data in its source: no leading '/'
   static bool CheckNotNegative(double value, const std::string& what);
+  static bool CheckPositive(double value, const std::string& what);
   static bool CheckFraction(double value, const std::string& what);  // 0 to 1
   static bool CheckCount(int64_t count, const std::string& what);    // at least one
   static bool CheckPixels(int64_t size, const std::string& what);    // a side of a canvas: 1 to 32767 pixels

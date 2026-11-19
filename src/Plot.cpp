@@ -232,6 +232,13 @@ bool Plot::CheckNotNegative(double value, const string& what)
   logger::warning("The {} ({}) is ignored: it is negative.", what, Shown(value));
   return false;
 }
+bool Plot::CheckPositive(double value, const string& what)
+{
+  if (!CheckFinite(value, what)) return false;
+  if (value > 0.) return true;
+  logger::warning("The {} ({}) is ignored: it is not positive.", what, Shown(value));
+  return false;
+}
 bool Plot::CheckFraction(double value, const string& what)
 {
   if (value >= 0. && value <= 1.) return true;
@@ -4215,8 +4222,8 @@ ptree Plot::Pad::Box<BoxType>::GetPropertyTree() const
 template <typename BoxType>
 BoxType& Plot::Pad::Box<BoxType>::SetSize(double_t width, double_t height)
 {
-  bool valid = CheckNotNegative(width, "box width");
-  valid = CheckNotNegative(height, "box height") && valid;
+  bool valid = CheckPositive(width, "box width");
+  valid = CheckPositive(height, "box height") && valid;
   if (!valid) return *GetThis();
   this->mWidth = width;
   this->mHeight = height;
@@ -4305,12 +4312,12 @@ ptree Plot::Pad::ImageBox::GetPropertyTree() const
 //**************************************************************************************************
 auto Plot::Pad::ImageBox::SetWidth(double_t width) -> decltype(*this)
 {
-  if (CheckNotNegative(width, "image width")) mWidth = width;
+  if (CheckPositive(width, "image width")) mWidth = width;
   return *this;
 }
 auto Plot::Pad::ImageBox::SetHeight(double_t height) -> decltype(*this)
 {
-  if (CheckNotNegative(height, "image height")) mHeight = height;
+  if (CheckPositive(height, "image height")) mHeight = height;
   return *this;
 }
 //--------------------------------------------------------------------------------------------------

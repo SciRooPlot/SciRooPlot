@@ -3038,10 +3038,10 @@ SETTER_INVALID = {
     "SetLabelSize.size": [-1.0, math.nan],
     "SetTitleSize.size": [-1.0, math.nan],
     "width": [math.nan],  # a negative line width draws the exclusion side of a graph
-    "SetSize.width": [-0.2, math.nan],
-    "SetSize.height": [-0.2, math.nan],
-    "ImageBox.SetWidth.width": [-0.2, math.nan],
-    "ImageBox.SetHeight.height": [-0.2, math.nan],
+    "SetSize.width": [0.0, -0.2, math.nan],
+    "SetSize.height": [0.0, -0.2, math.nan],
+    "ImageBox.SetWidth.width": [0.0, -0.2, math.nan],
+    "ImageBox.SetHeight.height": [0.0, -0.2, math.nan],
     "Plot.SetDimensions.width": [0, -5, 100000],  # a canvas side: 1 to 32767 pixels
     "Plot.SetDimensions.height": [0, 100000],
     "Plot.SetWidth.width": [0, 100000],
