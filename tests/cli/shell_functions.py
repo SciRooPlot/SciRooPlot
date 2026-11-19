@@ -4,7 +4,7 @@ file globbing works again afterwards, also after plot in a pipeline. srp makes r
 keeps other values and paths starting with ~ or a variable as written; srp cd goes to the program folder; srp edit opens the sources of
 the program (a C++ program: of its CMake source folder, else of its own folder), and fails with a message without any; srp cd and srp out of an
 unknown project, srp out without an output folder or before it exists fail with a message. The srp program alone refuses the
-commands that need env.sh, unknown commands and a missing command, with exit status 1. In zsh without a terminal, env.sh registers the
+commands that need env.sh, unknown commands, a missing command and too many arguments, with exit status 1. In zsh without a terminal, env.sh registers the
 completion silently also with an insecure directory in fpath.
 Covers: the bash plot alias in compound commands (pre-release braces rule), 2026-11-03 (zsh read-only names in env.sh)."""
 
@@ -125,7 +125,7 @@ if "zsh" in SHELLS:
     check("zsh: without a terminal and with an insecure directory in fpath, env.sh registers the completion silently", out.stdout.strip() == "_plot_completions_zsh" and not out.stderr.strip(), out.tail())
 
 # the srp program alone
-for args, message in ((("init-py", "x"), "Source environment script"), (("cd",), "Source environment script"), (("nosuch",), "Unknown command nosuch"), ((), "Not enough arguments")):
+for args, message in ((("init-py", "x"), "Source environment script"), (("cd",), "Source environment script"), (("nosuch",), "Unknown command nosuch"), ((), "Not enough arguments"), (("set", "proj", "x", "two", "words"), "Too many arguments")):
     out = run(SRP, *args, config=config)
     check(f"srp {' '.join(args) or '(nothing)'} without env.sh: exit 1, {message}", out.rc == 1 and len(out.errors()) == 1 and message in out.errors()[0], out.tail())
 finish()

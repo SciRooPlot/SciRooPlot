@@ -96,6 +96,10 @@ int main(int argc, char* argv[])
     pos.add("property", 1);
     pos.add("setting", 1);
 
+    if (argc > 5) {
+      logger::error("Too many arguments (srp help lists the commands; quote a value containing spaces).");
+      return 1;
+    }
     po::variables_map vm;
     // no options, so an argument starting with a dash (e.g. a negative number) is an ordinary positional one
     po::store(po::command_line_parser(argc, argv).options(arguments).positional(pos).style(po::command_line_style::unix_style & ~(po::command_line_style::allow_short | po::command_line_style::allow_long)).run(), vm);
