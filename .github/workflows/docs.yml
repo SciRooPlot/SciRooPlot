@@ -31,6 +31,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0  # the tags, for the version of the docs
+
+      - name: Version of the docs
+        run: |
+          # a commit after the tag of the version of CMakeLists.txt is the development version after that release (as srp info names it);
+          # the version commit of a release is not tagged yet when it is pushed
+          version=$(sed -n '/^project(/,/)/s/^ *VERSION *\([0-9.]*\)$/\1/p' CMakeLists.txt)
+          described=$(git describe --tags --match "v${version}" 2>/dev/null || true)
+          [[ -n "${described}" && "${described}" != "v${version}" ]] && version="${version}+dev"
+          echo "SCIROOPLOT_DOCS_VERSION=${version}" >> "${GITHUB_ENV}"
 
       - name: Install Typst
         uses: typst-community/setup-typst@v5
@@ -84,11 +95,11 @@ jobs:
           mkdir -p build/skill/scirooplot/reference
           cp docs/skill/scirooplot/SKILL.md build/skill/scirooplot/
           cp docs/skill/scirooplot/reference/*.md build/skill/scirooplot/reference/
-          (cd docs/skill && zip -r ../../build/skill/scirooplot.skill scirooplot)   # a .skill file is a zip of the skill folder
+          sed -i "s/^Describes SciRooPlot [^ ]*/Describes SciRooPlot ${SCIROOPLOT_DOCS_VERSION}/" build/skill/scirooplot/SKILL.md
+          (cd build/skill && zip -r scirooplot.skill scirooplot)   # a .skill file is a zip of the skill folder
           mkdir -p build/slides
-          version=$(sed -n '/^project(/,/)/s/^ *VERSION *\([0-9.]*\)$/\1/p' CMakeLists.txt)
-          typst compile docs/slides/slides.typ build/slides/SciRooPlot_UserManual_cpp.pdf --input lang=cpp --input "version=${version}"
-          typst compile docs/slides/slides.typ build/slides/SciRooPlot_UserManual_py.pdf --input lang=py --input "version=${version}"
+          typst compile docs/slides/slides.typ build/slides/SciRooPlot_UserManual_cpp.pdf --input lang=cpp --input "version=${SCIROOPLOT_DOCS_VERSION}"
+          typst compile docs/slides/slides.typ build/slides/SciRooPlot_UserManual_py.pdf --input lang=py --input "version=${SCIROOPLOT_DOCS_VERSION}"
 
       - name: Check output
         run: |

@@ -296,8 +296,15 @@ execute_process(
 if(NOT GIT_DESCRIBE_RESULT EQUAL 0 OR GIT_DESCRIBE STREQUAL "")
   set(GIT_DESCRIBE "v${PROJECT_VERSION}")
 endif()
+# a build after the tag of its version (commits or changes since) is the development version after that release, as the docs built
+# from master name it
+set(DISPLAY_VERSION "${PROJECT_VERSION}")
+string(FIND "${GIT_DESCRIBE}" "v${PROJECT_VERSION}-" AFTER_TAG)
+if(AFTER_TAG EQUAL 0)
+  string(APPEND DISPLAY_VERSION "+dev")
+endif()
 target_compile_definitions(srp PRIVATE
-    SCIROOPLOT_VERSION="${PROJECT_VERSION}"
+    SCIROOPLOT_VERSION="${DISPLAY_VERSION}"
     SCIROOPLOT_GIT_DESCRIBE="${GIT_DESCRIBE}"
     SCIROOPLOT_ROOT_EXECUTABLE="${ROOT_EXECUTABLE}"
     SCIROOPLOT_ROOT_VERSION="${ROOT_VERSION}"

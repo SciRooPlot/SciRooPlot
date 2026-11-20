@@ -9,7 +9,7 @@ SciRooPlot is a C++/Python library on top of ROOT that separates *defining* plot
 Describes SciRooPlot 4.1.0 (ROOT >= 6.36.04). Repository: https://github.com/SciRooPlot/SciRooPlot — docs: https://scirooplot.github.io/SciRooPlot/
 
 **Version check** (once per session, where you can run commands): the first line of `srp info` names the installed version.
-- Older than the version above: tell the user to run `srp update` (afterwards, run each Python plotting program once); until then, code written from this skill may use what the installed version lacks.
+- Older than the version above: tell the user to run `srp update` (afterwards, run each Python plotting program once); until then, code written from this skill may use what the installed version lacks. A version ending in `+dev` is the development version after that release (built from the repository's master): the release itself is older, and only a source installation gets the newer parts before the next release.
 - Newer: this skill is outdated. Tell the user to import the current one, https://scirooplot.github.io/SciRooPlot/skill/scirooplot.skill, and meanwhile take the interface from https://scirooplot.github.io/SciRooPlot/skill/scirooplot/reference/api.md and the changes from https://scirooplot.github.io/SciRooPlot/api-changes.md.
 
 ## Mental model (read this first)
