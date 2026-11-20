@@ -5594,7 +5594,8 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
         // compared in pad coordinates: 10^log10(limit) is not always the limit, so a line at a limit of a log axis would count as outside
         const bool logAxis = (isVertical) ? pad_ptr->GetLogx() : pad_ptr->GetLogy();
         const double_t padPos = ToPad(pos, logAxis);
-        if (padPos < ((isVertical) ? pad_ptr->GetUxmin() : pad_ptr->GetUymin()) || padPos > ((isVertical) ? pad_ptr->GetUxmax() : pad_ptr->GetUymax())) {
+        // in fractions of the pad it may lie beside the frame (spanning its height or width), as a region
+        if (cutAtFrame && (padPos < ((isVertical) ? pad_ptr->GetUxmin() : pad_ptr->GetUymin()) || padPos > ((isVertical) ? pad_ptr->GetUxmax() : pad_ptr->GetUymax()))) {
           skip("its position is outside of the frame");
           continue;
         }

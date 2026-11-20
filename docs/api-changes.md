@@ -37,6 +37,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A legend row given only a text alpha (`LegendEntry::SetTextAlpha`) had a white label | The text colour of the legend with that alpha | behaviour | Nothing. |
 | A `ColorScale()` cell left out its own legends, texts, images and shapes without a word, and drew legends with rows of other pads (`AddDataEntry`) and texts naming their data over the scale | None of them is drawn, one warning names what is left out | behaviour | Put boxes and shapes into a panel. |
 | After `GeneratePlots` with `srp bitmapscale` other than 1, gStyle kept the scaled line width, end-error size, hatch width and dash patterns: a program drawing on got scaled lines | They are those of the program again once the files are written (in modes `show` and `spread` they stay while the windows are open) | behaviour | Nothing. |
+| `AddVerticalLine`/`AddHorizontalLine` in pad coordinates (`SetPadCoordinates`) at a position beside the frame were not drawn, with a warning | Drawn there over the height or width of the frame, as `AddRegionX`/`AddRegionY` | behaviour | Nothing. |
 
 ### Input validation
 

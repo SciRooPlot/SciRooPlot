@@ -7,6 +7,7 @@ regions and polygons a translucent fill, ellipses no fill, arrows a head in the 
 polygon with a set line gets its outline as a second TPolyLine right after its fill, a region with a set line option l, in every layer).
 Cases: every kind × every layer × a histogram, a graph, a map and a log axis giving the frame × the default or a set look, and the named
 cases (lines at the limits of a log axis, positions at or below zero on a log axis, shapes of a base plot and of pad 0, arrow heads, arcs).
+In fractions of the pad a vertical or horizontal line beside the frame is drawn there, as a region.
 Reference: the primitives of the pad and the same plot without the shape.
 Covers: shapes in their layers, a line at the limit of a log axis, and the named cases.
 """
@@ -260,4 +261,16 @@ while lnk:
     lnk = lnk.Next()
 check("a region with a line set gets its outline", boxes and boxes[0].GetLineStyle() == ROOT.kDashed and options == ["l"], f"{options}")
 check("a polygon of fewer than three points is not drawn, reported when it is added", not of("polygon_too_few", "TPolyLine") and "Polygon with 2 points: it needs at least three" in tooFewSaid, tooFewSaid)
+# in fractions of the pad lines and regions may lie beside the frame; a fill alpha alone fills an ellipse
+q = Project("shapes_beside")
+q.source("s", {"h": h})
+plot = S.Plot("beside", "beside", "1d")
+plot[1].AddData("h", "s")
+plot[1].AddVerticalLine(0.05).SetPadCoordinates()
+plot[1].AddRegionX(0.0, 0.08).SetPadCoordinates()
+q.pm.AddPlot(plot)
+besideRun = q.plot("beside")
+lines = [o for o, _ in besideRun.links("beside", "beside") if o.ClassName() == "TLine"]
+padObj = besideRun.pad("beside", "beside")
+check("a vertical line in fractions of the pad beside the frame is drawn there", len(lines) == 1 and padObj and lines[0].GetX1() < padObj.GetUxmin(), " | ".join(besideRun.messages("beside", "beside")))
 finish()
