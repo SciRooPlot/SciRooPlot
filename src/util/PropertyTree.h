@@ -27,8 +27,8 @@
 #include <string>
 #include <system_error>
 #include <type_traits>
-#include <unistd.h>
 
+#include "util/Paths.h"
 #include "util/Strings.h"
 #include "util/TypeTraits.h"
 
@@ -75,7 +75,7 @@ void read_from_tree(const boost::property_tree::ptree& tree, std::optional<T>& v
 // (throws if it fails, leaving no temporary file)
 inline void write_info_file(const std::string& file, const boost::property_tree::ptree& tree)
 {
-  const std::string tmpFile = file + "." + std::to_string(getpid()) + ".tmp";
+  const std::string tmpFile = temporary_file(file);
   try {
     boost::property_tree::write_info(tmpFile, tree);
     std::filesystem::rename(tmpFile, file);

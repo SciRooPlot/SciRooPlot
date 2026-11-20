@@ -217,9 +217,11 @@ bool PlotManager::SavePlotsToRootFile() const
 {
   if (!mCanvasRegistry.empty()) {
     if (!CreateOutputDirectory()) return false;
-    TFile outputFile((mOutputDirectory + "/" + mPlotsRootFile).data(), "RECREATE");
+    const string filePath = mOutputDirectory + "/" + mPlotsRootFile;
+    const string tmpPath = util::temporary_file(filePath);
+    TFile outputFile(tmpPath.data(), "RECREATE");
     if (outputFile.IsZombie()) {
-      logger::error("Could not create output file {}/{}.", mOutputDirectory, mPlotsRootFile);
+      logger::error("Could not create output file {}.", filePath);
       return false;
     }
     outputFile.cd();
@@ -259,7 +261,8 @@ bool PlotManager::SavePlotsToRootFile() const
       ++nPlots;
     }
     outputFile.Close();
-    logger::info("Saved {} to file {}/{}.", plural(nPlots, "plot"), mOutputDirectory, mPlotsRootFile);
+    if (!ReplaceOutputFile(tmpPath, filePath, outputFile.TestBit(TFile::kWriteError))) return false;
+    logger::info("Saved {} to file {}.", plural(nPlots, "plot"), filePath);
   }
   return true;
 }
@@ -298,9 +301,11 @@ void PlotManager::ReserveColorIndices(TCanvas* canvas)
 bool PlotManager::SaveDataToRootFile(const set<std::pair<string, string>>& keys) const
 {
   if (!CreateOutputDirectory()) return false;
-  TFile outputFile((mOutputDirectory + "/" + mDataRootFile).data(), "RECREATE");
+  const string filePath = mOutputDirectory + "/" + mDataRootFile;
+  const string tmpPath = util::temporary_file(filePath);
+  TFile outputFile(tmpPath.data(), "RECREATE");
   if (outputFile.IsZombie()) {
-    logger::error("Could not create output file {}/{}.", mOutputDirectory, mDataRootFile);
+    logger::error("Could not create output file {}.", filePath);
     return false;
   }
   // written in a fixed order (by name), so the same data always gives the same file
@@ -352,7 +357,28 @@ bool PlotManager::SaveDataToRootFile(const set<std::pair<string, string>>& keys)
     }
   }
   outputFile.Close();
-  logger::info("Saved data to file {}/{}.", mOutputDirectory, mDataRootFile);
+  if (!ReplaceOutputFile(tmpPath, filePath, outputFile.TestBit(TFile::kWriteError))) return false;
+  logger::info("Saved data to file {}.", filePath);
+  return true;
+}
+
+//**************************************************************************************************
+/**
+ * Moves a ROOT file written to a temporary path into place (an earlier file of that name stays if writing failed).
+ */
+//**************************************************************************************************
+bool PlotManager::ReplaceOutputFile(const string& tmpPath, const string& filePath, bool writeError)
+{
+  std::error_code ec;
+  if (writeError) {
+    std::filesystem::remove(tmpPath, ec);
+    logger::error("Could not write output file {}.", filePath);
+    return false;
+  }
+  if (!util::replace_file(tmpPath, filePath, ec)) {
+    logger::error("Could not write output file {}: {}.", filePath, ec.message());
+    return false;
+  }
   return true;
 }
 

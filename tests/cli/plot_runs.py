@@ -1,8 +1,9 @@
 """plot runs of one project at the same time and interrupted: two runs into one output folder at once (one writing Plots.root, one the
-pictures of mode png) both end with exit status 0 and write all they make (every plot in Plots.root, every picture complete); Ctrl-C (SIGINT
+pictures of mode png) both end with exit status 0 and write all they make (every plot in Plots.root, every picture complete); a run whose
+write of Plots.root is cut short leaves the Plots.root of the earlier run as it was; Ctrl-C (SIGINT
 to the process group, as a terminal sends it) ends a long run within seconds, in mode file and png, and leaves the Plots.root of an earlier
 run as it was (it is written at the end of a run).
-Covers: two runs at once, Ctrl-C during a long run."""
+Covers: two runs at once, a write of Plots.root cut short, Ctrl-C during a long run."""
 
 import os
 import pty
@@ -83,6 +84,14 @@ check("two runs at once: the run in mode file wrote every plot into Plots.root",
 written = sorted(f[:-4] for f in os.listdir(os.path.join(out, "g")) if f.endswith(".png")) if os.path.isdir(os.path.join(out, "g")) else []
 broken = [name for name in written if not (img := ROOT.TImage.Open(os.path.join(out, "g", f"{name}.png"))) or img.GetWidth() == 0]
 check("two runs at once: the run in mode png wrote every picture, each complete", written == pictures and not broken, f"{len(written)} of {len(pictures)}, unreadable {broken[:3]}")
+
+# a run whose write of Plots.root is cut short (here by a file size limit, as by a full disk) leaves the Plots.root of the earlier run
+size = os.path.getsize(os.path.join(out, "Plots.root"))
+cut = subprocess.run(["bash", "-c", f"ulimit -f {size // 2048}; exec {PLOT} g '.+' file"], capture_output=True, text=True)
+check("a write of Plots.root cut short: the run fails", cut.returncode != 0, f"exit status {cut.returncode}")
+check("a write of Plots.root cut short: the Plots.root of the earlier run is left as it was", plots_in(os.path.join(out, "Plots.root")) == found and os.path.getsize(os.path.join(out, "Plots.root")) == size, f"{len(plots_in(os.path.join(out, 'Plots.root')) or [])} plots")
+for leftover in [f for f in os.listdir(out) if f.endswith(".tmp")]:  # the temporary file of the run killed while writing
+    os.remove(os.path.join(out, leftover))
 
 # Ctrl-C during a long run
 before = os.path.getmtime(os.path.join(out, "Plots.root"))

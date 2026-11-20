@@ -25,6 +25,7 @@
 #include <optional>
 #include <string>
 #include <system_error>
+#include <unistd.h>
 #include <utility>
 #include <vector>
 
@@ -70,6 +71,21 @@ inline std::pair<std::string, std::string> split_path(const std::string& path)
   const size_t pos = path.rfind('/');
   if (pos == std::string::npos) return {"", path};
   return {path.substr(0, pos), path.substr(pos + 1)};
+}
+
+// an output file is written to a temporary file beside it and renamed once complete (replace_file), so that an interrupted write,
+// a failed one or two runs finishing at the same time cannot leave a truncated file behind
+inline std::string temporary_file(const std::string& file)
+{
+  return file + "." + std::to_string(getpid()) + ".tmp";
+}
+inline bool replace_file(const std::string& tmpFile, const std::string& file, std::error_code& ec)
+{
+  std::filesystem::rename(tmpFile, file, ec);
+  if (!ec) return true;
+  std::error_code removeError;
+  std::filesystem::remove(tmpFile, removeError);
+  return false;
 }
 }  // end namespace SciRooPlot::util
 #endif  // SRC_UTIL_PATHS_H_

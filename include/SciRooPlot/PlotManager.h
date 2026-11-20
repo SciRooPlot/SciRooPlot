@@ -176,6 +176,7 @@ class PlotManager
   static bool IsValidDataSourceName(const std::string& dataSource);
   void ForgetBufferedData(const std::string& dataSource);
   bool SaveDataToRootFile(const std::set<std::pair<std::string, std::string>>& keys) const;
+  static bool ReplaceOutputFile(const std::string& tmpPath, const std::string& filePath, bool writeError);
 
   std::string mProjectName;
   std::string mPlotsRootFile{"Plots.root"};
