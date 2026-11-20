@@ -186,7 +186,7 @@ float_t Plot::RoundWidth(float_t width, const char* what)
 {
   const float_t rounded = std::round(width);
   if (rounded != width) {
-    logger::warning("The {} {} is not an integer; ROOT stores line widths as short, using {}.", what, width, rounded);
+    logger::warning("The {} ({}) is not an integer: ROOT stores line widths as integers, {} is used.", what, Shown(width), Shown(rounded));
   }
   return rounded;
 }
@@ -322,53 +322,62 @@ void layout_t::Update(const layout_t& other)
   if (other.scale) scale = other.scale;
 }
 
-void layout_t::SetMarker(int16_t newStyle, float_t size, color_t newColor, float_t newAlpha, const string& what)
+void layout_t::SetMarker(int16_t newStyle, float_t size, color_t newColor, float_t newAlpha, const string& what, const string& of)
 {
-  bool valid = Plot::CheckNotNegative(size, what + " size");
-  valid = Plot::CheckAlpha(newAlpha, what + " alpha") && valid;
-  valid = Plot::CheckMarkerStyle(newStyle, what + " style") && valid;
+  bool valid = Plot::CheckNotNegative(size, what + " size" + of);
+  valid = Plot::CheckAlpha(newAlpha, what + " alpha" + of) && valid;
+  valid = Plot::CheckMarkerStyle(newStyle, what + " style" + of) && valid;
   if (valid) *this = {newColor, newAlpha, newStyle, size};
 }
-void layout_t::SetLine(int16_t newStyle, float_t width, color_t newColor, float_t newAlpha, const string& what)
+void layout_t::SetLine(int16_t newStyle, float_t width, color_t newColor, float_t newAlpha, const string& what, const string& of)
 {
-  bool valid = Plot::CheckFinite(width, what + " width");
-  valid = Plot::CheckAlpha(newAlpha, what + " alpha") && valid;
-  if (valid) *this = {newColor, newAlpha, newStyle, Plot::RoundWidth(width, (what + " width").data())};
+  bool valid = Plot::CheckFinite(width, what + " width" + of);
+  valid = Plot::CheckAlpha(newAlpha, what + " alpha" + of) && valid;
+  if (valid) *this = {newColor, newAlpha, newStyle, Plot::RoundWidth(width, (what + " width" + of).data())};
 }
-void layout_t::SetFill(int16_t newStyle, color_t newColor, float_t newAlpha, const string& what)
+void layout_t::SetFill(int16_t newStyle, color_t newColor, float_t newAlpha, const string& what, const string& of)
 {
-  if (Plot::CheckAlpha(newAlpha, what + " alpha")) *this = {newColor, newAlpha, newStyle, {}};
+  if (Plot::CheckAlpha(newAlpha, what + " alpha" + of)) *this = {newColor, newAlpha, newStyle, {}};
 }
-void layout_t::SetText(int16_t font, float_t size, color_t newColor, float_t newAlpha, const string& what)
+void layout_t::SetText(int16_t font, float_t size, color_t newColor, float_t newAlpha, const string& what, const string& of)
 {
   bool valid = Plot::CheckFont(font);
-  valid = Plot::CheckNotNegative(size, what + " size") && valid;
-  valid = Plot::CheckAlpha(newAlpha, what + " alpha") && valid;
+  valid = Plot::CheckNotNegative(size, what + " size" + of) && valid;
+  valid = Plot::CheckAlpha(newAlpha, what + " alpha" + of) && valid;
   if (valid) *this = {newColor, newAlpha, font, size};
 }
-void layout_t::SetAlpha(float_t newAlpha, const string& what)
+void layout_t::SetAlpha(float_t newAlpha, const string& what, const string& of)
 {
-  if (Plot::CheckAlpha(newAlpha, what + " alpha")) alpha = newAlpha;
+  if (Plot::CheckAlpha(newAlpha, what + " alpha" + of)) alpha = newAlpha;
 }
-void layout_t::SetMarkerStyle(int16_t newStyle, const string& what)
+void layout_t::SetMarkerStyle(int16_t newStyle, const string& what, const string& of)
 {
-  if (Plot::CheckMarkerStyle(newStyle, what + " style")) style = newStyle;
+  if (Plot::CheckMarkerStyle(newStyle, what + " style" + of)) style = newStyle;
 }
-void layout_t::SetMarkerSize(float_t size, const string& what)
+void layout_t::SetMarkerSize(float_t size, const string& what, const string& of)
 {
-  if (Plot::CheckNotNegative(size, what + " size")) scale = size;
+  if (Plot::CheckNotNegative(size, what + " size" + of)) scale = size;
 }
-void layout_t::SetWidth(float_t width, const string& what)
+void layout_t::SetWidth(float_t width, const string& what, const string& of)
 {
-  if (Plot::CheckFinite(width, what + " width")) scale = Plot::RoundWidth(width, (what + " width").data());
+  if (Plot::CheckFinite(width, what + " width" + of)) scale = Plot::RoundWidth(width, (what + " width" + of).data());
 }
 void layout_t::SetFont(int16_t font)
 {
   if (Plot::CheckFont(font)) style = font;
 }
-void layout_t::SetTextSize(float_t size, const string& what)
+void layout_t::SetTextSize(float_t size, const string& what, const string& of)
 {
-  if (Plot::CheckNotNegative(size, what + " size")) scale = size;
+  if (Plot::CheckNotNegative(size, what + " size" + of)) scale = size;
+}
+template <class Owner>
+string layout_t::Of(const Owner& owner)
+{
+  if constexpr (std::is_base_of_v<Plot::Pad::Data, Owner>) {
+    return " of " + owner.GetName();
+  } else {
+    return {};
+  }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -380,7 +389,7 @@ void layout_t::SetTextSize(float_t size, const string& what)
 template <class Derived>
 Derived& MarkerSetters<Derived>::SetMarker(int16_t style, float_t size, color_t color, float_t alpha)
 {
-  mMarker.SetMarker(style, size, color, alpha, "marker");
+  mMarker.SetMarker(style, size, color, alpha, "marker", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -392,19 +401,19 @@ Derived& MarkerSetters<Derived>::SetMarkerColor(color_t color)
 template <class Derived>
 Derived& MarkerSetters<Derived>::SetMarkerAlpha(float_t alpha)
 {
-  mMarker.SetAlpha(alpha, "marker");
+  mMarker.SetAlpha(alpha, "marker", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
 Derived& MarkerSetters<Derived>::SetMarkerStyle(int16_t style)
 {
-  mMarker.SetMarkerStyle(style, "marker");
+  mMarker.SetMarkerStyle(style, "marker", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
 Derived& MarkerSetters<Derived>::SetMarkerSize(float_t size)
 {
-  mMarker.SetMarkerSize(size, "marker");
+  mMarker.SetMarkerSize(size, "marker", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -421,7 +430,7 @@ void MarkerSetters<Derived>::PutMarker(ptree& tree) const
 template <class Derived>
 Derived& LineSetters<Derived>::SetLine(int16_t style, float_t width, color_t color, float_t alpha)
 {
-  mLine.SetLine(style, width, color, alpha, "line");
+  mLine.SetLine(style, width, color, alpha, "line", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -433,7 +442,7 @@ Derived& LineSetters<Derived>::SetLineColor(color_t color)
 template <class Derived>
 Derived& LineSetters<Derived>::SetLineAlpha(float_t alpha)
 {
-  mLine.SetAlpha(alpha, "line");
+  mLine.SetAlpha(alpha, "line", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -445,7 +454,7 @@ Derived& LineSetters<Derived>::SetLineStyle(int16_t style)
 template <class Derived>
 Derived& LineSetters<Derived>::SetLineWidth(float_t width)
 {
-  mLine.SetWidth(width, "line");
+  mLine.SetWidth(width, "line", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -462,7 +471,7 @@ void LineSetters<Derived>::PutLine(ptree& tree) const
 template <class Derived>
 Derived& FillSetters<Derived>::SetFill(int16_t style, color_t color, float_t alpha)
 {
-  mFill.SetFill(style, color, alpha, "fill");
+  mFill.SetFill(style, color, alpha, "fill", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -480,7 +489,7 @@ Derived& FillSetters<Derived>::SetFillStyle(int16_t style)
 template <class Derived>
 Derived& FillSetters<Derived>::SetFillAlpha(float_t alpha)
 {
-  mFill.SetAlpha(alpha, "fill");
+  mFill.SetAlpha(alpha, "fill", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -497,7 +506,7 @@ void FillSetters<Derived>::PutFill(ptree& tree) const
 template <class Derived>
 Derived& TextSetters<Derived>::SetText(int16_t font, float_t size, color_t color, float_t alpha)
 {
-  mText.SetText(font, size, color, alpha, "text");
+  mText.SetText(font, size, color, alpha, "text", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -509,7 +518,7 @@ Derived& TextSetters<Derived>::SetTextColor(color_t color)
 template <class Derived>
 Derived& TextSetters<Derived>::SetTextAlpha(float_t alpha)
 {
-  mText.SetAlpha(alpha, "text");
+  mText.SetAlpha(alpha, "text", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -521,7 +530,7 @@ Derived& TextSetters<Derived>::SetTextFont(int16_t font)
 template <class Derived>
 Derived& TextSetters<Derived>::SetTextSize(float_t size)
 {
-  mText.SetTextSize(size, "text");
+  mText.SetTextSize(size, "text", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -538,7 +547,7 @@ void TextSetters<Derived>::PutText(ptree& tree) const
 template <class Derived>
 Derived& BorderSetters<Derived>::SetBorder(int16_t style, float_t width, color_t color, float_t alpha)
 {
-  mBorder.SetLine(style, width, color, alpha, "border");
+  mBorder.SetLine(style, width, color, alpha, "border", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -550,7 +559,7 @@ Derived& BorderSetters<Derived>::SetBorderColor(color_t color)
 template <class Derived>
 Derived& BorderSetters<Derived>::SetBorderAlpha(float_t alpha)
 {
-  mBorder.SetAlpha(alpha, "border");
+  mBorder.SetAlpha(alpha, "border", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -562,7 +571,7 @@ Derived& BorderSetters<Derived>::SetBorderStyle(int16_t style)
 template <class Derived>
 Derived& BorderSetters<Derived>::SetBorderWidth(float_t width)
 {
-  mBorder.SetWidth(width, "border");
+  mBorder.SetWidth(width, "border", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -953,7 +962,7 @@ auto Plot::SetBasePlot(const string& basePlot) -> decltype(*this)
 auto Plot::SetDimensions(int32_t width, int32_t height, bool fixAspectRatio) -> decltype(*this)
 {
   // nothing is set if one of the sizes is invalid, as for the other setters of several values
-  if (!CheckPixels(width, "width of plot " + mName) || !CheckPixels(height, "height of plot " + mName)) return *this;
+  if (!CheckPixels(width, "width of plot " + Label(*this)) || !CheckPixels(height, "height of plot " + Label(*this))) return *this;
   mPlotDimensions.width = width;
   mPlotDimensions.height = height;
   mPlotDimensions.fixAspectRatio = fixAspectRatio;
@@ -962,13 +971,13 @@ auto Plot::SetDimensions(int32_t width, int32_t height, bool fixAspectRatio) -> 
 
 auto Plot::SetWidth(int32_t width) -> decltype(*this)
 {
-  if (CheckPixels(width, "width of plot " + mName)) mPlotDimensions.width = width;
+  if (CheckPixels(width, "width of plot " + Label(*this))) mPlotDimensions.width = width;
   return *this;
 }
 
 auto Plot::SetHeight(int32_t height) -> decltype(*this)
 {
-  if (CheckPixels(height, "height of plot " + mName)) mPlotDimensions.height = height;
+  if (CheckPixels(height, "height of plot " + Label(*this))) mPlotDimensions.height = height;
   return *this;
 }
 
@@ -3911,8 +3920,8 @@ auto Plot::Pad::Axis::SetTitle(const string& title) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetRange(double_t min, double_t max) -> decltype(*this)
 {
-  bool valid = CheckFinite(min, "range minimum");
-  valid = CheckFinite(max, "range maximum") && valid;
+  bool valid = CheckFinite(min, fmt::format("range minimum of axis {}", mName));
+  valid = CheckFinite(max, fmt::format("range maximum of axis {}", mName)) && valid;
   if (!valid) return *this;
   if (min >= max) {
     logger::warning("The range [{}, {}] of axis {} is ignored: its minimum is not below its maximum.", min, max, mName);
@@ -3923,12 +3932,12 @@ auto Plot::Pad::Axis::SetRange(double_t min, double_t max) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetMaxRange(double_t max) -> decltype(*this)
 {
-  if (CheckFinite(max, "range maximum")) mRange.max = max;
+  if (CheckFinite(max, fmt::format("range maximum of axis {}", mName))) mRange.max = max;
   return *this;
 }
 auto Plot::Pad::Axis::SetMinRange(double_t min) -> decltype(*this)
 {
-  if (CheckFinite(min, "range minimum")) mRange.min = min;
+  if (CheckFinite(min, fmt::format("range minimum of axis {}", mName))) mRange.min = min;
   return *this;
 }
 auto Plot::Pad::Axis::SetRoomAboveMax(double_t frameFraction) -> decltype(*this)
@@ -3963,7 +3972,7 @@ auto Plot::Pad::Axis::SetAxisColor(color_t color) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetAxisAlpha(float_t alpha) -> decltype(*this)
 {
-  if (!Plot::CheckAlpha(alpha, "axis alpha")) return *this;
+  if (!Plot::CheckAlpha(alpha, fmt::format("axis alpha of axis {}", mName))) return *this;
   mAxisFrame.alpha = alpha;
   return *this;
 }
@@ -3979,7 +3988,7 @@ auto Plot::Pad::Axis::SetMaxDigits(int32_t maxDigits) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetTickLength(float_t tickLength) -> decltype(*this)
 {
-  if (CheckFinite(tickLength, "tick length")) mAxisFrame.scale = tickLength;
+  if (CheckFinite(tickLength, fmt::format("tick length of axis {}", mName))) mAxisFrame.scale = tickLength;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleFont(int16_t font) -> decltype(*this)
@@ -3994,12 +4003,12 @@ auto Plot::Pad::Axis::SetLabelFont(int16_t font) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetTitleSize(float_t size) -> decltype(*this)
 {
-  if (CheckNotNegative(size, "title size")) mTitleLayout.scale = size;
+  if (CheckNotNegative(size, fmt::format("title size of axis {}", mName))) mTitleLayout.scale = size;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelSize(float_t size) -> decltype(*this)
 {
-  if (CheckNotNegative(size, "label size")) mLabelLayout.scale = size;
+  if (CheckNotNegative(size, fmt::format("label size of axis {}", mName))) mLabelLayout.scale = size;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleColor(color_t color) -> decltype(*this)
@@ -4014,29 +4023,29 @@ auto Plot::Pad::Axis::SetLabelColor(color_t color) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetTitleAlpha(float_t alpha) -> decltype(*this)
 {
-  if (!Plot::CheckAlpha(alpha, "title alpha")) return *this;
+  if (!Plot::CheckAlpha(alpha, fmt::format("title alpha of axis {}", mName))) return *this;
   mTitleLayout.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelAlpha(float_t alpha) -> decltype(*this)
 {
-  if (!Plot::CheckAlpha(alpha, "label alpha")) return *this;
+  if (!Plot::CheckAlpha(alpha, fmt::format("label alpha of axis {}", mName))) return *this;
   mLabelLayout.alpha = alpha;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleOffset(float_t offset) -> decltype(*this)
 {
-  if (CheckFinite(offset, "title offset")) mTitleLayout.offset = offset;
+  if (CheckFinite(offset, fmt::format("title offset of axis {}", mName))) mTitleLayout.offset = offset;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelOffset(float_t offset) -> decltype(*this)
 {
-  if (CheckFinite(offset, "label offset")) mLabelLayout.offset = offset;
+  if (CheckFinite(offset, fmt::format("label offset of axis {}", mName))) mLabelLayout.offset = offset;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelAngle(float_t angle) -> decltype(*this)
 {
-  if (CheckFinite(angle, "label angle")) mLabelLayout.angle = angle;
+  if (CheckFinite(angle, fmt::format("label angle of axis {}", mName))) mLabelLayout.angle = angle;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleCenter(bool center) -> decltype(*this)
@@ -4076,12 +4085,12 @@ auto Plot::Pad::Axis::SetHideClippedLabels(bool hide) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetColorScaleOffset(float_t offset) -> decltype(*this)
 {
-  if (CheckFinite(offset, "colour scale offset")) mAxisFrame.colorScaleOffset = offset;
+  if (CheckFinite(offset, fmt::format("colour scale offset of axis {}", mName))) mAxisFrame.colorScaleOffset = offset;
   return *this;
 }
 auto Plot::Pad::Axis::SetColorScaleWidth(float_t width) -> decltype(*this)
 {
-  if (CheckNotNegative(width, "colour scale width")) mAxisFrame.colorScaleWidth = width;
+  if (CheckNotNegative(width, fmt::format("colour scale width of axis {}", mName))) mAxisFrame.colorScaleWidth = width;
   return *this;
 }
 auto Plot::Pad::Axis::SetTimeFormat(const string& timeFormat) -> decltype(*this)

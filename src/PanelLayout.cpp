@@ -137,9 +137,9 @@ PanelLayout::PanelLayout(const PanelLayout& sizes, vector<vector<Panel>> rows) :
 }
 
 // a length that is not a finite number, negative or (where not allowed) zero is reported and ignored: the value set before stays
-bool PanelLayout::ValidLength(const char* setter, double_t pixel, bool zeroAllowed)
+bool PanelLayout::ValidLength(const char* setter, double_t pixel, bool zeroAllowed, const char* value)
 {
-  const string what = fmt::format("length of {}", setter);
+  const string what = fmt::format("{} of {}", value, setter);
   if (!Plot::CheckNotNegative(pixel, what)) return false;
   if (zeroAllowed || pixel > 0.) return true;
   logger::warning("The {} ({}) is ignored: it is not positive.", what, Plot::Shown(pixel));
@@ -161,10 +161,10 @@ PanelLayout& PanelLayout::SetPanelSize(double_t pixel)
 PanelLayout& PanelLayout::SetMargins(double_t top, double_t bottom, double_t left, double_t right)
 {
   // one invalid margin: none is set (as Pad::SetMargins)
-  bool valid = ValidLength("PanelLayout::SetMargins", top, true);
-  valid = ValidLength("PanelLayout::SetMargins", bottom, true) && valid;
-  valid = ValidLength("PanelLayout::SetMargins", left, true) && valid;
-  valid = ValidLength("PanelLayout::SetMargins", right, true) && valid;
+  bool valid = ValidLength("PanelLayout::SetMargins", top, true, "top margin");
+  valid = ValidLength("PanelLayout::SetMargins", bottom, true, "bottom margin") && valid;
+  valid = ValidLength("PanelLayout::SetMargins", left, true, "left margin") && valid;
+  valid = ValidLength("PanelLayout::SetMargins", right, true, "right margin") && valid;
   if (!valid) return *this;
   mMarginTop = top;
   mMarginBottom = bottom;
@@ -241,13 +241,13 @@ PanelLayout& PanelLayout::SetZTitleOffset(double_t pixel)
 
 PanelLayout& PanelLayout::SetLineWidth(float_t width)
 {
-  if (ValidLength("PanelLayout::SetLineWidth", width, true)) mLineWidth = Plot::RoundWidth(width, "line width of PanelLayout::SetLineWidth");
+  if (ValidLength("PanelLayout::SetLineWidth", width, true, "line width")) mLineWidth = Plot::RoundWidth(width, "line width of PanelLayout::SetLineWidth");
   return *this;
 }
 
 PanelLayout& PanelLayout::SetMarkerSize(float_t size)
 {
-  if (ValidLength("PanelLayout::SetMarkerSize", size, true)) mMarkerSize = size;
+  if (ValidLength("PanelLayout::SetMarkerSize", size, true, "marker size")) mMarkerSize = size;
   return *this;
 }
 

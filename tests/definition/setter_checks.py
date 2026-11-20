@@ -18,7 +18,8 @@ not exist ...), the other parameters plain. Reference: the same call with the pl
   other (Entries, a drawing option and an alias, contour levels and their number, also from a layout, SetDefinesFrame(False),
   SetTransparent after a fill colour).
 The messages of the style setters name what was set (the width of SetFrameBorder as "frame border width", SetDefaultLineWidth of a legend
-as "legend default line width"), and a style setter given several invalid values names each of them.
+as "legend default line width"), and a style setter given several invalid values names each of them; they name the object it belongs to
+where it has a name (the axis, the data, the plot with its group, which margin of a layout).
 Style numbers (markers, lines, fills) are not checked: ROOT draws an unknown style in its default style.
 Covers: the same tree joined again, a selection of data that is not projected, pad margins without room for the
 frame, ranges inverted by single-end setters, calls replacing each other.
@@ -329,4 +330,22 @@ S.check("values in the messages as given (a float not widened to double: 1.2, no
 pad = run.pad("margins_order", "g")
 margins = [round(m, 6) for m in (pad.GetTopMargin(), pad.GetBottomMargin(), pad.GetLeftMargin(), pad.GetRightMargin())] if pad else None
 S.check("margins with room for the frame are drawn as set, whatever the order of setting", margins == [0.9, 0.05, 0.85, 0.1], str(margins))
+
+# what a message refers to: the axis, the data, the plot, the margin
+NAMED = {
+    "axis title size": (lambda: S.S.Plot("a", "g", "1d")[1]["X"].SetTitleSize(-1.0), "title size of axis X (-1)"),
+    "axis alpha": (lambda: S.S.Plot("a", "g", "1d")[1]["Y"].SetAxisAlpha(3.0), "axis alpha of axis Y (3)"),
+    "data marker size": (lambda: S.S.Data("h", "s").SetMarkerSize(-2.0), "marker size of h (-2)"),
+    "data line alpha": (lambda: S.S.Data("h", "s").SetLineAlpha(2.0), "line alpha of h (2)"),
+    "layout margin": (lambda: S.S.PanelLayout().SetMargins(-1.0, 0.0, 0.0, 0.0), "top margin of PanelLayout::SetMargins (-1)"),
+    "layout marker size": (lambda: S.S.PanelLayout().SetMarkerSize(-1.0), "marker size of PanelLayout::SetMarkerSize (-1)"),
+    "layout line width": (lambda: S.S.PanelLayout().SetLineWidth(2.5), "line width of PanelLayout::SetLineWidth (2.5) is not an integer"),
+    "plot width": (lambda: S.S.Plot("a", "g", "1d").SetWidth(0), "from group"),
+    "text alignment": (lambda: S.S.Plot("a", "g", "1d")[1].AddText(0.5, 0.5, "t").SetTextAlign(5), "0 for the default"),
+    "shape kind": (lambda: S.S.Plot("a", "g", "1d")[1].AddRegionX(1.0, 2.0).SetArc(0.0, 90.0), "ignored on this region X"),
+}
+for what, (call, text) in NAMED.items():
+    _, printed = S.captured(call)
+    plain = re.sub(r"\x1b\[[0-9;]*m", "", printed)
+    S.check(f"the message names what it refers to: {what}", text in plain, plain.strip())
 S.finish()

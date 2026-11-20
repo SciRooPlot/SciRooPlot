@@ -290,19 +290,23 @@ struct layout_t {
   std::optional<int16_t> style;        // marker, line, fill, border style, text font
   std::optional<float_t> scale;        // marker size, line width, text size, border width (a fill has none)
   void Update(const layout_t& other);  // takes over the values set in other
-  // the checked setters of all style setters (what names the attribute in messages: "marker", "default line", "frame border" ...): a
+  // the checked setters of all style setters (what names the attribute in messages: "marker", "default line", "frame border" ..., of its
+  // owner where it has a name: " of h"): a
   // value that is not valid is warned about and ignored, the value set before stays; the setters of all values together set nothing if
   // one of them is not valid (each such value warned about)
-  void SetMarker(int16_t newStyle, float_t size, color_t newColor, float_t newAlpha, const std::string& what);
-  void SetLine(int16_t newStyle, float_t width, color_t newColor, float_t newAlpha, const std::string& what);  // also borders
-  void SetFill(int16_t newStyle, color_t newColor, float_t newAlpha, const std::string& what);
-  void SetText(int16_t font, float_t size, color_t newColor, float_t newAlpha, const std::string& what);
-  void SetAlpha(float_t newAlpha, const std::string& what);
-  void SetMarkerStyle(int16_t newStyle, const std::string& what);
-  void SetMarkerSize(float_t size, const std::string& what);
-  void SetWidth(float_t width, const std::string& what);  // of a line or border (rounded)
+  void SetMarker(int16_t newStyle, float_t size, color_t newColor, float_t newAlpha, const std::string& what, const std::string& of = {});
+  void SetLine(int16_t newStyle, float_t width, color_t newColor, float_t newAlpha, const std::string& what, const std::string& of = {});  // also borders
+  void SetFill(int16_t newStyle, color_t newColor, float_t newAlpha, const std::string& what, const std::string& of = {});
+  void SetText(int16_t font, float_t size, color_t newColor, float_t newAlpha, const std::string& what, const std::string& of = {});
+  void SetAlpha(float_t newAlpha, const std::string& what, const std::string& of = {});
+  void SetMarkerStyle(int16_t newStyle, const std::string& what, const std::string& of = {});
+  void SetMarkerSize(float_t size, const std::string& what, const std::string& of = {});
+  void SetWidth(float_t width, const std::string& what, const std::string& of = {});  // of a line or border (rounded)
   void SetFont(int16_t font);
-  void SetTextSize(float_t size, const std::string& what);
+  void SetTextSize(float_t size, const std::string& what, const std::string& of = {});
+  // of in messages: " of <name>" for data and ratios ("The marker alpha of h (2) is ignored"), nothing for the others
+  template <class Owner>
+  static std::string Of(const Owner& owner);
 };
 
 //**************************************************************************************************
@@ -1104,6 +1108,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   friend class Plot;
   friend class Pad;
   friend class Ratio;
+  friend struct layout_t;  // names the data in the messages of the shared style setters
 
   virtual boost::property_tree::ptree GetPropertyTree() const;
   void SetType(const std::string& type) { mType = type; }
