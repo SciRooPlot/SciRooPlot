@@ -15,7 +15,7 @@ Project configuration:     srp get (<project>|@current) <property> | srp set ...
 Project access:            srp confdir [<project>] (config folder) | srp cd [<project>] (program folder) | srp edit [<project>] (source files) | srp out [<project>] (output folder in the file manager)
 Settings:                  srp settings | srp color (bright|dark|off) | srp verbosity (debug|log|info|warning|error|silent) | srp plotmode <mode> (any mode of plot, e.g. show|spread|pdf|png|gif+<centiseconds>; the default of plot, initially show)
                            srp matchmode (exact|contains) | srp matchcase (sensitive|insensitive) | srp screenscale <factor> | srp bitmapscale <factor>
-Maintenance:               srp info | srp update [--reinstall] | srp clean | srp reset | srp help
+Maintenance:               srp info | srp update | srp reinstall | srp clean | srp reset | srp help
 Utilities:                 srp print <file>[:<path>] (contents of a ROOT file, or below a path in it) | srp open <file> (in a TBrowser)
                            srp colorwheel [<file>]   (ROOT's colour wheel, names under the mouse in the status bar; with a file: saved there)
 ```

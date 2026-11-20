@@ -214,7 +214,7 @@ int RunCommand(const string& command, const string& project, const string& prope
     heading("Maintenance");
     row("srp info", "installation and build details");
     row("srp update", "update SciRooPlot");
-    row("srp update --reinstall", "fresh build of a source installation");
+    row("srp reinstall", "reinstall SciRooPlot from scratch");
     row("srp clean", "remove projects whose code is gone");
     row("srp reset", "remove all projects (their code is kept)");
     row("srp help", "this overview");
@@ -495,7 +495,7 @@ int RunCommand(const string& command, const string& project, const string& prope
     }
     if (!Config::GetMutable().SetProperty(project, property, setting)) return 1;
   } else {
-    const vector<string> shellCommands = {"update", "edit", "cd", "out", "init-py", "init-cpp", "example-py", "example-cpp"};
+    const vector<string> shellCommands = {"update", "reinstall", "edit", "cd", "out", "init-py", "init-cpp", "example-py", "example-cpp"};
     if (std::find(shellCommands.begin(), shellCommands.end(), command) != shellCommands.end()) {
       logger::error("Source environment script to use this feature.");
     } else {
