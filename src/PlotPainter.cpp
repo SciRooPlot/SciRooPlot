@@ -177,8 +177,11 @@ void PlotPainter::CopyFuncAttributes(FuncT* from, FuncT* to, double_t contentFac
     if (const int32_t nLevels = from->GetContour(); nLevels > 0) {
       vector<double_t> levels(nLevels);
       from->GetContour(levels.data());
-      // levels not given by the user read as 0 (computed only when painted)
-      const bool computedLevels = std::all_of(levels.begin(), levels.end(), [](double_t level) { return level == 0.; });
+      // levels not given by the user are marked by ROOT with a first stored level of -9999 (computed only when painted)
+      struct ContourOf : TF2 {
+        static const TArrayD& Get(const TF2& func) { return func.*(&ContourOf::fContour); }
+      };
+      const bool computedLevels = (ContourOf::Get(*from).GetAt(0) == -9999.);
       if (computedLevels) {
         to->SetContour(nLevels);
       } else {

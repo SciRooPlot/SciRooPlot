@@ -318,23 +318,26 @@ unexpectedEdgeWarnings = [line for line in edgeRun.warnings() if not any(w in li
 check("rebinning to edges: every warning expected", not unexpectedEdgeWarnings, " | ".join(unexpectedEdgeWarnings[:3]))
 check("rebinning to edges: no errors", not edgeRun.errors(), " | ".join(edgeRun.errors()[:3]))
 
-# contour levels of a scaled 2d function: a number of levels stays, given levels are scaled with the values
+# contour levels of a scaled 2d function: a number of levels stays, given levels are scaled with the values (also levels of 0, the zero
+# line of a function: ROOT marks levels it computes itself by a first stored level of -9999, which GetContourLevel reads as 0 too)
+ROOT.gInterpreter.Declare("struct SrpTestContourOf : TF2 { static double First(const TF2& f) { return (f.*(&SrpTestContourOf::fContour)).GetAt(0); } };")
 c = Project("contour_levels", bases=("2d",))
-levelFuncs = {"auto": ROOT.TF2("auto", "x * y", 0.0, 4.0, 0.0, 4.0), "given": ROOT.TF2("given", "x * y", 0.0, 4.0, 0.0, 4.0)}
+levelFuncs = {name: ROOT.TF2(name, "x * y - 2", 0.0, 4.0, 0.0, 4.0) for name in ("auto", "given", "zero", "zeros")}
 levelFuncs["auto"].SetContour(4)
-givenLevels = ROOT.std.vector["double"]([1.0, 2.0, 5.0])
-levelFuncs["given"].SetContour(3, givenLevels.data())
+givenLevels = {name: ROOT.std.vector["double"](levels) for name, levels in {"given": [1.0, 2.0, 5.0], "zero": [0.0], "zeros": [0.0, 0.0]}.items()}
+for name, levels in givenLevels.items():
+    levelFuncs[name].SetContour(levels.size(), levels.data())
 c.source("lev", levelFuncs)
 for name in levelFuncs:
     plot = S.Plot(name, "levels", "2d")
     plot[1].AddData(name, "lev").Scale(2.0)
     c.pm.AddPlot(plot)
 levelRun = c.plot("levels")
-for name, expected in {"auto": 4, "given": [2.0, 4.0, 10.0]}.items():
+for name, expected in {"auto": (4, True), "given": ([2.0, 4.0, 10.0], False), "zero": ([0.0], False), "zeros": ([0.0, 0.0], False)}.items():
     obs = levelRun.objects(name, "levels")
     got = None
     if obs:
         n = obs[0].GetContour()
-        got = n if name == "auto" else [obs[0].GetContourLevel(i) for i in range(n)]
-    check(f"contour levels of a scaled 2d function, {name}", got == expected, f"{got}, expected {expected}")
+        got = (n if name == "auto" else [obs[0].GetContourLevel(i) for i in range(n)], ROOT.SrpTestContourOf.First(obs[0]) == -9999.0)
+    check(f"contour levels of a scaled 2d function, {name}", got == expected, f"{got} (levels, computed by ROOT), expected {expected}")
 finish()
