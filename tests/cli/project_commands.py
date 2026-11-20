@@ -8,6 +8,7 @@ plots and data sources is refused with one error each. Removing, renaming and re
 kept or refused; clean forgets the projects whose code is gone (the folder of the program, for a C++ project also the sources above its
 build folder). Registering is safe against srp commands and programs running at the same time, and in-memory data moves with a renamed
 project.
+Writing plots of a project without an output folder names srp set.
 Covers: unknown projects, confdir of an unknown project, unset program, confdir ..,
 add with an unset variable: one message, nothing left, program before srp add, concurrent
 srp add, SaveProject keeping changes made meanwhile, rename with in-memory data, srp set while a program saves, rename
@@ -328,4 +329,9 @@ for a, b in (("L1", "L2"), ("L2", "L1"), ("L1", "A")):
     os.symlink(os.path.join(config, a), os.path.join(config, b))
 out = run(SRP, "projects", "A", config=config)
 check("srp projects of a project whose folder is a symlink loop: exit 1, one error naming the loop", out.rc == 1 and len(out.errors()) == 1 and "symbolic links" in out.errors()[0], out.tail())
+# writing plots without an output folder: in a project the error names srp set, without one SetOutputDirectory
+for project, wanted in (("withproj", "srp set withproj outdir <folder>"), ("", "SetOutputDirectory")):
+    code = f"from SciRooPlot import *\npm = PlotManager({project!r})\npm.AddBasePlot(PlotManager.MakeBasePlot('1d'))\np = Plot('p', 'g', '1d')\np[1]['X'].SetRange(0, 1)\np[1]['Y'].SetRange(0, 1)\npm.AddPlot(p)\npm.GeneratePlots('png')"
+    out = python(code, config=config_folder(f"no_outdir_{project or 'none'}"))
+    check(f"no output folder {'in a project' if project else 'without a project'}: the error names {wanted}", len(out.errors()) == 1 and wanted in out.errors()[0], out.tail())
 finish()

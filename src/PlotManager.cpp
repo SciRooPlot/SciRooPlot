@@ -390,7 +390,7 @@ bool PlotManager::ReplaceOutputFile(const string& tmpPath, const string& filePat
 bool PlotManager::CreateOutputDirectory() const
 {
   if (mOutputDirectory.empty()) {
-    logger::error("No output directory was specified: set one with SetOutputDirectory.");
+    logger::error("No output directory was specified: set one with {}.", (mProjectName.empty()) ? "SetOutputDirectory" : fmt::format("srp set {} outdir <folder> (or SetOutputDirectory in the program)", mProjectName));
     return false;
   }
   std::filesystem::path outputDir = std::filesystem::path(mOutputDirectory).lexically_normal();
@@ -1502,7 +1502,9 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   const bool needsDisplay = isInteractiveMode || mode == "macro";
   // said once for all plots (a program plotting in memory has no project directory unless it sets one); print writes nothing
   if (!isInteractiveMode && mode != "print" && mOutputDirectory.empty()) {
-    logger::error("No output directory was specified: set one with SetOutputDirectory before writing plots in mode '{}'.", mode);
+    // in a project (the plot command) the folder is set with srp, in a program with SetOutputDirectory
+    const string how = (mProjectName.empty()) ? "SetOutputDirectory" : fmt::format("srp set {} outdir <folder> (or SetOutputDirectory in the program)", mProjectName);
+    logger::error("No output directory was specified: set one with {} before writing plots in mode '{}'.", how, mode);
     return false;
   }
   // likewise a missing parent of the output directory, before anything is painted
