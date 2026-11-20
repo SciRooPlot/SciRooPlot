@@ -911,7 +911,9 @@ bool Config::SetProperty(const string& projectName, const string& property, cons
   if (property == "outdir" && !value.empty() && !CheckPath(value)) return false;
   auto& properties = mProjects[projectName].mProperties;
   if (property != "program" && property != "outdir") {
-    // a setting the program declares; a value left from a setting it no longer declares can still be unset
+    // a setting the program declares; a value left from a setting it no longer declares can still be unset (not while the declarations
+    // cannot be read: it may be declared)
+    if (!DeclaredSettings(projectName)) return false;  // reported
     const bool leftover = value.empty() && !Property(projectName, property).empty();
     const auto declaration = DeclaredSetting(projectName, property, !leftover);
     if (!declaration && !leftover) return false;

@@ -9,7 +9,7 @@ saved; a setting declared again otherwise is warned, declared again alike is not
 each with its value, the default where it differs and its description, and the values left from settings no longer declared.
 SaveProject saves the declarations and removes them once the program declares none. srp get and srp projects give the value the program
 uses (the default for a stored value the declaration does not allow, warned by get). An unreadable settings file is one error, and srp
-projects fails.
+projects and srp unset fail.
 Covers: a value with spaces, quotes and braces, a value left from a setting with another type, a setting no longer declared, a program
 declaring none, invalid declarations, a PlotManager without project."""
 
@@ -220,11 +220,20 @@ broken = config_folder("broken")
 run(SRP, "add", "bp", program, config=broken)
 os.makedirs(os.path.join(broken, "bp"), exist_ok=True)
 with open(os.path.join(broken, "bp", "settings.info"), "w") as f:
+    f.write("kept\n{\n    type integer\n    default 1\n}\n")
+stored = run(SRP, "set", "bp", "kept", "7", config=broken)
+with open(os.path.join(broken, "bp", "settings.info"), "w") as f:
     f.write("nbins\n{\n type integer")
 listed = run(SRP, "projects", "bp", config=broken)
 got = run(SRP, "get", "bp", "nbins", config=broken)
+unset = run(SRP, "unset", "bp", "kept", config=broken)
 check("an unreadable settings file: srp projects fails with one error", listed.rc == 1 and len(listed.errors()) == 1 and "settings.info" in listed.errors()[0], listed.tail())
 check("an unreadable settings file: srp get fails with that one error", got.rc == 1 and len(got.errors()) == 1 and "settings.info" in got.errors()[0], got.tail())
+check(
+    "an unreadable settings file: srp unset of a stored value fails with that one error, the value kept",
+    stored.rc == 0 and unset.rc == 1 and len(unset.errors()) == 1 and "settings.info" in unset.errors()[0] and "kept" in open(os.path.join(broken, "projects.info")).read(),
+    stored.tail() + unset.tail(),
+)
 
 # without a project: the defaults, no message
 out = python("from SciRooPlot import *\npm = PlotManager()\nprint('GOT', pm.Setting('s', True), pm.Setting('t', 'x', 'd', ['x', 'y']))", config=config)
