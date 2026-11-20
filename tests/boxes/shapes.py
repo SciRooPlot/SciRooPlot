@@ -1,11 +1,12 @@
 """Shapes (lines, arrows, vertical and horizontal lines, regions, ellipses, polygons) are drawn as ROOT's TLine, TArrow, TBox, TEllipse and
 TPolyLine in their layer: behind the data (right after the frame), after the data (the default) or on top of the boxes. They are not data:
 they leave the frame, the numbering, the default colours and the legend of the data as they are. Lines and regions over a whole axis span
-the final frame, also a log one; regions and polygons are cut at the frame; a shape without its default look gets ROOT's line in black,
+the final frame, also a log one; regions and polygons are cut at the frame; positions at or below zero on a log axis are at the frame
+edge, as ROOT puts them (warned, but for regions, which then span to the edge); a shape without its default look gets ROOT's line in black,
 regions and polygons a translucent fill, ellipses no fill, arrows a head in the colour of their line; set styles are drawn as set (a
 polygon with a set line gets its outline as a second TPolyLine right after its fill, a region with a set line option l, in every layer).
 Cases: every kind × every layer × a histogram, a graph, a map and a log axis giving the frame × the default or a set look, and the named
-cases (lines at the limits of a log axis, positions a log axis cannot show, shapes of a base plot and of pad 0, arrow heads, arcs).
+cases (lines at the limits of a log axis, positions at or below zero on a log axis, shapes of a base plot and of pad 0, arrow heads, arcs).
 Reference: the primitives of the pad and the same plot without the shape.
 Covers: shapes in their layers, a line at the limit of a log axis, and the named cases.
 """
@@ -106,9 +107,9 @@ plot = S.Plot("log_not_positive", "named", "1d")
 plot[1].AddData("h", "s")
 plot[1]["Y"].SetLog()
 plot[1].AddRegion((2.0, -5.0), (3.0, 5.0))  # below zero: starts at the frame
-plot[1].AddHorizontalLine(-1.0)  # cannot be shown: left out, warned
+plot[1].AddHorizontalLine(-1.0)  # no position on the axis: at the frame edge, warned
 plot[1].AddPolygon([(4.0, 0.01), (6.0, 0.01), (5.0, 5.0)])  # below the frame: cut at its lower edge
-plot[1].AddPolygon([(7.0, -1.0), (8.0, -1.0), (7.5, 5.0)])  # a point the axis cannot show: left out, warned
+plot[1].AddPolygon([(7.0, -1.0), (8.0, -1.0), (7.5, 5.0)])  # points with no position on the axis: at the frame edge, warned
 plot[1].AddRegion((3.0, 5.0), (2.0, -5.0))  # the corner below zero given second: the same region
 plot[1].AddRegionY(5.0, -1.0)  # the end below zero given second: from the frame up to 5
 p.pm.AddPlot(plot)
@@ -131,7 +132,7 @@ plot[1].AddRegionX(6.0, 7.0).SetLine(ROOT.kDashed, 1.0, ROOT.kBlack)
 p.pm.AddPlot(plot)
 plot = S.Plot("polygon_too_few", "named", "1d")
 plot[1].AddData("h", "s")
-plot[1].AddPolygon([(2.0, 2.0), (3.0, 3.0)])
+_, tooFewSaid = captured(lambda: plot[1].AddPolygon([(2.0, 2.0), (3.0, 3.0)]))
 p.pm.AddPlot(plot)
 
 run = p.plot()
@@ -238,10 +239,14 @@ check(
     len(regions) == 3 and all(close(b.GetY1(), y1, 1e-6) and close(b.GetY2(), 5.0) for b in regions) and close(regions[0].GetX1(), regions[1].GetX1()) and close(regions[0].GetX2(), regions[1].GetX2()),
     f"{[(b.GetX1(), b.GetX2(), b.GetY1(), b.GetY2()) for b in regions]} frame from {y1}",
 )
-check("log y: a polygon below zero is cut at the lower edge of the frame", len(polys) == 1 and close(min(polys[0].GetY()[k] for k in range(polys[0].GetN())), y1, 1e-6))
+check("log y: a polygon below zero is cut at the lower edge of the frame", len(polys) == 2 and close(min(polys[0].GetY()[k] for k in range(polys[0].GetN())), y1, 1e-6))
 messages = run.messages("log_not_positive", "named")
-check("log y: a line the axis cannot show is left out, warned", not of("log_not_positive", "TLine") and any("Shape 2 (horizontal_line) of pad 1 is not drawn: its position is not positive on a log axis" in m for m in messages), " | ".join(messages))
-check("log y: a polygon with a point the axis cannot show is left out, warned", any("Shape 4 (polygon) of pad 1 is not drawn: a point is not positive" in m for m in messages), " | ".join(messages))
+edge = "is put at the edge of the frame where a position is at or below zero: a log axis has no position for it"
+lines = of("log_not_positive", "TLine")
+check("log y: a line at or below zero is at the lower edge of the frame, warned", len(lines) == 1 and close(lines[0].GetY1(), y1, 1e-6) and any(f"Shape 2 (horizontal_line) of pad 1 {edge}" in m for m in messages), " | ".join(messages))
+corners = sorted(polys[1].GetY()[k] for k in range(polys[1].GetN())) if len(polys) == 2 else []
+check("log y: polygon points at or below zero are at the lower edge of the frame, warned", corners[:2] and all(close(c, y1, 1e-6) for c in corners[:2]) and any(f"Shape 4 (polygon) of pad 1 {edge}" in m for m in messages), " | ".join(messages))
+check("log y: regions reaching below zero are not warned about", not any("(region" in m and edge in m for m in messages), " | ".join(messages))
 check("a shape of the base plot is drawn", len([o for o in of("from_base", "TLine") if close(o.GetY1(), 5.0)]) == 1)
 check("shapes of pad 0 are not drawn, warned when the plot is added", not of("pad0", "TLine") and "shapes added to pad 0 are not drawn" in pad0Said, pad0Said)
 arrows, ellipses, boxes = of("styles", "TArrow"), of("styles", "TEllipse"), of("styles", "TBox")
@@ -254,5 +259,5 @@ while lnk:
         options.append(str(lnk.GetOption()))
     lnk = lnk.Next()
 check("a region with a line set gets its outline", boxes and boxes[0].GetLineStyle() == ROOT.kDashed and options == ["l"], f"{options}")
-check("a polygon of fewer than three points is not drawn, reported", not of("polygon_too_few", "TPolyLine") and any("polygon" in m.lower() and "point" in m for m in run.lines("WARN") + run.lines("ERR")), " | ".join(run.lines("WARN")))
+check("a polygon of fewer than three points is not drawn, reported when it is added", not of("polygon_too_few", "TPolyLine") and "Polygon with 2 points: it needs at least three" in tooFewSaid, tooFewSaid)
 finish()

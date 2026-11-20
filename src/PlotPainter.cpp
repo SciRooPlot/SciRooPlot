@@ -5504,7 +5504,6 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
   // TLine, TArrow, TBox and TEllipse take axis values (they convert them to pad coordinates, log10 on a log axis, when painted)
   const double_t xMin = FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx()), xMax = FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx());
   const double_t yMin = FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()), yMax = FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy());
-  const double_t nan = std::numeric_limits<double_t>::quiet_NaN();
   uint8_t shapeIndex{};
   std::map<kind_t, uint16_t> numberOfKind;  // over all layers: the nth shape of a kind is the nth call that added one
   for (const auto& shape : pad.GetShapes()) {
@@ -5527,9 +5526,19 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
     if (isLine && (shape->GetFillColor() || shape->GetFillStyle() || shape->GetFillAlpha())) {
       ReportIgnored(fmt::format("The fill of shape {} ({}) of pad {}", shapeIndex, enum_name(kind), padID), "a line has no area (an arrow fills its head)");
     }
-    // positions as axis values: given so, or fractions of the frame or the pad converted; a log axis cannot show values that are not positive
-    auto valueX = [&](double_t x) { return (!isUser) ? FromPad(pad_ptr->GetX1() + (span[0] + x * (span[2] - span[0])) * (pad_ptr->GetX2() - pad_ptr->GetX1()), pad_ptr->GetLogx()) : ((pad_ptr->GetLogx() && x <= 0.) ? nan : x); };
-    auto valueY = [&](double_t y) { return (!isUser) ? FromPad(pad_ptr->GetY1() + (span[1] + y * (span[3] - span[1])) * (pad_ptr->GetY2() - pad_ptr->GetY1()), pad_ptr->GetLogy()) : ((pad_ptr->GetLogy() && y <= 0.) ? nan : y); };
+    // positions as axis values: given so, or fractions of the frame or the pad converted; a log axis has no position for values at or
+    // below zero: they are put at the frame edge, where ROOT puts them (TPad::XtoPad), as for boxes and the free space they look for
+    bool atFrameEdge{};
+    auto valueX = [&](double_t x) {
+      if (!isUser) return FromPad(pad_ptr->GetX1() + (span[0] + x * (span[2] - span[0])) * (pad_ptr->GetX2() - pad_ptr->GetX1()), pad_ptr->GetLogx());
+      if (pad_ptr->GetLogx() && x <= 0.) atFrameEdge = true;
+      return (pad_ptr->GetLogx() && x <= 0.) ? xMin : x;
+    };
+    auto valueY = [&](double_t y) {
+      if (!isUser) return FromPad(pad_ptr->GetY1() + (span[1] + y * (span[3] - span[1])) * (pad_ptr->GetY2() - pad_ptr->GetY1()), pad_ptr->GetLogy());
+      if (pad_ptr->GetLogy() && y <= 0.) atFrameEdge = true;
+      return (pad_ptr->GetLogy() && y <= 0.) ? yMin : y;
+    };
     auto skip = [&](const char* reason) { logger::warning("Shape {} ({}) of pad {} is not drawn: {}.", shapeIndex, enum_name(kind), padID, reason); };
 
     TObject* object{};
@@ -5539,10 +5548,6 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
       case kind_t::line:
       case kind_t::arrow: {
         const double_t x1 = valueX(c[0]), y1 = valueY(c[1]), x2 = valueX(c[2]), y2 = valueY(c[3]);
-        if (!std::isfinite(x1) || !std::isfinite(y1) || !std::isfinite(x2) || !std::isfinite(y2)) {
-          skip("a position is not positive on a log axis");
-          continue;
-        }
         if (kind == kind_t::arrow) {
           object = new TArrow(x1, y1, x2, y2, shape->GetArrowSize().value_or(0.03f), shape->GetArrowHead().value_or("|>").data());
         } else {
@@ -5554,10 +5559,6 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
       case kind_t::horizontal_line: {
         const bool isVertical = (kind == kind_t::vertical_line);
         const double_t pos = (isVertical) ? valueX(c[0]) : valueY(c[0]);
-        if (!std::isfinite(pos)) {
-          skip("its position is not positive on a log axis");
-          continue;
-        }
         // compared in pad coordinates: 10^log10(limit) is not always the limit, so a line at a limit of a log axis would count as outside
         const bool logAxis = (isVertical) ? pad_ptr->GetLogx() : pad_ptr->GetLogy();
         const double_t padPos = ToPad(pos, logAxis);
@@ -5579,13 +5580,6 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
         } else {
           y1 = valueY(c[0]), y2 = valueY(c[1]);
         }
-        // on a log axis a region reaching below 0 starts at the frame edge (whichever corner it is)
-        for (double_t* end : {&x1, &x2}) {
-          if (!std::isfinite(*end)) *end = xMin;
-        }
-        for (double_t* end : {&y1, &y2}) {
-          if (!std::isfinite(*end)) *end = yMin;
-        }
         if (x1 > x2) std::swap(x1, x2);
         if (y1 > y2) std::swap(y1, y2);
         if (cutAtFrame) {
@@ -5602,10 +5596,6 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
       case kind_t::ellipse: {
         if (c[2] <= 0. || c[3] <= 0.) continue;  // reported when it was added
         const double_t x = valueX(c[0]), y = valueY(c[1]);
-        if (!std::isfinite(x) || !std::isfinite(y)) {
-          skip("its centre is not positive on a log axis");
-          continue;
-        }
         if (isUser && (pad_ptr->GetLogx() || pad_ptr->GetLogy())) {
           logger::warning("Shape {} (ellipse) of pad {} is drawn distorted: TEllipse does not convert its radii on a log axis.", shapeIndex, padID);
         }
@@ -5619,15 +5609,8 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
       case kind_t::polygon: {
         // cut at the frame (Sutherland-Hodgman, edge by edge) in pad coordinates, where the edges are straight also on log axes
         vector<std::pair<double_t, double_t>> points;
-        bool valid = true;
         for (size_t i = 0; i + 1 < c.size(); i += 2) {
-          const double_t x = valueX(c[i]), y = valueY(c[i + 1]);
-          valid = valid && std::isfinite(x) && std::isfinite(y);
-          points.emplace_back(ToPad(x, pad_ptr->GetLogx()), ToPad(y, pad_ptr->GetLogy()));
-        }
-        if (!valid) {
-          skip("a point is not positive on a log axis");
-          continue;
+          points.emplace_back(ToPad(valueX(c[i]), pad_ptr->GetLogx()), ToPad(valueY(c[i + 1]), pad_ptr->GetLogy()));
         }
         if (cutAtFrame) {
           // inside: of the four frame edges (axis, limit, sign: lower or upper limit)
@@ -5667,6 +5650,10 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
       }
     }
     if (!object) continue;
+    // a region reaching to or below zero on a log axis spans to the frame edge as meant; other positions put there are reported
+    if (atFrameEdge && kind != kind_t::region && kind != kind_t::region_x && kind != kind_t::region_y) {
+      logger::warning("Shape {} ({}) of pad {} is put at the edge of the frame where a position is at or below zero: a log axis has no position for it.", shapeIndex, enum_name(kind), padID);
+    }
 
     // line: black, the default line width of the pad; fill: regions light grey and translucent, arrow heads in the line colour, ellipses open
     auto* line = dynamic_cast<TAttLine*>(object);
@@ -6446,9 +6433,9 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
   const double_t cellsPerY = ny / (pad->GetY2() - pad->GetY1());
   auto cellX = [&](double_t x) { return (x - pad->GetX1()) * cellsPerX; };
   auto cellY = [&](double_t y) { return (y - pad->GetY1()) * cellsPerY; };
-  // conversion from user coordinates to pad coordinates (on a log axis non-positive values are moved to the pad edge)
-  auto padX = [&](double_t x) { return (!pad->GetLogx() || x > 0.) ? ToPad(x, pad->GetLogx()) : pad->GetX1(); };
-  auto padY = [&](double_t y) { return (!pad->GetLogy() || y > 0.) ? ToPad(y, pad->GetLogy()) : pad->GetY1(); };
+  // conversion from user coordinates to pad coordinates (on a log axis values at or below zero are at the frame edge, as ROOT puts them)
+  auto padX = [&](double_t x) { return (!pad->GetLogx() || x > 0.) ? ToPad(x, pad->GetLogx()) : pad->GetUxmin(); };
+  auto padY = [&](double_t y) { return (!pad->GetLogy() || y > 0.) ? ToPad(y, pad->GetLogy()) : pad->GetUymin(); };
 
   auto setRect = [&](double_t x1, double_t y1, double_t x2, double_t y2, uint8_t value) {  // in cells, inclusive (value: kObject, kMap or kBox)
     if (!std::isfinite(x1) || !std::isfinite(y1) || !std::isfinite(x2) || !std::isfinite(y2)) return;
