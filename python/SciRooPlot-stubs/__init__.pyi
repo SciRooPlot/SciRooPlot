@@ -711,16 +711,16 @@ class Data:
     def GetLegendEntry(self) -> LegendEntry:
         ...
     @typing.overload
-    def Join(self, tree: str, keys: list[str] = [], alias: str = '') -> Data:
+    def Join(self, tree: str, keys: list[str] = [], alias: str = '', keepUnmatched: bool = False) -> Data:
         ...
     @typing.overload
-    def Join(self, tree: list[str], keys: list[str] = [], alias: str = '') -> Data:
+    def Join(self, tree: list[str], keys: list[str] = [], alias: str = '', keepUnmatched: bool = False) -> Data:
         ...
     @typing.overload
-    def JoinByIndex(self, tree: str, indexColumn: str, alias: str = '') -> Data:
+    def JoinByIndex(self, tree: str, indexColumn: str, alias: str = '', keepUnmatched: bool = False) -> Data:
         ...
     @typing.overload
-    def JoinByIndex(self, tree: list[str], indexColumn: str, alias: str = '') -> Data:
+    def JoinByIndex(self, tree: list[str], indexColumn: str, alias: str = '', keepUnmatched: bool = False) -> Data:
         ...
     def Normalize(self, isDensity: bool = False, min: float | None = None, max: float | None = None) -> Data:
         ...
@@ -924,16 +924,16 @@ class Ratio(Data):
     def GetLegendEntry(self) -> LegendEntry:
         ...
     @typing.overload
-    def Join(self, tree: str, keys: list[str] = [], alias: str = '') -> Ratio:
+    def Join(self, tree: str, keys: list[str] = [], alias: str = '', keepUnmatched: bool = False) -> Ratio:
         ...
     @typing.overload
-    def Join(self, tree: list[str], keys: list[str] = [], alias: str = '') -> Ratio:
+    def Join(self, tree: list[str], keys: list[str] = [], alias: str = '', keepUnmatched: bool = False) -> Ratio:
         ...
     @typing.overload
-    def JoinByIndex(self, tree: str, indexColumn: str, alias: str = '') -> Ratio:
+    def JoinByIndex(self, tree: str, indexColumn: str, alias: str = '', keepUnmatched: bool = False) -> Ratio:
         ...
     @typing.overload
-    def JoinByIndex(self, tree: list[str], indexColumn: str, alias: str = '') -> Ratio:
+    def JoinByIndex(self, tree: list[str], indexColumn: str, alias: str = '', keepUnmatched: bool = False) -> Ratio:
         ...
     def Normalize(self, isDensity: bool = False, min: float | None = None, max: float | None = None) -> Ratio:
         ...

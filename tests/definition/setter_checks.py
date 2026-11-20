@@ -116,7 +116,7 @@ for case in plains + cases:  # every plot draws something (a pad without data wa
             case[key] = case[key].replace('p = Plot("{name}", "g", "1d")\n', 'p = Plot("{name}", "g", "1d")\np[1].AddData("h", "s")\n')
 
 # a call repeated with another value: the plot is the one with only the second call; one that adds something keeps the first
-ADDERS = ("Filter", "Define", "Join", "AddSymbolOf", "ApplyLayout")  # ApplyLayout merges the layout into what is set
+ADDERS = ("Filter", "Define", "Join", "JoinByIndex", "AddSymbolOf", "ApplyLayout")  # ApplyLayout merges the layout into what is set
 repeated = S.S.PlotManager("repeated")
 namespace = dict(vars(S.S), pm=repeated)
 pairs = []

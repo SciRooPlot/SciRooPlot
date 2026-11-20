@@ -2907,6 +2907,7 @@ SETTER_VALUES = {
     "common": {"plain": False},  # true by default
     "contours": {"plain": [1.0, 2.5, 7.0], "precise": [1 / 3, 2 / 3, 1.0]},
     "correlated": FLAG,
+    "keepUnmatched": FLAG,
     "data": {"plain": Code('Data("h2", "s2")')},
     "numerator": {"plain": Code('Data("h", "s")')},
     "denominator": {"plain": Code('Data("h2", "s2")')},

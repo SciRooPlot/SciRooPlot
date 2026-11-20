@@ -106,8 +106,29 @@ write_tree(p.path("rn.root"), {"score": E["score"][:10]}, name="scores", ntuple=
 # collisions; the folders of each file are the inputs. Labels row by row with the tracks refer to the particles of their folder.
 # Collisions and FT0-like rows carry the bunch crossing of their folder (fIndexBCs, restarting in every folder; some without FT0).
 ao2d = [p.path("AO2D_1.root"), p.path("AO2D_2.root")]
+
+
+def write_ft0(path, folder, bc, timeA, amplitudes):
+    """an FT0-like tree as in AO2Ds: an array whose size is a column of its own (fAmplitudeA[fAmplitudeA_size])"""
+    f = ROOT.TFile(path, "UPDATE")
+    directory = f.GetDirectory(folder) or f.mkdir(folder)
+    directory.cd()
+    tree = ROOT.TTree("O2ft0", "")
+    bcBuf, timeBuf, sizeBuf, ampBuf = np.zeros(1, np.int32), np.zeros(1, np.float32), np.zeros(1, np.int32), np.zeros(32, np.float32)
+    tree.Branch("fIndexBCs", bcBuf, "fIndexBCs/I")
+    tree.Branch("fTimeA", timeBuf, "fTimeA/F")
+    tree.Branch("fAmplitudeA_size", sizeBuf, "fAmplitudeA_size/I")
+    tree.Branch("fAmplitudeA", ampBuf, "fAmplitudeA[fAmplitudeA_size]/F")
+    for b, t, a in zip(bc, timeA, amplitudes):
+        bcBuf[0], timeBuf[0], sizeBuf[0] = b, t, len(a)
+        ampBuf[: len(a)] = a
+        tree.Fill()
+    tree.Write()
+    f.Close()
+
+
 AO = {k: [] for k in ("pt", "idx", "posZ", "mult", "part", "vz")}
-AOC = {"timeA": []}  # per collision: the FT0 time of its bunch crossing (nan without)
+AOC = {"timeA": [], "sumA": []}  # per collision: the FT0 time and summed amplitudes of its bunch crossing (nan without)
 for path, nColls in zip(ao2d, ((40, 0, 0, 25), (0, 60))):
     for d, nColl in enumerate(nColls):
         folder = f"DF_{d}"
@@ -123,11 +144,14 @@ for path, nColls in zip(ao2d, ((40, 0, 0, 25), (0, 60))):
         ft0BC = rng.permutation(nColl + 5)[: max(nColl - 3, 0)].astype(np.int32)
         timeA = rng.uniform(-2, 2, len(ft0BC))
         write_tree(path, {"fPosZ": posZ, "fMult": mult, "fIndexBCs": collBC}, name="O2collision", folder=folder)
-        write_tree(path, {"fIndexBCs": ft0BC, "fTimeA": timeA}, name="O2ft0", folder=folder)
+        amplitudes = [rng.uniform(0, 10, int(rng.integers(0, 6))).astype(np.float32) for _ in ft0BC]
+        write_ft0(path, folder, ft0BC, timeA.astype(np.float32), amplitudes)
         dupBC = np.append(ft0BC, ft0BC[:1]) if (path, d) == (ao2d[1], 1) else ft0BC  # one key twice in one folder
         write_tree(path, {"fIndexBCs": dupBC, "fTimeA": rng.uniform(-2, 2, len(dupBC))}, name="O2dupft0", folder=folder)
-        timeOf = dict(zip(ft0BC.tolist(), timeA.tolist()))
+        timeOf = dict(zip(ft0BC.tolist(), timeA.astype(np.float32).tolist()))
+        sumOf = dict(zip(ft0BC.tolist(), (float(a.sum(dtype=np.float32)) for a in amplitudes)))
         AOC["timeA"].extend(timeOf.get(bc, np.nan) for bc in collBC.tolist())
+        AOC["sumA"].extend(sumOf.get(bc, np.nan) for bc in collBC.tolist())
         write_tree(path, {"fIndexCollisions": idx, "fPt": pt}, name="O2track", folder=folder)
         write_tree(path, {"fIndexMcParticles": part}, name="O2mctracklabel", folder=folder)
         write_tree(path, {"fVz": vz}, name="O2mcparticle", folder=folder)
@@ -228,6 +252,23 @@ case("by an index column: an expression of both trees, with an alias", H(30, 0, 
 case("by an index column: a filter on a joined column", H(30, 0, 6, aoPt[aoZ > 0]), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPt", 30, [0.0, 6.0])).Filter("fPosZ > 0"))
 withFT0 = ~np.isnan(AOC["timeA"])
 case("by a key of the same data source: matched within the joined tree of each input (keys restart per folder)", H(40, -2, 2, AOC["timeA"][withFT0]), lambda pad: pad.AddData("O2collision", "ao2d").Join("O2ft0", ["fIndexBCs"], "ft0").Project1D(("ft0.fTimeA", 40, [-2.0, 2.0])))
+# keeping rows without a match: alias.matched, and the joined columns there NaN (floating point), 0 (integers) or empty (arrays)
+case("keeping rows without a match by a key: alias.matched", H(2, -0.5, 1.5, withFT0.astype(float)), lambda pad: pad.AddData("O2collision", "ao2d").Join("O2ft0", ["fIndexBCs"], "ft0", True).Project1D(("ft0.matched", 2, [-0.5, 1.5])))
+case(
+    "keeping rows without a match by a key: an array with a size column, summed in the rows with a match",
+    H(30, 0, 60, AOC["sumA"][withFT0]),
+    lambda pad: pad.AddData("O2collision", "ao2d").Join("O2ft0", ["fIndexBCs"], "ft0", True).Project1D(("Sum(ft0.fAmplitudeA)", 30, [0.0, 60.0])).Filter("ft0.matched"),
+)
+case("keeping rows without a match by a key: the array empty in the rows without", H(30, 0, 60, np.zeros(int((~withFT0).sum()))), lambda pad: pad.AddData("O2collision", "ao2d").Join("O2ft0", ["fIndexBCs"], "ft0", True).Project1D(("Sum(ft0.fAmplitudeA)", 30, [0.0, 60.0])).Filter("!ft0.matched"))
+case("keeping rows without a match by a key: a floating-point column by its bare name NaN in the rows without", H(2, -0.5, 1.5, (~withFT0).astype(float)), lambda pad: pad.AddData("O2collision", "ao2d").Join("O2ft0", ["fIndexBCs"], "ft0", True).Project1D(("std::isnan(fTimeA)", 2, [-0.5, 1.5])))
+case("keeping rows without a match by an index column: alias.matched", H(2, -0.5, 1.5, aoMatched.astype(float)), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions", "col", True).Project1D(("col.matched", 2, [-0.5, 1.5])))
+case(
+    "keeping rows without a match by an index column: an integer column 0 in the rows without",
+    H(10, -0.5, 9.5, np.zeros(int((~aoMatched).sum()))),
+    lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions", "col", True).Project1D(("col.fMult", 10, [-0.5, 9.5])).Filter("!col.matched"),
+)
+case("keeping rows without a match by keys of another data source: alias.matched", H(2, -0.5, 1.5, matched.astype(float)), lambda pad: pad.AddData("tracks", "trk").Join(byKey, ["run", "event"], "ev", True).Project1D(("ev.matched", 2, [-0.5, 1.5])))
+case("keeping rows without a match by keys of another data source: a column 0 there", H(20, 0, 100, tCent), lambda pad: pad.AddData("tracks", "trk").Join(byKey, ["run", "event"], "ev", True).Project1D(("ev.matched ? ev.cent : 0.", 20, [0.0, 100.0])))
 both = aoMatched & (AO["part"] >= 0)
 for form in ("fIndexMcParticles", "O2mctracklabel.fIndexMcParticles"):
     case(
@@ -286,4 +327,10 @@ for i, (what, (_, reason)) in enumerate(FAILING.items()):
     given = [line for line in failed.errors() if reason in line]
     check(f"a join that is not possible is reported and loses the plot: {what}", lost and len(given) == 1, f"plot {'lost' if lost else 'made'}, reason given {len(given)} times: {given or failed.errors()[:3]}")
 check("data of a failed join is reported missing", len(missing(failed)) >= 5, str(sorted(missing(failed))))
+try:
+    S.Data("events", "A").Join("scores", [], "", True)
+    refused = ""
+except Exception as e:  # noqa: BLE001
+    refused = str(e)
+check("keeping rows without a match is refused for a join row by row, where every row has its match", "every row has its match" in refused, refused or "not refused")
 finish()

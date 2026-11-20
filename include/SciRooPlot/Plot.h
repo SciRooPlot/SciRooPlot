@@ -1096,12 +1096,14 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
     std::string dataSource;
   };
   // without keys rows are matched by their number, with keys (at most two integer columns) by equal values; a tree of the same data source
-  // is the one beside each input, its keys matched within that input (e.g. AO2D: Join("O2ft0", {"fIndexBCs"}) per DF_ folder)
-  virtual Data& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "");
+  // is the one beside each input, its keys matched within that input (e.g. AO2D: Join("O2ft0", {"fIndexBCs"}) per DF_ folder);
+  // rows without a match are skipped, or with keepUnmatched kept: alias.matched tells whether a row has one, the columns of the joined
+  // tree are then NaN (floating point), 0 (integers) or empty (arrays)
+  virtual Data& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "", bool keepUnmatched = false);
   // tree of the same data source whose row is the number an integer column of this tree holds, counted within the joined tree beside each
   // part of the tree (e.g. AO2D: JoinByIndex("O2collision", "fIndexCollisions") per DF_ folder); rows without a match are skipped;
   // the index column may also be one of a tree joined before, given as column (if the tree has none of that name) or as alias.column
-  virtual Data& JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias = "");
+  virtual Data& JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias = "", bool keepUnmatched = false);
   virtual Data& Entries(uint32_t nEntries);
   virtual Data& Entries(uint32_t entryMin, uint32_t entryMax);
 
@@ -1211,8 +1213,9 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
       std::vector<std::string> keys{};  // columns with equal values in matching rows (empty: rows are matched by their number)
       std::string alias;                // empty: last part of the tree name
       std::string indexColumn{};        // column of the tree holding the row number in the joined tree (empty: by keys or row by row)
+      bool keepUnmatched{};             // rows without a match are kept (alias.matched false, default values of the joined columns)
       std::string GetAlias() const;     // prefix of the columns of the joined tree
-      std::string ToString() const;     // stored form: tree|dataSource|key1,key2|alias[|indexColumn]
+      std::string ToString() const;     // stored form: tree|dataSource|key1,key2|alias[|indexColumn[|keep]]
       static join_t FromString(const std::string& str);
       std::string GetDescription() const;
       bool operator==(const join_t& other) const { return ToString() == other.ToString(); }
@@ -1236,7 +1239,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   static std::optional<std::vector<data_info_t::join_t>> ReadJoins(const boost::property_tree::ptree& tree, const std::string& label);
   static void PutJoins(boost::property_tree::ptree& tree, const std::optional<std::vector<data_info_t::join_t>>& joins, const std::string& label);
   static void AddJoin(data_info_t& dataInfo, const std::string& name, const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias,
-                      const std::string& indexColumn);
+                      const std::string& indexColumn, bool keepUnmatched);
   static void ReadDataInfo(const boost::property_tree::ptree& tree, data_info_t& dataInfo, const std::string& prefix);
   static void PutDataInfo(boost::property_tree::ptree& tree, const data_info_t& dataInfo, const std::string& prefix);
   static void ReadProjInfo(const boost::property_tree::ptree& tree, std::optional<proj_info_t>& projInfo, const std::string& prefix);
@@ -1441,8 +1444,8 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
 
   Ratio& Define(const std::string& key, const std::string& value) override;
   Ratio& Filter(const std::string& filter) override;
-  Ratio& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "") override;
-  Ratio& JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias = "") override;
+  Ratio& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "", bool keepUnmatched = false) override;
+  Ratio& JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias = "", bool keepUnmatched = false) override;
   Ratio& Entries(uint32_t nEntries) override;
   Ratio& Entries(uint32_t entryMin, uint32_t entryMax) override;
 

@@ -2155,11 +2155,12 @@ void PlotManager::ChainTrees(required_data_t& requiredData)
           chain->AddFile(treeInput.file.data(), TTree::kMaxEntries, treeInput.treePath.data());
         }
         vector<shared_ptr<TChain>> joinedChains;
+        vector<shared_ptr<join_match_t>> joinMatches;
         bool isJoined = true;
         for (const auto& join : joins) {
           if (failedJoins.count(join.ToString())) {
             isJoined = false;
-          } else if (auto error = AttachJoin(*chain, treeName, treeInputs, join, joinedChains)) {
+          } else if (auto error = AttachJoin(*chain, treeName, treeInputs, join, joinedChains, joinMatches)) {
             logger::error("Cannot join {} to tree {}: {}.", join.GetDescription(), DataLocation(dataSource, treeName), *error);
             failedJoins.insert(join.ToString());
             isJoined = false;
@@ -2167,7 +2168,7 @@ void PlotManager::ChainTrees(required_data_t& requiredData)
           if (!isJoined) break;
         }
         if (!isJoined) continue;
-        ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [chain, joinedChains]() { return std::make_unique<ROOT::RDataFrame>(*chain); /* joinedChains: keeps the joined trees alive */ }, chain.get(), describeInputs(treeInputs), joins);
+        ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [chain, joinedChains]() { return std::make_unique<ROOT::RDataFrame>(*chain); /* joinedChains: keeps the joined trees alive */ }, chain.get(), describeInputs(treeInputs), joins, joinMatches);
       }
     }
   }
@@ -3927,13 +3928,69 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
 
 //**************************************************************************************************
 /**
+ * Joins that keep rows without a match: what tells whether a row has one, and the values of the joined columns in rows without.
+ */
+//**************************************************************************************************
+struct PlotManager::join_match_t {
+  string alias;
+  std::function<ROOT::RDF::RNode(ROOT::RDF::RNode)> defineMatched;  // defines SRP_MATCHED_<alias> (reads the input of a row from SRP_SAMPLE)
+};
+namespace
+{
+// the types of basic columns as RDataFrame names them (branches as ROOT does, defined columns as C++ does), with the value of each in rows
+// without a match: NaN for floating point, 0 for integers and bool, empty for arrays (and calls f with that value)
+template <typename F>
+bool with_default_of(const string& type, F&& f)
+{
+  auto as = [&](auto value, std::initializer_list<const char*> names) {
+    using T = decltype(value);
+    for (const char* name : names) {
+      if (type == name) return f(std::numeric_limits<T>::has_quiet_NaN ? std::numeric_limits<T>::quiet_NaN() : T{}), true;
+      if (type == string("ROOT::VecOps::RVec<") + name + ">") return f(ROOT::RVec<T>{}), true;
+      if (type == string("vector<") + name + ">" || type == string("std::vector<") + name + ">") return f(std::vector<T>{}), true;
+    }
+    return false;
+  };
+  return as(Float_t{}, {"Float_t", "float"}) || as(Double_t{}, {"Double_t", "double"}) || as(Int_t{}, {"Int_t", "int"}) || as(UInt_t{}, {"UInt_t", "unsigned int"}) ||
+         as(Short_t{}, {"Short_t", "short"}) || as(UShort_t{}, {"UShort_t", "unsigned short"}) || as(Char_t{}, {"Char_t", "char"}) ||
+         as(UChar_t{}, {"UChar_t", "unsigned char"}) || as(static_cast<signed char>(0), {"signed char"}) || as(Long64_t{}, {"Long64_t", "long long"}) ||
+         as(ULong64_t{}, {"ULong64_t", "unsigned long long"}) || as(Long_t{}, {"Long_t", "long"}) || as(ULong_t{}, {"ULong_t", "unsigned long"}) ||
+         as(Bool_t{}, {"Bool_t", "bool"});
+}
+// a joined column with its default value in rows without a match (whose joined row is only a stand-in: ROOT cannot read arrays with a separate
+// size column in a missing row); false if its type has no default
+bool mask_unmatched(ROOT::RDF::RNode& node, const string& column, const string& matchedColumn)
+{
+  return with_default_of(node.GetColumnType(column), [&](auto value) {
+    using T = decltype(value);
+    node = node.Redefine(column, [value](bool matched, const T& joined) { return (matched) ? joined : value; }, {matchedColumn, column});
+  });
+}
+// a copy of an integer column as Long64_t (compiled, without the interpreter)
+ROOT::RDF::RNode define_as_long64(ROOT::RDF::RNode node, const string& name, const string& column)
+{
+  std::optional<ROOT::RDF::RNode> result;
+  with_default_of(node.GetColumnType(column), [&](auto value) {
+    using T = decltype(value);
+    if constexpr (std::is_integral_v<T>) {
+      result = node.Define(name, [](T v) { return static_cast<Long64_t>(v); }, {column});
+    }
+  });
+  if (!result) throw std::runtime_error(fmt::format("column {} of type {} is no integer", column, node.GetColumnType(column)));
+  return *result;
+}
+}  // namespace
+
+//**************************************************************************************************
+/**
  * Join a tree to a chain: its rows are matched with the rows of the chain either by their number, by the values of key columns
  * or by the row number an index column of the chain holds (counted within the joined tree beside each part of the chain).
  * Returns why this is not possible (if so).
  */
 //**************************************************************************************************
 optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, const vector<tree_input_t>& treeInputs,
-                                         const Plot::Pad::Data::data_info_t::join_t& join, vector<shared_ptr<TChain>>& joinedChains)
+                                         const Plot::Pad::Data::data_info_t::join_t& join, vector<shared_ptr<TChain>>& joinedChains,
+                                         vector<shared_ptr<join_match_t>>& joinMatches)
 {
   if (const string treeAlias = split_path(treeName).second; join.GetAlias() == treeAlias) {
     return fmt::format("the columns of both would be called {}.column, please specify an alias", treeAlias);
@@ -3966,12 +4023,15 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
   class RowIndex : public TVirtualIndex
   {
    public:
-    RowIndex(TTree* joinedChain, vector<string> columns, map<string, string> joinedTreeOf, std::shared_ptr<const rows_by_key_t> rowsByKey = nullptr)
-      : mColumns(std::move(columns)), mJoinedTreeOf(std::move(joinedTreeOf)), mRowsByKey(std::move(rowsByKey))
+    RowIndex(TTree* joinedChain, vector<string> columns, map<string, string> joinedTreeOf, std::shared_ptr<const rows_by_key_t> rowsByKey, bool keepUnmatched)
+      : mColumns(std::move(columns)), mJoinedTreeOf(std::move(joinedTreeOf)), mRowsByKey(std::move(rowsByKey)), mKeepUnmatched(keepUnmatched)
     {
       fTree = joinedChain;
     }
-    RowIndex(const RowIndex& other) : TVirtualIndex(), mColumns(other.mColumns), mJoinedTreeOf(other.mJoinedTreeOf), mRowsByKey(other.mRowsByKey) { fTree = other.fTree; }
+    RowIndex(const RowIndex& other) : TVirtualIndex(), mColumns(other.mColumns), mJoinedTreeOf(other.mJoinedTreeOf), mRowsByKey(other.mRowsByKey), mKeepUnmatched(other.mKeepUnmatched)
+    {
+      fTree = other.fTree;
+    }
     RowIndex& operator=(const RowIndex&) = delete;
     ~RowIndex() override
     {
@@ -4028,6 +4088,8 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
         if (match != mRows->end()) row = match->second;
       }
       if (row >= 0 && row < mNRows) return mOffset + row;
+      // a join keeping rows without a match gives them a stand-in row (masked when reading), the first one beside or of the joined chain
+      if (mKeepUnmatched) return (mNRows > 0) ? mOffset : 0;
       // no match: the joined chain must still have a tree loaded, since the chain attaches it to its current tree only then
       // (otherwise its columns are unknown to the reader of that tree, e.g. if the first row has no match); it keeps the tree
       // when it is asked for the invalid entry
@@ -4058,11 +4120,42 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     vector<string> mColumns;                          // the index column, or the key columns
     map<string, string> mJoinedTreeOf;                // tree -> its joined tree, each as file|path
     std::shared_ptr<const rows_by_key_t> mRowsByKey;  // null: joined by an index column
+    bool mKeepUnmatched{};
     vector<TTreeFormula*> mFormulas;
     Int_t mTreeNumber{-1};
     Long64_t mOffset{};
     Long64_t mNRows{};
     const map<key_t, Long64_t>* mRows{};  // rows by key of the joined tree beside the current tree
+  };
+  // an index by keys of the whole joined chain that gives rows without a match the stand-in row 0 (masked when reading)
+  class KeepingIndex : public TVirtualIndex
+  {
+   public:
+    explicit KeepingIndex(TVirtualIndex* index) : mIndex(index) { fTree = index->GetTree(); }
+    KeepingIndex& operator=(const KeepingIndex&) = delete;
+    ~KeepingIndex() override { delete mIndex; }
+    TObject* Clone(const char* name) const override { return new KeepingIndex(static_cast<TVirtualIndex*>(mIndex->Clone(name))); }
+    Long64_t GetEntryNumberFriend(const TTree* parent) override
+    {
+      const Long64_t entry = mIndex->GetEntryNumberFriend(parent);
+      return (entry == -1) ? 0 : entry;  // -1: no match (-2, -3: no entry of the parent)
+    }
+    void UpdateFormulaLeaves(const TTree* parent) override { mIndex->UpdateFormulaLeaves(parent); }
+    void SetTree(TTree* tree) override
+    {
+      fTree = tree;
+      mIndex->SetTree(tree);
+    }
+    void Append(const TVirtualIndex* index, bool delaySort) override { mIndex->Append(index, delaySort); }
+    Long64_t GetEntryNumberWithIndex(Long64_t major, Long64_t minor) const override { return mIndex->GetEntryNumberWithIndex(major, minor); }
+    Long64_t GetEntryNumberWithBestIndex(Long64_t major, Long64_t minor) const override { return mIndex->GetEntryNumberWithBestIndex(major, minor); }
+    const char* GetMajorName() const override { return mIndex->GetMajorName(); }
+    const char* GetMinorName() const override { return mIndex->GetMinorName(); }
+    bool IsValidFor(const TTree* parent) override { return mIndex->IsValidFor(parent); }
+    Long64_t GetN() const override { return mIndex->GetN(); }
+
+   private:
+    TVirtualIndex* mIndex;
   };
   // the leaf of a top-level column with a single value per row (null if the tree has none), and whether it holds floating-point values
   auto columnLeaf = [](const TTree* tree, const string& column) -> TLeaf* {
@@ -4075,7 +4168,11 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
   };
   auto joinedChain = std::make_shared<TChain>(join.GetAlias().data());
   const TTree* firstJoinedTree{};
-  map<string, string> joinedTreeOf;  // join by an index column: part of the chain -> its joined tree, each as file|path
+  map<string, string> joinedTreeOf;    // join by an index column: part of the chain -> its joined tree, each as file|path
+  map<string, Long64_t> rowsOfJoined;  // joined tree as file|path -> its number of rows
+  // RDataFrame names the input of a row file/path: the inputs of the chain by that name, as file|path
+  auto sampleOf = [](const string& part) { return part.substr(0, part.find('|')) + "/" + part.substr(part.find('|') + 1); };
+  const string matchedColumn = "SRP_MATCHED_" + join.GetAlias();
   if (join.dataSource.empty()) {
     // taken from each input of the tree: the name of the joined tree starts where the name of the tree starts
     const auto nLevels = std::count(treeName.begin(), treeName.end(), '/') + 1;
@@ -4094,6 +4191,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
         if (const Long64_t nRows = joinedTree->GetEntries(); nRows > 0) {
           joinedChain->AddFile(treeInput.file.data(), nRows, path.data());
           joinedTreeOf[treeInput.file + "|" + treeInput.treePath] = treeInput.file + "|" + path;
+          rowsOfJoined[treeInput.file + "|" + path] = nRows;
         }
         continue;
       }
@@ -4155,7 +4253,32 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       return fmt::format("index column {} of {} is of type {}, but it must hold one integer per row", column, indexTreeDescription, leaf->GetTypeName());
     }
     if (joinedTreeOf.empty()) return fmt::format("it has no rows in any input of {}", treeName);
-    joinedChain->SetTreeIndex(new RowIndex(joinedChain.get(), {indexExpression}, std::move(joinedTreeOf)));  // owned by the chain
+    if (join.keepUnmatched) {
+      // a row has its match if its index is a row of the joined tree beside it; an index read from a tree joined before that keeps rows
+      // without a match is only one if that tree has a match
+      auto nRowsOf = std::make_shared<std::unordered_map<string, Long64_t>>();
+      for (const auto& [part, joined] : joinedTreeOf) {
+        (*nRowsOf)[sampleOf(part)] = rowsOfJoined[joined];
+      }
+      const string holder = (indexTree != firstTree) ? indexTreeDescription : "";
+      const bool holderKeeps = std::any_of(joinMatches.begin(), joinMatches.end(), [&](const auto& match) { return match->alias == holder; });
+      const string holderMatched = (holderKeeps) ? "SRP_MATCHED_" + holder : "";
+      const string indexColumn = "SRP_INDEX_" + join.GetAlias();
+      auto defineMatched = [=](ROOT::RDF::RNode node) {
+        node = define_as_long64(node, indexColumn, indexExpression);
+        auto isRow = [nRowsOf](const string& sample, Long64_t row) {
+          auto nRows = nRowsOf->find(sample);
+          return nRows != nRowsOf->end() && row >= 0 && row < nRows->second;
+        };
+        node = node.Define(matchedColumn, isRow, {"SRP_SAMPLE", indexColumn});
+        if (!holderMatched.empty()) {
+          node = node.Redefine(matchedColumn, [](bool matched, bool holderMatched) { return matched && holderMatched; }, {matchedColumn, holderMatched});
+        }
+        return node;
+      };
+      joinMatches.push_back(std::make_shared<join_match_t>(join_match_t{join.GetAlias(), defineMatched}));
+    }
+    joinedChain->SetTreeIndex(new RowIndex(joinedChain.get(), {indexExpression}, std::move(joinedTreeOf), nullptr, join.keepUnmatched));  // owned by the chain
   } else if (!join.keys.empty()) {
     for (const auto& key : join.keys) {
       for (const auto* tree : {static_cast<const TTree*>(firstTree), firstJoinedTree}) {
@@ -4192,7 +4315,30 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
           }
         }
       }
-      joinedChain->SetTreeIndex(new RowIndex(joinedChain.get(), join.keys, std::move(joinedTreeOf), std::move(rowsByKey)));  // owned by the chain
+      if (join.keepUnmatched) {
+        // a row has its match if its keys are in the joined tree beside it
+        auto rowsOfSample = std::make_shared<std::unordered_map<string, const map<key_t, Long64_t>*>>();
+        for (const auto& [part, joined] : joinedTreeOf) {
+          (*rowsOfSample)[sampleOf(part)] = &rowsByKey->at(joined);
+        }
+        const vector<string> keys = join.keys;
+        const string alias = join.GetAlias();
+        std::shared_ptr<const rows_by_key_t> rows = rowsByKey;  // kept alive with the lookup
+        auto defineMatched = [=](ROOT::RDF::RNode node) {
+          auto has = [rowsOfSample, rows](const string& sample, Long64_t major, Long64_t minor) {
+            auto rowsOf = rowsOfSample->find(sample);
+            return rowsOf != rowsOfSample->end() && rowsOf->second->count({major, minor}) > 0;
+          };
+          node = define_as_long64(node, "SRP_KEY0_" + alias, keys[0]);
+          if (keys.size() > 1) {
+            node = define_as_long64(node, "SRP_KEY1_" + alias, keys[1]);
+            return node.Define(matchedColumn, has, {"SRP_SAMPLE", "SRP_KEY0_" + alias, "SRP_KEY1_" + alias});
+          }
+          return node.Define(matchedColumn, [has](const string& sample, Long64_t major) { return has(sample, major, 0); }, {"SRP_SAMPLE", "SRP_KEY0_" + alias});
+        };
+        joinMatches.push_back(std::make_shared<join_match_t>(join_match_t{alias, defineMatched}));
+      }
+      joinedChain->SetTreeIndex(new RowIndex(joinedChain.get(), join.keys, std::move(joinedTreeOf), std::move(rowsByKey), join.keepUnmatched));  // owned by the chain
       chain.AddFriend(joinedChain.get(), join.GetAlias().data());
       joinedChains.push_back(joinedChain);
       return nullopt;
@@ -4217,7 +4363,27 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
         return (join.keys.size() > 1) ? fmt::format("{} = {} and {} = {} appears in more than one row", join.keys[0], major[i], join.keys[1], minor[i]) : fmt::format("{} = {} appears in more than one row", join.keys[0], major[i]);
       }
     }
-    joinedChain->SetTreeIndex(index.release());  // owned by the chain
+    if (join.keepUnmatched) {
+      // a row has its match if its keys are in the index of the joined tree (owned by the joined chain, which the reading keeps alive)
+      const TTreeIndex* keyIndex = index.get();
+      const vector<string> keys = join.keys;
+      const string alias = join.GetAlias();
+      auto defineMatched = [=](ROOT::RDF::RNode node) {
+        node = define_as_long64(node, "SRP_KEY0_" + alias, keys[0]);
+        if (keys.size() > 1) {
+          node = define_as_long64(node, "SRP_KEY1_" + alias, keys[1]);
+          auto has = [keyIndex](Long64_t major, Long64_t minor) { return keyIndex->GetEntryNumberWithIndex(major, minor) >= 0; };
+          return node.Define(matchedColumn, has, {"SRP_KEY0_" + alias, "SRP_KEY1_" + alias});
+        }
+        return node.Define(matchedColumn, [keyIndex](Long64_t major) { return keyIndex->GetEntryNumberWithIndex(major, 0) >= 0; }, {"SRP_KEY0_" + alias});
+      };
+      joinMatches.push_back(std::make_shared<join_match_t>(join_match_t{alias, defineMatched}));
+    }
+    if (join.keepUnmatched) {
+      joinedChain->SetTreeIndex(new KeepingIndex(index.release()));  // owned by the chain
+    } else {
+      joinedChain->SetTreeIndex(index.release());  // owned by the chain
+    }
   }
   chain.AddFriend(joinedChain.get(), join.GetAlias().data());
   joinedChains.push_back(joinedChain);
@@ -4233,7 +4399,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
 //**************************************************************************************************
 void PlotManager::ProcessDataRequests(const string& type, const string& dataSource, const string& name, const string& objNameSuffix,
                                       const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, TTree* tree, const string& inputsDescription,
-                                      const optional<vector<Plot::Pad::Data::data_info_t::join_t>>& joins)
+                                      const optional<vector<Plot::Pad::Data::data_info_t::join_t>>& joins, const vector<shared_ptr<join_match_t>>& joinMatches)
 {
   using data_info_t = Plot::Pad::Data::data_info_t;
   auto start = std::chrono::steady_clock::now();
@@ -4424,6 +4590,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       vector<string> matchColumns;
       if (joins) {
         for (const auto& join : *joins) {
+          if (join.keepUnmatched) continue;
           if (!join.keys.empty()) matchColumns.push_back(join.GetAlias() + "." + join.keys[0]);
           // joined by an index column: any column of the joined tree has no value without a match
           if (!join.indexColumn.empty()) {
@@ -4438,6 +4605,36 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
         }
       }
       ROOT::RDF::RNode base = *df;
+      // joins keeping rows without a match: their columns have a value in those rows (as alias.column, and by the bare name unless the tree
+      // has a column of that name), alias.matched tells whether a row has one (RDataFrame allows no '.' in a defined name: renamed)
+      vector<std::pair<string, string>> renames;
+      if (joins && !joinMatches.empty()) {
+        base = base.DefinePerSample("SRP_SAMPLE", [](unsigned int, const ROOT::RDF::RSampleInfo& sample) { return sample.AsString(); });
+        for (const auto& match : joinMatches) {
+          base = match->defineMatched(base);
+        }
+        // a bare name stands for a joined column only if exactly one joined tree has it and the tree itself has not
+        map<string, int> nJoinedWith;
+        for (const auto& join : *joins) {
+          const string prefix = join.GetAlias() + ".";
+          for (const auto& column : df->GetColumnNames()) {
+            if (str_starts_with(column, prefix)) ++nJoinedWith[column.substr(prefix.size())];
+          }
+        }
+        for (const auto& join : *joins) {
+          if (!join.keepUnmatched) continue;
+          const string prefix = join.GetAlias() + ".";
+          const string matchedColumn = "SRP_MATCHED_" + join.GetAlias();
+          for (const auto& column : df->GetColumnNames()) {
+            if (!str_starts_with(column, prefix)) continue;
+            mask_unmatched(base, column, matchedColumn);
+            const string bare = column.substr(prefix.size());
+            const bool isOwn = tree && tree->GetListOfBranches() && tree->GetListOfBranches()->FindObject(bare.data());
+            if (!isOwn && bare.find('.') == string::npos && nJoinedWith[bare] == 1 && df->HasColumn(bare)) mask_unmatched(base, bare, matchedColumn);
+          }
+          renames.emplace_back(prefix + "matched", matchedColumn);
+        }
+      }
       for (const auto& column : cStringColumns) {
         if (!df->HasColumn(column) || df->GetColumnType(column) != "ROOT::VecOps::RVec<Char_t>") continue;
         base = base.Redefine(column, [](const ROOT::RVec<Char_t>& chars) { return string(chars.data(), strnlen(chars.data(), chars.size())); }, {column});
@@ -4453,6 +4650,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
 
       for (auto info : infos) {
         DataFrameRequest<data_info_t> request(info, fmt::format("{} {}", type, DataLocation(dataSource, name)), name + info->GetNameSuffix() + objNameSuffix);
+        request.SetRenames(renames);
         auto outputStart = rootOutput.Text().size();  // only consider ROOT output caused by this request
         try {
           // the requests share the filter on the matching rows (evaluated once per row), except those with an entry range:

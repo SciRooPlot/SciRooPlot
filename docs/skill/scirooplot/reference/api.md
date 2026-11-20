@@ -261,8 +261,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& Profile2D(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> weight = {})`
 - `Data& Define(const std::string& key, const std::string& value)`
 - `Data& Filter(const std::string& filter)`
-- `Data& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "")`
-- `Data& JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias = "")`
+- `Data& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "", bool keepUnmatched = false)`
+- `Data& JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias = "", bool keepUnmatched = false)`
 - `Data& Entries(uint32_t nEntries)`
 - `Data& Entries(uint32_t entryMin, uint32_t entryMax)`
 - `color_t`: a ROOT colour (`kRed + 1`, `632`), `"#rrggbb"` or `{r, g, b}` from 0 to 1 (Python: tuple); transparency with the alpha setters
@@ -297,8 +297,8 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Ratio& Profile2D(data_dim_t x, data_dim_t y, const std::string& profile, std::optional<std::string> weight = {})`
 - `Ratio& Define(const std::string& key, const std::string& value)`
 - `Ratio& Filter(const std::string& filter)`
-- `Ratio& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "")`
-- `Ratio& JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias = "")`
+- `Ratio& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "", bool keepUnmatched = false)`
+- `Ratio& JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias = "", bool keepUnmatched = false)`
 - `Ratio& Entries(uint32_t nEntries)`
 - `Ratio& Entries(uint32_t entryMin, uint32_t entryMax)`
 - `data_dim_t`: `"var"` (100 automatic bins; integer columns: bins of whole-number width), `{"var", nBins}`, `{"var", nBins, {min, max}}` or `{"var", {edges...}}` (Python: tuples)

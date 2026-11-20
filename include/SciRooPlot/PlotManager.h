@@ -263,12 +263,16 @@ class PlotManager
   void ReadData(TObject* folder, std::set<std::string>& dataNames, const std::string& prefix, const std::string& suffix, const std::string& dataSource, read_cache_t& readCache);
   static bool PrepareInput(TObject*& obj, const std::string& location);
   void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataSource);
+  // how to tell for a join that keeps rows without a match whether a row has one (defined in the implementation)
+  struct join_match_t;
   void ProcessDataRequests(const std::string& type, const std::string& dataSource, const std::string& name, const std::string& objNameSuffix,
                            const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, TTree* tree, const std::string& inputsDescription = "",
-                           const std::optional<std::vector<Plot::Pad::Data::data_info_t::join_t>>& joins = std::nullopt);
+                           const std::optional<std::vector<Plot::Pad::Data::data_info_t::join_t>>& joins = std::nullopt,
+                           const std::vector<std::shared_ptr<join_match_t>>& joinMatches = {});
   std::vector<tree_input_t> FindTreeInputs(const std::string& dataSource, const std::string& treeName);
   std::optional<std::string> AttachJoin(TChain& chain, const std::string& treeName, const std::vector<tree_input_t>& treeInputs,
-                                        const Plot::Pad::Data::data_info_t::join_t& join, std::vector<std::shared_ptr<TChain>>& joinedChains);
+                                        const Plot::Pad::Data::data_info_t::join_t& join, std::vector<std::shared_ptr<TChain>>& joinedChains,
+                                        std::vector<std::shared_ptr<join_match_t>>& joinMatches);
 };
 
 }  // end namespace SciRooPlot

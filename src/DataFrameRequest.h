@@ -67,6 +67,8 @@ class DataFrameRequest
 
   // reasonOf: why ROOT refused an expression (e.g. its compiler error), given in the message naming the expression (empty: none known)
   bool Prepare(ROOT::RDF::RNode node, const std::vector<std::string>& requiredColumns = {}, const std::function<std::string(const std::exception&)>& reasonOf = {});
+  // names written in expressions that stand for columns of another name (alias.matched: RDataFrame allows no '.' in defined names)
+  void SetRenames(std::vector<std::pair<std::string, std::string>> renames) { mRenames = std::move(renames); }
   bool NeedsAutoRange() const;
   bool Book();
 
@@ -80,7 +82,8 @@ class DataFrameRequest
  private:
   using data_dim_t = Plot::Pad::Data::data_dim_t;
 
-  static std::string AvailableColumns(ROOT::RDF::RNode& node);
+  std::string AvailableColumns(ROOT::RDF::RNode& node) const;
+  std::string Rename(const std::string& code) const;
   template <typename T>
   void SetResult(ROOT::RDF::RResultPtr<T> result);
 
@@ -92,8 +95,9 @@ class DataFrameRequest
   };
 
   const DataInfo* mInfo{};
-  std::string mContext;  // e.g. 'tree source:name', used in messages
-  std::string mObjName;  // name of the resulting object
+  std::vector<std::pair<std::string, std::string>> mRenames;  // name in expressions -> column
+  std::string mContext;                                       // e.g. 'tree source:name', used in messages
+  std::string mObjName;                                       // name of the resulting object
   std::optional<ROOT::RDF::RNode> mNode;
   std::vector<data_dim_t> mDims;
   std::string mHistTitle;
@@ -112,12 +116,15 @@ class DataFrameRequest
 
 // list of the columns available in a data frame, to be appended to messages about invalid expressions
 template <typename DataInfo>
-std::string DataFrameRequest<DataInfo>::AvailableColumns(ROOT::RDF::RNode& node)
+std::string DataFrameRequest<DataInfo>::AvailableColumns(ROOT::RDF::RNode& node) const
 {
   constexpr size_t kMaxColumns = 30;
   std::vector<std::string> columns;
   for (const auto& column : node.GetColumnNames()) {
     if (!util::str_starts_with(column, "SRP_")) columns.push_back(column);
+  }
+  for (const auto& [name, column] : mRenames) {
+    if (node.HasColumn(column)) columns.push_back(name);
   }
   std::sort(columns.begin(), columns.end());
   std::string list;
@@ -126,6 +133,26 @@ std::string DataFrameRequest<DataInfo>::AvailableColumns(ROOT::RDF::RNode& node)
   }
   if (columns.size() > kMaxColumns) list += fmt::format(", ... ({} more)", columns.size() - kMaxColumns);
   return " (available columns: " + list + ")";
+}
+
+// an expression with the names that stand for other columns replaced (as whole names, not as part of a longer name or member)
+template <typename DataInfo>
+std::string DataFrameRequest<DataInfo>::Rename(const std::string& code) const
+{
+  auto isNameChar = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; };
+  std::string result = code;
+  for (const auto& [name, column] : mRenames) {
+    for (size_t pos = result.find(name); pos != std::string::npos; pos = result.find(name, pos)) {
+      const size_t end = pos + name.size();
+      if ((pos == 0 || (!isNameChar(result[pos - 1]) && result[pos - 1] != '.')) && (end == result.size() || !isNameChar(result[end]))) {
+        result.replace(pos, name.size(), column);
+        pos += column.size();
+      } else {
+        ++pos;
+      }
+    }
+  }
+  return result;
 }
 
 // book everything that is needed before the final result can be booked (defines, filters, entry counts, auto-detection of axis ranges)
@@ -154,7 +181,8 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
   // like "[](double a) { double b = 2 * a; return b; }(pt)" would get the type void, which breaks the event loop of all requests
   // and the interpreter. Such an expression is given an explicit return statement; code with a statement outside of all braces
   // (a ';' followed by more code or a statement keyword, e.g. "double b = 2 * pt; return b;") stays a function body.
-  auto toRootCode = [](const std::string& code) {
+  auto toRootCode = [this](const std::string& rawCode) {
+    const std::string code = Rename(rawCode);
     if (code.find("return") == std::string::npos) return code;
     auto isWord = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; };
     int32_t depth{};
@@ -245,11 +273,11 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     // a plain column of a basic type is converted with compiled code, so that such requests do not involve the interpreter at all
     // (its first use in a process costs about half a second, every further compilation a tenth); this also takes columns whose names are
     // no C++ identifiers (CSV headers like "pT [GeV]"), which an expression cannot name
-    if (node.HasColumn(expression)) {
-      columnType = node.GetColumnType(expression);
+    if (const std::string column = Rename(expression); node.HasColumn(column)) {
+      columnType = node.GetColumnType(column);
       auto defineTyped = [&](auto value) {
         using value_t = decltype(value);
-        node = node.Define(colName, [](value_t v) { return static_cast<double>(v); }, {expression});
+        node = node.Define(colName, [](value_t v) { return static_cast<double>(v); }, {column});
         return true;
       };
       // ROOT names the types of branches like Float_t, those of defined columns like float
