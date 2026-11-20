@@ -40,6 +40,7 @@
 #include <array>
 #include <deque>
 #include <functional>
+#include <limits>
 #include <math.h>
 #include <memory>
 #include <numeric>
@@ -330,7 +331,15 @@ void exportPlotManager(py::module_& m)
     .def("SaveProject", &PlotManager::SaveProject)
     // bool first: a Python bool is also an int
     .def("Setting", py::overload_cast<const string&, bool, const string&>(&PlotManager::Setting), arg("name"), arg("defaultValue"), arg("description") = "")
-    .def("Setting", py::overload_cast<const string&, int, const string&>(&PlotManager::Setting), arg("name"), arg("defaultValue"), arg("description") = "")
+    // any Python int: one beyond the C++ int would otherwise fall through to the bool overload
+    .def("Setting", [](PlotManager& pm, const string& name, const py::int_& defaultValue, const string& description) -> py::int_ {
+        int overflow{};
+        const int64_t value = PyLong_AsLongLongAndOverflow(defaultValue.ptr(), &overflow);
+        if (overflow || value < std::numeric_limits<int>::min() || value > std::numeric_limits<int>::max()) {
+          logger::error("The default {} of setting {} is not an integer from {} to {}: the setting is not declared (declare a number instead).", py::str(py::object(defaultValue)).cast<string>(), name, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
+          return defaultValue;
+        }
+        return py::int_(pm.Setting(name, static_cast<int>(value), description)); }, arg("name"), arg("defaultValue"), arg("description") = "")
     .def("Setting", py::overload_cast<const string&, double, const string&>(&PlotManager::Setting), arg("name"), arg("defaultValue"), arg("description") = "")
     .def("Setting", py::overload_cast<const string&, const string&, const string&, const vector<string>&>(&PlotManager::Setting), arg("name"), arg("defaultValue"), arg("description") = "", arg("choices") = vector<string>{})
     .def_static("MakeBasePlot", &PlotManager::MakeBasePlot, arg("name") = "1d", py::arg_v("sizes", PanelLayout(), "PanelLayout()"), py::arg_v("shape", BasePlotShape(), "BasePlotShape()"));

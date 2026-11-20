@@ -43,6 +43,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A size of 0 for a box (`SetSize` of legends, texts, statistics boxes) or an image (`ImageBox::SetWidth`, `SetHeight`) was taken: a legend of size 0 × 0 crashed the plot program (ROOT's own placement of such a `TLegend`), an image of size 0 was not drawn | Refused with a warning where set, as a negative size | input validation | Nothing. |
 | `PanelLayout::SetMargins` with one invalid margin set the other three | Sets none of them, as `Pad::SetMargins` | input validation | Nothing. |
 | `Pad::AddImage` with an empty path threw a filesystem error (`RuntimeError` in Python) | `std::invalid_argument` (`ValueError`) naming the reason | input validation | Nothing. |
+| Python `PlotManager.Setting(name, default)` with an `int` default beyond the C++ `int` (e.g. `10_000_000_000`) declared an on/off switch and returned `True` | Refused with an error, the setting is not declared and the default is returned | input validation | Declare such a setting with a `float` default. |
 
 ### Files
 

@@ -12,6 +12,7 @@ Covers: a value with spaces, quotes and braces, a value left from a setting with
 declaring none, invalid declarations, a PlotManager without project."""
 
 import os
+import re
 import shutil
 
 from srptest import SRP, WORK, cases, check, config_files, config_folder, cpp_program, finish, python, run, syntax_check
@@ -177,6 +178,8 @@ INVALID = {
     "empty name": ('pm.Setting("", 1)', 1),
     "default not among the choices": ('pm.Setting("c", "x", "", ["a", "b"])', "x"),
     "default not a finite number": ('pm.Setting("n", float("nan"))', None),
+    "integer default above the C++ int": ('pm.Setting("i", 10_000_000_000)', 10_000_000_000),
+    "integer default below the C++ int": ('pm.Setting("i", -2_147_483_649)', -2_147_483_649),
 }
 for why, (call, default) in INVALID.items():
     out = python(f"import math\nfrom SciRooPlot import *\npm = PlotManager('proj')\nv = {call}\nprint('GOT', repr(v))\npm.SaveProject()", config=config)
@@ -186,6 +189,16 @@ out = python("from SciRooPlot import *\npm = PlotManager('proj')\npm.Setting('s'
 check("a setting declared again alike: no message", out.rc == 0 and not out.warnings() and not out.errors(), out.tail())
 out = python("from SciRooPlot import *\npm = PlotManager('proj')\npm.Setting('s', 1)\nprint('GOT', pm.Setting('s', 2))\npm.SaveProject()", config=config)
 check("a setting declared again otherwise: one warning, the last declaration saved", out.rc == 0 and len(out.warnings()) == 1 and "GOT 2" in out.stdout and "default 2" in open(settingsFile).read(), out.tail())
+
+# the type of a Python default: a bool is a switch, every int in the range of the C++ int an integer, a float a number
+out = python("from SciRooPlot import *\npm = PlotManager('proj')\nprint('GOT', pm.Setting('a', 2_147_483_647), pm.Setting('b', -2_147_483_648), pm.Setting('c', 1), pm.Setting('d', 0), pm.Setting('e', False), pm.Setting('f', 1e10))\npm.SaveProject()", config=config)
+saved = open(settingsFile).read() if os.path.exists(settingsFile) else ""
+types = re.findall(r"^(\w+)\n\{\n\s*type (\w+)", saved, re.M)
+check(
+    "the type of a Python default: int at the limits of the C++ int, 0 and 1 integers, a bool a switch, a float a number",
+    out.rc == 0 and "GOT 2147483647 -2147483648 1 0 False 10000000000.0" in out.stdout and dict(types) == {"a": "integer", "b": "integer", "c": "integer", "d": "integer", "e": "switch", "f": "number"},
+    out.tail() + saved,
+)
 
 # without a project: the defaults, no message
 out = python("from SciRooPlot import *\npm = PlotManager()\nprint('GOT', pm.Setting('s', True), pm.Setting('t', 'x', 'd', ['x', 'y']))", config=config)
