@@ -1,8 +1,9 @@
 """Every colour setter takes a colour in each of its forms, a ROOT index, "#rrggbb" (any case) and (r, g, b) from 0 to 1, and the drawn
 object gets exactly that colour (rgb colours are stored in the plot definitions as "#rrggbb"), with the transparency of the alpha given
 with it (the alpha setter or the alpha of a combined setter); colour forms that are not valid raise when they are set. An index ROOT
-does not know is drawn black (as by ROOT) with a warning, once per index and run.
-Covers: rgb colours in every colour setter.
+does not know is drawn black (as by ROOT) with a warning, once per index and run. An alpha setter alone gives the colour the part has
+without it that transparency (a legend row without a text colour of its own: the legend's).
+Covers: rgb colours in every colour setter; a text alpha alone on a legend row.
 """
 
 import itertools
@@ -93,9 +94,16 @@ def added(pl, d):
     return pl[1].AddLegend(0.6, 0.8).AddEntry("added")
 
 
-def separate(*setters):
-    """a colour setter and its alpha setter"""
-    return lambda obj, color, alpha: [getattr(obj, setters[0])(color)] + ([getattr(obj, s)(alpha) for s in setters[1:]] if alpha is not None else [])
+class separate:
+    """a colour setter and its alpha setters"""
+
+    def __init__(self, *setters):
+        self.color, self.alphas = setters[0], setters[1:]
+
+    def __call__(self, obj, color, alpha):
+        getattr(obj, self.color)(color)
+        for setter in self.alphas if alpha is not None else ():
+            getattr(obj, setter)(alpha)
 
 
 # setters: (object made in a plot, call with colour and alpha, what it colours)
@@ -166,7 +174,35 @@ for i, (setter, index) in enumerate(UNKNOWN):
     make, call, _ = SETTERS[setter]
     call(make(plot, add_data(plot[1], "hist").SetLegendLabel("data")), index, None)
     p.pm.AddPlot(plot)
+# the alpha setters alone, next to the same plot without them
+ALONE = {name: setter for name, setter in SETTERS.items() if isinstance(setter[1], separate)}
+for i, name in enumerate(ALONE):
+    make, call, _ = ALONE[name]
+    for prefix, alpha in (("a", 0.4), ("r", None)):
+        plot = S.Plot(f"{prefix}{i}", "forms", "1d")
+        obj = make(plot, add_data(plot[1], "hist").SetLegendLabel("data"))
+        for setter in call.alphas if alpha is not None else ():
+            getattr(obj, setter)(alpha)
+        p.pm.AddPlot(plot)
 run = p.plot("forms")
+
+
+def own_colour(target, obj, index, run, name):
+    """the colour a part is drawn in: text colour 0 of a legend row is the legend's"""
+    if index == 0 and target in ("added_text",):
+        return prim("TLegend")(run, name).GetTextColor()
+    return index
+
+
+for i, name in enumerate(ALONE):
+    for target in ALONE[name][2]:
+        find, getter = READ[target]
+        obj, ref = find(run, f"a{i}"), find(run, f"r{i}")
+        if not obj or not ref:
+            check(f"{target} drawn: {name} alpha alone", False, " | ".join(run.errors()[:2]))
+            continue
+        found = colour_diff(own_colour(target, ref, getattr(ref, getter)(), run, f"r{i}"), own_colour(target, obj, getattr(obj, getter)(), run, f"a{i}"), 0.4)
+        check(f"{target}: {name} alpha alone", not found, found)
 
 for i, case in enumerate(todo):
     what = describe(case)

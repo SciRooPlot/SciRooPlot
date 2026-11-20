@@ -5920,7 +5920,9 @@ void PlotPainter::AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box
     applyLayout({entry.GetMarkerColor(), entry.GetMarkerAlpha(), entry.GetMarkerStyle(), entry.GetMarkerSize()},
                 {entry.GetLineColor(), entry.GetLineAlpha(), entry.GetLineStyle(), entry.GetLineWidth()},
                 {entry.GetFillColor(), entry.GetFillAlpha(), entry.GetFillStyle(), {}});
-    curEntry->SetTextColor(ColorWithAlpha(curEntry->GetTextColor(), entry.GetTextColor(), entry.GetTextAlpha()));
+    // text colour 0 of an entry means the legend's: an alpha alone applies to that one
+    const Color_t entryTextColor = (curEntry->GetTextColor() == 0 && !entry.GetTextColor() && entry.GetTextAlpha()) ? legend->GetTextColor() : curEntry->GetTextColor();
+    curEntry->SetTextColor(ColorWithAlpha(entryTextColor, entry.GetTextColor(), entry.GetTextAlpha()));
     if (entry.GetTextFont() || entry.GetTextSize()) {
       const auto [font, size] = EntryText(entry, textFont, textSize, pad);
       curEntry->SetTextFont(font);
