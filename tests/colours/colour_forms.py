@@ -2,7 +2,8 @@
 object gets exactly that colour (rgb colours are stored in the plot definitions as "#rrggbb"), with the transparency of the alpha given
 with it (the alpha setter or the alpha of a combined setter); colour forms that are not valid raise when they are set. An index ROOT
 does not know is drawn black (as by ROOT) with a warning, once per index and run. An alpha setter alone gives the colour the part has
-without it that transparency (a legend row without a text colour of its own: the legend's).
+without it that transparency (a legend row without a text colour of its own: the legend's). A fill or border colour alone shows its part
+on a legend or text without fill or border (a solid fill, a border of width 1), as on shapes.
 Covers: rgb colours in every colour setter; a text alpha alone on a legend row.
 """
 
@@ -184,7 +185,17 @@ for i, name in enumerate(ALONE):
         for setter in call.alphas if alpha is not None else ():
             getattr(obj, setter)(alpha)
         p.pm.AddPlot(plot)
+# a fill or border colour alone on a box without fill or border: shown
+SHOWN = {"legend_fill": (legend, "SetFillColor"), "legend_border": (legend, "SetBorderColor"), "text_fill": (text, "SetFillColor"), "text_border": (text, "SetBorderColor")}
+for target, (make, setter) in SHOWN.items():
+    plot = S.Plot(f"shown_{target}", "forms", "1d")
+    getattr(make(plot, add_data(plot[1], "hist").SetLegendLabel("data")), setter)(ROOT.kRed)
+    p.pm.AddPlot(plot)
 run = p.plot("forms")
+for target in SHOWN:
+    obj = READ[target][0](run, f"shown_{target}")
+    shown = obj and (obj.GetFillStyle() == 1001 if target.endswith("fill") else obj.GetLineWidth() == 1)
+    check(f"{target}: a colour alone shows it", bool(shown), f"fill style {obj.GetFillStyle()}, line width {obj.GetLineWidth()}" if obj else "not drawn")
 
 
 def own_colour(target, obj, index, run, name):

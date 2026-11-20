@@ -7,7 +7,8 @@ regions and polygons a translucent fill, ellipses no fill, arrows a head in the 
 polygon with a set line gets its outline as a second TPolyLine right after its fill, a region with a set line option l, in every layer).
 Cases: every kind × every layer × a histogram, a graph, a map and a log axis giving the frame × the default or a set look, and the named
 cases (lines at the limits of a log axis, positions at or below zero on a log axis, shapes of a base plot and of pad 0, arrow heads, arcs).
-In fractions of the pad a vertical or horizontal line beside the frame is drawn there, as a region.
+In fractions of the pad a vertical or horizontal line beside the frame is drawn there, as a region; an ellipse given only a fill alpha
+is filled.
 Reference: the primitives of the pad and the same plot without the shape.
 Covers: shapes in their layers, a line at the limit of a log axis, and the named cases.
 """
@@ -268,9 +269,12 @@ plot = S.Plot("beside", "beside", "1d")
 plot[1].AddData("h", "s")
 plot[1].AddVerticalLine(0.05).SetPadCoordinates()
 plot[1].AddRegionX(0.0, 0.08).SetPadCoordinates()
+plot[1].AddEllipse((5.0, 0.5), 1.0, 0.2).SetFillAlpha(0.5)
 q.pm.AddPlot(plot)
 besideRun = q.plot("beside")
 lines = [o for o, _ in besideRun.links("beside", "beside") if o.ClassName() == "TLine"]
 padObj = besideRun.pad("beside", "beside")
 check("a vertical line in fractions of the pad beside the frame is drawn there", len(lines) == 1 and padObj and lines[0].GetX1() < padObj.GetUxmin(), " | ".join(besideRun.messages("beside", "beside")))
+ellipses = [o for o, _ in besideRun.links("beside", "beside") if o.ClassName() == "TEllipse"]
+check("an ellipse given only a fill alpha is filled", len(ellipses) == 1 and ellipses[0].GetFillStyle() == 1001, f"{[e.GetFillStyle() for e in ellipses]}")
 finish()

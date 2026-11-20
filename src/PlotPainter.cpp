@@ -5702,7 +5702,7 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
       } else if (kind == kind_t::arrow && !hasFill) {
         fill->SetFillColor(line->GetLineColor());
         fill->SetFillStyle(1001);
-      } else if (kind == kind_t::ellipse && !hasFill) {
+      } else if (kind == kind_t::ellipse && !hasFill && !shape->GetFillAlpha()) {  // an alpha alone fills it (in grey)
         fill->SetFillStyle(0);
       } else {
         fill->SetFillColor(shape->GetFillColor().value_or(color_t(kGray)).ToIndex());
@@ -6372,7 +6372,8 @@ Color_t PlotPainter::ColorWithAlpha(Color_t current, const optional<color_t>& co
 
 //**************************************************************************************************
 /**
- * Applies the border and fill set for a box (the ones not set keep the values the box has).
+ * Applies the border and fill set for a box (the ones not set keep the values the box has). A colour alone shows its part, as for
+ * shapes: a box without fill gets a solid one, a box without border a border of width 1.
  */
 //**************************************************************************************************
 template <typename BoxType>
@@ -6380,8 +6381,16 @@ void PlotPainter::ApplyBoxStyle(const BoxType& box, TPave* pave)
 {
   if (box.GetBorderStyle()) pave->SetLineStyle(*box.GetBorderStyle());
   pave->SetLineColor(ColorWithAlpha(pave->GetLineColor(), box.GetBorderColor(), box.GetBorderAlpha()));
-  if (box.GetBorderWidth()) pave->SetLineWidth(*box.GetBorderWidth());
-  if (box.GetFillStyle()) pave->SetFillStyle(*box.GetFillStyle());
+  if (box.GetBorderWidth()) {
+    pave->SetLineWidth(*box.GetBorderWidth());
+  } else if (box.GetBorderColor() && pave->GetLineWidth() == 0) {
+    pave->SetLineWidth(1);
+  }
+  if (box.GetFillStyle()) {
+    pave->SetFillStyle(*box.GetFillStyle());
+  } else if (box.GetFillColor() && pave->GetFillStyle() == 0) {
+    pave->SetFillStyle(1001);
+  }
   pave->SetFillColor(ColorWithAlpha(pave->GetFillColor(), box.GetFillColor(), box.GetFillAlpha()));
 }
 
