@@ -208,7 +208,7 @@ if [[ -f "${CACHE_FILE}" ]]; then
     echo "  Configured: ${CACHED_PREFIX}"
     echo "  Requested:  ${INSTALL_PREFIX}"
     echo
-    echo "Run with --reinstall to configure with the requested prefix."
+    echo "Run with --reinstall (srp reinstall, when updating with srp) to configure with the requested prefix."
     exit 1
   fi
 

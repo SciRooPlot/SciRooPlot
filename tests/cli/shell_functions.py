@@ -3,12 +3,14 @@ plot gets its patterns unexpanded (.* is not a list of dot files), also after &&
 file globbing works again afterwards, also after plot in a pipeline. srp makes relative program and output paths absolute (add, set),
 keeps other values and paths starting with ~ or a variable as written; srp cd goes to the program folder; srp edit opens the sources of
 the program (a C++ program: of its CMake source folder, else of its own folder), and fails with a message without any; srp cd and srp out of an
-unknown project, srp out without an output folder or before it exists fail with a message. The srp program alone refuses the
+unknown project, srp out without an output folder or before it exists fail with a message; srp update of a build configured for
+another prefix fails naming srp reinstall. The srp program alone refuses the
 commands that need env.sh, unknown commands, a missing command and too many arguments, with exit status 1. In zsh without a terminal, env.sh registers the
 completion silently also with an insecure directory in fpath.
 Covers: the bash plot alias in compound commands (pre-release braces rule), 2026-11-03 (zsh read-only names in env.sh)."""
 
 import os
+import shutil
 
 from srptest import ENV_SCRIPT, SHELLS, SRP, check, config_folder, finish, run, shell
 
@@ -85,6 +87,18 @@ grep note "$SCIROOPLOT_CONFIG_PATH/projects.info" """,
     said = [line for line in out.stderr.splitlines() if line.strip()]
     check(f"{sh}: srp update with an unknown argument is refused, nothing run", out.stdout.splitlines()[:1] == ["status 1"] and "takes no arguments" in out.stderr and "install.sh" not in out.stderr, out.tail())
     check(f"{sh}: srp cd without a selected project: one message saying so", out.stdout.splitlines()[1:2] == ["status 1"] and len(said) == 2 and "No project selected" in said[1], out.tail())
+    # srp update of a source installation whose build directory is configured for another prefix: the installer's advice works from srp
+    fake = config_folder(f"fake_source_{sh}")
+    os.makedirs(os.path.join(fake, "scripts"))
+    os.makedirs(os.path.join(fake, "build"))
+    shutil.copy(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "scripts", "install.sh"), os.path.join(fake, "scripts", "install.sh"))
+    with open(os.path.join(fake, "CMakeLists.txt"), "w") as f:
+        f.write("project(SciRooPlot)\n")
+    with open(os.path.join(fake, "build", "CMakeCache.txt"), "w") as f:
+        f.write("CMAKE_INSTALL_PREFIX:PATH=/other/prefix\n")
+    os.makedirs(os.path.join(fake, "prefix"))
+    out = shell(f"SCIROOPLOT_SOURCE_DIR={fake}; SCIROOPLOT_ROOT={fake}/prefix; srp update; echo status $?", sh, config=config_folder(f"fake_update_{sh}"), cwd=folder)
+    check(f"{sh}: srp update into another prefix than configured: fails, naming srp reinstall", "status 1" in out.stdout and "srp reinstall" in out.text, out.tail())
     run(SRP, "set", "proj", "outdir", os.path.join(folder, "notyet"), config=config)
     out = shell("srp out proj; echo status $?", sh, config=config)
     check(f"{sh}: srp out before the output folder exists fails with a message", out.stdout.strip() == "status 1" and "does not exist yet" in out.stderr, out.tail())
