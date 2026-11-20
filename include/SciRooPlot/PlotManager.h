@@ -38,6 +38,7 @@
 
 class TCanvas;
 class TDirectory;
+class TFile;
 class TChain;
 class TKey;
 class TObject;
@@ -270,6 +271,10 @@ class PlotManager
                            const std::optional<std::vector<Plot::Pad::Data::data_info_t::join_t>>& joins = std::nullopt,
                            const std::vector<std::shared_ptr<join_match_t>>& joinMatches = {});
   std::vector<tree_input_t> FindTreeInputs(const std::string& dataSource, const std::string& treeName);
+  // an input file opened for reading; a remote one is opened once per reading of the data (each open costs a round trip, on the grid
+  // a catalogue lookup) and kept open until it ends, also if it cannot be opened
+  std::shared_ptr<TFile> OpenInput(const std::string& fileName) const;
+  mutable std::map<std::string, std::shared_ptr<TFile>> mRemoteFiles;  // remote input -> its file while the data is read (null: cannot be opened)
   std::optional<std::string> AttachJoin(TChain& chain, const std::string& treeName, const std::vector<tree_input_t>& treeInputs,
                                         const Plot::Pad::Data::data_info_t::join_t& join, std::vector<std::shared_ptr<TChain>>& joinedChains,
                                         std::vector<std::shared_ptr<join_match_t>>& joinMatches);

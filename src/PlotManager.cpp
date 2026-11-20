@@ -800,10 +800,10 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
   // folders matching the (wildcard) path within a root file, e.g. DF_* or run*/sub
   // (nullopt for a file that cannot be opened, reported here, ROOT's own messages left out)
   auto expandFolders = [&](const string& fileName, const string& folderPattern) -> std::optional<vector<string>> {
-    std::unique_ptr<TFile> file;
+    std::shared_ptr<TFile> file;
     {
       auto quiet = ignore_root_messages_below(kFatal);
-      file = open_input_file(fileName);
+      file = OpenInput(fileName);
     }
     if (!file || file->IsZombie()) {
       logger::warning("Cannot open input file {} (data source {}){}.", fileName, dataSource, util::open_failure_reason(fileName));
@@ -1647,6 +1647,8 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     }
   }
   mExpandedInputs.clear();
+  mRemoteFiles.clear();
+  auto remoteFilesGuard = make_scope_guard([this]() { mRemoteFiles.clear(); });  // closed when the data is read
   size_t nInputs{};
   for (const auto& dataSource : sourcesToRead) {
     // data sources restricted to a folder are read together with the data source they are part of
@@ -3915,7 +3917,7 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
     const string& fileName = fileNamePath[0];
     std::error_code existsError;
     if (!is_root_input(fileName) || is_missing_local_file(fileName, existsError)) continue;
-    auto file = open_input_file(fileName);
+    auto file = OpenInput(fileName);
     if (!file || file->IsZombie()) continue;
     TDirectory* dir = file.get();
     if (fileNamePath.size() > 1) dir = subDirectory(dir, fileNamePath[1]);
@@ -3983,6 +3985,22 @@ ROOT::RDF::RNode define_as_long64(ROOT::RDF::RNode node, const string& name, con
 
 //**************************************************************************************************
 /**
+ * Input file opened for reading: a remote one once per reading of the data.
+ */
+//**************************************************************************************************
+shared_ptr<TFile> PlotManager::OpenInput(const string& fileName) const
+{
+  const bool remote = is_remote(fileName);
+  auto opened = (remote) ? mRemoteFiles.find(fileName) : mRemoteFiles.end();
+  if (opened != mRemoteFiles.end()) return opened->second;
+  TDirectory::TContext keepDirectory;  // histograms made later must not end up in a file that stays open
+  shared_ptr<TFile> file = open_input_file(fileName);
+  if (remote) mRemoteFiles[fileName] = (file && !file->IsZombie()) ? file : nullptr;
+  return file;
+}
+
+//**************************************************************************************************
+/**
  * Join a tree to a chain: its rows are matched with the rows of the chain either by their number, by the values of key columns
  * or by the row number an index column of the chain holds (counted within the joined tree beside each part of the chain).
  * Returns why this is not possible (if so).
@@ -3995,10 +4013,10 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
   if (const string treeAlias = split_path(treeName).second; join.GetAlias() == treeAlias) {
     return fmt::format("the columns of both would be called {}.column, please specify an alias", treeAlias);
   }
-  map<string, std::unique_ptr<TFile>> openFiles;  // each file is opened only once for the following checks
+  map<string, shared_ptr<TFile>> openFiles;  // each file is opened only once for the following checks
   auto getTree = [&](const string& fileName, const string& treePath) -> TTree* {
     auto& file = openFiles[fileName];
-    if (!file) file = open_input_file(fileName);
+    if (!file) file = OpenInput(fileName);
     if (!file || file->IsZombie()) return nullptr;
     return file->Get<TTree>(treePath.data());
   };
