@@ -302,9 +302,10 @@ struct layout_t {
   void SetMarkerStyle(int16_t newStyle, const std::string& what, const std::string& of = {});
   void SetMarkerSize(float_t size, const std::string& what, const std::string& of = {});
   void SetWidth(float_t width, const std::string& what, const std::string& of = {});  // of a line or border (rounded)
-  void SetFont(int16_t font);
+  void SetFont(int16_t font, const std::string& what, const std::string& of = {});
   void SetTextSize(float_t size, const std::string& what, const std::string& of = {});
-  // of in messages: " of <name>" for data and ratios ("The marker alpha of h (2) is ignored"), nothing for the others
+  // of in messages: " of <name>" for data and ratios ("The marker alpha of h (2) is ignored"), " of plot <name> from group <group>" for
+  // plots, nothing for the others
   template <class Owner>
   static std::string Of(const Owner& owner);
 };
@@ -548,7 +549,7 @@ class Plot : public FillSetters<Plot>
   static bool CheckCount(int64_t count, const std::string& what);                       // at least one
   static bool CheckEdges(const std::vector<double_t>& edges, const std::string& what);  // at least two, finite and increasing
   static bool CheckPixels(int64_t size, const std::string& what);                       // a side of a canvas: 1 to 32767 pixels
-  static bool CheckFont(int16_t font);
+  static bool CheckFont(int16_t font, const std::string& what = "text font");
   static bool CheckMarkerStyle(int16_t style, const std::string& what);  // ROOT's markers and their thicker versions up to line width 10
   static void Quietly(bool quiet, const std::function<void()>& call);    // without messages if quiet
   static std::optional<float_t> RoundWidth(const std::optional<float_t>& width, const char* what);

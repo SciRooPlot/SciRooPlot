@@ -341,6 +341,9 @@ NAMED = {
     "layout marker size": (lambda: S.S.PanelLayout().SetMarkerSize(-1.0), "marker size of PanelLayout::SetMarkerSize (-1)"),
     "layout line width": (lambda: S.S.PanelLayout().SetLineWidth(2.5), "line width of PanelLayout::SetLineWidth (2.5) is not an integer"),
     "plot width": (lambda: S.S.Plot("a", "g", "1d").SetWidth(0), "from group"),
+    "plot fill alpha": (lambda: S.S.Plot("a", "g", "1d").SetFillAlpha(3.0), "fill alpha of plot a from group g (3)"),
+    "axis title font": (lambda: S.S.Plot("a", "g", "1d")[1]["X"].SetTitleFont(999), "title font of axis X (999)"),
+    "axis label font": (lambda: S.S.Plot("a", "g", "1d")[1]["Y"].SetLabelFont(999), "label font of axis Y (999)"),
     "text alignment": (lambda: S.S.Plot("a", "g", "1d")[1].AddText(0.5, 0.5, "t").SetTextAlign(5), "0 for the default"),
     "shape kind": (lambda: S.S.Plot("a", "g", "1d")[1].AddRegionX(1.0, 2.0).SetArc(0.0, 90.0), "ignored on this region X"),
 }

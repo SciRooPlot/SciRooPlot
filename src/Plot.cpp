@@ -270,10 +270,10 @@ bool Plot::CheckPixels(int64_t size, const string& what)
   logger::warning("The {} ({}) is ignored: it is larger than 32767 pixels, the largest side of a canvas.", what, size);
   return false;
 }
-bool Plot::CheckFont(int16_t font)
+bool Plot::CheckFont(int16_t font, const string& what)
 {
   if (font / 10 >= 1 && font / 10 <= 15 && font % 10 <= 3) return true;
-  logger::warning("The text font ({}) is ignored: it is not a ROOT font (10 * font number from 1 to 15 + precision from 0 to 3).", font);
+  logger::warning("The {} ({}) is ignored: it is not a ROOT font (10 * font number from 1 to 15 + precision from 0 to 3).", what, font);
   return false;
 }
 void Plot::Quietly(bool quiet, const std::function<void()>& call)
@@ -352,7 +352,7 @@ void layout_t::SetFill(int16_t newStyle, color_t newColor, float_t newAlpha, con
 }
 void layout_t::SetText(int16_t font, float_t size, color_t newColor, float_t newAlpha, const string& what, const string& of)
 {
-  bool valid = Plot::CheckFont(font);
+  bool valid = Plot::CheckFont(font, what + " font" + of);
   valid = Plot::CheckNotNegative(size, what + " size" + of) && valid;
   valid = Plot::CheckAlpha(newAlpha, what + " alpha" + of) && valid;
   if (valid) *this = {newColor, newAlpha, font, size};
@@ -373,9 +373,9 @@ void layout_t::SetWidth(float_t width, const string& what, const string& of)
 {
   if (Plot::CheckFinite(width, what + " width" + of)) scale = Plot::RoundWidth(width, (what + " width" + of).data());
 }
-void layout_t::SetFont(int16_t font)
+void layout_t::SetFont(int16_t font, const string& what, const string& of)
 {
-  if (Plot::CheckFont(font)) style = font;
+  if (Plot::CheckFont(font, what + " font" + of)) style = font;
 }
 void layout_t::SetTextSize(float_t size, const string& what, const string& of)
 {
@@ -386,6 +386,8 @@ string layout_t::Of(const Owner& owner)
 {
   if constexpr (std::is_base_of_v<Plot::Pad::Data, Owner>) {
     return " of " + owner.GetName();
+  } else if constexpr (std::is_same_v<Plot, Owner>) {
+    return " of plot " + Plot::Label(owner);
   } else {
     return {};
   }
@@ -535,7 +537,7 @@ Derived& TextSetters<Derived>::SetTextAlpha(float_t alpha)
 template <class Derived>
 Derived& TextSetters<Derived>::SetTextFont(int16_t font)
 {
-  mText.SetFont(font);
+  mText.SetFont(font, "text", layout_t::Of(static_cast<const Derived&>(*this)));
   return static_cast<Derived&>(*this);
 }
 template <class Derived>
@@ -1112,7 +1114,7 @@ auto Plot::Pad::SetDefaultTextAlpha(float_t alpha) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultTextFont(int16_t font) -> decltype(*this)
 {
-  mText.SetFont(font);
+  mText.SetFont(font, "default text");
   return *this;
 }
 
@@ -4056,12 +4058,12 @@ auto Plot::Pad::Axis::SetTickLength(float_t tickLength) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetTitleFont(int16_t font) -> decltype(*this)
 {
-  if (CheckFont(font)) mTitleLayout.style = font;
+  if (CheckFont(font, fmt::format("title font of axis {}", mName))) mTitleLayout.style = font;
   return *this;
 }
 auto Plot::Pad::Axis::SetLabelFont(int16_t font) -> decltype(*this)
 {
-  if (CheckFont(font)) mLabelLayout.style = font;
+  if (CheckFont(font, fmt::format("label font of axis {}", mName))) mLabelLayout.style = font;
   return *this;
 }
 auto Plot::Pad::Axis::SetTitleSize(float_t size) -> decltype(*this)
