@@ -1769,11 +1769,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
           polygon->SetPoint(i + corners, data_ptr->GetPointX(i), data_ptr->GetPointY(i));
         }
         if (corners) polygon->SetPoint(data_ptr->GetN() + 1, data_ptr->GetPointX(data_ptr->GetN() - 1), 0.);
-        // the histogram it was made from belongs to the copy now: a later graph at the freed address is another one
-        if (auto source = mSourceHists.extract(data_ptr)) {
-          source.key() = polygon;
-          mSourceHists.insert(std::move(source));
-        }
+        MoveRecords(data_ptr, polygon);
         delete data_ptr;
         data_ptr = polygon;
       }
@@ -2697,7 +2693,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
       axisHist_ptr = static_cast<TH1*>(data_ptr->GetHistogram()->Clone());
       axisHist_ptr->SetDirectory(nullptr);
       polarAxisHist.reset(axisHist_ptr);
-      mSourceHists.erase(data_ptr);
+      DropRecords(data_ptr);
       delete data_ptr;
       if (!polargram) {  // no points: a grid of radius 1 over the full turn
         polargram = new TGraphPolargram("Polargram", 0., 1., 0., TMath::TwoPi(), drawOption.data());
@@ -2833,7 +2829,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
   if (!polargram) {
     // drawn without SAME: the pad is cleared, which deletes a graph drawn above (a later graph at its address is another one)
     if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
-      if (data_ptr->TestBit(kCanDelete)) mSourceHists.erase(data_ptr);
+      if (data_ptr->TestBit(kCanDelete)) DropRecords(data_ptr);
     }
     axisHist_ptr->Draw((drawOption + drawOptAxis).data());
     axisHist_ptr->Draw((drawOption + "SAME AXIG").data());
@@ -3925,7 +3921,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
           TH1* cumulativeHist = ptr->GetCumulative(*m.cumulative, "");  // under the name of the data (ROOT appends _cumulative)
           cumulativeHist->SetDirectory(nullptr);
           cumulativeHist->SetBit(kCanDelete);
-          MoveProjectionTitles(ptr, cumulativeHist);
+          MoveRecords(ptr, cumulativeHist);
           delete ptr;
           ptr = cumulativeHist;
         }
@@ -4363,10 +4359,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
               withErrors->GetXaxis()->SetTitle(data_ptr->GetXaxis()->GetTitle());
               withErrors->SetBit(kCanDelete, data_ptr->TestBit(kCanDelete));
               CopyStyle(*data_ptr, *withErrors);
-              if (auto source = mSourceHists.extract(data_ptr)) {
-                source.key() = withErrors;
-                mSourceHists.insert(std::move(source));
-              }
+              MoveRecords(data_ptr, withErrors);
               delete data_ptr;
               data_ptr = withErrors;
             }
@@ -4493,7 +4486,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
         // steps show no errors: no warning about asymmetric ones
         const draw_option_t fallback = *defaultAlias(data_ptr);
         if (TH1* histogram = ToHist(data_ptr, *optionAlias, fallback, dataIndex != 0, false)) {
-          mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
+          DropRecords(data_ptr);  // deleted by ToHist
           drawClipped(histogram, *optionAlias);
           return;
         }
@@ -4515,7 +4508,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       // the warning about asymmetric errors (drawn with their mean) only where the option shows errors
       const draw_option_t fallback = *defaultAlias(data_ptr);
       if (TH1* hist = ToHist(data_ptr, *optionAlias, fallback, dataIndex != 0, !aliasesWithoutErrors.count(*optionAlias))) {
-        mSourceHists.erase(data_ptr);  // deleted by ToHist: a later graph at that address is another one
+        DropRecords(data_ptr);  // deleted by ToHist
         DrawItem(state, hist, optionAlias);
         return;
       }
@@ -8473,15 +8466,26 @@ optional<float_t> PlotPainter::LayoutValue(const Plot::Pad& pad, const Plot::Pad
 
 //**************************************************************************************************
 /**
- * The axis titles of the input of a projection (for <projection>) go with the object that replaces it.
+ * The records of data kept by its object while it is prepared (the histogram a graph is drawn from, the axis titles of the input of a
+ * projection) go with the object that replaces it, and are dropped with an object that is deleted (a later object at its address is
+ * another one): every replacement and deletion of data goes through these.
  */
 //**************************************************************************************************
-void PlotPainter::MoveProjectionTitles(const TObject* from, const TObject* to)
+void PlotPainter::MoveRecords(const TObject* from, const TObject* to)
 {
-  if (auto node = mProjectionAxisTitles.extract(from)) {
-    node.key() = to;
-    mProjectionAxisTitles.insert(std::move(node));
-  }
+  auto move = [&](auto& records) {
+    if (auto node = records.extract(from)) {
+      node.key() = to;
+      records.insert(std::move(node));
+    }
+  };
+  move(mSourceHists);
+  move(mProjectionAxisTitles);
+}
+void PlotPainter::DropRecords(const TObject* obj)
+{
+  mSourceHists.erase(obj);
+  mProjectionAxisTitles.erase(obj);
 }
 
 //**************************************************************************************************
@@ -8495,7 +8499,7 @@ bool PlotPainter::ProfileMeans(data_ptr_t& data)
     means->SetDirectory(nullptr);
     means->SetName(profile->GetName());
     CopyStyle(*profile, *means);  // the projections take labels and titles, not the style
-    MoveProjectionTitles(profile, means);
+    MoveRecords(profile, means);
     delete profile;
     data = means;
     return true;

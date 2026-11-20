@@ -384,7 +384,8 @@ class PlotPainter
   static std::optional<double_t> MaxRange(const Plot::Pad& pad, const Plot::Pad& padDefaults, char axisLabel);
   static std::optional<bool> IsLog(const Plot::Pad& pad, const Plot::Pad& padDefaults, char axisLabel);
   bool ProfileMeans(data_ptr_t& data);
-  void MoveProjectionTitles(const TObject* from, const TObject* to);
+  void MoveRecords(const TObject* from, const TObject* to);
+  void DropRecords(const TObject* obj);
   void DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID);
   static bool IsHBarFrame(TPad* pad, const TH1* frame);
   static bool IsViewFrame(TPad* pad, const TH1* frame);
