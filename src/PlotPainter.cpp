@@ -499,6 +499,24 @@ struct PlotPainter::item_state_t {
 
 //**************************************************************************************************
 /**
+ * Undoes the scale of the last plot painted in the absolute sizes of gStyle (line width, hatches, ends of error bars, dashes).
+ */
+//**************************************************************************************************
+void PlotPainter::RestoreStyle()
+{
+  if (!sUnscaledStyle) return;
+  gStyle->SetLineWidth(sUnscaledStyle->lineWidth);
+  gStyle->SetHatchesLineWidth(sUnscaledStyle->hatchesLineWidth);
+  gStyle->SetEndErrorSize(sUnscaledStyle->endErrorSize);
+  gStyle->SetGridStyle(sUnscaledStyle->gridStyle);
+  for (int32_t style = 1; style <= static_cast<int32_t>(sUnscaledStyle->lineStyles.size()); ++style) {
+    gStyle->SetLineStyleString(style, sUnscaledStyle->lineStyles[style - 1].data());
+  }
+  sUnscaledStyle.reset();
+}
+
+//**************************************************************************************************
+/**
  * The canvas of a plot: its pads with their data, frames, boxes and shapes, the data taken from the inputs in dataBuffer.
  */
 //**************************************************************************************************
@@ -515,16 +533,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   });
 
   // ROOT reads some absolute sizes from gStyle only at paint time (see end of this function): undo the scale of a previous plot before drawing
-  if (sUnscaledStyle) {
-    gStyle->SetLineWidth(sUnscaledStyle->lineWidth);
-    gStyle->SetHatchesLineWidth(sUnscaledStyle->hatchesLineWidth);
-    gStyle->SetEndErrorSize(sUnscaledStyle->endErrorSize);
-    gStyle->SetGridStyle(sUnscaledStyle->gridStyle);
-    for (int32_t style = 1; style <= static_cast<int32_t>(sUnscaledStyle->lineStyles.size()); ++style) {
-      gStyle->SetLineStyleString(style, sUnscaledStyle->lineStyles[style - 1].data());
-    }
-    sUnscaledStyle.reset();
-  }
+  RestoreStyle();
 
   double_t canvasWidth = std::round(mScale * plot.GetWidth().value_or(gStyle->GetCanvasDefW()));
   double_t canvasHeight = std::round(mScale * plot.GetHeight().value_or(gStyle->GetCanvasDefH()));

@@ -2,8 +2,9 @@
 scaled alike: the dashes and gaps of line styles 2 to 4 s times as long, the outline of open markers s pixels wide, filled markers still
 filled; vector files (svg, pdf, eps) do not depend on it. screenscale s does the same for the plots shown on screen (mode show): the window
 shows the dashes and markers as the png at bitmapscale s (X11 has fixed patterns for styles 2 to 4, which SciRooPlot replaces by styles of
-its own). The screen part needs Xvfb and ImageMagick's import for the screenshot; it is left out without them.
-Covers: dashes of line styles 2 to 4 and outlines of open markers scaled, the screen of mode show."""
+its own). The screen part needs Xvfb and ImageMagick's import for the screenshot; it is left out without them. A program drawing on
+after GeneratePlots wrote files gets its own gStyle sizes back.
+Covers: dashes of line styles 2 to 4 and outlines of open markers scaled, the screen of mode show, gStyle after writing files."""
 
 import os
 import re
@@ -13,7 +14,7 @@ import time
 
 import numpy as np
 
-from srptest import PLOT, Project, ROOT, S, bitmap, check, display, finish, gif_info, rgb
+from srptest import PLOT, WORK, Project, ROOT, S, bitmap, check, display, finish, gif_info, python, rgb
 
 p = Project("scaling")
 plot = S.Plot("lines", "scaling", "1d")
@@ -144,4 +145,24 @@ else:
         check(f"screenscale {scale}: open marker outline {scale} pixels wide", found["ring"] == [scale, scale], f"{found['ring']}")
         check(f"screenscale {scale}: filled marker filled", found["filled"])
     p.srp("screenscale", "1")
+# gStyle after GeneratePlots wrote scaled bitmaps: the sizes of the program, not the scaled ones
+p.srp("bitmapscale", "2")
+out = python(f"""import ROOT
+from SciRooPlot import *
+def sizes():
+    return (ROOT.gStyle.GetLineWidth(), ROOT.gStyle.GetEndErrorSize(), ROOT.gStyle.GetHatchesLineWidth(), ROOT.gStyle.GetLineStyleString(2).split())
+before = sizes()
+pm = PlotManager()
+pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
+pm.SetOutputDirectory({os.path.join(WORK, "style_after")!r})
+plot = Plot("p", "g", "1d")
+plot[1].AddLine((0.0, 0.5), (1.0, 0.5)).SetLine(2, 2.0, ROOT.kRed)
+plot[1]["X"].SetRange(0, 1)
+plot[1]["Y"].SetRange(0, 1)
+pm.AddPlot(plot)
+pm.GeneratePlots("png")
+print("SIZES", before == sizes(), before, sizes())""")
+check("gStyle after GeneratePlots with bitmapscale 2: the sizes of the program", "SIZES True" in out.stdout, out.tail())
+
+p.srp("bitmapscale", "1")
 finish()

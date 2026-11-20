@@ -1516,6 +1516,10 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     if (wasWebDisplay) gROOT->SetWebDisplay(webDisplay.Data());
     if (!wasMTEnabled) ROOT::DisableImplicitMT();
   });
+  // gStyle keeps the scaled sizes while canvases are on screen; a program drawing on after writing files gets its own back
+  auto styleGuard = make_scope_guard([isInteractiveMode]() {
+    if (!isInteractiveMode) PlotPainter::RestoreStyle();
+  });
   if (!wasMTEnabled) ROOT::EnableImplicitMT();
   gROOT->SetWebDisplay("off");
   auto quiet = ignore_root_messages_below(kWarning);
