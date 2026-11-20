@@ -836,7 +836,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
 
   // remote directories are listed through ROOT's system plugins (XRootD, AliEn): the sorted names in one, nullopt if it is none or cannot be listed
   auto listRemote = [](const string& dir) -> std::optional<vector<string>> {
-    if (!util::connect_grid_for(dir)) return std::nullopt;
+    if (util::is_grid_path(dir)) return util::list_grid_directory(dir);  // JAliEn lists no directories as a file system
     FileStat_t info;
     if (gSystem->GetPathInfo(dir.data(), info) != 0 || !R_ISDIR(info.fMode)) return std::nullopt;
     void* handle = gSystem->OpenDirectory(dir.data());
@@ -854,9 +854,9 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
   matchRemote = [&](const string& pattern, size_t from, vector<string>& matches) {
     const size_t wildcard = pattern.find_first_of("*[", from);
     if (wildcard == string::npos) {
-      util::connect_grid_for(pattern);
       FileStat_t info;
-      if (from == pattern.size() || gSystem->GetPathInfo(pattern.data(), info) == 0) matches.push_back(pattern);
+      const bool exists = (util::is_grid_path(pattern)) ? util::grid_path_exists(pattern) : gSystem->GetPathInfo(pattern.data(), info) == 0;
+      if (from == pattern.size() || exists) matches.push_back(pattern);
       return;
     }
     const size_t levelStart = pattern.rfind('/', wildcard) + 1;
@@ -897,7 +897,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
       if (!literal && path.find_first_of("*[") != string::npos) {
         vector<string> matches;
         matchRemote(path, 0, matches);
-        if (matches.empty()) logger::warning("No files match {} (data source {}).", filePart, dataSource);
+        if (matches.empty()) logger::warning("No files match {} (data source {}){}.", filePart, dataSource, (util::connect_grid_for(url)) ? "" : util::grid_failure_reason(url));
         for (const auto& match : matches) {
           addEntry(match + query + folderSuffix, true);
         }
@@ -909,7 +909,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
       }
       vector<string> dirFileNames;
       if (!walkRemote(path, dirFileNames)) {
-        logger::warning("Data source entry {} (data source {}) is neither a recognized file type nor a directory that can be listed. Skipping.", entry, dataSource);
+        logger::warning("Data source entry {} (data source {}) is neither a recognized file type nor a directory that can be listed{}. Skipping.", entry, dataSource, (util::connect_grid_for(url)) ? "" : util::grid_failure_reason(url));
         return;
       }
       if (dirFileNames.empty()) logger::warning("No ROOT files found in directory {} (data source {}).", entry, dataSource);

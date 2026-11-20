@@ -200,6 +200,7 @@ add_library(SciRooPlot SHARED
   src/Config.cpp
   src/util/Strings.cpp
   src/util/Paths.cpp
+  src/util/Grid.cpp
   include/SciRooPlot/Plot.h
   include/SciRooPlot/PlotManager.h
   include/SciRooPlot/PanelLayout.h
@@ -233,6 +234,7 @@ target_link_libraries(SciRooPlot
     ROOT::Gui
     ROOT::Hist
     ROOT::Gpad
+    ROOT::Net
     ROOT::ROOTDataFrame
     Boost::program_options
     fmt::fmt
