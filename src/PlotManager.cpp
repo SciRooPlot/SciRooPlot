@@ -4201,6 +4201,56 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
     }
   }
 
+  // aliases stored with a tree (TTree::SetAlias) are no columns for RDataFrame: those a request names, directly or through other aliases,
+  // are defined for it (the aliases they name first); a column of the same name is kept
+  vector<std::pair<string, string>> aliases;  // name, expression
+  if (tree) {
+    for (TTree* aliasTree : {tree, tree->GetTree()}) {  // a chain's own aliases and those stored with its trees
+      if (!aliasTree || !aliasTree->GetListOfAliases()) continue;
+      for (auto* alias : *aliasTree->GetListOfAliases()) {
+        const string aliasName = alias->GetName();
+        const bool isNew = std::none_of(aliases.begin(), aliases.end(), [&](const auto& known) { return known.first == aliasName; });
+        if (isNew) aliases.emplace_back(aliasName, alias->GetTitle());
+      }
+    }
+  }
+  // defines the aliases the expressions of a request name; false if RDataFrame cannot read one of them (reported)
+  auto defineAliases = [&](ROOT::RDF::RNode& node, const data_info_t& info) {
+    if (aliases.empty()) return true;
+    set<string> defined;
+    std::function<bool(const string&)> defineNamed = [&](const string& expression) {
+      for (size_t pos = 0; pos < expression.size();) {
+        if (!std::isalpha(static_cast<unsigned char>(expression[pos])) && expression[pos] != '_') {
+          ++pos;
+          continue;
+        }
+        size_t end = pos;
+        while (end < expression.size() && (std::isalnum(static_cast<unsigned char>(expression[end])) || expression[end] == '_'))
+          ++end;
+        const string word = expression.substr(pos, end - pos);
+        pos = end;
+        auto alias = std::find_if(aliases.begin(), aliases.end(), [&](const auto& known) { return known.first == word; });
+        if (alias == aliases.end() || defined.count(word) || node.HasColumn(word)) continue;
+        defined.insert(word);
+        if (!defineNamed(alias->second)) return false;
+        try {
+          node = node.Define(alias->first, alias->second);
+        } catch (const std::runtime_error&) {
+          logger::error("Cannot use alias {} of {} {}: RDataFrame cannot read its expression {}.", alias->first, type, DataLocation(dataSource, name), alias->second);
+          return false;
+        }
+      }
+      return true;
+    };
+    vector<string> expressions{info.weight.value_or("")};
+    for (const auto& dim : info.dataDims)
+      expressions.push_back(dim.var);
+    for (const auto& list : {info.filters, info.definitions.values}) {
+      if (list) expressions.insert(expressions.end(), list->begin(), list->end());
+    }
+    return std::all_of(expressions.begin(), expressions.end(), defineNamed);
+  };
+
   // errors that only show up while reading may come from inputs of a chained tree with a different structure
   const string chainHint = (inputsDescription.empty()) ? "" : fmt::format(" (the tree is chained from {}: do all inputs of the data source have the same columns?)", inputsDescription);
   optional<ULong64_t> nEntries;
@@ -4300,7 +4350,8 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           // the requests share the filter on the matching rows (evaluated once per row), except those with an entry range:
           // their range refers to all rows of the tree, so they apply the filter after it
           const bool hasEntryRange = info->entries.max.has_value();
-          if (request.Prepare((hasEntryRange) ? base : matched, (hasEntryRange) ? matchColumns : vector<string>{})) {
+          ROOT::RDF::RNode node = (hasEntryRange) ? base : matched;
+          if (defineAliases(node, *info) && request.Prepare(node, (hasEntryRange) ? matchColumns : vector<string>{})) {
             requests.push_back(std::move(request));
           } else {
             rejected.push_back(info);

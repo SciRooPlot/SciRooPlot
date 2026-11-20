@@ -8,12 +8,13 @@ floating point, integer and bool type and an expression). The automatic range ta
 100 bins or the number given; integer values get bins of whole-number width centred on the integers. Requests that differ only slightly
 (ranges in the last digits, bins, filters, defines of the same name) give their own results, requests that differ only in whitespace or
 in the order of their filters give the same. C strings also as members of a leaf list are strings, an array of Char_t stays numbers.
+Aliases stored with a tree (also naming other aliases, in a file and chained) can be used in every expression; a column keeps its name.
 Weighted profiles read in parallel, where some inputs hold weights of 1 only, have the errors of the profile filled directly. An invalid request (a column that is a string, unknown columns, an expression throwing while
 the rows are read, a scatter in 3d of a collection, a profile with too many axes, a tree without request) loses only its own plot, with
 the reason; the others of the same tree are read as usual. A binning ROOT cannot make (an end or edge that is not finite, edges
 not increasing, an inverted range) is refused where it is defined, with the reason. The reading summary names the entries, the inputs a tree is chained from and
 the passes over the data (at most two per group of requests: the automatic ranges, then the results).
-Covers: typed requests: the column types, 'return' in identifiers, function bodies, C-string columns in filters,
+Covers: tree aliases, typed requests: the column types, 'return' in identifiers, function bodies, C-string columns in filters,
 Scatter in 3d, the weighted profiles merged by ROOT (TProfile::Merge, ROOT's merge of profiles) and the axis titles of function bodies
 (semicolons), the automatic ranges of columns with inf and nan, a throwing expression loses only its
 request, two bin edges as one bin.
@@ -438,6 +439,33 @@ ROOT.srptest_leaf_lists(p.path("leaf_lists.root"))
 p.pm.AddDataSource("leaf_lists", p.path("leaf_lists.root"))
 same_tree("a C string in a leaf list in a filter", filled(ROOT.TH1D("ref", "", 4, -0.5, 3.5), [np.array([0.0, 2.0])], np.ones(2)), lambda d: d.Filter('ll.s == "test"').Project1D(("ll.i", 4, [-0.5, 3.5])), "t", "leaf_lists")
 same_tree("an array of Char_t: its numbers", filled(ROOT.TH1D("ref", "", 6, -0.5, 5.5), [np.array([k + j for k in range(4) for j in range(3)], dtype=float)], np.ones(12)), lambda d: d.Project1D(("arr", 6, [-0.5, 5.5])), "t", "leaf_lists")
+# aliases stored with a tree (TTree::SetAlias), also naming another alias, in a file and chained; an alias named like a column leaves the column
+ALIASES = {"twox": "2*x", "fourx": "2*twox", "wt": "w*w", "y": "-y", "bad": "Sum$(x)"}
+
+
+def with_aliases(path):
+    f = ROOT.TFile.Open(path, "UPDATE")
+    t = f.Get("t")
+    for alias, expression in ALIASES.items():
+        t.SetAlias(alias, expression)
+    t.Write("", ROOT.TObject.kOverwrite)
+    f.Close()
+
+
+write_tree(p.path("aliases.root"), COLUMNS)
+with_aliases(p.path("aliases.root"))
+os.makedirs(p.path("alias_chain"))
+for i, (a, b) in enumerate(SPLITS):
+    write_tree(p.path("alias_chain", f"part{i}.root"), COLUMNS, rows=slice(a, b))
+    with_aliases(p.path("alias_chain", f"part{i}.root"))
+p.pm.AddDataSource("aliases", p.path("aliases.root"))
+p.pm.AddDataSource("alias_chain", p.path("alias_chain", "part*.root"))
+for source in ("aliases", "alias_chain"):
+    same_tree(f"{source}: an alias as axis", filled(ROOT.TH1D("ref", "", 20, -6.0, 6.0), [xs * 2], np.ones(N)), lambda d: d.Project1D(("twox", 20, [-6.0, 6.0])), "t", source)
+    same_tree(f"{source}: an alias naming another alias", filled(ROOT.TH1D("ref", "", 20, -12.0, 12.0), [xs * 4], np.ones(N)), lambda d: d.Project1D(("fourx", 20, [-12.0, 12.0])), "t", source)
+    mask = xs > 0
+    same_tree(f"{source}: aliases in a filter and a weight", filled(ROOT.TH1D("ref", "", 20, -3.0, 3.0), [xs[mask]], ws[mask] ** 2), lambda d: d.Project1D(("x", 20, [-3.0, 3.0]), "wt").Filter("twox > 0"), "t", source)
+same_tree("an alias named like a column: the column", filled(ROOT.TH1D("ref", "", 20, -3.0, 3.0), [ys], np.ones(N)), lambda d: d.Project1D(("y", 20, [-3.0, 3.0])), "t", "aliases")
 
 # the same request in two plots, once normalized: one read, the same values
 for plotName, norm in (("same_a", False), ("same_b", True)):
@@ -484,6 +512,7 @@ for source, kind in (("tree", "tree"), ("csv", "table"), ("rntuple", "tree"), ("
     invalid(f"{source}: an expression throwing while reading", source, "t", lambda d: d.Project1D(("std::stod(s)", 10, [0.0, 1.0])), f"{source}:t (projection of std::stod(s))")
     invalid(f"{source}: a profile with three binned axes", source, "t", lambda d: d.Profile([("x", 2, [0.0, 1.0]), ("y", 2, [0.0, 1.0]), ("z", 2, [0.0, 1.0])], "w"), f"Too many dimensions specified for profile of {kind} {source}:t")
     invalid(f"{source}: no request", source, "t", lambda d: d, f"Cannot plot {kind} {source}:t directly")
+invalid("tree: an alias RDataFrame cannot read", "aliases", "t", lambda d: d.Project1D(("bad", 10, [0.0, 1.0])), "Cannot use alias bad of tree aliases:t: RDataFrame cannot read its expression Sum$(x).")
 invalid("tree: a C-string column as axis", "tree", "t", lambda d: d.Project1D(("cstr", 10, [0.0, 1.0])), "Expression cstr for tree tree:t is not numeric.")
 invalid("tree: a scatter in 3d of a collection", "tree", "t", lambda d: d.Scatter("vec", "y", "z"), "A scatter plot in 3d needs scalar values: tree tree:t")
 valids = {}
