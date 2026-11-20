@@ -3768,6 +3768,10 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
         warnUnsupported(m.rebinGroupZ.has_value(), "RebinZ");
       }
     }
+    // ROOT keeps all labels of a rebinned axis: an axis that can extend is doubled to show them when painted (or its overflow is set)
+    if ((m.rebinGroupX && ptr->GetXaxis()->GetLabels()) || (m.rebinGroupY && ptr->GetYaxis()->GetLabels()) || (m.rebinGroupZ && ptr->GetZaxis()->GetLabels())) {
+      ptr->SetCanExtend(TH1::kNoAxis);
+    }
     bool isDensity = m.scaleBinWidthNorm && *m.scaleBinWidthNorm;
     if (isProfile) {
       // ROOT does not divide the mean values of a profile by the bin widths

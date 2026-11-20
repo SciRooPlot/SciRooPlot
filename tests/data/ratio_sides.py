@@ -73,6 +73,7 @@ todo = cases(
         {"pair": ("hist", "hist"), "side": "numer", "mods": ("rebin_x",), "variant": "normal", "why": "numerator rebinned: other binning, interpolated"},
         {"pair": ("profile", "profile"), "side": "both", "mods": ("rebin_x",), "variant": "normal", "why": "profiles divided as their means"},
         {"pair": ("tf1", "tf1"), "side": "denom", "mods": ("normalize",), "variant": "normal", "why": "the denominator of a function numerator reported once"},
+        {"pair": ("hist_labels", "hist_labels"), "side": "numer", "mods": ("rebin_x",), "variant": "normal", "why": "a rebinned labelled numerator: other binning, not interpolated"},
     ],
 )
 
