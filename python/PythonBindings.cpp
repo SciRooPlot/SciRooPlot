@@ -699,8 +699,9 @@ void exportRatio(py::module_& m)
   defDataSetters(ratio);
   // only here, after Ratio is registered
   py::class_<Data>(m.attr("Data")).def("AsRatio", &Data::AsRatio, ref_int);
-  // functions given in the plot definition as data, e.g. in a ratio
+  // functions and points (AddPoints) given in the plot definition as data, e.g. in a ratio
   m.attr("kUserFunctions") = kUserFunctions;
+  m.attr("kUserGraphs") = kUserGraphs;
   m.def("Function", &Function, arg("formula"), arg("label") = nullopt, "A function given by its formula as data, e.g. as numerator or denominator of a ratio.");
 }
 
