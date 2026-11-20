@@ -93,9 +93,10 @@ grep note "$SCIROOPLOT_CONFIG_PATH/projects.info" """,
 # srp edit opens the sources of the program: the .py files of its folder, for a C++ program those of the source folder of its CMake
 # build, else of its own folder (not those of neighbouring folders); without source files it says so
 stub = config_folder("opener")
-with open(os.path.join(stub, "xdg-open"), "w") as f:
-    f.write('#!/bin/sh\necho "OPENED $*"\n')
-os.chmod(os.path.join(stub, "xdg-open"), 0o755)
+for opener in ("open", "xdg-open"):  # macOS opens with open, Linux with xdg-open: neither may reach the real one (it opens windows)
+    with open(os.path.join(stub, opener), "w") as f:
+        f.write('#!/bin/sh\necho "OPENED $*"\n')
+    os.chmod(os.path.join(stub, opener), 0o755)
 tree = config_folder("edit")
 for path in ("py/def.py", "py/helper.py", "cpp/main.cpp", "cpp/build/prog", "loose/prog/prog", "loose/prog/main.cpp", "loose/other/a.cpp"):
     os.makedirs(os.path.join(tree, os.path.dirname(path)), exist_ok=True)
@@ -115,7 +116,8 @@ run(SRP, "add", f"e{len(edits)}", os.path.join(tree, "bare", "prog"), config=edi
 for sh in SHELLS:
     for k, (program, wanted) in enumerate(edits.items()):
         out = shell(f"srp edit e{k}", sh, config=editConfig, env={"PATH": f"{stub}:{os.environ['PATH']}"})
-        opened = sorted(os.path.relpath(os.path.normpath(line.split(" ", 1)[1]), tree) for line in out.stdout.splitlines() if line.startswith("OPENED "))
+        # open gets all files in one call, xdg-open one call per file
+        opened = sorted(os.path.relpath(os.path.normpath(path), tree) for line in out.stdout.splitlines() if line.startswith("OPENED ") for path in line.split()[1:])
         check(f"{sh}: srp edit of {program} opens the sources of the program", opened == sorted(wanted), f"{opened} {out.tail()}")
     # a program without source files next to it: an error saying so, nothing opened
     out = shell(f"srp edit e{len(edits)}; echo status $?", sh, config=editConfig, env={"PATH": f"{stub}:{os.environ['PATH']}"})
