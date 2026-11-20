@@ -4266,7 +4266,9 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     // the index column is one of the tree or of a tree joined before (alias.column, or column if the tree has none of that name):
     // the chain loads its joined trees in the order of the joins, so the row of an earlier one is known when the index is evaluated
     const string treeAlias = split_path(treeName).second;
-    const auto dot = join.indexColumn.find('.');
+    // a column whose name has a dot itself (a branch of a split object, event.fIndex) is taken whole
+    const bool wholeName = columnLeaf(firstTree, join.indexColumn) || std::any_of(joinedChains.begin(), joinedChains.end(), [&](const auto& other) { return columnLeaf(other.get(), join.indexColumn); });
+    const auto dot = (wholeName) ? string::npos : join.indexColumn.find('.');
     const string qualifier = (dot == string::npos) ? "" : join.indexColumn.substr(0, dot);
     const string column = join.indexColumn.substr((dot == string::npos) ? 0 : dot + 1);
     const TTree* indexTree = (qualifier.empty() || qualifier == treeAlias) ? firstTree : nullptr;

@@ -3,7 +3,8 @@
 of its inputs, however they are split into files), by one or two integer keys from another data source (rows of the tree without a match
 skipped and counted in the reading summary; the joined data source may be restricted to a folder, the joined tree named by a path), by
 an index column holding the row number within the joined tree of the same input (AO2D-like DF_ folders: rows whose index is -1 or beyond
-the joined tree skipped, folders that are empty or have no joined rows, read in parallel).
+the joined tree skipped, folders that are empty or have no joined rows, read in parallel; an index column with a dot in its name
+taken whole).
 Columns of the joined tree are reached as alias.column, or by their name where the tree has no column of that name (the tree's own column
 wins); filters (also on C strings of the joined tree), defines, weights, entry ranges (counted over the rows of the tree, before rows without a match are skipped) and ratios
 work on joined columns; two joins at once, and requests with other joins on the same tree, each give their own result. A join that is
@@ -170,6 +171,23 @@ noColl = p.path("AO2D_none.root")
 for d in range(2):
     write_tree(noColl, {"fPosZ": np.zeros(0)}, name="O2collision", folder=f"DF_{d}")
     write_tree(noColl, {"fIndexCollisions": np.zeros(5, dtype=np.int32), "fPt": np.ones(5)}, name="O2track", folder=f"DF_{d}")
+# an index column with a dot in its name (a branch of a split object, event.fIndex): taken whole, not as alias.column
+dotted = ROOT.TFile(p.path("dotted.root"), "RECREATE")
+dottedColl = ROOT.TTree("coll", "")
+dottedZ = np.zeros(1, dtype=np.float32)
+dottedColl.Branch("z", dottedZ, "z/F")
+for i in range(5):
+    dottedZ[0] = i
+    dottedColl.Fill()
+dottedTrk = ROOT.TTree("trk", "")
+dottedIdx = np.zeros(1, dtype=np.int32)
+dottedTrk.Branch("ev.idx", dottedIdx, "ev.idx/I")
+for i in range(20):
+    dottedIdx[0] = i % 5
+    dottedTrk.Fill()
+dotted.Write()
+dotted.Close()
+p.pm.AddDataSource("dotted", p.path("dotted.root"))
 for name, inputs in (("ao2d", [f"{path}:DF_*" for path in ao2d]), ("aoNone", f"{noColl}:DF_*")):
     p.pm.AddDataSource(name, inputs)
 for name, inputs in (("A", A), ("other", other), ("trk", tracks), ("evInfo", info), ("gid", items), ("mt", mt), ("tl", listFile), ("csv", p.path("table.csv")), ("rn", p.path("rn.root"))):
@@ -249,6 +267,7 @@ aoPt, aoZ, aoMult = AO["pt"][aoMatched], AO["posZ"][aoMatched], AO["mult"][aoMat
 case("by an index column: a column of the joined tree in the same DF folder", H(20, -10, 10, aoZ), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPosZ", 20, [-10.0, 10.0])))
 case("by an index column: rows without a row in the joined tree are skipped", H(30, 0, 6, aoPt), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPt", 30, [0.0, 6.0])))
 case("by an index column: an expression of both trees, with an alias", H(30, 0, 300, aoPt * aoMult), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions", "coll").Project1D(("fPt * coll.fMult", 30, [0.0, 300.0])))
+case("by an index column: a column with a dot in its name", H(5, -0.5, 4.5, [i % 5 for i in range(20)]), lambda pad: pad.AddData("trk", "dotted").JoinByIndex("coll", "ev.idx").Project1D(("z", 5, [-0.5, 4.5])))
 case("by an index column: a filter on a joined column", H(30, 0, 6, aoPt[aoZ > 0]), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPt", 30, [0.0, 6.0])).Filter("fPosZ > 0"))
 withFT0 = ~np.isnan(AOC["timeA"])
 case("by a key of the same data source: matched within the joined tree of each input (keys restart per folder)", H(40, -2, 2, AOC["timeA"][withFT0]), lambda pad: pad.AddData("O2collision", "ao2d").Join("O2ft0", ["fIndexBCs"], "ft0").Project1D(("ft0.fTimeA", 40, [-2.0, 2.0])))
