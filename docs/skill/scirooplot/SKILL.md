@@ -175,7 +175,7 @@ Polar: the `_polar` aliases take x as the angle (one full turn) and y as the rad
 
 ## Modifiers (applied in this order, before drawing)
 
-`ScaleX/Y/Z(f)` (on the value axis, i.e. `ScaleY` of 1D data and `ScaleZ` of 2D data, they act as `Scale(f)` at the end) → `RebinX/Y/Z(n)`, `RebinXY`, `RebinXYZ` → `DivideBinWidth()` → `Smooth(n)` → `Normalize([isDensity], [min, max])` (to integral) → `Cumulative([forward])` → `NormalizeToMaximum([min, max])`, `Scale(f)` → then the range cuts `SetRangeX/Y`.
+`ScaleX/Y/Z(f)` (on the value axis, i.e. `ScaleY` of 1D data and `ScaleZ` of 2D data, they act as `Scale(f)` at the end) → `RebinX/Y/Z(n)` (n bins merged) or `RebinX/Y/Z({edges})` (to new bin edges, which must be edges of the input), `RebinXY`, `RebinXYZ` → `DivideBinWidth()` → `Smooth(n)` → `Normalize([isDensity], [min, max])` (to integral) → `Cumulative([forward])` → `NormalizeToMaximum([min, max])`, `Scale(f)` → then the range cuts `SetRangeX/Y`.
 With `min, max` the integral or maximum is taken only in that x range (the bins reaching into it; graphs: the points within it), e.g. `Normalize(false, 0.6, 0.9)` to compare shapes in a peak region while showing everything.
 `Density()` = `DivideBinWidth().Normalize()`: a probability density from counts. `Normalize(true)` is only for data that already is a density (e.g. dN/dpT); `Density()` on such data would divide by the bin widths twice.
 So `Normalize().Cumulative()` is a CDF and `Cumulative().NormalizeToMaximum()` ends at 1.0

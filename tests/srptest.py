@@ -2906,6 +2906,7 @@ SETTER_VALUES = {
     "Span.rows": {"plain": 1},
     "common": {"plain": False},  # true by default
     "contours": {"plain": [1.0, 2.5, 7.0], "precise": [1 / 3, 2 / 3, 1.0]},
+    "edges": {"plain": [0.0, 2.0, 5.0], "precise": [1 / 3, 2 / 3, 1.0]},
     "correlated": FLAG,
     "keepUnmatched": FLAG,
     "data": {"plain": Code('Data("h2", "s2")')},
@@ -3099,6 +3100,7 @@ SETTER_INVALID = {
     "align": [99, 14, -12],
     "font": [999, -1],
     "contours": [[3.0, 1.0, 2.0], [1.0, math.nan]],
+    "edges": [[1.0], [3.0, 1.0], [1.0, math.nan]],
     "nContours": [0, -3],
     "nIterSmooth": [0],
     "nGroup": [0],

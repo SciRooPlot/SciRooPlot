@@ -3698,6 +3698,10 @@ template <typename PtrT>
 void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad::Data::modify_t& m)
 {
   using ptr_type = std::decay_t<decltype(ptr)>;
+  // an axis is rebinned by a group of bins or to new edges
+  const bool rebinsX = m.rebinGroupX || m.rebinEdgesX;
+  const bool rebinsY = m.rebinGroupY || m.rebinEdgesY;
+  const bool rebinsZ = m.rebinGroupZ || m.rebinEdgesZ;
   auto ignored = [&](const string& setting, const string& reason) { ReportIgnored(state, setting + " of " + ptr->GetName(), reason); };
   auto warnUnsupported = [&](bool requested, const char* what) {
     if (requested) ignored(what, fmt::format("it is not supported for a {}", ptr->ClassName()));
@@ -3707,7 +3711,7 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
   auto changes = [](const auto& value, auto neutral) { return value && *value != neutral; };
   auto scales = [](const optional<double_t>& factor) { return factor && *factor != 1.; };
   if (m.scaleBinWidthNorm || m.normMaximum || m.cumulative || m.divideBinWidth.value_or(false) || scales(m.scaleFactor) ||
-      changes(m.rebinGroupX, 1) || changes(m.rebinGroupY, 1) || changes(m.rebinGroupZ, 1) || scales(m.scaleAxisX) ||
+      changes(m.rebinGroupX, 1) || changes(m.rebinGroupY, 1) || changes(m.rebinGroupZ, 1) || m.rebinEdgesX || m.rebinEdgesY || m.rebinEdgesZ || scales(m.scaleAxisX) ||
       scales(m.scaleAxisY) || scales(m.scaleAxisZ) || changes(m.nIterSmooth, 0))
     DropStoredFunctions(state, ptr, "modifiers of the data");
   // multiplies a factor of Scale or ScaleX/Y/Z into product (the setters take positive factors only)
@@ -3762,12 +3766,12 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     constexpr bool isProfileType = is_one_of_v<ptr_type, TProfile*, TProfile2D*>();
     const bool isProfile = isProfileType || dynamic_cast<TProfile3D*>(ptr);
     // ROOT merges the bins of a labelled axis but keeps the first labels, so the drawn categories are wrong
-    auto warnLabelled = [&](const TAxis* axis, const optional<uint16_t>& group, const char* what) {
-      if (group && axis->GetLabels()) Warn(state, "{} on the labelled axis of {} mixes up the labels.", what, ptr->GetName());
+    auto warnLabelled = [&](const TAxis* axis, bool rebins, const char* what) {
+      if (rebins && axis->GetLabels()) Warn(state, "{} on the labelled axis of {} mixes up the labels.", what, ptr->GetName());
     };
-    warnLabelled(ptr->GetXaxis(), m.rebinGroupX, "RebinX");
-    warnLabelled(ptr->GetYaxis(), m.rebinGroupY, "RebinY");
-    warnLabelled(ptr->GetZaxis(), m.rebinGroupZ, "RebinZ");
+    warnLabelled(ptr->GetXaxis(), rebinsX, "RebinX");
+    warnLabelled(ptr->GetYaxis(), rebinsY, "RebinY");
+    warnLabelled(ptr->GetZaxis(), rebinsZ, "RebinZ");
     // ROOT moves the bins that make no complete group into the overflow (its warning does not say so): said here, ROOT's is silenced
     auto warnIncomplete = [&](const TAxis* axis, const optional<uint16_t>& group, const char* what) {
       // not where rebinning is refused below (TH2Poly, TProfile3D)
@@ -3792,8 +3796,8 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
       if constexpr (is_hist_2d<ptr_type>()) {
         if (poly) {
           // a TH2Poly has no bins along its axes (ROOT aborts)
-          warnUnsupported(m.rebinGroupX.has_value(), "RebinX");
-          warnUnsupported(m.rebinGroupY.has_value(), "RebinY");
+          warnUnsupported(rebinsX, "RebinX");
+          warnUnsupported(rebinsY, "RebinY");
         } else {
           const bool rebinX = rebinFits(ptr->GetXaxis(), m.rebinGroupX, "RebinX");
           const bool rebinY = rebinFits(ptr->GetYaxis(), m.rebinGroupY, "RebinY");
@@ -3805,11 +3809,11 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
             ptr->RebinY(*m.rebinGroupY);
           }
         }
-        warnUnsupported(m.rebinGroupZ.has_value(), "RebinZ");
+        warnUnsupported(rebinsZ, "RebinZ");
       } else if constexpr (is_hist_3d<ptr_type>()) {
         if (dynamic_cast<TProfile3D*>(ptr)) {
           // TProfile3D has no rebinning of its own: the one of TH3 leaves every bin empty (ROOT bug)
-          warnUnsupported(m.rebinGroupX || m.rebinGroupY || m.rebinGroupZ, "Rebinning");
+          warnUnsupported(rebinsX || rebinsY || rebinsZ, "Rebinning");
         } else {
           if (rebinFits(ptr->GetXaxis(), m.rebinGroupX, "RebinX")) ptr->RebinX(*m.rebinGroupX);
           if (rebinFits(ptr->GetYaxis(), m.rebinGroupY, "RebinY")) ptr->RebinY(*m.rebinGroupY);
@@ -3817,12 +3821,96 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
         }
       } else {
         if (rebinFits(ptr->GetXaxis(), m.rebinGroupX, "RebinX")) ptr->RebinX(*m.rebinGroupX);
-        warnUnsupported(m.rebinGroupY.has_value(), "RebinY");
-        warnUnsupported(m.rebinGroupZ.has_value(), "RebinZ");
+        warnUnsupported(rebinsY, "RebinY");
+        warnUnsupported(rebinsZ, "RebinZ");
+      }
+    }
+    // new edges must be bin edges of the axis (ROOT would add a cut bin to the new bin holding its centre): the axis's own are used,
+    // since ROOT compares them exactly
+    [[maybe_unused]] auto edgesFit = [&](const TAxis* axis, const optional<vector<double_t>>& edges, const char* what) -> optional<vector<double_t>> {
+      if (!edges) return {};
+      vector<double_t> fitted;
+      fitted.reserve(edges->size());
+      for (double_t edge : *edges) {
+        const int32_t bin = std::clamp(axis->FindFixBin(edge), 1, axis->GetNbins());
+        const double_t tolerance = 1e-3 * axis->GetBinWidth(bin);  // edges typed with a few digits (0.3333 for 1/3)
+        const double_t low = axis->GetBinLowEdge(bin);
+        const double_t up = axis->GetBinUpEdge(bin);
+        const double_t match = (std::abs(edge - low) <= tolerance) ? low : (std::abs(edge - up) <= tolerance) ? up
+                                                                                                              : NAN;
+        if (std::isnan(match) || (!fitted.empty() && match == fitted.back())) {
+          ignored(what, fmt::format("{:g} is no bin edge of the axis (from {:g} to {:g}) or falls on the same one as the edge before",
+                                    edge, axis->GetXmin(), axis->GetXmax()));
+          return {};
+        }
+        fitted.push_back(match);
+      }
+      return fitted;
+    };
+    if (m.rebinEdgesX || m.rebinEdgesY || m.rebinEdgesZ) {
+      auto quietRebin = ignore_root_messages_below(kError);
+      if constexpr (is_hist_1d<ptr_type>()) {
+        if (auto edges = edgesFit(ptr->GetXaxis(), m.rebinEdgesX, "RebinX")) {
+          // ROOT rebins to new edges into a new histogram only: copied back into the data drawn
+          std::unique_ptr<TH1> rebinned(ptr->Rebin(static_cast<int32_t>(edges->size()) - 1, ptr->GetName(), edges->data()));
+          rebinned->SetDirectory(nullptr);
+          rebinned->Copy(*ptr);
+        }
+      } else if constexpr (is_one_of_v<ptr_type, TProfile2D*>()) {
+        // ROOT has no rebinning of a 2d profile to new edges
+        warnUnsupported(m.rebinEdgesX.has_value(), "RebinX");
+        warnUnsupported(m.rebinEdgesY.has_value(), "RebinY");
+      } else if (!poly && !dynamic_cast<TProfile3D*>(ptr)) {  // both said above
+        constexpr int32_t nDims = (is_hist_3d<ptr_type>()) ? 3 : 2;
+        std::array<optional<vector<double_t>>, 3> edges{edgesFit(ptr->GetXaxis(), m.rebinEdgesX, "RebinX"),
+                                                        edgesFit(ptr->GetYaxis(), m.rebinEdgesY, "RebinY"),
+                                                        (nDims == 3) ? edgesFit(ptr->GetZaxis(), m.rebinEdgesZ, "RebinZ") : std::nullopt};
+        if (edges[0] || edges[1] || edges[2]) {
+          // ROOT rebins only 1d histograms to new edges: every cell (flows too) is added to the new cell holding it
+          std::unique_ptr<TH1> old(static_cast<TH1*>(ptr->Clone()));
+          old->SetDirectory(nullptr);
+          TAxis* axes[3] = {ptr->GetXaxis(), ptr->GetYaxis(), ptr->GetZaxis()};
+          const TAxis* oldAxes[3] = {old->GetXaxis(), old->GetYaxis(), old->GetZaxis()};
+          for (int32_t i = 0; i < nDims; ++i) {
+            if (edges[i]) continue;
+            edges[i].emplace(oldAxes[i]->GetNbins() + 1);
+            for (int32_t bin = 1; bin <= oldAxes[i]->GetNbins() + 1; ++bin)
+              (*edges[i])[bin - 1] = oldAxes[i]->GetBinLowEdge(bin);
+          }
+          auto nBins = [&](int32_t i) { return static_cast<int32_t>(edges[i]->size()) - 1; };
+          double_t stats[TH1::kNstat] = {};
+          ptr->GetStats(stats);
+          const double_t entries = ptr->GetEntries();
+          if constexpr (nDims == 3) {
+            ptr->SetBins(nBins(0), edges[0]->data(), nBins(1), edges[1]->data(), nBins(2), edges[2]->data());
+          } else {
+            ptr->SetBins(nBins(0), edges[0]->data(), nBins(1), edges[1]->data());
+          }
+          for (int32_t i = 0; i < nDims; ++i) {  // an axis left as it is keeps fixed bins
+            if (nBins(i) == oldAxes[i]->GetNbins() && !oldAxes[i]->IsVariableBinSize()) axes[i]->Set(nBins(i), oldAxes[i]->GetXmin(), oldAxes[i]->GetXmax());
+          }
+          ptr->Reset("ICES");
+          auto newBin = [&](int32_t i, int32_t bin) {
+            if (bin == 0) return 0;
+            if (bin > oldAxes[i]->GetNbins()) return nBins(i) + 1;
+            return axes[i]->FindFixBin(oldAxes[i]->GetBinCenter(bin));
+          };
+          const TArrayD* oldSumw2 = (old->GetSumw2N()) ? old->GetSumw2() : nullptr;
+          TArrayD* sumw2 = ptr->GetSumw2();
+          for (int32_t cell = 0; cell < old->GetNcells(); ++cell) {
+            int32_t x = 0, y = 0, z = 0;
+            old->GetBinXYZ(cell, x, y, z);
+            const int32_t target = ptr->GetBin(newBin(0, x), newBin(1, y), (nDims == 3) ? newBin(2, z) : 0);
+            ptr->AddBinContent(target, old->GetBinContent(cell));
+            if (oldSumw2) sumw2->fArray[target] += oldSumw2->fArray[cell];
+          }
+          ptr->PutStats(stats);
+          ptr->SetEntries(entries);
+        }
       }
     }
     // ROOT keeps all labels of a rebinned axis: an axis that can extend is doubled to show them when painted (or its overflow is set)
-    if ((m.rebinGroupX && ptr->GetXaxis()->GetLabels()) || (m.rebinGroupY && ptr->GetYaxis()->GetLabels()) || (m.rebinGroupZ && ptr->GetZaxis()->GetLabels())) {
+    if ((rebinsX && ptr->GetXaxis()->GetLabels()) || (rebinsY && ptr->GetYaxis()->GetLabels()) || (rebinsZ && ptr->GetZaxis()->GetLabels())) {
       ptr->SetCanExtend(TH1::kNoAxis);
     }
     bool isDensity = m.scaleBinWidthNorm && *m.scaleBinWidthNorm;
@@ -4006,9 +4094,9 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     }
     if (scaleFactor) ptr->Scale(*scaleFactor);
   } else if constexpr (is_graph_1d<ptr_type>()) {
-    warnUnsupported(m.rebinGroupX.has_value(), "RebinX");
-    warnUnsupported(m.rebinGroupY.has_value(), "RebinY");
-    warnUnsupported(m.rebinGroupZ.has_value(), "RebinZ");
+    warnUnsupported(rebinsX, "RebinX");
+    warnUnsupported(rebinsY, "RebinY");
+    warnUnsupported(rebinsZ, "RebinZ");
     warnUnsupported(m.divideBinWidth && *m.divideBinWidth, "DivideBinWidth");
     warnUnsupported(m.showOverflowBins.has_value(), "ShowOverflowBins");
     warnUnsupported(m.cumulative.has_value(), "Cumulative");
@@ -4068,9 +4156,9 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     multiplyFactor(scaleFactor, m.scaleAxisY);
     if (scaleFactor) ScaleGraphAxis(ptr, 1, *scaleFactor);
   } else if constexpr (is_graph_2d<ptr_type>()) {
-    warnUnsupported(m.rebinGroupX.has_value(), "RebinX");
-    warnUnsupported(m.rebinGroupY.has_value(), "RebinY");
-    warnUnsupported(m.rebinGroupZ.has_value(), "RebinZ");
+    warnUnsupported(rebinsX, "RebinX");
+    warnUnsupported(rebinsY, "RebinY");
+    warnUnsupported(rebinsZ, "RebinZ");
     warnUnsupported(m.divideBinWidth && *m.divideBinWidth, "DivideBinWidth");
     warnUnsupported(m.nIterSmooth.has_value(), "Smooth");
     warnUnsupported(m.showOverflowBins.has_value(), "ShowOverflowBins");
@@ -4100,9 +4188,9 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
     multiplyFactor(scaleFactor, m.scaleAxisZ);
     if (scaleFactor) ScaleGraphAxis(ptr, 2, *scaleFactor);
   } else if constexpr (is_func<ptr_type>()) {
-    warnUnsupported(m.rebinGroupX.has_value(), "RebinX");
-    warnUnsupported(m.rebinGroupY.has_value(), "RebinY");
-    warnUnsupported(m.rebinGroupZ.has_value(), "RebinZ");
+    warnUnsupported(rebinsX, "RebinX");
+    warnUnsupported(rebinsY, "RebinY");
+    warnUnsupported(rebinsZ, "RebinZ");
     warnUnsupported(m.divideBinWidth && *m.divideBinWidth, "DivideBinWidth");
     warnUnsupported(m.nIterSmooth.has_value(), "Smooth");
     warnUnsupported(m.normMaximum && *m.normMaximum, "NormalizeToMaximum");
@@ -4445,7 +4533,9 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
 
     // modifiers on the ratio itself are applied as requested, but most of them are rarely meaningful there
     constexpr auto hint = "use Numer() / Denom() to apply it to the inputs before the division";
-    if (data->GetRebinGroupX() || data->GetRebinGroupY() || data->GetRebinGroupZ()) {
+    const auto& resultModify = data->Modify();
+    if (resultModify.rebinGroupX || resultModify.rebinGroupY || resultModify.rebinGroupZ || resultModify.rebinEdgesX || resultModify.rebinEdgesY ||
+        resultModify.rebinEdgesZ) {
       Warn(state, "Rebinning ratio {} sums ratio values; {}.", data_ptr->GetName(), hint);
     }
     if (data->GetCumulative()) {
@@ -4463,7 +4553,7 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
   const auto& m = data->Modify();
   const bool changesContents = m.scaleBinWidthNorm || m.normMaximum || m.cumulative || m.showOverflowBins.value_or(false) ||
                                m.divideBinWidth.value_or(false) || (m.scaleFactor && *m.scaleFactor > 0. && *m.scaleFactor != 1.) ||
-                               m.rebinGroupX.value_or(1) > 1 || m.rebinGroupY.value_or(1) > 1 || m.rebinGroupZ.value_or(1) > 1 ||
+                               m.rebinGroupX.value_or(1) > 1 || m.rebinGroupY.value_or(1) > 1 || m.rebinGroupZ.value_or(1) > 1 || m.rebinEdgesX || m.rebinEdgesY || m.rebinEdgesZ ||
                                (m.scaleAxisY && *m.scaleAxisY != 1.) || (m.scaleAxisZ && *m.scaleAxisZ != 1.);
   RemoveInvalid(state, data_ptr, DataName(*data), !changesContents);
 

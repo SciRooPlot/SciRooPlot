@@ -1593,7 +1593,7 @@
 
       - `DivideBinWidth()` divides the contents by the bin widths; `Density()` does that and normalizes the integral to one (a probability density from counts). For data that already is a density (e.g. dN/dpT) use `Normalize(true)`, which normalizes with the bin-width-weighted integral.
 
-      - `RebinX()` / `RebinY()` / `RebinZ()` -- and the `RebinXY()` / `RebinXYZ()` shortcuts -- merge neighboring bins along an axis. Histograms only.
+      - `RebinX()` / `RebinY()` / `RebinZ()` -- and the `RebinXY()` / `RebinXYZ()` shortcuts -- merge neighboring bins along an axis, a number of them or into the bins between new edges (edges of the input). Histograms only.
 
       - `Cumulative()` replaces the histogram with its running sum, low to high; pass `false` for a high-to-low sum. 1D histograms only.
 
@@ -2182,7 +2182,7 @@
         [`DivideBinWidth(divideBinWidth = true)`], [Divide contents by bin width.],
         [`Density()`], [Divide by bin width and normalize the integral to one: a probability density from counts.],
         [`Cumulative(forward = true)`], [Replace with the running sum. 1D histograms only.],
-        [`RebinX(n)` / `RebinY(n)` / `RebinZ(n)`], [Rebin one axis. Histograms only.],
+        [`RebinX(n)` / `RebinY(n)` / `RebinZ(n)`], [Rebin one axis: n bins merged, or given a list of new edges (edges of the input) into the bins between them. Histograms only.],
         [`RebinXY(nx, ny)` / `RebinXYZ(nx, ny, nz)`], [Rebin two or three axes at once.],
         [`Smooth(nIterSmooth = 1)`], [Apply smoothing.],
         [`ScaleX(factor)` / `ScaleY(factor)` / `ScaleZ(factor)`], [Rescale an axis itself (e.g. a unit conversion) -- unlike `Scale()`, which rescales the values.],

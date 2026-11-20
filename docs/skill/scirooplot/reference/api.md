@@ -237,6 +237,9 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Data& RebinZ(uint16_t nGroup)`
 - `Data& RebinXY(uint16_t nGroupX, uint16_t nGroupY)`
 - `Data& RebinXYZ(uint16_t nGroupX, uint16_t nGroupY, uint16_t nGroupZ)`
+- `Data& RebinX(const std::vector<double_t>& edges)`
+- `Data& RebinY(const std::vector<double_t>& edges)`
+- `Data& RebinZ(const std::vector<double_t>& edges)`
 - `Data& ScaleX(double_t scaleFactor)`
 - `Data& ScaleY(double_t scaleFactor)`
 - `Data& ScaleZ(double_t scaleFactor)`

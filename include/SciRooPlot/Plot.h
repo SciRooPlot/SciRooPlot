@@ -544,9 +544,10 @@ class Plot : public FillSetters<Plot>
   static std::string DataPath(const std::string& name, const std::string& dataSource);  // the path of data in its source: no leading '/'
   static bool CheckNotNegative(double value, const std::string& what);
   static bool CheckPositive(double value, const std::string& what);
-  static bool CheckFraction(double value, const std::string& what);  // 0 to 1
-  static bool CheckCount(int64_t count, const std::string& what);    // at least one
-  static bool CheckPixels(int64_t size, const std::string& what);    // a side of a canvas: 1 to 32767 pixels
+  static bool CheckFraction(double value, const std::string& what);                     // 0 to 1
+  static bool CheckCount(int64_t count, const std::string& what);                       // at least one
+  static bool CheckEdges(const std::vector<double_t>& edges, const std::string& what);  // at least two, finite and increasing
+  static bool CheckPixels(int64_t size, const std::string& what);                       // a side of a canvas: 1 to 32767 pixels
   static bool CheckFont(int16_t font);
   static bool CheckMarkerStyle(int16_t style, const std::string& what);  // ROOT's markers and their thicker versions up to line width 10
   static void Quietly(bool quiet, const std::function<void()>& call);    // without messages if quiet
@@ -1029,6 +1030,10 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   Data& RebinZ(uint16_t nGroup);
   Data& RebinXY(uint16_t nGroupX, uint16_t nGroupY);
   Data& RebinXYZ(uint16_t nGroupX, uint16_t nGroupY, uint16_t nGroupZ);
+  // merges the bins into the bins between the given edges, which must be bin edges of the input (histograms, not 2d/3d profiles)
+  Data& RebinX(const std::vector<double_t>& edges);
+  Data& RebinY(const std::vector<double_t>& edges);
+  Data& RebinZ(const std::vector<double_t>& edges);
   Data& ScaleX(double_t scaleFactor);
   Data& ScaleY(double_t scaleFactor);
   Data& ScaleZ(double_t scaleFactor);
@@ -1173,6 +1178,9 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
     std::optional<uint16_t> rebinGroupX;
     std::optional<uint16_t> rebinGroupY;
     std::optional<uint16_t> rebinGroupZ;
+    std::optional<std::vector<double_t>> rebinEdgesX;  // a group or edges per axis, not both
+    std::optional<std::vector<double_t>> rebinEdgesY;
+    std::optional<std::vector<double_t>> rebinEdgesZ;
     std::optional<double_t> scaleAxisX;
     std::optional<double_t> scaleAxisY;
     std::optional<double_t> scaleAxisZ;
@@ -1408,6 +1416,10 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   FORWARD_MODIFIER(Smooth)
   FORWARD_MODIFIER(Cumulative)
 #undef FORWARD_MODIFIER
+  // a braced list of edges is no argument the templates above can deduce
+  Ratio& RebinX(const std::vector<double_t>& edges) { return RebinX<std::vector<double_t>>(edges); }
+  Ratio& RebinY(const std::vector<double_t>& edges) { return RebinY<std::vector<double_t>>(edges); }
+  Ratio& RebinZ(const std::vector<double_t>& edges) { return RebinZ<std::vector<double_t>>(edges); }
   Ratio& Normalize(bool isDensity, std::optional<double_t> min, std::optional<double_t> max) { return Normalize<bool, std::optional<double_t>, std::optional<double_t>>(isDensity, min, max); }
   Ratio& NormalizeToMaximum(std::optional<double_t> min, std::optional<double_t> max) { return NormalizeToMaximum<std::optional<double_t>, std::optional<double_t>>(min, max); }
 

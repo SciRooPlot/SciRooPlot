@@ -17,7 +17,11 @@ each error with its point; messages after Cumulative name the data; scaled funct
 levels (given levels scaled with the values, as TH1::Scale does).
 """
 
+import bisect
+import math
 import re
+
+import numpy as np
 
 from srptest import (
     COMBINATIONS,
@@ -45,6 +49,7 @@ from srptest import (
     has_variant,
     holds_nonfinite,
     hist_diff,
+    inner_cells,
     modifier_reference,
     profile_means,
     source_of,
@@ -173,6 +178,145 @@ for name, (_, _, _, warning, bins) in limitCases.items():
     check(f"limits of the modifiers, {name}: the warning", bool(limitRun.warnings(warning)), " | ".join(limitRun.warnings()[:3]))
     check(f"limits of the modifiers, {name}: the bins", got == bins, f"{got}, expected {bins}")
 check("limits of the modifiers: no errors", not limitRun.errors(), " | ".join(limitRun.errors()[:3]))
+
+# rebinning to new edges: every histogram class against the sum of the contents and squared errors of the old cells in each new bin
+# (profiles against ROOT's TProfile::Rebin), unsupported kinds and edges that are no bin edges of the axis warned about and left as they are
+v = Project("rebin_edges")
+varEdges = ROOT.std.vector("double")([0.0, 1.0, 3.0, 4.0, 6.0, 10.0])
+edgeInputs = {
+    "e1": ROOT.TH1D("e1", "", 10, 0.0, 10.0),
+    "e1n": ROOT.TH1D("e1n", "", 10, 0.0, 10.0),  # without stored errors
+    "e1v": ROOT.TH1D("e1v", "", varEdges.size() - 1, varEdges.data()),
+    "e1t": ROOT.TH1D("e1t", "", 3, 0.0, 1.0),  # edges at thirds
+    "e2": ROOT.TH2D("e2", "", 10, 0.0, 10.0, 8, 0.0, 8.0),
+    "e2n": ROOT.TH2D("e2n", "", 10, 0.0, 10.0, 8, 0.0, 8.0),
+    "e2f": ROOT.TH2F("e2f", "", 10, 0.0, 10.0, 8, 0.0, 8.0),
+    "e3": ROOT.TH3D("e3", "", 4, 0.0, 4.0, 6, 0.0, 6.0, 4, 0.0, 4.0),
+    "ep1": ROOT.TProfile("ep1", "", 10, 0.0, 10.0),
+    "ep2": ROOT.TProfile2D("ep2", "", 4, 0.0, 4.0, 4, 0.0, 4.0),
+    "ep3": ROOT.TProfile3D("ep3", "", 4, 0.0, 4.0, 4, 0.0, 4.0, 4, 0.0, 4.0),
+    "epoly": ROOT.TH2Poly("epoly", "", 0.0, 4.0, 0.0, 4.0),
+    "eg": ROOT.TGraph(3, np.array([1.0, 2.0, 3.0]), np.array([1.0, 4.0, 9.0])),
+}
+edgeInputs["eg"].SetName("eg")
+for name, h in edgeInputs.items():
+    if not h.InheritsFrom("TH1") or h.InheritsFrom("TProfile") or h.InheritsFrom("TProfile2D") or h.InheritsFrom("TProfile3D") or name == "epoly":
+        continue
+    if not name.endswith("n"):
+        h.Sumw2()
+    for c in range(h.GetNcells()):
+        h.SetBinContent(c, 1.0 + (7 * c) % 11)
+        if not name.endswith("n"):
+            h.SetBinError(c, 0.1 + 0.05 * (c % 5))
+    h.SetEntries(100)
+for i in range(10):
+    edgeInputs["ep1"].Fill(i + 0.5, 2.0 + i)
+    edgeInputs["ep1"].Fill(i + 0.5, 3.0 + 2 * i)
+for i in range(4):
+    edgeInputs["ep2"].Fill(i + 0.5, i + 0.5, 1.0 + i)
+    edgeInputs["ep3"].Fill(i + 0.5, i + 0.5, i + 0.5, 1.0 + i)
+    cell = ROOT.TGraph(4, np.array([i, i + 1.0, i + 1.0, i]), np.array([0.0, 0.0, 4.0, 4.0]))
+    edgeInputs["epoly"].AddBin(cell)  # owned by the TH2Poly
+edgeInputs["e1l"] = edgeInputs["e1"].Clone("e1l")  # bin labels: ROOT doubles such an axis when it is painted after a rebin
+for b in range(1, 11):
+    edgeInputs["e1l"].GetXaxis().SetBinLabel(b, f"bin {b}")
+v.source("ed", edgeInputs)
+edgeCases = {  # plot: (data, base, modifier, new edges per axis (None: unchanged) or None: as the input, expected warning fragments)
+    "x1": ("e1", "1d", lambda d: d.RebinX([0.0, 2.0, 5.0, 10.0]), ([0.0, 2.0, 5.0, 10.0],), []),
+    "x1_part": ("e1", "1d", lambda d: d.RebinX([2.0, 5.0, 8.0]), ([2.0, 5.0, 8.0],), []),
+    "x1_rounded": ("e1", "1d", lambda d: d.RebinX([0.0, 0.1 * 3 * 10, 10.0]), ([0.0, 3.0, 10.0],), []),
+    "x1_typed": ("e1t", "1d", lambda d: d.RebinX([0.0, 0.3333, 1.0]), ([0.0, 1.0 / 3, 1.0],), []),
+    "x1_noerrors": ("e1n", "1d", lambda d: d.RebinX([0.0, 4.0, 10.0]), ([0.0, 4.0, 10.0],), []),
+    "x1_var": ("e1v", "1d", lambda d: d.RebinX([0.0, 3.0, 6.0, 10.0]), ([0.0, 3.0, 6.0, 10.0],), []),
+    "x1_numpy": ("e1", "1d", lambda d: d.RebinX(np.array([0.0, 5.0, 10.0])), ([0.0, 5.0, 10.0],), []),
+    "x1_then_group": ("e1", "1d", lambda d: d.RebinX([0.0, 5.0, 10.0]).RebinX(2), ([0.0, 2.0, 4.0, 6.0, 8.0, 10.0],), []),
+    "x1_group_then": ("e1", "1d", lambda d: d.RebinX(2).RebinX([0.0, 5.0, 10.0]), ([0.0, 5.0, 10.0],), []),
+    "x1_labels": ("e1l", "1d", lambda d: d.RebinX([0.0, 5.0, 10.0]), ([0.0, 5.0, 10.0],), ["RebinX on the labelled axis of e1l:ed mixes up the labels"]),
+    "x2": ("e2", "2d", lambda d: d.RebinX([0.0, 5.0, 10.0]), ([0.0, 5.0, 10.0], None), []),
+    "xy2": ("e2", "2d", lambda d: d.RebinX([0.0, 1.0, 10.0]).RebinY([0.0, 2.0, 8.0]), ([0.0, 1.0, 10.0], [0.0, 2.0, 8.0]), []),
+    "xy2_group": ("e2", "2d", lambda d: d.RebinX(2).RebinY([0.0, 3.0, 8.0]), ([0.0, 2.0, 4.0, 6.0, 8.0, 10.0], [0.0, 3.0, 8.0]), []),
+    "y2_noerrors": ("e2n", "2d", lambda d: d.RebinY([0.0, 3.0, 8.0]), (None, [0.0, 3.0, 8.0]), []),
+    "y2_float": ("e2f", "2d", lambda d: d.RebinY([0.0, 3.0, 8.0]), (None, [0.0, 3.0, 8.0]), []),
+    "z3": ("e3", "2d", lambda d: d.RebinZ([0.0, 1.0, 4.0]).RebinY([1.0, 5.0]), (None, [1.0, 5.0], [0.0, 1.0, 4.0]), []),
+    "x1_profile": ("ep1", "1d", lambda d: d.RebinX([0.0, 4.0, 5.0, 10.0]), ([0.0, 4.0, 5.0, 10.0],), []),
+    "no_edge": ("e1", "1d", lambda d: d.RebinX([0.0, 2.5, 10.0]), None, ["RebinX of e1:ed is ignored: 2.5 is no bin edge of the axis (from 0 to 10)"]),
+    "beyond": ("e1", "1d", lambda d: d.RebinX([0.0, 5.0, 12.0]), None, ["RebinX of e1:ed is ignored: 12 is no bin edge of the axis (from 0 to 10)"]),
+    "y1": ("e1", "1d", lambda d: d.RebinY([0.0, 1.0]), None, ["RebinY of e1:ed is ignored: it is not supported for a TH1D"]),
+    "z2": ("e2", "2d", lambda d: d.RebinZ([0.0, 1.0]), None, ["RebinZ of e2:ed is ignored: it is not supported for a TH2D"]),
+    "profile2d": ("ep2", "2d", lambda d: d.RebinX([0.0, 2.0, 4.0]), None, ["RebinX of ep2:ed is ignored: it is not supported for a TProfile2D"]),
+    "profile3d": ("ep3", "2d", lambda d: d.RebinX([0.0, 2.0, 4.0]), None, ["Rebinning of ep3:ed is ignored: it is not supported for a TProfile3D"]),
+    "poly": ("epoly", "2d", lambda d: d.RebinX([0.0, 2.0, 4.0]), None, ["RebinX of epoly:ed is ignored: it is not supported for a TH2Poly"]),
+    "graph": ("eg", "1d", lambda d: d.RebinX([0.0, 2.0, 4.0]), None, ["RebinX of eg:ed is ignored: it is not supported for a TGraph"]),
+}
+for name, (data, base, modify, _, _) in edgeCases.items():
+    plot = S.Plot(name, "edges", base)
+    modify(plot[1].AddData(data, "ed"))
+    v.pm.AddPlot(plot)
+ratioPlot = S.Plot("ratio", "edges", "1d")  # both inputs rebinned to the same edges: divided bin by bin
+ratioPlot[1].AddRatio(S.Data("e1", "ed"), S.Data("e1", "ed")).Both().RebinX([0.0, 3.0, 10.0])
+v.pm.AddPlot(ratioPlot)
+edgeRun = v.plot("edges")
+
+
+def merged(h, newEdges):
+    """the reference: h (as drawn without modifiers) with the cells merged into the bins between newEdges, flows left out"""
+    dim = h.GetDimension()
+    axes = [getattr(h, f"Get{a}axis")() for a in "XYZ"[:dim]]
+    edges = [ne if ne is not None else [a.GetBinLowEdge(b) for b in range(1, a.GetNbins() + 2)] for a, ne in zip(axes, newEdges)]
+    vecs = [ROOT.std.vector("double")(e) for e in edges]
+    args = [x for vec in vecs for x in (vec.size() - 1, vec.data())]
+    ref = {1: ROOT.TH1D, 2: ROOT.TH2D, 3: ROOT.TH3D}[dim]("merged", "", *args)
+    ref.SetDirectory(0)
+    sums, squares = [0.0] * ref.GetNcells(), [0.0] * ref.GetNcells()
+    for c in inner_cells(h):
+        bx, by, bz = ROOT.std.vector("int")(1), ROOT.std.vector("int")(1), ROOT.std.vector("int")(1)
+        h.GetBinXYZ(c, bx.data(), by.data(), bz.data())
+        centre = [a.GetBinCenter(b) for a, b in zip(axes, (bx[0], by[0], bz[0]))]
+        target = [bisect.bisect_right(e, x) for e, x in zip(edges, centre)]  # 1 to n inside the new edges
+        if any(t < 1 or t >= len(e) for t, e in zip(target, edges)):
+            continue
+        cell = ref.GetBin(*(target + [0] * (3 - dim)))
+        sums[cell] += h.GetBinContent(c)
+        squares[cell] += h.GetBinError(c) ** 2
+    for cell in range(ref.GetNcells()):
+        ref.SetBinContent(cell, sums[cell])
+        ref.SetBinError(cell, math.sqrt(squares[cell]) if h.GetSumw2N() else math.sqrt(abs(sums[cell])))
+    return ref
+
+
+for name, (data, base, _, newEdges, warnings) in edgeCases.items():
+    obs = edgeRun.objects(name, "edges")
+    if not obs:
+        check(f"rebinning to edges, {name}: drawn", False, " | ".join(edgeRun.errors()[:2]))
+        continue
+    obs = obs[0]
+    for warning in warnings:
+        check(f"rebinning to edges, {name}: the warning", bool(edgeRun.warnings(warning)), " | ".join(edgeRun.warnings()[:3]))
+    if data == "eg":
+        check(f"rebinning to edges, {name}: left as it is", obs.GetN() == 3, f"{obs.GetN()} points")
+        continue
+    inputHist = edgeInputs[data]
+    if newEdges is None:
+        same = all(getattr(obs, f"GetNbins{a}")() == getattr(inputHist, f"GetNbins{a}")() for a in "XYZ")
+        check(f"rebinning to edges, {name}: left as it is", same, f"{[getattr(obs, f'GetNbins{a}')() for a in 'XYZ']}")
+        continue
+    if family(inputHist) == "profile":
+        expected = inputHist.Clone("expected")
+        vec = ROOT.std.vector("double")(newEdges[0])
+        expected = expected.Rebin(vec.size() - 1, "expected_rebinned", vec.data())
+        diff = hist_diff(profile_means(expected), profile_means(obs), 1e-9)
+    else:
+        diff = hist_diff(merged(inputHist, newEdges), obs, 1e-6 if inputHist.ClassName().endswith("F") else 1e-9)
+    check(f"rebinning to edges, {name}: as the merged cells", not diff, diff)
+    fixed = [not getattr(obs, f"Get{a}axis")().IsVariableBinSize() for a, ne in zip("XYZ", newEdges) if ne is None]
+    check(f"rebinning to edges, {name}: an axis left as it is keeps fixed bins", all(fixed), str(fixed))
+ratioObs = edgeRun.objects("ratio", "edges")
+ratioContents = [ratioObs[0].GetBinContent(b) for b in range(1, ratioObs[0].GetNbinsX() + 1)] if ratioObs else None
+check("rebinning to edges, both ratio inputs: divided bin by bin", ratioContents == [1.0, 1.0], str(ratioContents))
+expectedEdgeWarnings = [w for case in edgeCases.values() for w in case[4]]
+unexpectedEdgeWarnings = [line for line in edgeRun.warnings() if not any(w in line for w in expectedEdgeWarnings)]
+check("rebinning to edges: every warning expected", not unexpectedEdgeWarnings, " | ".join(unexpectedEdgeWarnings[:3]))
+check("rebinning to edges: no errors", not edgeRun.errors(), " | ".join(edgeRun.errors()[:3]))
 
 # contour levels of a scaled 2d function: a number of levels stays, given levels are scaled with the values
 c = Project("contour_levels", bases=("2d",))

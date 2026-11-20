@@ -251,6 +251,17 @@ bool Plot::CheckCount(int64_t count, const string& what)
   logger::warning("The {} ({}) is ignored: it is not a positive number.", what, count);
   return false;
 }
+bool Plot::CheckEdges(const vector<double_t>& edges, const string& what)
+{
+  // whether they are bin edges of the input is known only when it is drawn
+  const bool finite = std::all_of(edges.begin(), edges.end(), [](double_t edge) { return std::isfinite(edge); });
+  const bool increasing = std::adjacent_find(edges.begin(), edges.end(), std::greater_equal<double_t>()) == edges.end();
+  const char* reason = (edges.size() < 2) ? "at least two are needed" : (!finite)     ? "they are not all finite numbers"
+                                                                      : (!increasing) ? "they are not in increasing order"
+                                                                                      : nullptr;
+  if (reason) logger::warning("The {} are ignored: {}.", what, reason);
+  return !reason;
+}
 bool Plot::CheckPixels(int64_t size, const string& what)
 {
   // X11 (and ROOT's bitmaps after it) cannot make a window or image side beyond 32767 pixels: painting such a canvas crashes
@@ -2532,6 +2543,9 @@ void Plot::Pad::Data::ReadModify(const ptree& tree, modify_t& modify, const stri
   read_from_tree(tree, modify.rebinGroupX, prefix + "rebin_x");
   read_from_tree(tree, modify.rebinGroupY, prefix + "rebin_y");
   read_from_tree(tree, modify.rebinGroupZ, prefix + "rebin_z");
+  read_from_tree(tree, modify.rebinEdgesX, prefix + "rebin_edges_x");
+  read_from_tree(tree, modify.rebinEdgesY, prefix + "rebin_edges_y");
+  read_from_tree(tree, modify.rebinEdgesZ, prefix + "rebin_edges_z");
   read_from_tree(tree, modify.scaleAxisX, prefix + "scale_axis_x");
   read_from_tree(tree, modify.scaleAxisY, prefix + "scale_axis_y");
   read_from_tree(tree, modify.scaleAxisZ, prefix + "scale_axis_z");
@@ -2552,6 +2566,9 @@ void Plot::Pad::Data::PutModify(ptree& tree, const modify_t& modify, const strin
   put_in_tree(tree, modify.rebinGroupX, prefix + "rebin_x");
   put_in_tree(tree, modify.rebinGroupY, prefix + "rebin_y");
   put_in_tree(tree, modify.rebinGroupZ, prefix + "rebin_z");
+  put_in_tree(tree, modify.rebinEdgesX, prefix + "rebin_edges_x");
+  put_in_tree(tree, modify.rebinEdgesY, prefix + "rebin_edges_y");
+  put_in_tree(tree, modify.rebinEdgesZ, prefix + "rebin_edges_z");
   put_in_tree(tree, modify.scaleAxisX, prefix + "scale_axis_x");
   put_in_tree(tree, modify.scaleAxisY, prefix + "scale_axis_y");
   put_in_tree(tree, modify.scaleAxisZ, prefix + "scale_axis_z");
@@ -2965,17 +2982,23 @@ auto Plot::Pad::Data::Density() -> decltype(*this)
 }
 auto Plot::Pad::Data::RebinX(uint16_t nGroup) -> decltype(*this)
 {
-  if (CheckCount(nGroup, "number of bins to merge for " + GetName())) mModify.rebinGroupX = nGroup;
+  if (!CheckCount(nGroup, "number of bins to merge for " + GetName())) return *this;
+  mModify.rebinGroupX = nGroup;
+  mModify.rebinEdgesX.reset();  // a group or edges per axis
   return *this;
 }
 auto Plot::Pad::Data::RebinY(uint16_t nGroup) -> decltype(*this)
 {
-  if (CheckCount(nGroup, "number of bins to merge for " + GetName())) mModify.rebinGroupY = nGroup;
+  if (!CheckCount(nGroup, "number of bins to merge for " + GetName())) return *this;
+  mModify.rebinGroupY = nGroup;
+  mModify.rebinEdgesY.reset();  // a group or edges per axis
   return *this;
 }
 auto Plot::Pad::Data::RebinZ(uint16_t nGroup) -> decltype(*this)
 {
-  if (CheckCount(nGroup, "number of bins to merge for " + GetName())) mModify.rebinGroupZ = nGroup;
+  if (!CheckCount(nGroup, "number of bins to merge for " + GetName())) return *this;
+  mModify.rebinGroupZ = nGroup;
+  mModify.rebinEdgesZ.reset();  // a group or edges per axis
   return *this;
 }
 auto Plot::Pad::Data::RebinXY(uint16_t nGroupX, uint16_t nGroupY) -> decltype(*this)
@@ -2985,6 +3008,8 @@ auto Plot::Pad::Data::RebinXY(uint16_t nGroupX, uint16_t nGroupY) -> decltype(*t
   if (!valid) return *this;
   mModify.rebinGroupX = nGroupX;
   mModify.rebinGroupY = nGroupY;
+  mModify.rebinEdgesX.reset();
+  mModify.rebinEdgesY.reset();
   return *this;
 }
 auto Plot::Pad::Data::RebinXYZ(uint16_t nGroupX, uint16_t nGroupY, uint16_t nGroupZ) -> decltype(*this)
@@ -2996,6 +3021,30 @@ auto Plot::Pad::Data::RebinXYZ(uint16_t nGroupX, uint16_t nGroupY, uint16_t nGro
   mModify.rebinGroupX = nGroupX;
   mModify.rebinGroupY = nGroupY;
   mModify.rebinGroupZ = nGroupZ;
+  mModify.rebinEdgesX.reset();
+  mModify.rebinEdgesY.reset();
+  mModify.rebinEdgesZ.reset();
+  return *this;
+}
+auto Plot::Pad::Data::RebinX(const vector<double_t>& edges) -> decltype(*this)
+{
+  if (!CheckEdges(edges, "x bin edges for rebinning " + GetName())) return *this;
+  mModify.rebinEdgesX = edges;
+  mModify.rebinGroupX.reset();
+  return *this;
+}
+auto Plot::Pad::Data::RebinY(const vector<double_t>& edges) -> decltype(*this)
+{
+  if (!CheckEdges(edges, "y bin edges for rebinning " + GetName())) return *this;
+  mModify.rebinEdgesY = edges;
+  mModify.rebinGroupY.reset();
+  return *this;
+}
+auto Plot::Pad::Data::RebinZ(const vector<double_t>& edges) -> decltype(*this)
+{
+  if (!CheckEdges(edges, "z bin edges for rebinning " + GetName())) return *this;
+  mModify.rebinEdgesZ = edges;
+  mModify.rebinGroupZ.reset();
   return *this;
 }
 auto Plot::Pad::Data::ScaleX(double_t scaleFactor) -> decltype(*this)
