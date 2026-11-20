@@ -8,7 +8,8 @@ plots and data sources is refused with one error each. Removing, renaming and re
 kept or refused; clean forgets the projects whose code is gone (the folder of the program, for a C++ project also the sources above its
 build folder). Registering is safe against srp commands and programs running at the same time, and in-memory data moves with a renamed
 project.
-Removing and resetting say which projects they removed; writing plots of a project without an output folder names srp set.
+Removing and resetting say which projects they removed; writing plots of a project without an output folder names srp set; a projects.info
+that is a symbolic link is written where it points, the link kept.
 Covers: unknown projects, confdir of an unknown project, unset program, confdir ..,
 add with an unset variable: one message, nothing left, program before srp add, concurrent
 srp add, SaveProject keeping changes made meanwhile, rename with in-memory data, srp set while a program saves, rename
@@ -339,4 +340,15 @@ for project, wanted in (("withproj", "srp set withproj outdir <folder>"), ("", "
     code = f"from SciRooPlot import *\npm = PlotManager({project!r})\npm.AddBasePlot(PlotManager.MakeBasePlot('1d'))\np = Plot('p', 'g', '1d')\np[1]['X'].SetRange(0, 1)\np[1]['Y'].SetRange(0, 1)\npm.AddPlot(p)\npm.GeneratePlots('png')"
     out = python(code, config=config_folder(f"no_outdir_{project or 'none'}"))
     check(f"no output folder {'in a project' if project else 'without a project'}: the error names {wanted}", len(out.errors()) == 1 and wanted in out.errors()[0], out.tail())
+# a projects.info that is a symbolic link: written where it points, the link kept
+config = setup()
+linkTarget = os.path.join(config_folder("projects_info_elsewhere"), "projects.info")
+shutil.move(os.path.join(config, "projects.info"), linkTarget)
+os.symlink(linkTarget, os.path.join(config, "projects.info"))
+out = run(SRP, "add", "C", program("C"), os.path.join(PROGRAMS, "C", "out"), config=config)
+check(
+    "a projects.info that is a link: written where it points, the link kept",
+    out.rc == 0 and os.path.islink(os.path.join(config, "projects.info")) and "C" in open(linkTarget).read().split() and not [f for f in os.listdir(os.path.dirname(linkTarget)) if f.endswith(".tmp")],
+    out.tail(),
+)
 finish()

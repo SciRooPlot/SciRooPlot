@@ -2,8 +2,8 @@
 pictures of mode png) both end with exit status 0 and write all they make (every plot in Plots.root, every picture complete); a run whose
 write of Plots.root is cut short leaves the Plots.root of the earlier run as it was; Ctrl-C (SIGINT
 to the process group, as a terminal sends it) ends a long run within seconds, in mode file and png, and leaves the Plots.root of an earlier
-run as it was (it is written at the end of a run).
-Covers: two runs at once, a write of Plots.root cut short, Ctrl-C during a long run."""
+run as it was (it is written at the end of a run); a Plots.root that is a symbolic link is written where it points, the link kept.
+Covers: two runs at once, a write of Plots.root cut short, Ctrl-C during a long run, a Plots.root linked elsewhere."""
 
 import os
 import pty
@@ -103,4 +103,16 @@ for mode in ("file", "png"):
     status, output = finished(proc, master, 30)
     check(f"Ctrl-C during a run in mode {mode}: it ends within seconds", status is not None and time.time() - interrupted < 10, f"status {status} after {time.time() - interrupted:.1f} s: {output[-200:]}")
     check(f"Ctrl-C during a run in mode {mode}: the Plots.root of the earlier run is left as it was", os.path.getmtime(os.path.join(out, "Plots.root")) == before and plots_in(os.path.join(out, "Plots.root")) == found, "changed")
+
+# a Plots.root that is a symbolic link: written where it points, the link kept
+target = p.path("elsewhere", "Plots.root")
+os.makedirs(os.path.dirname(target), exist_ok=True)
+os.replace(os.path.join(out, "Plots.root"), target)
+os.symlink(target, os.path.join(out, "Plots.root"))
+linked = subprocess.run([PLOT, "g", "p0", "file"], capture_output=True, text=True)
+check(
+    "a Plots.root that is a link: written where it points, the link kept",
+    linked.returncode == 0 and os.path.islink(os.path.join(out, "Plots.root")) and plots_in(target) == ["p0"] and not [f for f in os.listdir(os.path.dirname(target)) if f.endswith(".tmp")],
+    f"exit status {linked.returncode}, link {os.path.islink(os.path.join(out, 'Plots.root'))}, target {plots_in(target)}",
+)
 finish()

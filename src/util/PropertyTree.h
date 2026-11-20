@@ -78,7 +78,7 @@ inline void write_info_file(const std::string& file, const boost::property_tree:
   const std::string tmpFile = temporary_file(file);
   try {
     boost::property_tree::write_info(tmpFile, tree);
-    std::filesystem::rename(tmpFile, file);
+    std::filesystem::rename(tmpFile, written_file(file));
   } catch (const std::exception&) {
     std::error_code ec;
     std::filesystem::remove(tmpFile, ec);
