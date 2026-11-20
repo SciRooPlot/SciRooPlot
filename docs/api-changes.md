@@ -75,6 +75,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `srp colorwheel <file>` with a name not ending in an image format wrote PostScript under that name; ROOT's info line was shown | Refused with an error; ROOT's line left out | CLI | Name the file `.png`, `.pdf`, `.svg`, `.eps`, `.jpg` or `.gif`. |
 | `srp edit` of a C++ program opened the sources in every folder next to the program's folder (also those of other projects) | The sources of the CMake source folder of its build (`srp init-cpp`: the folder above `build/`), else of its own folder; without sources there, or without a program to open files, it fails with an error saying so | CLI | Nothing. |
 | `srp` with more than four words (e.g. `srp set <project> <name> two words`) ended with Boost's message "too many positional options" | Refused with "Too many arguments", saying to quote a value with spaces | CLI | Nothing. |
+| `srp get` and `srp projects` showed a stored setting value the declaration no longer allows, while the program used the default | They give the default the program uses (`srp get` warns about the value set, `srp projects` names it) | CLI | Nothing. |
 
 ## 4.0.0 → 4.1.0
 

@@ -455,7 +455,14 @@ int RunCommand(const string& command, const string& project, const string& prope
         const string defaultValue = declaration.get<string>("default", "");
         auto it = properties.find(setting);
         const string value = (it == properties.end() || it->second.empty()) ? defaultValue : it->second;
-        const string shown = (value.empty() ? "-" : value) + ((value == defaultValue) ? "" : "  (default " + (defaultValue.empty() ? "-" : defaultValue) + ")");
+        // a value the declaration no longer allows: the program uses the default
+        const string allowed = Config::AllowedSettingValues(declaration, value);
+        string shown;
+        if (!allowed.empty()) {
+          shown = (defaultValue.empty() ? "-" : defaultValue) + "  (the value set, " + value + ", is not " + allowed + ")";
+        } else {
+          shown = (value.empty() ? "-" : value) + ((value == defaultValue) ? "" : "  (default " + (defaultValue.empty() ? "-" : defaultValue) + ")");
+        }
         valueWidth = std::max(valueWidth, shown.size());
         settingRows.emplace_back(setting, shown, declaration.get<string>("description", ""));
         if (it != properties.end()) properties.erase(it);
@@ -496,7 +503,14 @@ int RunCommand(const string& command, const string& project, const string& prope
       const auto declaration = Config::Get().DeclaredSetting(project, property);
       if (!declaration) return 1;
       const string value = Config::Get().Property(project, property);
-      std::cout << (value.empty() ? declaration->get<string>("default", "") : value) << std::endl;
+      const string defaultValue = declaration->get<string>("default", "");
+      // a value the declaration no longer allows: the program uses the default
+      if (const string allowed = Config::AllowedSettingValues(*declaration, value); !value.empty() && !allowed.empty()) {
+        logger::warning("The value '{}' set for setting {} of project {} is not {}: the default '{}' is used.", value, property, project, allowed, defaultValue);
+        std::cout << defaultValue << std::endl;
+      } else {
+        std::cout << (value.empty() ? defaultValue : value) << std::endl;
+      }
     }
   } else if (command == "unset") {
     if (!Config::GetMutable().SetProperty(project, property, "")) return 1;

@@ -7,7 +7,8 @@ value or the default; srp unset goes back to the default and removes a value lef
 declaration with a reserved or illegal name or with a default it does not allow is refused with one error, gives the default and is not
 saved; a setting declared again otherwise is warned, declared again alike is not. srp projects lists the settings in the order declared,
 each with its value, the default where it differs and its description, and the values left from settings no longer declared.
-SaveProject saves the declarations and removes them once the program declares none.
+SaveProject saves the declarations and removes them once the program declares none. srp get and srp projects give the value the program
+uses (the default for a stored value the declaration does not allow, warned by get).
 Covers: a value with spaces, quotes and braces, a value left from a setting with another type, a setting no longer declared, a program
 declaring none, invalid declarations, a PlotManager without project."""
 
@@ -152,6 +153,10 @@ else:
 # a stored value the declaration does not allow (the program changed the type): warned, the default
 out = define(PY.replace("pm.Setting('integer', 50", "pm.Setting('integer', True"))
 check("a stored value the declaration does not allow: warned once, the default", out.rc == 0 and "integer\tbool\tTrue" in out.stdout and len(out.warnings()) == 1 and "'3'" in out.warnings()[0], out.tail())
+got = run(SRP, "get", "proj", "integer", config=config)
+listed = run(SRP, "projects", "proj", config=config)
+check("srp get of a stored value the declaration does not allow: the default the program uses, warned", got.rc == 0 and got.stdout.strip() == "on" and len(got.warnings()) == 1 and "'3'" in got.warnings()[0], got.tail())
+check("srp projects of a stored value the declaration does not allow: the default, the value set named", "on  (the value set, 3, is not on or off" in listed.stdout, listed.tail())
 
 # a setting no longer declared: its value is listed and can be unset, not set
 out = define(PY.replace("values['integer'] = pm.Setting('integer', 50, '')\n", ""))
