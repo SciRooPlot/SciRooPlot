@@ -42,6 +42,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | The colour scale of a 3d histogram in a `ColorScale()` cell took only the fonts and colours set on `'C'` | Every look set on `'C'` (alphas, centring, axis colour, ticks, divisions, max digits, no exponent) and the text alpha of the pad, as the scale in the pad | behaviour | Nothing. |
 | `AddVerticalLine`/`AddHorizontalLine` in pad coordinates (`SetPadCoordinates`) at a position beside the frame were not drawn, with a warning | Drawn there over the height or width of the frame, as `AddRegionX`/`AddRegionY` | behaviour | Nothing. |
 | A `Ratio` used as template (`ratio(name)`) gave data with the numerator's projection and the ratio's own modifiers (`Result()`), without the numerator's modifiers | The numerator as data: its selection and modifiers (`Numer()`), with the ratio's look; the denominator and the modifiers of the ratio itself are left out | behaviour | Add the modifiers of the ratio to the data where they are wanted. |
+| A relative input path in `PlotManager::AddDataSource` was skipped with a warning | It is taken relative to the current directory and stored as an absolute path, as `SetOutputDirectory` does | behaviour | Nothing; build paths from the program's folder where they must not depend on the current directory. |
 
 ### Input validation
 

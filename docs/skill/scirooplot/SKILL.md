@@ -282,7 +282,7 @@ Identical names and chains. Differences:
 - Line widths are whole pixels: ROOT stores them as integers, so a fractional width (`SetLine(s, 3.5, c)`, `SetLineWidth(2.5)`, `SetBorder(s, 1.5, c)`, `SetDefaultLineWidth`, `PanelLayout::SetLineWidth`) is rounded to the nearest integer, with a warning. Write whole numbers (`3.`); marker sizes, text sizes and alpha may be fractional. Exclusion contours: a graph drawn `line`/`curve` with width 100 × zone + width (`SetLine(kSolid, 1503., kBlack).SetFill(3354, kBlack)`) hatches a zone of width 15 on one side in its fill, as in ROOT (negative width: the other side).
 - Rebin/Scale/Normalize on a ratio act on the result — use `.Both().Normalize()` etc. to act on the inputs.
 - In C++ `AddData({"h", "src"}, "label")` is ambiguous (the brace list also converts to a `std::string`): write `AddData("h", "src", "label")` or `AddData(Data("h", "src"), "label")`. Without a label, `AddData({"h", "src"})` is fine.
-- Input paths must be absolute (or start with an environment variable such as `${HOME}`): a relative path is skipped with a warning.
+- A relative input path is taken relative to the current directory (as the output directory) and stored as an absolute path; for paths that stay valid wherever the program runs, build them from the program's folder (`SRC_DIR`) or start them with an environment variable such as `${HOME}`.
 - `from SciRooPlot import *` also brings the drawing option aliases (`line`, `text`, `box`, `col`, …) and the helpers `graph`, `histo`, `table`: a user variable of the same name hides them.
 - In bash, quote patterns containing `(`, `)` or `|`.
 - Verify by generating: `plot <group> <name> png` and look at the file, or `plot ... list`. Warnings in the output name the plot and data.

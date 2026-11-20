@@ -467,13 +467,16 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<string>& 
   for (const auto& input : inputs) {
     const auto expandedInput = expand_path(input);
     if (!expandedInput) continue;
-    if (!is_remote(*expandedInput) && std::filesystem::path(*expandedInput).is_relative()) {
-      logger::warning("Skipping input '{}' (data source {}): {}.", input, dataSource, (input.empty()) ? "the path is empty" : "the path must not be relative");
+    if (input.empty()) {
+      logger::warning("Skipping input '' (data source {}): the path is empty.", dataSource);
       continue;
     }
+    // a relative path is taken relative to the current directory (as the output directory), so that it can be stored with the project
+    const bool relative = !is_remote(*expandedInput) && std::filesystem::path(*expandedInput).is_relative();
+    const string stored = (relative) ? std::filesystem::absolute(*expandedInput).lexically_normal().string() : input;
     auto& inputsOfDataSource = mInputs[dataSource];
-    if (std::find(inputsOfDataSource.begin(), inputsOfDataSource.end(), input) == inputsOfDataSource.end()) {
-      inputsOfDataSource.push_back(input);
+    if (std::find(inputsOfDataSource.begin(), inputsOfDataSource.end(), stored) == inputsOfDataSource.end()) {
+      inputsOfDataSource.push_back(stored);
     }
   }
 }

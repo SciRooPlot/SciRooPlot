@@ -974,7 +974,7 @@
 
       - Wildcards select all matching files and/or folders within the files (e.g. `AO2D_*.root:DF_*`).
 
-      - Paths are absolute, but `SRC_DIR` enables paths relative to #plot-def-file; environment variables are expanded automatically.
+      - Relative paths start at the current directory, `SRC_DIR` gives paths relative to #plot-def-file; environment variables are expanded.
 
       - Inputs are searched in the order they were added (files from directories or wildcards alphabetically) and the first match counts -- but trees and RNTuples found in several inputs are chained.
 
