@@ -730,7 +730,7 @@ std::string Config::SettingsFile(const string& projectName) const
   return mPath / projectName / "settings.info";
 }
 
-ptree Config::DeclaredSettings(const string& projectName) const
+std::optional<ptree> Config::DeclaredSettings(const string& projectName) const
 {
   ptree settings;
   const string file = SettingsFile(projectName);
@@ -740,15 +740,17 @@ ptree Config::DeclaredSettings(const string& projectName) const
   try {
     read_info(file, settings);
   } catch (const std::exception& e) {
-    logger::error("Cannot read the settings of project {}: {}.", projectName, util::without_final_period(e.what()));
-    settings.clear();
+    logger::error("Cannot read {} ({}).", file, util::without_final_period(e.what()));
+    return std::nullopt;
   }
   return settings;
 }
 
 std::optional<ptree> Config::DeclaredSetting(const string& projectName, const string& name, bool report) const
 {
-  const ptree settings = DeclaredSettings(projectName);
+  const auto declared = DeclaredSettings(projectName);
+  if (!declared) return std::nullopt;  // reported
+  const ptree& settings = *declared;
   if (const auto declaration = settings.find(name); declaration != settings.not_found()) {
     return declaration->second;
   }

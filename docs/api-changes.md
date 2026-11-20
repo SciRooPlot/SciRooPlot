@@ -76,6 +76,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `srp edit` of a C++ program opened the sources in every folder next to the program's folder (also those of other projects) | The sources of the CMake source folder of its build (`srp init-cpp`: the folder above `build/`), else of its own folder; without sources there, or without a program to open files, it fails with an error saying so | CLI | Nothing. |
 | `srp` with more than four words (e.g. `srp set <project> <name> two words`) ended with Boost's message "too many positional options" | Refused with "Too many arguments", saying to quote a value with spaces | CLI | Nothing. |
 | `srp get` and `srp projects` showed a stored setting value the declaration no longer allows, while the program used the default | They give the default the program uses (`srp get` warns about the value set, `srp projects` names it) | CLI | Nothing. |
+| An unreadable `settings.info` of a project was reported, but `srp projects` succeeded and `srp get`/`set` added that the program declares no setting | One error; `srp projects` exits with 1 | CLI | Nothing. |
 
 ## 4.0.0 → 4.1.0
 

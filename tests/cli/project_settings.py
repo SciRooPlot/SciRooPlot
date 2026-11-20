@@ -8,7 +8,8 @@ declaration with a reserved or illegal name or with a default it does not allow 
 saved; a setting declared again otherwise is warned, declared again alike is not. srp projects lists the settings in the order declared,
 each with its value, the default where it differs and its description, and the values left from settings no longer declared.
 SaveProject saves the declarations and removes them once the program declares none. srp get and srp projects give the value the program
-uses (the default for a stored value the declaration does not allow, warned by get).
+uses (the default for a stored value the declaration does not allow, warned by get). An unreadable settings file is one error, and srp
+projects fails.
 Covers: a value with spaces, quotes and braces, a value left from a setting with another type, a setting no longer declared, a program
 declaring none, invalid declarations, a PlotManager without project."""
 
@@ -204,6 +205,17 @@ check(
     out.rc == 0 and "GOT 2147483647 -2147483648 1 0 False 10000000000.0" in out.stdout and dict(types) == {"a": "integer", "b": "integer", "c": "integer", "d": "integer", "e": "switch", "f": "number"},
     out.tail() + saved,
 )
+
+# an unreadable settings file: one error; srp projects fails, srp get says nothing more
+broken = config_folder("broken")
+run(SRP, "add", "bp", program, config=broken)
+os.makedirs(os.path.join(broken, "bp"), exist_ok=True)
+with open(os.path.join(broken, "bp", "settings.info"), "w") as f:
+    f.write("nbins\n{\n type integer")
+listed = run(SRP, "projects", "bp", config=broken)
+got = run(SRP, "get", "bp", "nbins", config=broken)
+check("an unreadable settings file: srp projects fails with one error", listed.rc == 1 and len(listed.errors()) == 1 and "settings.info" in listed.errors()[0], listed.tail())
+check("an unreadable settings file: srp get fails with that one error", got.rc == 1 and len(got.errors()) == 1 and "settings.info" in got.errors()[0], got.tail())
 
 # without a project: the defaults, no message
 out = python("from SciRooPlot import *\npm = PlotManager()\nprint('GOT', pm.Setting('s', True), pm.Setting('t', 'x', 'd', ['x', 'y']))", config=config)

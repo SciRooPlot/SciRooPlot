@@ -434,7 +434,9 @@ int RunCommand(const string& command, const string& project, const string& prope
       // program and output folder first, then the settings the program declares, values left from settings it no longer declares,
       // then what the program saved
       auto properties = Config::Get().Properties(name);
-      const ptree settings = Config::Get().DeclaredSettings(name);
+      const auto declared = Config::Get().DeclaredSettings(name);
+      if (!declared) readable = false;
+      const ptree settings = declared.value_or(ptree{});
       size_t width = 12;
       for (const auto& [property, value] : properties)
         width = std::max(width, property.size());

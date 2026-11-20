@@ -72,7 +72,7 @@ class Config
 
   // the settings the program of a project declares (PlotManager::Setting), saved with its plot definitions: per name its
   // type (switch, integer, number or text), default, description and choices
-  boost::property_tree::ptree DeclaredSettings(const std::string& projectName) const;  // empty if there are none (an unreadable file is reported)
+  std::optional<boost::property_tree::ptree> DeclaredSettings(const std::string& projectName) const;  // empty if there are none, nullopt for an unreadable file (reported)
   std::optional<boost::property_tree::ptree> DeclaredSetting(const std::string& projectName, const std::string& name, bool report = true) const;
   static std::string AllowedSettingValues(const boost::property_tree::ptree& declaration, const std::string& value);  // empty if the value is one of them
   static std::optional<int> ParseInteger(const std::string& value);
