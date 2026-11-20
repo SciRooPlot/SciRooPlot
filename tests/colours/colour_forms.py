@@ -3,7 +3,8 @@ object gets exactly that colour (rgb colours are stored in the plot definitions 
 with it (the alpha setter or the alpha of a combined setter); colour forms that are not valid raise when they are set. An index ROOT
 does not know is drawn black (as by ROOT) with a warning, once per index and run. An alpha setter alone gives the colour the part has
 without it that transparency (a legend row without a text colour of its own: the legend's). A fill or border colour alone shows its part
-on a legend or text without fill or border (a solid fill, a border of width 1), as on shapes.
+on a legend or text without fill or border (a solid fill, a border of width 1), as on shapes. An alpha of an axis set in pad 0 stays with
+a colour set in the pad (axis line, title and labels alike).
 Covers: rgb colours in every colour setter; a text alpha alone on a legend row.
 """
 
@@ -191,7 +192,15 @@ for target, (make, setter) in SHOWN.items():
     plot = S.Plot(f"shown_{target}", "forms", "1d")
     getattr(make(plot, add_data(plot[1], "hist").SetLegendLabel("data")), setter)(ROOT.kRed)
     p.pm.AddPlot(plot)
+plot = S.Plot("axis_merge", "forms", "1d")
+add_data(plot[1], "hist")
+plot[0]["X"].SetAxisAlpha(0.3).SetLabelAlpha(0.3)
+plot[1]["X"].SetAxisColor(ROOT.kRed).SetLabelColor(ROOT.kRed)
+p.pm.AddPlot(plot)
 run = p.plot("forms")
+xAxis = axis(run, "axis_merge")
+found = (colour_diff(ROOT.kRed, xAxis.GetAxisColor(), 0.3), colour_diff(ROOT.kRed, xAxis.GetLabelColor(), 0.3)) if xAxis else ("not drawn",)
+check("an axis alpha of pad 0 stays with an axis colour of the pad, as for the labels", not any(found), " | ".join(found))
 for target in SHOWN:
     obj = READ[target][0](run, f"shown_{target}")
     shown = obj and (obj.GetFillStyle() == 1001 if target.endswith("fill") else obj.GetLineWidth() == 1)

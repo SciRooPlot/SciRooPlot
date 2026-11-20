@@ -38,6 +38,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A `ColorScale()` cell left out its own legends, texts, images and shapes without a word, and drew legends with rows of other pads (`AddDataEntry`) and texts naming their data over the scale | None of them is drawn, one warning names what is left out | behaviour | Put boxes and shapes into a panel. |
 | After `GeneratePlots` with `srp bitmapscale` other than 1, gStyle kept the scaled line width, end-error size, hatch width and dash patterns: a program drawing on got scaled lines | They are those of the program again once the files are written (in modes `show` and `spread` they stay while the windows are open) | behaviour | Nothing. |
 | `SetFillColor` alone on a legend or text box (`LegendBox`, `TextBox`), and `SetBorderColor` alone, had no visible effect; an ellipse given only `SetFillAlpha` stayed open | A fill colour alone gives a solid fill, a border colour alone a border of width 1, as on shapes; the ellipse is filled (grey) | behaviour | Set `SetFillStyle(0)` or `SetBorderWidth(0)` to keep a box without them. |
+| An axis alpha set in pad 0 (`Axis::SetAxisAlpha`) was lost where the pad set the axis colour (`SetAxisColor`) | It stays, as for the title and labels | behaviour | Nothing. |
 | `AddVerticalLine`/`AddHorizontalLine` in pad coordinates (`SetPadCoordinates`) at a position beside the frame were not drawn, with a warning | Drawn there over the height or width of the frame, as `AddRegionX`/`AddRegionY` | behaviour | Nothing. |
 
 ### Input validation

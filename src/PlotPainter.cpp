@@ -3125,6 +3125,8 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
   optional<double_t> userRangeMax;
   bool userTitleOffset{};
   bool userTitleCenter{};
+  optional<color_t> axisColor;  // merged over pad 0 and the pad like the title and labels: an alpha of pad 0 stays with a colour of the pad
+  optional<float_t> axisAlpha;
 
   // first apply default pad values and then settings for this specific pad
   for (const auto* axisSettings : AxisSettings(pad, padDefaults, axisLabel)) {
@@ -3150,8 +3152,8 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
     }
     if (axisLayout.GetLabelCenter()) axis_ptr->CenterLabels(*axisLayout.GetLabelCenter());
 
-    if (axisLayout.GetAxisColor()) axis_ptr->SetAxisColor(axisLayout.GetAxisColor()->ToIndex());
-    if (axisLayout.GetAxisAlpha()) axis_ptr->SetAxisColor(TColor::GetColorTransparent(axis_ptr->GetAxisColor(), *axisLayout.GetAxisAlpha()));
+    if (axisLayout.GetAxisColor()) axisColor = axisLayout.GetAxisColor();
+    if (axisLayout.GetAxisAlpha()) axisAlpha = axisLayout.GetAxisAlpha();
 
     if (axisLayout.GetTitleOffset()) {
       axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
@@ -3209,6 +3211,7 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
       }
     }
   }
+  axis_ptr->SetAxisColor(ColorWithAlpha(axis_ptr->GetAxisColor(), axisColor, axisAlpha));
   // the title set above or stored with the input
   if (string title = axis_ptr->GetTitle(); title.find('\\') != string::npos) {
     DropEmptyGroups(title);
