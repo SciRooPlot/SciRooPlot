@@ -209,9 +209,15 @@ plot[2].AddLine((0.1, 0.1), (0.5, 0.5)).SetPadCoordinates()
 plot[2].AddLegend().AddDataEntry(1, 1)
 plot[2].AddText(0.2, 0.2, "<name:1:1>")
 c.pm.AddPlot(plot)
+plot = S.Plot("lonely", S.PanelLayout([[S.ColorScale(), S.Panel()]]))
+plot.SetGroup("cell")
+add_data(plot[2], "hist2d").SetDrawOption(S.colz)
+c.pm.AddPlot(plot)
 cellRun = c.plot("cell")
 inCell = [o.ClassName() for o, _ in cellRun.links("cell", "cell", 2) if o.InheritsFrom("TPave") and not o.InheritsFrom("TPaletteAxis") or o.ClassName() == "TLine"]
 said = [m for m in cellRun.messages("cell", "cell") if "cell of a colour scale" in m]
 check("a ColorScale() cell draws no legend, text or shape of its own, nor boxes naming other pads", not inCell, str(inCell))
 check("a ColorScale() cell: one warning naming what is left out", len(said) == 1 and "legends, texts, shapes are not drawn" in said[0], " | ".join(cellRun.messages("cell", "cell")))
+said = [m for m in cellRun.messages("lonely", "cell") if "cell of a colour scale" in m]
+check("a ColorScale() cell without a panel left of it: warned, named as a cell of a colour scale", len(said) == 1 and "Pad 1 is the cell of a colour scale and stays empty" in said[0], " | ".join(cellRun.messages("lonely", "cell")))
 finish()

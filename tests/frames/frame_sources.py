@@ -156,7 +156,7 @@ frameHist = run.frame_hist("labelled_frame", "named")
 found = [frameHist.GetXaxis().GetBinLabel(b) for b in range(1, 5)] if frameHist else None
 check("a labelled frame input labels the frame", found == list("ABCD"), f"{found}")
 same_frame("set_and_marked", "alone_narrow_other")
-check("set_and_marked: warned that the marked data does not define the frame", any("has a frame (narrow), data marked SetDefinesFrame() does not define it" in m for m in run.messages("set_and_marked", "named")), " | ".join(run.messages("set_and_marked", "named")))
+check("set_and_marked: warned that the marked data does not define the frame", any("has a frame (narrow:other), data marked SetDefinesFrame() does not define it" in m for m in run.messages("set_and_marked", "named")), " | ".join(run.messages("set_and_marked", "named")))
 same_frame("set_twice", "alone_narrow_other")
 same_frame("frame_only", "alone_narrow_other")
 check("frame_only: nothing drawn as data", run.canvas("frame_only", "named") is not None and not run.objects("frame_only", "named"), f"{[o.GetName() for o in run.objects('frame_only', 'named')]}")

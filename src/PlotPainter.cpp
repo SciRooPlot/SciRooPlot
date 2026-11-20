@@ -756,7 +756,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       // the frame input of the pad is drawn only as frame (in front of the data, with the ranges stored with it, like data that defines the frame)
       const bool dataDefinesFrame = std::any_of(drawData.begin(), drawData.end(), [](const auto& curData) { return curData->GetDefinesFrame(); });
       if (dataDefinesFrame) {
-        logger::warning("Pad {} has a frame ({}), data marked SetDefinesFrame() does not define it.", padID, pad.GetFrame()->GetName());
+        logger::warning("Pad {} has a frame ({}), data marked SetDefinesFrame() does not define it.", padID, DataName(*pad.GetFrame()));
       }
       drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Data>(*pad.GetFrame()));
       drawData[0]->SetDefinesFrame();
@@ -938,7 +938,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       }
       pad_ptr->cd();
       if (!DrawBox(box, pad, padDefaults, pad_ptr, "LegendBox_" + std::to_string(legendIndex))) {
-        logger::warning("Legend {} was not added since it is empty.", legendIndex);
+        logger::warning("Legend {} of pad {} is empty: it is not drawn.", legendIndex, padID);
       }
     }
     uint8_t textIndex{};
@@ -947,7 +947,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       if (!box->RefersToOtherPads() || !pad_ptr) continue;
       pad_ptr->cd();
       if (!DrawBox(box, pad, padDefaults, pad_ptr, "TextBox_" + std::to_string(textIndex))) {
-        logger::warning("Text {} was not added since it is empty.", textIndex);
+        logger::warning("Text {} of pad {} is empty: it is not drawn.", textIndex, padID);
       }
     }
   }
@@ -1355,7 +1355,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
       if (box->IsAutoPlacement() == fixedPositions || box->HasForeignRows()) continue;  // a legend with rows of other pads comes once all are drawn
       box->MergeLegendEntries(static_cast<uint16_t>(pad.GetData().size()));             // put the rows added by the user between those of the data
       if (!DrawBox(box, pad, padDefaults, pad_ptr, "LegendBox_" + std::to_string(legendIndex))) {
-        logger::warning("Legend {} was not added since it is empty.", legendIndex);
+        logger::warning("Legend {} of pad {} is empty: it is not drawn.", legendIndex, padID);
       }
     }
     uint8_t textIndex{};
@@ -1363,7 +1363,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
       ++textIndex;
       if (box->IsAutoPlacement() == fixedPositions || box->RefersToOtherPads()) continue;  // a text naming data of other pads comes once all are drawn
       if (!DrawBox(box, pad, padDefaults, pad_ptr, "TextBox_" + std::to_string(textIndex))) {
-        logger::warning("Text {} was not added since it is empty.", textIndex);
+        logger::warning("Text {} of pad {} is empty: it is not drawn.", textIndex, padID);
       }
     }
     uint8_t imageIndex{};
@@ -6030,7 +6030,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           if (TNamed* data_ptr = findPlaceholderData(*entry.GetRefDataID(), entry.GetRefPadID())) {
             ReplacePlaceholders(line, data_ptr);
           } else {
-            logger::warning("Legend entry '{}': there is no data {} drawn in {}.", line, *entry.GetRefDataID(), (entry.GetRefPadID()) ? "pad " + std::to_string(*entry.GetRefPadID()) : "this pad");
+            logger::warning("Legend row '{}': there is no data {} drawn in {}.", line, *entry.GetRefDataID(), (entry.GetRefPadID()) ? "pad " + std::to_string(*entry.GetRefPadID()) : "this pad");
           }
         }
       } else if (line.find('<') != string::npos) {
@@ -8742,7 +8742,7 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
   Plot::Pad& cell = plot[padID];
   const uint8_t shown = *cell.GetColorScaleOf();
   if (shown == 0) {
-    logger::warning("The colour scale cell (pad {}) stays empty: no panel left of it, name one with ColorScale(padID).", padID);
+    logger::warning("Pad {} is the cell of a colour scale and stays empty: no panel left of it, name one with ColorScale(padID).", padID);
     return;
   }
   const vector<uint8_t> alone{shown};  // a panel in no z group: the cell shows its own scale
@@ -8760,7 +8760,7 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
     if (memberPad) break;
   }
   if (!memberPad) {
-    logger::warning("The colour scale cell (pad {}) stays empty: no panel of the z group of pad {} draws a 2d histogram, graph or function, or a 3d histogram.", padID, shown);
+    logger::warning("Pad {} is the cell of a colour scale and stays empty: no panel of the z group of pad {} draws a 2d histogram, graph or function, or a 3d histogram.", padID, shown);
     return;
   }
   const Plot::Pad& defaults = plot[0];
