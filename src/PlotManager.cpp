@@ -76,6 +76,7 @@
 #include <TTree.h>
 #include <TTreeFormula.h>
 #include <TTreeIndex.h>
+#include <TUrl.h>
 #include <TVirtualIndex.h>
 #include <TVirtualX.h>
 #include <termios.h>
@@ -1649,6 +1650,15 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   mExpandedInputs.clear();
   mRemoteFiles.clear();
   auto remoteFilesGuard = make_scope_guard([this]() { mRemoteFiles.clear(); });  // closed when the data is read
+  // remote inputs are read from local copies (srp cachedir), copied when first read and again when the remote file changed: every remote
+  // open, also those of RDataFrame; afterwards ROOT reads through the cache only when asked to again (its default)
+  const string cacheDir = Config::Get().CacheDir();
+  const bool useCache = !cacheDir.empty() && TFile::SetCacheFileDir(cacheDir, false, true);
+  if (!cacheDir.empty() && !useCache) logger::warning("Cannot use the cache folder {} (srp cachedir): it cannot be created or written. Reading remote inputs directly.", cacheDir);
+  auto cacheGuard = make_scope_guard([useCache]() {
+    if (useCache) TFile::SetCacheFileDir(TFile::GetCacheFileDir(), true, false);
+  });
+  auto cacheNoteGuard = filter_root_messages([](Int_t level, Bool_t, const char* location, const char*) { return level < kWarning && location && string(location) == "TFile::OpenFromCache"; });
   size_t nInputs{};
   for (const auto& dataSource : sourcesToRead) {
     // data sources restricted to a folder are read together with the data source they are part of
@@ -4189,7 +4199,14 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
   map<string, string> joinedTreeOf;    // join by an index column: part of the chain -> its joined tree, each as file|path
   map<string, Long64_t> rowsOfJoined;  // joined tree as file|path -> its number of rows
   // RDataFrame names the input of a row file/path: the inputs of the chain by that name, as file|path
-  auto sampleOf = [](const string& part) { return part.substr(0, part.find('|')) + "/" + part.substr(part.find('|') + 1); };
+  // (a remote file read from its local copy, srp cachedir, by the path of the copy: the cache folder followed by the path of the url)
+  auto samplesOf = [](const string& part) {
+    const string file = part.substr(0, part.find('|'));
+    const string treePath = part.substr(part.find('|') + 1);
+    vector<string> samples{file + "/" + treePath};
+    if (is_remote(file) && !string(TFile::GetCacheFileDir()).empty()) samples.push_back(TFile::GetCacheFileDir() + string(TUrl(file.data()).GetFile()) + "/" + treePath);
+    return samples;
+  };
   const string matchedColumn = "SRP_MATCHED_" + join.GetAlias();
   if (join.dataSource.empty()) {
     // taken from each input of the tree: the name of the joined tree starts where the name of the tree starts
@@ -4276,7 +4293,9 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       // without a match is only one if that tree has a match
       auto nRowsOf = std::make_shared<std::unordered_map<string, Long64_t>>();
       for (const auto& [part, joined] : joinedTreeOf) {
-        (*nRowsOf)[sampleOf(part)] = rowsOfJoined[joined];
+        for (const auto& sample : samplesOf(part)) {
+          (*nRowsOf)[sample] = rowsOfJoined[joined];
+        }
       }
       const string holder = (indexTree != firstTree) ? indexTreeDescription : "";
       const bool holderKeeps = std::any_of(joinMatches.begin(), joinMatches.end(), [&](const auto& match) { return match->alias == holder; });
@@ -4337,7 +4356,9 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
         // a row has its match if its keys are in the joined tree beside it
         auto rowsOfSample = std::make_shared<std::unordered_map<string, const map<key_t, Long64_t>*>>();
         for (const auto& [part, joined] : joinedTreeOf) {
-          (*rowsOfSample)[sampleOf(part)] = &rowsByKey->at(joined);
+          for (const auto& sample : samplesOf(part)) {
+            (*rowsOfSample)[sample] = &rowsByKey->at(joined);
+          }
         }
         const vector<string> keys = join.keys;
         const string alias = join.GetAlias();

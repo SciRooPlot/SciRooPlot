@@ -69,7 +69,7 @@ using namespace SciRooPlot;
 namespace po = boost::program_options;
 bool PrintRootFileContents(const string& inputPath);
 // the settings changed by srp <setting> <value>, in the order srp settings shows them
-constexpr const char* kSettings[] = {"verbosity", "color", "plotmode", "matchmode", "matchcase", "screenscale", "bitmapscale"};
+constexpr const char* kSettings[] = {"verbosity", "color", "plotmode", "matchmode", "matchcase", "screenscale", "bitmapscale", "cachedir"};
 string SettingValue(const string& setting)
 {
   const Config& config = Config::Get();
@@ -79,6 +79,7 @@ string SettingValue(const string& setting)
   if (setting == "matchmode") return config.MatchContains() ? "contains" : "exact";
   if (setting == "matchcase") return config.MatchCaseInsensitive() ? "insensitive" : "sensitive";
   if (setting == "screenscale") return fmt::format("{}", config.ScreenScale());
+  if (setting == "cachedir") return config.CacheDir().empty() ? "off" : config.CacheDir();
   return fmt::format("{}", config.BitmapScale());
 }
 int RunCommand(const string& command, const string& project, const string& property, const string& setting);
@@ -222,6 +223,7 @@ int RunCommand(const string& command, const string& project, const string& prope
     row("srp matchcase (sensitive | insensitive)", "case sensitivity of the patterns");
     row("srp screenscale <factor>", "size of plots on screen (default 1)");
     row("srp bitmapscale <factor>", "resolution of png/jpg/gif (default 1)");
+    row("srp cachedir (<folder> | off)", "local copies of remote inputs (default off)");
     heading("Maintenance");
     row("srp info", "installation and build details");
     row("srp update", "update SciRooPlot");

@@ -52,6 +52,7 @@ class Config
   bool MatchContains() const { return mMatchContains; }
   double ScreenScale() const { return mScreenScale; }
   double BitmapScale() const { return mBitmapScale; }
+  const std::string& CacheDir() const { return mCacheDir; }
   const std::filesystem::path& Path() const { return mPath; }
 
   const std::string& ProjectsFile() const { return mProjectsFile; }
@@ -138,6 +139,7 @@ class Config
   bool mMatchContains{false};
   double mScreenScale{1.};  // size factor for plots shown on screen
   double mBitmapScale{1.};  // resolution factor for bitmap files (png, jpg, gif)
+  std::string mCacheDir;    // folder of local copies of remote input files (empty: none)
   std::filesystem::path mPath;
   std::string mProjectsFile;
   std::string mSettingsFile;

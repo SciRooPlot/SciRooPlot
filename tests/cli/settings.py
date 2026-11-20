@@ -1,4 +1,4 @@
-"""The settings commands of srp (verbosity, color, plotmode, matchmode, matchcase, screenscale, bitmapscale) store every value srp help
+"""The settings commands of srp (verbosity, color, plotmode, matchmode, matchcase, screenscale, bitmapscale, cachedir) store every value srp help
 documents, shown by srp settings and kept in settings.info, and refuse anything else with exit status 1 and one error, changing nothing.
 Without a value they print the current value, changing nothing.
 Without a settings file the documented defaults hold. A settings.info edited by hand with an unknown key or an invalid value is reported once
@@ -18,6 +18,7 @@ VALID = {
     "matchcase": ["sensitive", "insensitive"],
     "screenscale": ["1", "1.5", "2", "0.25"],
     "bitmapscale": ["1", "1.5", "2", "0.25"],
+    "cachedir": ["off", "/tmp/srp-cache", "/a b/c"],
 }
 INVALID = {
     "verbosity": ["loud"],
@@ -27,8 +28,9 @@ INVALID = {
     "matchcase": ["maybe"],
     "screenscale": ["0", "-1", "abc", "nan", "inf", "1.5x"],
     "bitmapscale": ["0", "-2", "abc", "nan", "inf", "2x"],
+    "cachedir": ["relative/folder", "on"],
 }
-DEFAULTS = {"plotmode": "show", "matchmode": "exact", "matchcase": "sensitive", "screenscale": "1", "bitmapscale": "1", "current project": "none"}
+DEFAULTS = {"plotmode": "show", "matchmode": "exact", "matchcase": "sensitive", "screenscale": "1", "bitmapscale": "1", "cachedir": "off", "current project": "none"}
 
 
 def shown(config):
@@ -51,7 +53,11 @@ for i, case in enumerate(todo):
     out = run(SRP, case["setting"], case["value"], config=config)
     if case["value"] in VALID[case["setting"]]:
         stored = open(os.path.join(config, "settings.info")).read().splitlines()
-        check(f"stored and shown: {what}", out.rc == 0 and not out.errors() and shown(config).get(case["setting"]) == case["value"] and f"{case['setting']} {case['value']}" in stored, f"rc {out.rc}, shown {shown(config).get(case['setting'])}: {out.tail()}")
+        check(
+            f"stored and shown: {what}",
+            out.rc == 0 and not out.errors() and shown(config).get(case["setting"]) == case["value"] and (f"{case['setting']} {case['value']}" in stored or f'{case["setting"]} "{case["value"]}"' in stored),
+            f"rc {out.rc}, shown {shown(config).get(case['setting'])}: {out.tail()}",
+        )
     else:
         check(f"refused with one error, nothing changed: {what}", out.rc == 1 and len(out.errors()) == 1 and config_files(config) == before, f"rc {out.rc}: {out.tail()}")
 

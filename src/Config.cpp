@@ -237,6 +237,14 @@ std::optional<bool> Config::ApplySetting(const string& key, const string& value)
     if (scale) (key == "screenscale" ? mScreenScale : mBitmapScale) = *scale;
     return scale.has_value();
   }
+  if (key == "cachedir") {
+    // off, or an absolute folder (a leading ~ is the home folder)
+    string dir = value;
+    if (dir == "~" || util::str_starts_with(dir, "~/")) dir = expand_path("~").value_or("~") + dir.substr(1);
+    const bool valid = (value == "off" || (!dir.empty() && std::filesystem::path(dir).is_absolute()));
+    if (valid) mCacheDir = (value == "off") ? "" : std::filesystem::path(dir).lexically_normal().string();
+    return valid;
+  }
   return std::nullopt;
 }
 
@@ -294,6 +302,7 @@ bool Config::Save()
     tree.add("matchcase", mMatchCaseInsensitive ? "insensitive" : "sensitive");
     tree.add("screenscale", mScreenScale);
     tree.add("bitmapscale", mBitmapScale);
+    tree.add("cachedir", mCacheDir.empty() ? "off" : mCacheDir);
     // a failed write is reported once and not repeated at exit
     mChangedSettings.clear();
     mRewriteSettings = false;
@@ -984,7 +993,8 @@ bool Config::SetSetting(const string& key, const string& value)
                                               {"matchmode", "exact | contains"},
                                               {"matchcase", "sensitive | insensitive"},
                                               {"screenscale", "positive number, e.g. 1.5"},
-                                              {"bitmapscale", "positive number, e.g. 1.5"}};
+                                              {"bitmapscale", "positive number, e.g. 1.5"},
+                                              {"cachedir", "an absolute folder, e.g. ~/.SciRooPlot/cache, or off"}};
   if (!ApplySetting(key, value).value_or(false)) {
     logger::error("Invalid {} '{}' ({}).", key, value, hints.at(key));
     return false;
