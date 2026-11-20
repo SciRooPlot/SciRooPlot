@@ -33,6 +33,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `area` of a `TGraphPolar` was drawn in cartesian coordinates (the angles as x), filled down to zero there | Drawn on the polar grid; with a fill, the polygon through its points is filled there (ROOT's `F`) | behaviour | Nothing. |
 | A shape (line, arrow, vertical or horizontal line, ellipse, polygon) with a position at or below zero on a log axis (user coordinates) was not drawn, with a warning | Drawn with that position at the frame edge, where ROOT puts it, with a warning (regions reaching there span to the edge, as before) | behaviour | Nothing. |
 | Aliases stored with a tree (`TTree::SetAlias`) were unknown columns in requests ("Illegal expression") | Usable in every expression of a request (axes, weights, filters, `Define`), also naming other aliases; a column of the same name is kept; an alias RDataFrame cannot read (TTreeFormula syntax like `Sum$`) loses its plot with an error naming it | behaviour | Nothing. |
+| `Scale`, `ScaleX`, `ScaleY`, `ScaleZ` of an input `TF2`/`TF3` sampled it with ROOT's 30 points along y and z and dropped its contour levels | It keeps its points per axis and its contour levels (levels given scaled with the values, as `TH1::Scale` does) | behaviour | Nothing. |
 
 ### Input validation
 

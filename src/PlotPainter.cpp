@@ -153,7 +153,8 @@ using util::str_upper;
 
 //**************************************************************************************************
 /**
- * Copy the line, fill and marker attributes of an object; for functions also title and number of points (CopyFuncAttributes).
+ * Copy the line, fill and marker attributes of an object; for functions also title, number of points and contour levels, scaled by the content factor as TH1::Scale scales them
+ * (CopyFuncAttributes).
  */
 //**************************************************************************************************
 template <typename From, typename To>
@@ -165,11 +166,28 @@ void PlotPainter::CopyStyle(const From& from, To& to)
 }
 
 template <typename FuncT>
-void PlotPainter::CopyFuncAttributes(FuncT* from, FuncT* to)
+void PlotPainter::CopyFuncAttributes(FuncT* from, FuncT* to, double_t contentFactor)
 {
   CopyStyle(*from, *to);
   to->SetTitle(from->GetTitle());
   to->SetNpx(from->GetNpx());
+  if constexpr (std::is_base_of_v<TF2, FuncT>) {
+    to->SetNpy(from->GetNpy());
+    if constexpr (std::is_base_of_v<TF3, FuncT>) to->SetNpz(from->GetNpz());
+    if (const int32_t nLevels = from->GetContour(); nLevels > 0) {
+      vector<double_t> levels(nLevels);
+      from->GetContour(levels.data());
+      // levels not given by the user read as 0 (computed only when painted)
+      const bool computedLevels = std::all_of(levels.begin(), levels.end(), [](double_t level) { return level == 0.; });
+      if (computedLevels) {
+        to->SetContour(nLevels);
+      } else {
+        for (auto& level : levels)
+          level *= contentFactor;
+        to->SetContour(nLevels, levels.data());
+      }
+    }
+  }
   to->SetBit(kCanDelete);
 }
 
@@ -8153,7 +8171,7 @@ TF1* PlotPainter::ScaleFunc(TF1* func, double_t domainFactorX, double_t contentF
     origFunc->GetName(),
     [origFunc, domainFactorX, contentFactor](double_t* x, double_t*) { return contentFactor * origFunc->Eval(x[0] / domainFactorX); },
     origFunc->GetXmin() * domainFactorX, origFunc->GetXmax() * domainFactorX, 0, 1, TF1::EAddToList::kNo);
-  CopyFuncAttributes(origFunc.get(), newFunc);
+  CopyFuncAttributes(origFunc.get(), newFunc, contentFactor);
   return newFunc;
 }
 
@@ -8168,7 +8186,7 @@ TF2* PlotPainter::ScaleFunc(TF2* func, double_t domainFactorX, double_t domainFa
     },
     origFunc->GetXmin() * domainFactorX, origFunc->GetXmax() * domainFactorX,
     origFunc->GetYmin() * domainFactorY, origFunc->GetYmax() * domainFactorY, 0, 2, TF1::EAddToList::kNo);
-  CopyFuncAttributes(origFunc.get(), newFunc);
+  CopyFuncAttributes(origFunc.get(), newFunc, contentFactor);
   return newFunc;
 }
 
@@ -8184,7 +8202,7 @@ TF3* PlotPainter::ScaleFunc(TF3* func, double_t domainFactorX, double_t domainFa
     origFunc->GetXmin() * domainFactorX, origFunc->GetXmax() * domainFactorX,
     origFunc->GetYmin() * domainFactorY, origFunc->GetYmax() * domainFactorY,
     origFunc->GetZmin() * domainFactorZ, origFunc->GetZmax() * domainFactorZ, 0, 3, TF1::EAddToList::kNo);
-  CopyFuncAttributes(origFunc.get(), newFunc);
+  CopyFuncAttributes(origFunc.get(), newFunc, contentFactor);
   return newFunc;
 }
 

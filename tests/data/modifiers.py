@@ -13,7 +13,8 @@ the largest float or to infinity are reported as those of the input, and are set
 labels.
 Covers: TGraphMultiErrors scaled: both error dimensions follow; the Normalize range of a TH2Poly; graphs scaled by a negative
 factor (Normalize of values summing up below zero) keep positive errors, low and high swapped; a TGraphMultiErrors sorted for Smooth keeps
-each error with its point; messages after Cumulative name the data.
+each error with its point; messages after Cumulative name the data; scaled functions keep their points per axis and their contour
+levels (given levels scaled with the values, as TH1::Scale does).
 """
 
 import re
@@ -116,6 +117,9 @@ for i, case in enumerate(todo):
         continue  # a labelled axis rebinned: warned, ROOT's result has the wrong labels
     if fam == "func":
         diff = func_diff(ref, obs, 1e-9)
+        points = [tuple(getattr(f, f"GetNp{a}")() for a in "xyz"[: f.GetNdim()]) for f in (base, obs)]
+        if not diff and points[0] != points[1]:
+            diff = f"points per axis {points[1]}, unmodified {points[0]}"
     elif fam in ("graph", "graph2d"):
         diff = graph_diff(ref, obs, 1e-9)
     else:
@@ -169,4 +173,24 @@ for name, (_, _, _, warning, bins) in limitCases.items():
     check(f"limits of the modifiers, {name}: the warning", bool(limitRun.warnings(warning)), " | ".join(limitRun.warnings()[:3]))
     check(f"limits of the modifiers, {name}: the bins", got == bins, f"{got}, expected {bins}")
 check("limits of the modifiers: no errors", not limitRun.errors(), " | ".join(limitRun.errors()[:3]))
+
+# contour levels of a scaled 2d function: a number of levels stays, given levels are scaled with the values
+c = Project("contour_levels", bases=("2d",))
+levelFuncs = {"auto": ROOT.TF2("auto", "x * y", 0.0, 4.0, 0.0, 4.0), "given": ROOT.TF2("given", "x * y", 0.0, 4.0, 0.0, 4.0)}
+levelFuncs["auto"].SetContour(4)
+givenLevels = ROOT.std.vector["double"]([1.0, 2.0, 5.0])
+levelFuncs["given"].SetContour(3, givenLevels.data())
+c.source("lev", levelFuncs)
+for name in levelFuncs:
+    plot = S.Plot(name, "levels", "2d")
+    plot[1].AddData(name, "lev").Scale(2.0)
+    c.pm.AddPlot(plot)
+levelRun = c.plot("levels")
+for name, expected in {"auto": 4, "given": [2.0, 4.0, 10.0]}.items():
+    obs = levelRun.objects(name, "levels")
+    got = None
+    if obs:
+        n = obs[0].GetContour()
+        got = n if name == "auto" else [obs[0].GetContourLevel(i) for i in range(n)]
+    check(f"contour levels of a scaled 2d function, {name}", got == expected, f"{got}, expected {expected}")
 finish()

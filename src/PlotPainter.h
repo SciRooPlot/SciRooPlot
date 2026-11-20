@@ -446,7 +446,7 @@ class PlotPainter
   template <typename From, typename To>
   static void CopyStyle(const From& from, To& to);
   template <typename FuncT>
-  static void CopyFuncAttributes(FuncT* from, FuncT* to);
+  static void CopyFuncAttributes(FuncT* from, FuncT* to, double_t contentFactor);
   static std::pair<double_t, double_t> PadSizePixel(const TVirtualPad* pad);
   static double_t FromPad(double_t padValue, bool isLog) { return (isLog) ? std::pow(10., padValue) : padValue; }  // pad coordinates of a log axis are decades
   static double_t ToPad(double_t value, bool isLog) { return (isLog) ? std::log10(value) : value; }
