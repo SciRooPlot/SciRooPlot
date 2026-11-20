@@ -324,7 +324,7 @@ void layout_t::Update(const layout_t& other)
 
 void layout_t::SetMarker(int16_t newStyle, float_t size, color_t newColor, float_t newAlpha, const string& what)
 {
-  bool valid = Plot::CheckFinite(size, what + " size");
+  bool valid = Plot::CheckNotNegative(size, what + " size");
   valid = Plot::CheckAlpha(newAlpha, what + " alpha") && valid;
   valid = Plot::CheckMarkerStyle(newStyle, what + " style") && valid;
   if (valid) *this = {newColor, newAlpha, newStyle, size};
@@ -356,7 +356,7 @@ void layout_t::SetMarkerStyle(int16_t newStyle, const string& what)
 }
 void layout_t::SetMarkerSize(float_t size, const string& what)
 {
-  if (Plot::CheckFinite(size, what + " size")) scale = size;
+  if (Plot::CheckNotNegative(size, what + " size")) scale = size;
 }
 void layout_t::SetWidth(float_t width, const string& what)
 {
@@ -1103,7 +1103,7 @@ auto Plot::Pad::SetDefaultTextFont(int16_t font) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::SetDefaultMarkerSize(float_t size) -> decltype(*this)
 {
-  if (CheckFinite(size, "default marker size")) mMarkerDefaults.scale = size;
+  if (CheckNotNegative(size, "default marker size")) mMarkerDefaults.scale = size;
   return *this;
 }
 

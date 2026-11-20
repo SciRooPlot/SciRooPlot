@@ -3077,6 +3077,9 @@ SETTER_INVALID = {
     "SetDefaultTextSize.size": [-1.0, math.nan],
     "SetLabelSize.size": [-1.0, math.nan],
     "SetTitleSize.size": [-1.0, math.nan],
+    "SetMarker.size": [-1.0, math.nan],
+    "SetMarkerSize.size": [-1.0, math.nan],
+    "SetDefaultMarkerSize.size": [-1.0, math.nan],
     "width": [math.nan],  # a negative line width draws the exclusion side of a graph
     "SetSize.width": [0.0, -0.2, math.nan],
     "SetSize.height": [0.0, -0.2, math.nan],

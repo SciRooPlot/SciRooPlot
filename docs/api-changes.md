@@ -52,6 +52,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `PanelLayout::SetMargins` with one invalid margin set the other three | Sets none of them, as `Pad::SetMargins` | input validation | Nothing. |
 | `Pad::AddImage` with an empty path threw a filesystem error (`RuntimeError` in Python) | `std::invalid_argument` (`ValueError`) naming the reason | input validation | Nothing. |
 | Python `PlotManager.Setting(name, default)` with an `int` default beyond the C++ `int` (e.g. `10_000_000_000`) declared an on/off switch and returned `True` | Refused with an error, the setting is not declared and the default is returned | input validation | Declare such a setting with a `float` default. |
+| A negative marker size (`SetMarker`, `SetMarkerSize` of data, ratios and legend rows, `Pad::SetDefaultMarkerSize`, `LegendBox::SetDefaultMarkerSize`) was stored and drew no markers | Refused with a warning where set, the earlier size stays (as `PanelLayout::SetMarkerSize` and the text sizes) | input validation | Nothing. |
 
 ### Files
 
