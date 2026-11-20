@@ -1840,6 +1840,18 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     }
     SetUpFrame(state, data_ptr, polarGridOption);
   } else {
+    // a polar graph is drawn on the polar grid of a first polar graph, other data in a cartesian frame: ROOT paints a polar graph in a
+    // cartesian frame with a grid of its own over it, and cartesian data on a polar grid in the coordinates of the grid (the reference
+    // function, which the base plots of ratios give every pad, is drawn as before)
+    bool isPolarGraph{};
+    if constexpr (is_graph_1d<data_type>()) isPolarGraph = data_ptr->InheritsFrom(TGraphPolar::Class());
+    const bool isRefFunc = padState.hasRefFunc && dataIndex == 1;
+    if (!isRefFunc && isPolarGraph != (padState.polargram != nullptr)) {
+      if (isPolarGraph) {
+        return notDrawn("Data {} is a polar graph and needs a polar grid: the first data of its pad must be a polar graph. It is not drawn.", DataName(*data));
+      }
+      return notDrawn("Data {} cannot be drawn on the polar grid of its pad (the first data of the pad is a polar graph). It is not drawn.", DataName(*data));
+    }
     // data drawn in 3d needs the 3d frame of a first data drawn in 3d, flat data a flat frame: ROOT paints a 3d view over a flat map
     // (its box over the frame) and a flat drawing in a 3d frame not at all or at the wrong place; likewise a map projection needs a
     // frame of the same projection (flat data in a projected frame, or a map in an unprojected one, is painted in other coordinates)

@@ -4,15 +4,16 @@ of the other kind is not drawn, with one warning, and the data after it keeps it
 before it with the background (ROOT paints the frame fill colour behind the box for 2d graphs drawn in 3d and the colour boxes of 3d
 histograms). The edges ROOT draws around every box, bar, cell and triangle of a 3d view have width 1 unless the data sets one (or keeps
 the width of its input); the faces of a 3d function are white unless it has a fill colour of its own. The points and lines of a 2d graph
-in 3d paint only themselves, also when its z range goes below zero.
-Covers: 3d views over a flat map and flat maps in a 3d view drawn silently, a 2d graph drawn as points or lines covering the data before
+in 3d paint only themselves, also when its z range goes below zero. Likewise a polar graph is drawn only on the polar grid of a first polar
+graph, and 1d data of other kinds only in a cartesian frame.
+Covers: 3d views over a flat map and flat maps in a 3d view drawn silently, polar graphs and cartesian data in one pad drawn silently, a 2d graph drawn as points or lines covering the data before
 it, the colour boxes of a 3d histogram on walls in the palette maximum, wide black edges hiding the colours of small 3d boxes, black faces
 of 3d functions, a plane of colour behind the coloured points and a mesh under the lines of a 2d graph reaching below zero.
 """
 
 import re
 
-from srptest import DATA_2D, DATA_3D, DATA_KINDS, ROOT, Project, S, add_data, cases, check, data_name, data_objects, describe, drawn_type, finish, in_chunks, message_name, pixels, rgba
+from srptest import DATA_1D, DATA_2D, DATA_3D, DATA_KINDS, DATA_POLAR, ROOT, Project, S, add_data, cases, check, data_name, data_objects, describe, drawn_type, finish, in_chunks, message_name, pixels, rgba
 
 OPTIONS = {  # aliases of what the data is drawn as, flat and in 3d (None: the default of the kind)
     "hist2d": ("colz", "cont", "box", "text", "lego", "surf", "surf_col"),
@@ -74,6 +75,25 @@ for i, case in enumerate(frames):
     add(plot[1], case["kind"], case["alias"] or None)
     add(plot[1], *after)
     p.pm.AddPlot(plot)
+
+# 1d data drawn after a first polar graph or a first cartesian histogram, then data of the kind of the first
+polars = cases(
+    {"first": ["hist", DATA_POLAR[0]], "kind": list(DATA_1D + DATA_POLAR)},
+    always=lambda c: c["kind"] in ("hist", "graph") + DATA_POLAR,
+    named=[
+        {"first": "hist", "kind": DATA_POLAR[0], "why": "a polar graph over a cartesian frame"},
+        {"first": DATA_POLAR[0], "kind": "hist", "why": "a histogram on a polar grid"},
+    ],
+)
+q = Project("views_3d_polar")  # a run of its own: 1d data of some kinds gives warnings of its own (efficiencies below a histogram's frame)
+q.inputs()
+for i, case in enumerate(polars):
+    plot = S.Plot(f"p{i}", "polar", "1d")
+    add(plot[1], case["first"], None)
+    add(plot[1], case["kind"], None)
+    add(plot[1], case["first"], None)
+    q.pm.AddPlot(plot)
+polarRun = q.plot("polar")
 
 # a 3d view drawn after another one
 pairs = cases({"first": list(range(len(VIEWS))), "second": list(range(len(VIEWS)))}, always=lambda c: VIEWS[c["second"]][1] in ("points", "line"))
@@ -142,6 +162,16 @@ for i, case in enumerate(frames):
     want = [["1", first], ["2", name], ["3", after[0]]] if drawn else [["1", first], ["3", after[0]]]
     check(f"drawn only into a frame of its kind, the next data keeping its number: {what}", names == want, f"drawn {names}, expected {want}")
     messages = [line for line in run.messages(f"f{i}", "frames") if "[ WARN" in line or "[WARN" in line]
+    refused = [line for line in messages if line.rstrip(".").endswith("It is not drawn")]
+    check(f"{0 if drawn else 1} warning that it is not drawn: {what}", len(refused) == (0 if drawn else 1) and all(f" {message_name(case['kind'])} " in line for line in refused), " | ".join(messages))
+
+for i, case in enumerate(polars):
+    what = describe(case)
+    numbers = [obj.GetName().split(":", 1)[0] for obj, _ in polarRun.drawn(f"p{i}", "polar") if not obj.InheritsFrom("TGraphPolargram")]
+    drawn = (case["kind"] in DATA_POLAR) == (case["first"] in DATA_POLAR)
+    want = ["1", "2", "3"] if drawn else ["1", "3"]
+    check(f"drawn only into a polar grid or a cartesian frame as the first data, the next data keeping its number: {what}", numbers == want, f"drawn {numbers}, expected {want}")
+    messages = [line for line in polarRun.messages(f"p{i}", "polar") if "[ WARN" in line or "[WARN" in line]
     refused = [line for line in messages if line.rstrip(".").endswith("It is not drawn")]
     check(f"{0 if drawn else 1} warning that it is not drawn: {what}", len(refused) == (0 if drawn else 1) and all(f" {message_name(case['kind'])} " in line for line in refused), " | ".join(messages))
 
