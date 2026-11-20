@@ -4,7 +4,7 @@ file globbing works again afterwards, also after plot in a pipeline. srp makes r
 keeps other values and paths starting with ~ or a variable as written; srp cd goes to the program folder; srp edit opens the sources of
 the program (a C++ program: of its CMake source folder, else of its own folder), and fails with a message without any; srp cd and srp out of an
 unknown project, srp out without an output folder or before it exists fail with a message; srp update of a build configured for
-another prefix fails naming srp reinstall. The srp program alone refuses the
+another prefix fails naming srp reinstall; plot shows why srp cannot give the program of the current project. The srp program alone refuses the
 commands that need env.sh, unknown commands, a missing command and too many arguments, with exit status 1. In zsh without a terminal, env.sh registers the
 completion silently also with an insecure directory in fpath.
 Covers: the bash plot alias in compound commands (pre-release braces rule), 2026-11-03 (zsh read-only names in env.sh)."""
@@ -99,6 +99,11 @@ grep note "$SCIROOPLOT_CONFIG_PATH/projects.info" """,
     os.makedirs(os.path.join(fake, "prefix"))
     out = shell(f"SCIROOPLOT_SOURCE_DIR={fake}; SCIROOPLOT_ROOT={fake}/prefix; srp update; echo status $?", sh, config=config_folder(f"fake_update_{sh}"), cwd=folder)
     check(f"{sh}: srp update into another prefix than configured: fails, naming srp reinstall", "status 1" in out.stdout and "srp reinstall" in out.text, out.tail())
+    # plot of a project whose program path names a variable not set in this shell: srp's reason is shown, not only plot's
+    cfg = config_folder(f"unset_variable_{sh}")
+    open(os.path.join(folder, "var_def.py"), "w").close()
+    out = shell(f"SRPVAR={folder}; export SRPVAR; srp add varproj '$SRPVAR/var_def.py' out >/dev/null; srp select varproj >/dev/null; unset SRPVAR; plot g p print", sh, config=cfg, cwd=folder)
+    check(f"{sh}: plot of a program path with a variable not set: the reason is shown", "SRPVAR" in out.stderr and "is not set" in out.stderr, out.tail())
     run(SRP, "set", "proj", "outdir", os.path.join(folder, "notyet"), config=config)
     out = shell("srp out proj; echo status $?", sh, config=config)
     check(f"{sh}: srp out before the output folder exists fails with a message", out.stdout.strip() == "status 1" and "does not exist yet" in out.stderr, out.tail())
