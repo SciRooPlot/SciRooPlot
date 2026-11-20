@@ -142,7 +142,7 @@ for name in ("empty_first", "empty_marked"):
 check("a pad of only empty graphs is still made", run.canvas("only_empty", "named") is not None, " | ".join(run.messages("only_empty", "named")))
 found = frame_of("no_data", "named")
 check("a pad without data: the frame of its axis ranges", found is not None and all(close(a, b, 1e-9) for a, b in zip(found, (-3.0, 17.0, 2.0, 8.0))), f"{found}")
-for name, missing in (("no_y_range", " Y range"), ("no_ranges", " X Y range")):
+for name, missing in (("no_y_range", " Y range"), ("no_ranges", " X or Y range")):
     said = [m for m in run.messages(name, "named") if "Nothing to be drawn in pad 1" in m]
     check(f"a pad without data, boxes and{missing}: warned naming it", len(said) == 1 and f"no{missing} for an empty frame" in said[0], " | ".join(said))
 
@@ -198,4 +198,17 @@ for name in ("set_frame", "ranges"):
     pad = refRun.pad(name, "ref")
     functions = [o.GetTitle() for o in pad.GetListOfPrimitives() if o.InheritsFrom("TF1")] if pad else None
     check(f"a pad with only a frame draws its reference function: {name}", functions == ["2"], str(functions))
+# a pad with only a reference function and no ranges: the warning says the function needs a frame; sharing an axis it draws nothing
+r = Project("ref_only", bases=("1d",))
+r.inputs()
+plot = S.Plot("ref_only", S.PanelLayout([[S.Panel(), S.Panel()]]))
+plot.SetGroup("ref")
+plot[1].SetRefFunc("0.5")
+add_data(plot[2], "hist")
+plot.ShareAxis("X", [1, 2])
+r.pm.AddPlot(plot)
+refRun = r.plot("ref")
+said = refRun.messages("ref_only", "ref")
+check("a pad with only a reference function: the warning says it is drawn only on a frame", any("Nothing to be drawn in pad 1" in m and "reference function is drawn only on a frame" in m for m in said), " | ".join(said))
+check("a pad with only a reference function sharing an axis: left out as drawing nothing", any("pad 1 is left out of the pads sharing the X axis: it draws nothing" in m for m in said), " | ".join(said))
 finish()

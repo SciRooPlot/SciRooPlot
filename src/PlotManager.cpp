@@ -2784,7 +2784,7 @@ std::unique_ptr<TCanvas> PlotManager::ApplySharedAxes(PlotPainter& painter, Plot
         if (range == ranges.end()) {
           if (!group.fromLayout && pads.count(padID)) {
             const auto& pad = pads.at(padID);
-            const bool drawsNothing = pad.GetData().empty() && !pad.GetFrame() && !pad.GetRefFunc();
+            const bool drawsNothing = pad.GetData().empty() && !pad.GetFrame();  // a reference function alone needs a frame
             logger::warning("Plot {}: pad {} is left out of the pads sharing the {} axis: {}.", Plot::Label(fullPlot), padID, axisLabel,
                             (drawsNothing) ? "it draws nothing" : ((axisLabel == 'Z') ? "it draws no 2d histogram, graph or function and no 3d histogram (or a polar drawing)" : "it has no flat axis frame (a 3d view or a polar drawing)"));
           }
