@@ -806,7 +806,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
       file = open_input_file(fileName);
     }
     if (!file || file->IsZombie()) {
-      logger::warning("Cannot open input file {} (data source {}).", fileName, dataSource);
+      logger::warning("Cannot open input file {} (data source {}){}.", fileName, dataSource, util::open_failure_reason(fileName));
       return std::nullopt;
     }
     return MatchFolders(file.get(), folderPattern);
@@ -836,6 +836,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
 
   // remote directories are listed through ROOT's system plugins (XRootD, AliEn): the sorted names in one, nullopt if it is none or cannot be listed
   auto listRemote = [](const string& dir) -> std::optional<vector<string>> {
+    if (!util::connect_grid_for(dir)) return std::nullopt;
     FileStat_t info;
     if (gSystem->GetPathInfo(dir.data(), info) != 0 || !R_ISDIR(info.fMode)) return std::nullopt;
     void* handle = gSystem->OpenDirectory(dir.data());
@@ -853,6 +854,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
   matchRemote = [&](const string& pattern, size_t from, vector<string>& matches) {
     const size_t wildcard = pattern.find_first_of("*[", from);
     if (wildcard == string::npos) {
+      util::connect_grid_for(pattern);
       FileStat_t info;
       if (from == pattern.size() || gSystem->GetPathInfo(pattern.data(), info) == 0) matches.push_back(pattern);
       return;
@@ -1915,7 +1917,7 @@ void PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
         openFile.file = open_input_file(fileName);
       }
       if (!openFile.file || openFile.file->IsZombie()) {
-        logger::warning("Cannot open input file {} (data source {}).", fileName, baseSource);
+        logger::warning("Cannot open input file {} (data source {}){}.", fileName, baseSource, util::open_failure_reason(fileName));
         openFile.file.reset();
         continue;
       }
@@ -4463,7 +4465,14 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       }
     }
   };
-  if (!parallelInfos.empty()) processGroup(parallelInfos, false);
+  // files on the grid (alien://) are read in one thread: ROOT's JAliEn plugin crashes when several threads open them at once
+  bool onGrid = false;
+  if (auto* chain = dynamic_cast<TChain*>(tree)) {
+    for (auto* element : *chain->GetListOfFiles()) {
+      onGrid = onGrid || str_starts_with(element->GetTitle(), "alien:");  // the title of a chain element is its file
+    }
+  }
+  if (!parallelInfos.empty()) processGroup(parallelInfos, onGrid);
   if (!sequentialInfos.empty()) processGroup(sequentialInfos, true);
   if (!nRequests) return;
 

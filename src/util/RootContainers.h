@@ -28,16 +28,44 @@
 #include <TKey.h>
 #include <TMap.h>
 #include <TMultiGraph.h>
+#include <TPluginManager.h>
+#include <TROOT.h>
 
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 
 namespace SciRooPlot::util
 {
-// an input file opened for reading, through ROOT's plugin for the protocol of a remote one (XRootD, http ...); null if it cannot be opened
+// alien:// files and directories are reached only through a connection to the grid, opened by ROOT's TGrid plugin (JAliEn) once per
+// process when the first is needed (as TGrid::Connect("alien://") does, without that deprecated class); false if the path is an
+// alien:// one and the connection cannot be made (no plugin, no valid token)
+inline bool connect_grid_for(const std::string& path)
+{
+  if (path.rfind("alien:", 0) != 0) return true;
+  static std::once_flag once;
+  static bool connected{};
+  std::call_once(once, []() {
+    TPluginHandler* handler = gROOT->GetPluginManager()->FindHandler("TGrid", "alien://");
+    if (!handler || handler->LoadPlugin() == -1) return;
+    // the connection stays open for the process (the plugin keeps it as the current grid)
+    auto* grid = reinterpret_cast<TObject*>(handler->ExecPlugin(4, "alien://", "", "", ""));
+    connected = grid && !grid->IsZombie();
+  });
+  return connected;
+}
+
+// why an input file could not be opened, if known (": reason", else empty)
+inline std::string open_failure_reason(const std::string& fileName)
+{
+  return connect_grid_for(fileName) ? "" : ": no connection to the grid (ROOT needs the JAliEn plugin and a valid token)";
+}
+
+// an input file opened for reading, through ROOT's plugin for the protocol of a remote one (XRootD, http, alien ...); null if it cannot be opened
 inline std::unique_ptr<TFile> open_input_file(const std::string& fileName)
 {
+  if (!connect_grid_for(fileName)) return nullptr;
   return std::unique_ptr<TFile>(TFile::Open(fileName.data(), "READ"));
 }
 
