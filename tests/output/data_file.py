@@ -4,7 +4,8 @@ in the input file, for every data kind of srptest read from a file in every vari
 function of the plot definition under its data source, named by its formula, points of the plot definition likewise, named by their
 coordinates. Keys are written in a fixed order: the same plots give the
 same file. The plots themselves are not painted. Only the data of the selected plots is written, also when the process read other data
-before; a plot whose data is missing is reported with its reasons and the run fails, as in the other modes.
+before; a plot whose data is missing is reported with its reasons and the run fails, as in the other modes; when no plot has its data,
+nothing is written (an earlier Data.root stays).
 Covers: a data source restricted to a folder (also given with a trailing slash, or empty), a path in a name, functions and points of the plot
 definition, the fixed key order, missing data, data read by earlier calls in the same process."""
 
@@ -129,4 +130,8 @@ captured(lambda: p.pm.GeneratePlots("png", "paths", "data"))
 created, _ = captured(lambda: p.pm.GeneratePlots("data", "formula", "data"))
 names = keys(p.path("in_process", "Data.root"))
 check("only the data of the selected plots, not that of earlier calls", created is True and not any(name.startswith(("folders", "inner")) for name in names), names)
+# a run whose plots all lack their data writes nothing: the Data.root of an earlier run stays
+created, printed = captured(lambda: p.pm.GeneratePlots("data", "missing", "missing"))
+kept = keys(p.path("in_process", "Data.root"))
+check("missing data of every plot in mode data: the earlier Data.root stays, nothing said saved", created is False and bool(names) and kept == names and "Saved data" not in printed, f"{kept}, before {names} | {printed.strip()[-300:]}")
 finish()

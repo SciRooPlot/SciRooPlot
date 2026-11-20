@@ -301,6 +301,14 @@ void PlotManager::ReserveColorIndices(TCanvas* canvas)
 //**************************************************************************************************
 bool PlotManager::SaveDataToRootFile(const set<std::pair<string, string>>& keys) const
 {
+  // none of the data was read (every plot lacks its data): nothing is written, an earlier file of the name stays (as for Plots.root)
+  const bool anyData = std::any_of(keys.begin(), keys.end(), [&](const auto& key) {
+    auto source = mDataBuffer.find(key.first);
+    if (source == mDataBuffer.end()) return false;
+    auto data = source->second.find(key.second);
+    return data != source->second.end() && data->second;
+  });
+  if (!anyData) return true;
   if (!CreateOutputDirectory()) return false;
   const string filePath = mOutputDirectory + "/" + mDataRootFile;
   const string tmpPath = util::temporary_file(filePath);
