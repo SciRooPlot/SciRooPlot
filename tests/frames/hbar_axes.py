@@ -27,6 +27,7 @@ todo = cases(
         {"kind": "hist_var", "option": "hbars", "setting": "y_range", "extra": "none", "why": "a range between the variable bins ends at their edges"},
         {"kind": "hist", "option": "hbars", "setting": "room_y", "extra": "graph", "why": "the x of a graph is horizontal, not vertical extent"},
         {"kind": "hist", "option": "hbars", "setting": "room", "extra": "function", "why": "a formula function spans the widened horizontal frame"},
+        {"kind": "hist_labels", "option": "hbars", "setting": "looks", "extra": "none", "why": "bin labels on the vertical axis are painted at the label size set"},
     ],
 )
 
@@ -134,7 +135,9 @@ for i, case in enumerate(todo):
         check(f"{what}: the bars start at the left edge of the frame", close(drawn[0].GetMinimum(), f["X"][0], 1e-9), f"minimum {drawn[0].GetMinimum()}, frame from {f['X'][0]}")
     if setting == "looks":
         horizontal, verticalAxis = frame.GetYaxis(), frame.GetXaxis()  # HBAR: the histogram's y axis is drawn horizontally
-        ok = horizontal.GetTitle() == "contents horizontal" and close(horizontal.GetLabelSize(), 0.031, 1e-6) and verticalAxis.GetTitle() == "bins vertical" and close(verticalAxis.GetLabelSize(), 0.047, 1e-6)
+        # ROOT paints bin labels at 0.66666 of the label size: a labelled axis stores the size divided by it, so they are painted as set
+        verticalSize = 0.047 / 0.66666 if "labels" in DATA_KINDS[case["kind"]][2] else 0.047
+        ok = horizontal.GetTitle() == "contents horizontal" and close(horizontal.GetLabelSize(), 0.031, 1e-6) and verticalAxis.GetTitle() == "bins vertical" and close(verticalAxis.GetLabelSize(), verticalSize, 1e-6)
         check(f"{what}: titles and label sizes on the axes drawn at each place", ok, f"horizontal {horizontal.GetTitle()!r} {horizontal.GetLabelSize()}, vertical {verticalAxis.GetTitle()!r} {verticalAxis.GetLabelSize()}")
 
 mapPad, sidePad = run.pad("side", "named", 1), run.pad("side", "named", 2)
