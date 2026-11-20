@@ -6,7 +6,8 @@ data takes its frame from the ranges of its axes, and a pad missing one of them 
 The frame input takes nothing from the data: no number, no colour, no legend row; its bin labels label the frame. It wins over data
 marked SetDefinesFrame() (with a warning), a second call replaces it, and a pad of only a frame input is made with that frame. A frame
 input in pad 0 or in a base plot is ignored with a warning when the plot is added; a ratio or a frame without name or source is refused.
-A pad with only a frame (input or axis ranges) draws its reference function.
+A pad with only a frame (input or axis ranges) draws its reference function; a pad without data, frame or ranges is warned about,
+naming its reference function (not one switched off) and its shapes, which need a frame.
 Cases: every data kind of a flat frame giving the frame, first, marked or set, with other data of a wider range in the pad, and the named
 cases.
 Reference: the frame of the same data drawn alone; for colours and legend rows the same data without frame input.
@@ -207,7 +208,18 @@ plot[1].SetRefFunc("0.5")
 add_data(plot[2], "hist")
 plot.ShareAxis("X", [1, 2])
 r.pm.AddPlot(plot)
+# a pad switching the reference function of pad 0 off has none to name; a pad with only shapes names them
+for name, setup in (("ref_off", lambda pad: pad.SetRefFunc("")), ("shapes_only", lambda pad: (pad.SetRefFunc(""), pad.AddLine((0.1, 0.1), (0.9, 0.9)).SetPadCoordinates()))):
+    plot = S.Plot(name, S.PanelLayout([[S.Panel(), S.Panel()]]))
+    plot.SetGroup("ref")
+    plot[0].SetRefFunc("1")
+    add_data(plot[1], "hist")
+    setup(plot[2])
+    r.pm.AddPlot(plot)
 refRun = r.plot("ref")
+for name, wanted in (("ref_off", ""), ("shapes_only", " (its shapes are drawn only on a frame)")):
+    nothing = [m for m in refRun.messages(name, "ref") if "Nothing to be drawn in pad 2" in m]
+    check(f"a pad without data or ranges: the warning names what needs a frame: {name}", len(nothing) == 1 and nothing[0].rstrip().endswith(f"empty frame{wanted}."), " | ".join(nothing))
 said = refRun.messages("ref_only", "ref")
 check("a pad with only a reference function: the warning says it is drawn only on a frame", any("Nothing to be drawn in pad 1" in m and "reference function is drawn only on a frame" in m for m in said), " | ".join(said))
 check("a pad with only a reference function sharing an axis: left out as drawing nothing", any("pad 1 is left out of the pads sharing the X axis: it draws nothing" in m for m in said), " | ".join(said))

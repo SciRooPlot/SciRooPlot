@@ -800,8 +800,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
         drawData.push_back(std::make_shared<Plot::Pad::Data>("frame", "EMPTY_FRAME", nullopt));
       } else if (pad.GetLegendBoxes().empty() && pad.GetTextBoxes().empty() && pad.GetImageBoxes().empty() && !pad.GetIsEmptyCell()) {
         const string missing = (!rangeX && !rangeY) ? "X or Y" : ((rangeX) ? "Y" : "X");
-        const bool refFunc = pad.GetRefFunc() || padDefaults.GetRefFunc();
-        logger::warning("Nothing to be drawn in pad {}: it has no data, no frame and no {} range for an empty frame{}.", padID, missing, (refFunc) ? " (its reference function is drawn only on a frame)" : "");
+        // what the pad has that is drawn only on a frame: its reference function as drawn below (an empty one is none), its shapes
+        const auto refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
+        vector<string> onFrame;
+        if (refFunc && !refFunc->GetName().empty()) onFrame.emplace_back("its reference function");
+        if (!pad.GetShapes().empty()) onFrame.emplace_back("its shapes");
+        const string notDrawn = (onFrame.empty()) ? "" : fmt::format(" ({} {} drawn only on a frame)", join_strings(onFrame, " and "), (onFrame.size() == 1 && refFunc && !refFunc->GetName().empty()) ? "is" : "are");
+        logger::warning("Nothing to be drawn in pad {}: it has no data, no frame and no {} range for an empty frame{}.", padID, missing, notDrawn);
         continue;
       }
     }
