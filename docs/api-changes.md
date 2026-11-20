@@ -35,6 +35,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Aliases stored with a tree (`TTree::SetAlias`) were unknown columns in requests ("Illegal expression") | Usable in every expression of a request (axes, weights, filters, `Define`), also naming other aliases; a column of the same name is kept; an alias RDataFrame cannot read (TTreeFormula syntax like `Sum$`) loses its plot with an error naming it | behaviour | Nothing. |
 | `Scale`, `ScaleX`, `ScaleY`, `ScaleZ` of an input `TF2`/`TF3` sampled it with ROOT's 30 points along y and z and dropped its contour levels | It keeps its points per axis and its contour levels (levels given scaled with the values, as `TH1::Scale` does) | behaviour | Nothing. |
 | A legend row given only a text alpha (`LegendEntry::SetTextAlpha`) had a white label | The text colour of the legend with that alpha | behaviour | Nothing. |
+| A `ColorScale()` cell left out its own legends, texts, images and shapes without a word, and drew legends with rows of other pads (`AddDataEntry`) and texts naming their data over the scale | None of them is drawn, one warning names what is left out | behaviour | Put boxes and shapes into a panel. |
 
 ### Input validation
 

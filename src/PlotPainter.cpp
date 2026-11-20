@@ -599,7 +599,13 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     auto& pad = plot[padID];   // a lambda cannot capture a structured binding ('dummy') in C++17
     if (pad.GetColorScaleOf()) {
       // a ColorScale() cell is drawn once all panels are drawn (see DrawColorScaleCell)
-      if (!pad.GetData().empty() || pad.GetFrame()) logger::warning("Pad {} is the cell of a colour scale: its data is not drawn.", padID);
+      vector<string> dropped;
+      if (!pad.GetData().empty() || pad.GetFrame()) dropped.emplace_back("data");
+      if (!pad.GetLegendBoxes().empty()) dropped.emplace_back("legends");
+      if (!pad.GetTextBoxes().empty()) dropped.emplace_back("texts");
+      if (!pad.GetImageBoxes().empty()) dropped.emplace_back("images");
+      if (!pad.GetShapes().empty()) dropped.emplace_back("shapes");
+      if (!dropped.empty()) logger::warning("Pad {} is the cell of a colour scale: its {} not drawn.", padID, join_strings(dropped, ", ") + (dropped.size() == 1 && dropped[0] == "data" ? " is" : " are"));
       continue;
     }
     pad_state_t padState{pad, padDefaults, padID, fillDefaults, dataBuffer};
@@ -886,7 +892,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     if (padID > 0 && pad.GetColorScaleOf()) DrawColorScaleCell(canvas_ptr.get(), plot, padID);
   }
   for (auto& [padID, pad] : plot.GetPads()) {
-    if (padID == 0) continue;
+    if (padID == 0 || pad.GetColorScaleOf()) continue;  // the boxes of a colour scale cell are not drawn (see above)
     auto* pad_ptr = dynamic_cast<TPad*>(canvas_ptr->GetPrimitive(("Pad_" + std::to_string(padID)).data()));
     uint8_t legendIndex{};
     for (const auto& box : pad.GetLegendBoxes()) {

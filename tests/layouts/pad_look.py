@@ -7,7 +7,9 @@ The labels and title of an axis are hidden towards a touching panel (below for x
 drawing shares no x and y axes and keeps its own; a flat panel beside one keeps them hidden (no room for them) with a warning, once per axis.
 Every data kind is drawn in every panel of a base plot of its dimension (1d: a grid with ratio and pull panels, 2d: a grid with one
 colour scale and a gap grid with own scales, 3d: a touching grid), in the map-with-projections layout and in layouts with spanning panels.
-Covers: sizes given to MakeBasePlot, colour scales in pixels, pull panels, labels hidden only where the axis is shared and flat panels beside 3d views keeping their labels hidden.
+A ColorScale() cell draws nothing but the scale: its own data, legends, texts, images and shapes, and boxes naming data of other pads,
+are left out with one warning naming them.
+Covers: sizes given to MakeBasePlot, colour scales in pixels, pull panels, labels hidden only where the axis is shared and flat panels beside 3d views keeping their labels hidden, boxes in a colour scale cell.
 """
 
 from srptest import DATA_3D, DATA_KINDS, DATA_POLAR, ROOT, Project, S, add_data, cases, check, describe, finish
@@ -195,4 +197,21 @@ for name, (kind, place, label, title, want) in OWN_SIZES.items():
     frame = run.frame_hist(name.replace(" ", "_"), "look", 2)
     got = (round(frame.GetYaxis().GetLabelSize(), 6), frame.GetYaxis().GetTitleSize() > 0) if frame else None  # (a y title gets a pixel size)
     check(f"y labels and title of the pad beside a touching panel: {name}", got == want, f"{got}, expected {want}")
+# what is put into a ColorScale() cell: left out, one warning naming it
+c = Project("scale_cell", bases=())
+c.inputs()
+plot = S.Plot("cell", S.PanelLayout([[S.Panel(), S.ColorScale()]]))
+plot.SetGroup("cell")
+add_data(plot[1], "hist2d").SetDrawOption(S.colz)
+plot[2].AddLegend().AddEntry("own row")
+plot[2].AddText(0.5, 0.5, "own text")
+plot[2].AddLine((0.1, 0.1), (0.5, 0.5)).SetPadCoordinates()
+plot[2].AddLegend().AddDataEntry(1, 1)
+plot[2].AddText(0.2, 0.2, "<name:1:1>")
+c.pm.AddPlot(plot)
+cellRun = c.plot("cell")
+inCell = [o.ClassName() for o, _ in cellRun.links("cell", "cell", 2) if o.InheritsFrom("TPave") and not o.InheritsFrom("TPaletteAxis") or o.ClassName() == "TLine"]
+said = [m for m in cellRun.messages("cell", "cell") if "cell of a colour scale" in m]
+check("a ColorScale() cell draws no legend, text or shape of its own, nor boxes naming other pads", not inCell, str(inCell))
+check("a ColorScale() cell: one warning naming what is left out", len(said) == 1 and "legends, texts, shapes are not drawn" in said[0], " | ".join(cellRun.messages("cell", "cell")))
 finish()
