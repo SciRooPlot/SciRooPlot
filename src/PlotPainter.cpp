@@ -3542,13 +3542,7 @@ std::pair<double_t, double_t> PlotPainter::FuncRange(const item_state_t& state, 
 //**************************************************************************************************
 std::pair<double_t, double_t> PlotPainter::FiniteRange(const item_state_t& state, TF1* func, double_t min, double_t max, bool forFrame)
 {
-  auto warn = [&](auto&&... args) {
-    if (forFrame) {
-      if (!state.repeated) logger::warning(std::forward<decltype(args)>(args)...);
-    } else {
-      Warn(state, std::forward<decltype(args)>(args)...);
-    }
-  };
+  const warn_at_t at{forFrame};
   const int32_t nSamples = std::max(func->GetNpx(), 2) + 1;
   const double_t step = (max - min) / (nSamples - 1);
   auto isNaN = [&](double_t x) { return std::isnan(func->Eval(x)); };
@@ -3563,7 +3557,7 @@ std::pair<double_t, double_t> PlotPainter::FiniteRange(const item_state_t& state
   }
   if (first == 0 && last == nSamples - 1 && !gap) return {min, max};
   if (first < 0 || gap) {
-    warn("Function {} is NaN in parts of [{:g}, {:g}] that are not one piece: ROOT cannot draw it, give it a range where it is a number (SetRangeX).",
+    Warn(at, state, "Function {} is NaN in parts of [{:g}, {:g}] that are not one piece: ROOT cannot draw it, give it a range where it is a number (SetRangeX).",
          DataName(*state.data), min, max);
     return {min, max};
   }
@@ -3577,19 +3571,25 @@ std::pair<double_t, double_t> PlotPainter::FiniteRange(const item_state_t& state
   };
   const double_t newMin = (first > 0) ? bisect(min + (first - 1) * step, min + first * step) : min;
   const double_t newMax = (last < nSamples - 1) ? bisect(min + (last + 1) * step, min + last * step) : max;
-  warn("Function {} is NaN in parts of [{:g}, {:g}]: drawn over [{:g}, {:g}], where it is a number.", DataName(*state.data), min, max, newMin, newMax);
+  Warn(at, state, "Function {} is NaN in parts of [{:g}, {:g}]: drawn over [{:g}, {:g}], where it is a number.", DataName(*state.data), min, max, newMin, newMax);
   return {newMin, newMax};
 }
 
 //**************************************************************************************************
 /**
- * A warning about the data, given once: not for the frame copy of the first data (index 0), nor for an input prepared a second time.
+ * A warning about the data, given once: not for the frame copy of the first data (index 0) unless it is about the frame, nor for an
+ * input prepared a second time.
  */
 //**************************************************************************************************
 template <typename... Args>
 void PlotPainter::Warn(const item_state_t& state, Args&&... args)
 {
-  if (state.padState.dataIndex != 0 && !state.repeated) logger::warning(std::forward<decltype(args)>(args)...);
+  Warn(warn_at_t{}, state, std::forward<Args>(args)...);
+}
+template <typename... Args>
+void PlotPainter::Warn(warn_at_t at, const item_state_t& state, Args&&... args)
+{
+  if ((state.padState.dataIndex != 0 || at.frame) && !state.repeated) logger::warning(std::forward<Args>(args)...);
 }
 
 //**************************************************************************************************
