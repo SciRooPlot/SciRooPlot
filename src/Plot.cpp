@@ -4468,7 +4468,7 @@ void Plot::Pad::TextBox::ShiftDataIDsOfPads(const std::map<uint8_t, uint16_t>& o
 auto Plot::Pad::TextBox::SetTextAlign(int16_t align) -> decltype(*this)
 {
   if (align < 0 || align / 10 > 3 || align % 10 > 3) {
-    logger::warning("The text alignment ({}) is ignored: its tens must be 1-3 (left, centre, right), its units 1-3 (bottom, middle, top).", align);
+    logger::warning("The text alignment ({}) is ignored: its tens must be 1-3 (left, centre, right), its units 1-3 (bottom, middle, top), 0 for the default (left, middle).", align);
     return *this;
   }
   int16_t hAlign = (align / 10) * 10;

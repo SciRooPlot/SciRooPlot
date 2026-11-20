@@ -1665,7 +1665,7 @@ class Plot::Pad::TextBox : public Plot::Pad::Box<TextBox>
   TextBox& SetText(const std::string& text);  // lines separated by newlines
   TextBox& SetText(const std::vector<std::string>& lines);
   TextBox& SetText(std::initializer_list<std::string> lines);
-  TextBox& SetTextAlign(int16_t align);  // 11 to 33 (default 12) for the lines in the box; a single line at (x, y) is aligned at that point (21: centred above it)
+  TextBox& SetTextAlign(int16_t align);  // 11 to 33 (default 12; a digit 0: its default) for the lines in the box; a single line at (x, y) is aligned at that point (21: centred above it)
 
  protected:
   friend class PlotManager;

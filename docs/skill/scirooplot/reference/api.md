@@ -321,7 +321,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `TextBox(double_t xPos, double_t yPos, const std::vector<std::string>& lines)` — C++ only
 - `TextBox& SetText(const std::string& text)` — lines separated by newlines
 - `TextBox& SetText(const std::vector<std::string>& lines)`
-- `TextBox& SetTextAlign(int16_t align)` — 11 to 33 (default 12) for the lines in the box; a single line at (x, y) is aligned at that point (21: centred above it)
+- `TextBox& SetTextAlign(int16_t align)` — 11 to 33 (default 12; a digit 0: its default) for the lines in the box; a single line at (x, y) is aligned at that point (21: centred above it)
 
 ## Plot::Pad::ImageBox
 *an image file (e.g. a logo); in pdf files only with ROOT 6.42 or newer; also has the position setters*
