@@ -52,6 +52,14 @@ plot.SetGroup("named")
 add_data(plot[1], KINDS[0]).SetDrawOption(S.colz)
 plot[1]["C"].SetLabelColor(S.kRed).SetLabelAlpha(0.2).SetAxisColor(S.kBlue).SetAxisAlpha(0.4).SetTickLength(0.05)
 p.pm.AddPlot(plot)
+# the look set on 'Z' (the binned z axis) does not reach the scale in a ColorScale() cell: it is that of a cell without it
+for name, zLook in (("z_look_cell", True), ("plain_cell", False)):
+    plot = S.Plot(name, S.PanelLayout([[S.Panel(), S.ColorScale(1)]]))
+    plot.SetGroup("named")
+    add_data(plot[1], KINDS[0]).SetDrawOption(S.colz)
+    if zLook:
+        plot[1]["Z"].SetLabelColor(S.kRed).SetTitleColor(S.kBlue).SetAxisColor(S.kGreen).SetTickLength(0.11).SetNumDivisions(203)
+    p.pm.AddPlot(plot)
 
 run = p.plot()
 check("the plots are made without errors", not run.errors(), " | ".join(run.errors()[:3]))
@@ -62,6 +70,19 @@ scale = cell.GetPrimitive("color_scale_pad_2") if cell else None
 palette = scale.GetListOfFunctions().FindObject("palette") if scale else None
 look = (rgba(palette.GetAxis().GetLabelColor()), rgba(palette.GetAxis().GetLineColor()), round(palette.GetAxis().GetTickSize(), 4)) if palette else None
 check("the look of 'C' in a ColorScale() cell: label and axis colours with their alphas, tick length", look == (rgba(632, 0.2), rgba(600, 0.4), 0.05), str(look))
+
+
+def cell_look(name):
+    cellPad = run.pad(name, "named", 2)
+    cellScale = cellPad.GetPrimitive("color_scale_pad_2") if cellPad else None
+    if not cellScale:
+        return None
+    z = cellScale.GetZaxis()
+    return (rgba(z.GetLabelColor()), rgba(z.GetTitleColor()), rgba(z.GetAxisColor()), round(z.GetTickLength(), 4), z.GetNdivisions() % 1000000)
+
+
+zLookCell, plainCell = cell_look("z_look_cell"), cell_look("plain_cell")
+check("the look of 'Z' does not reach the scale in a ColorScale() cell", zLookCell is not None and zLookCell == plainCell, f"{zLookCell}, without it {plainCell}")
 
 for i, case in enumerate(todo):
     what = describe(case)

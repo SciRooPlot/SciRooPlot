@@ -8926,9 +8926,21 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
     } else {
       scale->SetContour(source->GetContour());
     }
-    source->GetZaxis()->TAttAxis::Copy(*scale->GetZaxis());
+    // as the scale in the panel (StyleContentScale): ROOT's look of a z axis in the text of the panel, then that of 'C' (the look set on 'Z'
+    // belongs to the binned z axis)
     const auto& member = plot[static_cast<uint8_t>(memberPad->GetNumber())];
-    ApplyContentLook(scale->GetZaxis(), member, defaults, get_first(member.GetDefaultTextAlpha(), defaults.GetDefaultTextAlpha()), false);
+    TAxis* scaleZ = scale->GetZaxis();
+    scaleZ->ResetAttAxis("Z");
+    scaleZ->SetTitleOffset(0.f);
+    if (auto textFont = get_first(member.GetDefaultTextFont(), defaults.GetDefaultTextFont())) {
+      scaleZ->SetTitleFont(*textFont);
+      scaleZ->SetLabelFont(*textFont);
+    }
+    if (auto textColor = get_first(member.GetDefaultTextColor(), defaults.GetDefaultTextColor())) {
+      scaleZ->SetTitleColor(textColor->ToIndex());
+      scaleZ->SetLabelColor(textColor->ToIndex());
+    }
+    ApplyContentLook(scaleZ, member, defaults, get_first(member.GetDefaultTextAlpha(), defaults.GetDefaultTextAlpha()), false);
     TString title = source->GetZaxis()->GetTitle();
     title.Remove(0, (title.Index(";") >= 0) ? title.Index(";") + 1 : title.Length());
     scale->GetZaxis()->SetTitle(title);
