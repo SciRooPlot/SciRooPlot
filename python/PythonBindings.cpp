@@ -1036,13 +1036,21 @@ void exportPythonDataInterfaces(py::module_& m)
     const Values x = values(xValues, "values");
     const auto w = weightsFor(weights, x.size());
     const auto spec = binning(bins, "bins");
+    optional<pair<double, double>> givenRange;
+    if (!range.is_none()) {
+      try {
+        givenRange = range.cast<pair<double, double>>();
+      } catch (const py::cast_error&) {
+        throw py::value_error("The range must be (min, max).");
+      }
+    }
     TDirectory::TContext noDirectory(nullptr);  // keeps a same-named object in the caller's open file
     TH1D* h = nullptr;
     if (const auto* edges = std::get_if<vector<double>>(&spec)) {
-      if (!range.is_none()) logger::warning("Histogram {}: the range is not used, since bin edges are given.", name);
+      if (givenRange) logger::warning("Histogram {}: the range is not used, since bin edges are given.", name);
       h = new TH1D(name.data(), "", static_cast<int>(edges->size()) - 1, edges->data());
     } else {
-      const auto [min, max] = rangeFor(range.is_none() ? nullopt : optional(range.cast<pair<double, double>>()), x, "x");
+      const auto [min, max] = rangeFor(givenRange, x, "x");
       h = new TH1D(name.data(), "", std::get<int32_t>(spec), min, max);
     }
     h->SetDirectory(nullptr);
