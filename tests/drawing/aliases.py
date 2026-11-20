@@ -3,7 +3,7 @@ without ROOT errors, and the drawn data paints something: the colour scale (the 
 an alias marked as drawn as the other type converts histograms to graphs and graphs to histograms; an alias neither 1d type can draw gives one
 warning and draws histograms and graphs as without a drawing option (other types with ROOT's default), as do a graph that cannot be made a
 histogram (points at one x) and error bands, boxes and brackets of a graph without errors.
-Documented adjustments: polar graphs draw the error bars of the points aliases with E, 2d graphs with errors add ERR, a TH2Poly is drawn
+Documented adjustments: polar graphs draw the error bars of the points aliases with E and fill area with F on their grid, 2d graphs with errors add ERR, a TH2Poly is drawn
 flat (col, colz) with a warning instead of lego, surf, polar, boxes, contours, candles and violins, and the frame of a 3d view is an empty lego plot
 (no surface), keeping POL. area without a fill paints what line paints. The drawn data carries the name of the input.
 Covers: colz_text, clamped maps, 3d histograms, functions, 2d functions, 2d graphs, TH2Poly drawn flat,
@@ -65,7 +65,7 @@ WITHOUT_ERRORS = {variant: without_errors(variant) for variant in ("normal", *VA
 
 def area_1d(case):
     """a case of area of cartesian 1d data, which is also drawn as area and as line in one frame (that of area spans zero, without the x errors);
-    area of a polar graph is drawn in cartesian coordinates"""
+    area of a polar graph is drawn on its polar grid"""
     return case["alias"] == "area" and DATA_KINDS[case["kind"]][0] == 1 and "polar" not in DATA_KINDS[case["kind"]][2]
 
 
@@ -152,6 +152,10 @@ for alias in KEPT_FILL:
     plot = S.Plot(f"kept_fill_{alias}", "aliases", "1d")
     add_data(plot[1], "hist").SetKeepInputStyle().SetFillColor(ROOT.kOrange).SetDrawOption(getattr(S, alias))
     p.pm.AddPlot(plot)
+# area of a polar graph with a fill: the polygon through its points, filled on the polar grid (ROOT's F)
+plot = S.Plot("polar_area", "aliases", base_of("graph_polar"))
+add_data(plot[1], "graph_polar").SetDrawOption(S.area).SetFill(1001, ROOT.kOrange)
+p.pm.AddPlot(plot)
 # hostile data: every alias on every kind with no entries or points, a single one, a NaN value
 variantCases = cases({"kind": list(DATA_KINDS), "alias": ALIASES, "variant": list(VARIANTS)}, valid=lambda c: has_variant(c["kind"], c["variant"]))
 for i, case in enumerate(variantCases):
@@ -219,6 +223,9 @@ asText = next(i for i, c in enumerate(todo) if c["kind"] == "graph_asymm" and c[
 check("a graph with asymmetric errors written as values: no warning about drawing its errors with their mean", not any("has asymmetric y errors" in m for m in run.messages(f"c{asText}", "aliases")), " | ".join(run.messages(f"c{asText}", "aliases")))
 fills = {alias: [(rgba(obj.GetFillColor()), obj.GetFillStyle()) for obj, _ in run.drawn(f"kept_fill_{alias}", "aliases")] for alias in KEPT_FILL}
 check("a histogram keeping its style with a fill colour: filled alike by every alias filling the steps", fills["hist"] and fills["hist"][0][1] != 0 and all(f == fills["hist"] for f in fills.values()), str(fills))
+drawn = run.drawn("polar_area", "aliases")
+grids = [o for o in run.pad("polar_area", "aliases").GetListOfPrimitives() if o.InheritsFrom("TGraphPolargram")] if run.pad("polar_area", "aliases") else []
+check("area of a polar graph with a fill: drawn on the polar grid, filled (F)", len(drawn) == 1 and drawn[0][0].InheritsFrom("TGraphPolar") and "F" in drawn[0][1].split() and len(grids) == 1, f"{[(o.ClassName(), opt) for o, opt in drawn]}, {len(grids)} grids")
 expectedWarnings = sum(expected(c["kind"], c["alias"])[3] for c in todo) + len(asymmetric) + len(REPEATED)
 check("no other warnings", len(run.warnings()) == expectedWarnings, " | ".join(w for w in run.warnings() if "is not available" not in w)[:500])
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))

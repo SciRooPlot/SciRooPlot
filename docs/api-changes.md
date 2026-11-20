@@ -29,6 +29,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | The bent error bars of a `TGraphBentErrors` kept their displacements when the graph was scaled (`ScaleX`, `ScaleY`, `Scale`, `Normalize`) or divided in a ratio | The displacements follow the axis they are measured along: scaled with it, divided by the denominator | behaviour | Nothing. |
 | The statistics of a histogram with NaN or infinite bins (drawn as zero), in its statistics box and the placeholders `<mean>`, `<stddev>`, still held what had been filled into those bins (NaN) | They are those of the bins as drawn | behaviour | Nothing. |
 | A data name starting with `/` (`AddData("/h", "src")`, also a ratio denominator) was not found | It is read from the top of its data source, with a warning | behaviour | Drop the leading `/`. |
+| `area` of a `TGraphPolar` was drawn in cartesian coordinates (the angles as x), filled down to zero there | Drawn on the polar grid; with a fill, the polygon through its points is filled there (ROOT's `F`) | behaviour | Nothing. |
 | Aliases stored with a tree (`TTree::SetAlias`) were unknown columns in requests ("Illegal expression") | Usable in every expression of a request (axes, weights, filters, `Define`), also naming other aliases; a column of the same name is kept; an alias RDataFrame cannot read (TTreeFormula syntax like `Sum$`) loses its plot with an error naming it | behaviour | Nothing. |
 
 ### Input validation

@@ -1,6 +1,6 @@
 """Data is drawn through the points it was given: a graph with points in no order of x (a contour, a trajectory) is drawn in their given
 order by every alias that draws it as a graph, with the values of the input; only area sorts them (the area below the points needs the
-order of x), with one warning; drawn as a histogram (hist, text, ...) or its steps (hist_clipped) a graph becomes bins, whose order is that of x. A function keeps
+order of x), with one warning, but for a polar graph (the polygon through its points, in their order); drawn as a histogram (hist, text, ...) or its steps (hist_clipped) a graph becomes bins, whose order is that of x. A function keeps
 the number of points it is sampled at (SetNpx, SetNpy, SetNpz), few or many, for every alias it can be drawn with. Points given in the
 plot definition (AddPoints) are named in messages by their label, or by their number and x range.
 Covers: area sorted the points of a graph silently, points of the definition named by all their coordinates (warnings of kilobytes).
@@ -76,13 +76,13 @@ for i, case in enumerate(todo):
     if not obj.InheritsFrom("TGraph"):
         check(f"drawn as a graph: {what}", False, obj.ClassName())
         continue
-    if case["alias"] == "area":
+    if case["alias"] == "area" and "polar" not in DATA_KINDS[case["kind"]][2]:
         check(f"area drawn through the points sorted by x: {what}", same(points_of(obj), sorted(points_of(given))), f"drawn {points_of(obj)[:5]}")
     else:
         check(f"drawn through the points as given: {what}", same(points_of(obj), points_of(given)), f"drawn {[(round(x, 3), round(y, 3)) for x, y in points_of(obj)[:6]]}")
 for kind in GRAPHS:  # the warnings name the data, not the plot
     found = [w for w in sortWarnings if f"graph {message_name(kind, 'unsorted')} " in w]
-    unsorted = sum(c["kind"] == kind and c["alias"] == "area" and c["variant"] == "unsorted" for c in todo)
+    unsorted = sum(c["kind"] == kind and c["alias"] == "area" and c["variant"] == "unsorted" and "polar" not in DATA_KINDS[kind][2] for c in todo)
     check(f"one warning about the order per area of unsorted points: {kind}", len(found) == unsorted, " | ".join(found))
 # error bands, boxes and brackets of a graph without errors would draw nothing: it is drawn as without a drawing option, with a warning
 errorWarnings = run.warnings("has no errors to draw with drawing option")

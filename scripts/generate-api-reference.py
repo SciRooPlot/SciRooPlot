@@ -291,7 +291,7 @@ def drawing_options(aliases):
         "in a square frame (the margins of the longer side grow) without the cartesian axes, measured by a radial axis below it with the title of y; their cells have no outline",
         "unless the data sets a line width; `lego_polar`, `lego_col_polar`, `surf_polar`, `surf_col_polar` are drawn on a disc in 3D (`SetView` turns it).",
         "A polar graph (TGraphPolar: x the angle in radians, y the radius) is drawn on a polar grid instead of a cartesian frame. The grid fills the pad (a square base plot keeps it round)",
-        "and takes the label fonts, sizes and colours of the x (angle) and y (radius) axes and the ranges and divisions set on them; the points aliases draw its error bars; shapes are not drawn there;",
+        "and takes the label fonts, sizes and colours of the x (angle) and y (radius) axes and the ranges and divisions set on them; the points aliases draw its error bars; `area` with a fill fills the polygon through its points (ROOT's `F`); shapes are not drawn there;",
         "as in ROOT, the raw option of the first polar graph of the pad also sets the grid: `D` or `G` for an angle in degrees or grads (a full turn), `N` without angle labels,",
         "`O` with the angle labels along the radius (`\"N\"` or `\"O\"` alone draws the graph as a line, as ROOT's empty option);",
         "automatically placed legends and texts keep off the grid and its angle labels, so they go into the corners of the pad (a box that does not fit there gets a warning).",

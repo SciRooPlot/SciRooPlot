@@ -1750,14 +1750,14 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
         logger::warning("The range of {} contains none of its points: all points are drawn.", DataName(*data));
       }
     }
-    if (alias == area && data_ptr->GetN() > 0) {
+    // (the area of a polar graph is filled on its polar grid, see below)
+    if (alias == area && data_ptr->GetN() > 0 && !data_ptr->InheritsFrom(TGraphPolar::Class())) {
       // the area below the points needs them in the order of x: points in another order (a closed contour, a trajectory) would change their shape
       const double_t* x = data_ptr->GetX();
       if (!std::is_sorted(x, x + data_ptr->GetN())) Warn(state, "The points of graph {} are not in the order of x: they are sorted to draw the area below them.", DataName(*data));
       SortGraph(data_ptr);
-      // the frame spans the area between the points and zero; the data is the line through the points, with its fill below (see below).
-      // A polar graph is drawn as the plain graph of its points, as its frame (the area below the points is no area in polar coordinates)
-      if (dataIndex == 0 || data_ptr->InheritsFrom(TGraphPolar::Class())) {
+      // the frame spans the area between the points and zero; the data is the line through the points, with its fill below (see below)
+      if (dataIndex == 0) {
         const int32_t corners = (dataIndex == 0);
         auto* polygon = new TGraph(data_ptr->GetN() + 2 * corners);
         polygon->SetName(data_ptr->GetName());
@@ -1969,7 +1969,10 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     // a graph drawn with area, hist_clipped or hist_open_clipped and a fill: the line or steps are the outline of the filled area below them
     bool hasFillBelow{false};
     if constexpr (is_graph_1d<data_type>()) {
-      if ((alias == area || alias == hist_clipped || alias == hist_open_clipped) && data_ptr->GetFillStyle() != 0 && data_ptr->GetFillColor() != 0 && data_ptr->GetN() > 0) {
+      // the area of a polar graph is the polygon through its points (in their order), filled on the polar grid as ROOT fills it (F)
+      const bool isPolar = data_ptr->InheritsFrom(TGraphPolar::Class());
+      if (isPolar && alias == area && data_ptr->GetFillStyle() != 0 && data_ptr->GetFillColor() != 0 && data_ptr->GetN() > 0) drawOption += " F";
+      if ((alias == area || alias == hist_clipped || alias == hist_open_clipped) && !isPolar && data_ptr->GetFillStyle() != 0 && data_ptr->GetFillColor() != 0 && data_ptr->GetN() > 0) {
         // the polygon closed at zero below the points of area (F alone would close it from the last point to the first, LF would draw its
         // edges down to zero), that of the steps far below the frame (at ROOT's base line once the frame is final): ROOT cuts it at the frame
         vector<double_t> x(data_ptr->GetX(), data_ptr->GetX() + data_ptr->GetN());

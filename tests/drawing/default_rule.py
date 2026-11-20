@@ -1,6 +1,6 @@
 """Data without a drawing option follows one rule, the same for histograms and graphs: data with a fill is drawn as hist (graphs as area),
 data with a marker style or size set, with errors (any non-zero error, as plain ROOT gives them: the square roots of the contents of a
-histogram filled without weights count) or a graph of a single point as points, other data (all errors zero) as hist (graphs as line); 2d data and 3d histograms as colz (the colour scale on the frame); other functions with ROOT's default.
+histogram filled without weights count) or a graph of a single point as points, other data (all errors zero) as hist (graphs as line); 2d data and 3d histograms as colz (the colour scale on the frame); other functions with ROOT's default; a polar graph with a fill as area filled on its polar grid.
 The fill of the input counts only when its style is kept (SetKeepInputStyle), and the fill ROOT gives every TEfficiency is not a fill.
 Covers: ROOT's default fill of a TEfficiency.
 """
@@ -54,7 +54,7 @@ p = Project("default_rule")
 p.inputs(VARIANTS)
 filled = {}
 for kind, obj in data_objects().items():
-    if DATA_KINDS[kind][0] == 1 and obj.InheritsFrom("TAttFill"):
+    if DATA_KINDS[kind][0] == 1 and obj.InheritsFrom("TAttFill") and "given" not in DATA_KINDS[kind][2]:  # points of the definition: no input
         filled[kind] = obj.Clone()
         filled[kind].SetFillColor(ROOT.kRed)
         filled[kind].SetFillStyle(1001)
@@ -86,13 +86,16 @@ for i, case in enumerate(todo):
     alias = expected(case, objects[case["variant"]].get(case["kind"]))
     kindType = drawn_type(case["kind"])
     want = no_scale(TABLE[alias][kindType]) if alias else ""
-    if alias and alias.startswith("points") and DATA_KINDS[case["kind"]][1] == "TGraphPolar":
+    polar = DATA_KINDS[case["kind"]][1] == "TGraphPolar"
+    if alias and alias.startswith("points") and polar:
         want += " E"
+    if alias == "area" and polar:  # filled on the polar grid (ROOT's F): the polygon through the points
+        want += " F"
     obj, opt = drawn[0]
     if alias and obj.InheritsFrom("TGraphMultiErrors"):
         want = per_error_set(want)
     check(f"drawn as {alias or 'the default of ROOT'}: {what}", opt == want, f"drawn with '{opt}', expected '{want}'")
-    if alias == "area":  # the line through the points, filled below by the polygon closed at zero
+    if alias == "area" and not polar:  # the line through the points, filled below by the polygon closed at zero
         fill = next((o for o, _ in run.links(f"c{i}", "rule") if o.GetName() == f"fill_{obj.GetName()}"), None)
         check(f"area filled down to zero: {what}", bool(fill) and fill.GetN() == obj.GetN() + 2 and close(fill.GetPointY(0), 0.0) and close(fill.GetPointY(fill.GetN() - 1), 0.0), obj.ClassName())
     if alias == "colz":
