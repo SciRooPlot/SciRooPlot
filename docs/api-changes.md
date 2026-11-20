@@ -78,6 +78,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `srp get` and `srp projects` showed a stored setting value the declaration no longer allows, while the program used the default | They give the default the program uses (`srp get` warns about the value set, `srp projects` names it) | CLI | Nothing. |
 | An unreadable `settings.info` of a project was reported, but `srp projects` succeeded and `srp get`/`set` added that the program declares no setting | One error; `srp projects` exits with 1 | CLI | Nothing. |
 | `srp print`, `srp open` and `srp colorwheel` took a file name literally (`srp colorwheel "~/w.png"` wrote the file and reported a failure) | `~` and environment variables are expanded, as in the inputs of data sources | CLI | Nothing. |
+| `srp get @current` and `srp confdir @current` without a selected project failed without a message; `srp cd`, `srp edit` and `srp out` added "could not … project" to srp's error; `srp remove` and `srp reset` printed nothing | One message saying why (no project selected, an unknown project); remove and reset name the projects removed | CLI | Nothing. |
 
 ## 4.0.0 → 4.1.0
 

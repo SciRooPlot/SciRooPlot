@@ -101,7 +101,7 @@ out = run(PLOT, "a", "p")
 check("srp plotmode sets the mode used without one", out.rc == 0 and listed(out) == reference("a", "p", "exact")[0], out.tail())
 p.srp("plotmode", "show")
 out = run(PLOT, "a", "p", "list", config=config_folder("config_none"))
-check("no project selected: exit 1 with the reason", out.rc == 1 and any("No plotting project is selected" in line for line in out.errors()), out.tail())
+check("no project selected: exit 1 with the reason", out.rc == 1 and len(out.errors()) == 1 and "No project selected (srp select <project> selects one)" in out.errors()[0], out.tail())
 
 # shell wildcards in the patterns: named in the error when nothing matches; a * after an escape is a regex repetition
 for group, name, hint in (("QA*", "p", "did you mean group 'QA.*'"), ("a", "x*", "did you mean name 'x.*'"), ("zz*", "q*", "group 'zz.*' and name 'q.*'"), ("zz", "q\\d*", None)):

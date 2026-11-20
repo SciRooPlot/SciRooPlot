@@ -38,7 +38,7 @@ namespace po = boost::program_options;
 int main(int argc, char* argv[])
 {
   if (Config::Get().CurrentProject().empty()) {
-    logger::error("No plotting project is selected. Exiting.");
+    logger::error("No project selected (srp select <project> selects one).");
     return 1;
   }
 

@@ -133,9 +133,7 @@ int main(int argc, char* argv[])
       if (project == "@current") {
         project = Config::Get().CurrentProject();
         if (project.empty()) {
-          if ((command != "get") && (command != "confdir")) {
-            logger::error("No project selected (srp select <project> selects one).");
-          }
+          logger::error("No project selected (srp select <project> selects one).");
           return 1;
         }
       }

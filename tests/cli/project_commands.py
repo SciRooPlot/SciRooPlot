@@ -8,7 +8,7 @@ plots and data sources is refused with one error each. Removing, renaming and re
 kept or refused; clean forgets the projects whose code is gone (the folder of the program, for a C++ project also the sources above its
 build folder). Registering is safe against srp commands and programs running at the same time, and in-memory data moves with a renamed
 project.
-Writing plots of a project without an output folder names srp set.
+Removing and resetting say which projects they removed; writing plots of a project without an output folder names srp set.
 Covers: unknown projects, confdir of an unknown project, unset program, confdir ..,
 add with an unset variable: one message, nothing left, program before srp add, concurrent
 srp add, SaveProject keeping changes made meanwhile, rename with in-memory data, srp set while a program saves, rename
@@ -113,12 +113,10 @@ for case in todo:
         P = "A" if target == "@current" else target
         check(f"does its job: {what}", out.rc == 0 and not out.errors() and effect(config, P, out), out.tail())
     else:
-        # get and confdir of @current print nothing when no project is selected: env.sh asks them whether there is one
-        quiet = case["target"] == "none_selected" and case["command"] in ("get", "confdir")
         nErrors = len(out.errors())
         check(
-            f"fails with {'no' if quiet else 'one'} error and changes nothing: {what}",
-            out.rc == 1 and nErrors == (0 if quiet else 1) and config_files(config) == before,
+            f"fails with one error and changes nothing: {what}",
+            out.rc == 1 and nErrors == 1 and config_files(config) == before,
             f"rc {out.rc}, {nErrors} errors, changed {sorted(k for k in set(before) | set(config_files(config)) if before.get(k) != config_files(config).get(k))}: {out.tail()}",
         )
 
@@ -222,7 +220,14 @@ out = run(SRP, "remove", "B", config=config)
 check("remove keeps a project folder holding other files (and warns), removes the project", out.rc == 0 and project_names(config) == ["A"] and os.path.isfile(os.path.join(config, "B", "notes.txt")) and not os.path.exists(os.path.join(config, "B", "plots.info")) and out.warnings(), out.tail())
 config = setup()
 out = run(SRP, "reset", config=config)
-check("reset removes every project and its folder, programs stay", out.rc == 0 and project_names(config) == [] and not os.path.exists(os.path.join(config, "A")) and os.path.exists(program("A")), out.tail())
+check(
+    "reset removes every project and its folder, programs stay, one line per project",
+    out.rc == 0 and project_names(config) == [] and not os.path.exists(os.path.join(config, "A")) and os.path.exists(program("A")) and "- deleting project A" in out.stdout and "- deleting project B" in out.stdout,
+    out.tail(),
+)
+config = setup()
+out = run(SRP, "remove", "A", config=config)
+check("remove says what it removed", out.rc == 0 and "Removed project A" in out.stdout, out.tail())
 config = setup()
 shutil.rmtree(os.path.join(PROGRAMS, "B"))
 out = run(SRP, "clean", config=config)

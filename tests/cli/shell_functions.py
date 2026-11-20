@@ -78,8 +78,13 @@ grep note "$SCIROOPLOT_CONFIG_PATH/projects.info" """,
     out = shell("srp cd proj && pwd; srp cd nosuch; echo status $?; srp out proj; echo status $?", sh, config=config, cwd=folder)
     lines = out.stdout.splitlines()
     check(f"{sh}: srp cd goes to the program folder", lines[:1] == [os.path.dirname(program)], out.tail())
-    check(f"{sh}: srp cd of an unknown project fails with a message", "status 1" in lines[1:2] and "could not cd project 'nosuch'" in out.stderr, out.tail())
+    said = [line for line in out.stderr.splitlines() if line.strip()]
+    check(f"{sh}: srp cd of an unknown project fails with one message", "status 1" in lines[1:2] and len(said) == 2 and "Cannot find project nosuch" in said[0], out.tail())
     check(f"{sh}: srp out without an output folder fails with a message", lines[2:3] == ["status 1"] and "has no output folder" in out.stderr, out.tail())
+    out = shell("srp update junk; echo status $?; srp cd; echo status $?", sh, config=config_folder(f"no_project_{sh}"), cwd=folder)
+    said = [line for line in out.stderr.splitlines() if line.strip()]
+    check(f"{sh}: srp update with an unknown argument is refused, nothing run", out.stdout.splitlines()[:1] == ["status 1"] and "takes no arguments" in out.stderr and "install.sh" not in out.stderr, out.tail())
+    check(f"{sh}: srp cd without a selected project: one message saying so", out.stdout.splitlines()[1:2] == ["status 1"] and len(said) == 2 and "No project selected" in said[1], out.tail())
     run(SRP, "set", "proj", "outdir", os.path.join(folder, "notyet"), config=config)
     out = shell("srp out proj; echo status $?", sh, config=config)
     check(f"{sh}: srp out before the output folder exists fails with a message", out.stdout.strip() == "status 1" and "does not exist yet" in out.stderr, out.tail())

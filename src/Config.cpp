@@ -499,7 +499,11 @@ bool Config::Reset()
   for (const auto& [projectName, project] : mProjects) {
     projectNames.push_back(projectName);
   }
-  return RemoveProjects(projectNames, "").size() == projectNames.size();
+  const auto removed = RemoveProjects(projectNames, "");
+  for (const auto& projectName : removed) {
+    logger::print("- deleting project {}", projectName);
+  }
+  return removed.size() == projectNames.size();
 }
 
 bool Config::Clean()
@@ -568,7 +572,9 @@ bool Config::Remove(const string& projectName)
     return false;
   }
   const string otherProject = (mProjects.begin()->first != projectName) ? mProjects.begin()->first : (mProjects.size() > 1 ? std::next(mProjects.begin())->first : "");
-  return !RemoveProjects({projectName}, otherProject).empty();
+  if (RemoveProjects({projectName}, otherProject).empty()) return false;
+  logger::print("Removed project {} (its code is kept).", projectName);
+  return true;
 }
 
 /**
