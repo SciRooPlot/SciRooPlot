@@ -1095,6 +1095,8 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
     std::string name;
     std::string dataSource;
   };
+  // without keys rows are matched by their number, with keys (at most two integer columns) by equal values; a tree of the same data source
+  // is the one beside each input, its keys matched within that input (e.g. AO2D: Join("O2ft0", {"fIndexBCs"}) per DF_ folder)
   virtual Data& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "");
   // tree of the same data source whose row is the number an integer column of this tree holds, counted within the joined tree beside each
   // part of the tree (e.g. AO2D: JoinByIndex("O2collision", "fIndexCollisions") per DF_ folder); rows without a match are skipped;

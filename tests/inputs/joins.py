@@ -104,8 +104,10 @@ write_tree(p.path("rn.root"), {"score": E["score"][:10]}, name="scores", ntuple=
 # AO2D-like files: tracks refer to the collisions of their DF_ folder by row number (-1 or beyond the collisions: no collision),
 # the first track of each folder to none (its joined tree is then unknown when the folder is opened); some folders empty or without
 # collisions; the folders of each file are the inputs. Labels row by row with the tracks refer to the particles of their folder.
+# Collisions and FT0-like rows carry the bunch crossing of their folder (fIndexBCs, restarting in every folder; some without FT0).
 ao2d = [p.path("AO2D_1.root"), p.path("AO2D_2.root")]
 AO = {k: [] for k in ("pt", "idx", "posZ", "mult", "part", "vz")}
+AOC = {"timeA": []}  # per collision: the FT0 time of its bunch crossing (nan without)
 for path, nColls in zip(ao2d, ((40, 0, 0, 25), (0, 60))):
     for d, nColl in enumerate(nColls):
         folder = f"DF_{d}"
@@ -117,7 +119,15 @@ for path, nColls in zip(ao2d, ((40, 0, 0, 25), (0, 60))):
         nPart = int(rng.integers(20, 80))
         vz = rng.uniform(-5, 5, nPart)
         part = rng.integers(-1, nPart + 3, nTrk).astype(np.int32)
-        write_tree(path, {"fPosZ": posZ, "fMult": mult}, name="O2collision", folder=folder)
+        collBC = rng.permutation(nColl + 5)[:nColl].astype(np.int32)
+        ft0BC = rng.permutation(nColl + 5)[: max(nColl - 3, 0)].astype(np.int32)
+        timeA = rng.uniform(-2, 2, len(ft0BC))
+        write_tree(path, {"fPosZ": posZ, "fMult": mult, "fIndexBCs": collBC}, name="O2collision", folder=folder)
+        write_tree(path, {"fIndexBCs": ft0BC, "fTimeA": timeA}, name="O2ft0", folder=folder)
+        dupBC = np.append(ft0BC, ft0BC[:1]) if (path, d) == (ao2d[1], 1) else ft0BC  # one key twice in one folder
+        write_tree(path, {"fIndexBCs": dupBC, "fTimeA": rng.uniform(-2, 2, len(dupBC))}, name="O2dupft0", folder=folder)
+        timeOf = dict(zip(ft0BC.tolist(), timeA.tolist()))
+        AOC["timeA"].extend(timeOf.get(bc, np.nan) for bc in collBC.tolist())
         write_tree(path, {"fIndexCollisions": idx, "fPt": pt}, name="O2track", folder=folder)
         write_tree(path, {"fIndexMcParticles": part}, name="O2mctracklabel", folder=folder)
         write_tree(path, {"fVz": vz}, name="O2mcparticle", folder=folder)
@@ -130,6 +140,7 @@ for path, nColls in zip(ao2d, ((40, 0, 0, 25), (0, 60))):
         AO["part"].extend(np.where(okPart, part, -1).tolist())
         AO["vz"].extend(np.where(okPart, vz[np.clip(part, 0, nPart - 1)], np.nan).tolist())
 AO = {k: np.array(v) for k, v in AO.items()}
+AOC = {k: np.array(v) for k, v in AOC.items()}
 aoMatched = AO["idx"] >= 0
 noColl = p.path("AO2D_none.root")
 for d in range(2):
@@ -215,6 +226,8 @@ case("by an index column: a column of the joined tree in the same DF folder", H(
 case("by an index column: rows without a row in the joined tree are skipped", H(30, 0, 6, aoPt), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPt", 30, [0.0, 6.0])))
 case("by an index column: an expression of both trees, with an alias", H(30, 0, 300, aoPt * aoMult), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions", "coll").Project1D(("fPt * coll.fMult", 30, [0.0, 300.0])))
 case("by an index column: a filter on a joined column", H(30, 0, 6, aoPt[aoZ > 0]), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPt", 30, [0.0, 6.0])).Filter("fPosZ > 0"))
+withFT0 = ~np.isnan(AOC["timeA"])
+case("by a key of the same data source: matched within the joined tree of each input (keys restart per folder)", H(40, -2, 2, AOC["timeA"][withFT0]), lambda pad: pad.AddData("O2collision", "ao2d").Join("O2ft0", ["fIndexBCs"], "ft0").Project1D(("ft0.fTimeA", 40, [-2.0, 2.0])))
 both = aoMatched & (AO["part"] >= 0)
 for form in ("fIndexMcParticles", "O2mctracklabel.fIndexMcParticles"):
     case(
@@ -243,6 +256,7 @@ FAILING = {  # what: (setup, the reason)
     "an index column in neither the tree nor a tree joined before": (lambda pad: pad.AddData("O2track", "ao2d").Join("O2mctracklabel").JoinByIndex("O2mcparticle", "fNope"), "neither O2track nor a tree joined before has a column fNope"),
     "an index column of a tree joined after it": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2mcparticle", "fIndexMcParticles").Join("O2mctracklabel"), "O2track has no column fIndexMcParticles"),
     "an index column of an alias not joined": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2mcparticle", "lbl.fIndexMcParticles"), "index column lbl.fIndexMcParticles: lbl is neither O2track nor a tree joined before"),
+    "a key appearing twice in the joined tree of one input": (lambda pad: pad.AddData("O2collision", "ao2d").Join("O2dupft0", ["fIndexBCs"]), f"appears in more than one row of {ao2d[1]}:DF_1/O2dupft0"),
     "an index column that is no integer": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fPt"), "index column fPt of O2track is of type Double_t, but it must hold one integer per row"),
     "a tree joined by an index column without rows in any input": (lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions"), "it has no rows in any input of O2track"),
     "a joined tree missing beside a tree joined by an index column": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2bc", "fIndexCollisions"), f"{ao2d[0]}:DF_0/O2bc does not exist"),
