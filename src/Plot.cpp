@@ -5016,7 +5016,7 @@ Plot::Pad::Shape::Shape(kind_t kind, const vector<double_t>& coordinates) : mKin
 {
   const bool finite = std::all_of(coordinates.begin(), coordinates.end(), [](double_t value) { return std::isfinite(value); });
   if (!finite) {
-    logger::warning("A {} with a position that is not a finite number will not be drawn.", enum_name(kind));
+    logger::warning("This {} has a position that is not a finite number: it is not drawn.", KindLabel(kind));
   }
 }
 
@@ -5107,19 +5107,19 @@ auto Plot::Pad::Shape::SetOnTop() -> decltype(*this)
 }
 auto Plot::Pad::Shape::SetArrowHead(const string& style) -> decltype(*this)
 {
-  if (mKind != kind_t::arrow) logger::warning("SetArrowHead has an effect only on arrows (Pad::AddArrow), not on a {}.", enum_name(mKind));
+  if (mKind != kind_t::arrow) logger::warning("SetArrowHead has an effect only on arrows (Pad::AddArrow): ignored on this {}.", KindLabel(mKind));
   mArrowHead = style;
   return *this;
 }
 auto Plot::Pad::Shape::SetArrowSize(float_t size) -> decltype(*this)
 {
-  if (mKind != kind_t::arrow) logger::warning("SetArrowSize has an effect only on arrows (Pad::AddArrow), not on a {}.", enum_name(mKind));
+  if (mKind != kind_t::arrow) logger::warning("SetArrowSize has an effect only on arrows (Pad::AddArrow): ignored on this {}.", KindLabel(mKind));
   if (CheckNotNegative(size, "arrow size")) mArrowSize = size;
   return *this;
 }
 auto Plot::Pad::Shape::SetArc(double_t phiMin, double_t phiMax) -> decltype(*this)
 {
-  if (mKind != kind_t::ellipse) logger::warning("SetArc has an effect only on ellipses (Pad::AddEllipse), not on a {}.", enum_name(mKind));
+  if (mKind != kind_t::ellipse) logger::warning("SetArc has an effect only on ellipses (Pad::AddEllipse): ignored on this {}.", KindLabel(mKind));
   bool valid = CheckFinite(phiMin, "start angle of the arc");
   valid = CheckFinite(phiMax, "end angle of the arc") && valid;
   if (valid) mArc = {phiMin, phiMax};
@@ -5127,7 +5127,7 @@ auto Plot::Pad::Shape::SetArc(double_t phiMin, double_t phiMax) -> decltype(*thi
 }
 auto Plot::Pad::Shape::SetRotation(double_t theta) -> decltype(*this)
 {
-  if (mKind != kind_t::ellipse) logger::warning("SetRotation has an effect only on ellipses (Pad::AddEllipse), not on a {}.", enum_name(mKind));
+  if (mKind != kind_t::ellipse) logger::warning("SetRotation has an effect only on ellipses (Pad::AddEllipse): ignored on this {}.", KindLabel(mKind));
   if (CheckFinite(theta, "rotation angle")) mRotation = theta;
   return *this;
 }

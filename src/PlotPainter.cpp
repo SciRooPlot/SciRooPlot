@@ -5536,12 +5536,12 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
   // TLine, TArrow, TBox and TEllipse take axis values (they convert them to pad coordinates, log10 on a log axis, when painted)
   const double_t xMin = FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx()), xMax = FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx());
   const double_t yMin = FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()), yMax = FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy());
-  uint8_t shapeIndex{};
   std::map<kind_t, uint16_t> numberOfKind;  // over all layers: the nth shape of a kind is the nth call that added one
   for (const auto& shape : pad.GetShapes()) {
-    ++shapeIndex;
     const kind_t kind = shape->GetKind();
     const uint16_t number = ++numberOfKind[kind];
+    // named in messages as in show mode: "vertical line 2" is the second call of AddVerticalLine
+    const string shapeName = Plot::Pad::Shape::KindLabel(kind) + " " + std::to_string(number);
     if (shape->GetLayer() != layer) continue;
     const auto& c = shape->GetCoordinates();
     const coordinates_t coordinates = get_first_or(user_coordinates, shape->GetCoordinateSystem(), pad.GetDefaultShapeCoordinates(), padDefaults.GetDefaultShapeCoordinates());
@@ -5556,7 +5556,7 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
     if (!finite) continue;
     const bool isLine = kind == kind_t::line || kind == kind_t::vertical_line || kind == kind_t::horizontal_line;
     if (isLine && (shape->GetFillColor() || shape->GetFillStyle() || shape->GetFillAlpha())) {
-      ReportIgnored(fmt::format("The fill of shape {} ({}) of pad {}", shapeIndex, enum_name(kind), padID), "a line has no area (an arrow fills its head)");
+      ReportIgnored(fmt::format("The fill of {} of pad {}", shapeName, padID), "a line has no area (an arrow fills its head)");
     }
     // positions as axis values: given so, or fractions of the frame or the pad converted; a log axis has no position for values at or
     // below zero: they are put at the frame edge, where ROOT puts them (TPad::XtoPad), as for boxes and the free space they look for
@@ -5571,7 +5571,7 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
       if (pad_ptr->GetLogy() && y <= 0.) atFrameEdge = true;
       return (pad_ptr->GetLogy() && y <= 0.) ? yMin : y;
     };
-    auto skip = [&](const char* reason) { logger::warning("Shape {} ({}) of pad {} is not drawn: {}.", shapeIndex, enum_name(kind), padID, reason); };
+    auto skip = [&](const char* reason) { logger::warning("The {} of pad {} is not drawn: {}.", shapeName, padID, reason); };
 
     TObject* object{};
     TObject* outline{};  // drawn after the fill: the outline of a polygon
@@ -5629,7 +5629,7 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
         if (c[2] <= 0. || c[3] <= 0.) continue;  // reported when it was added
         const double_t x = valueX(c[0]), y = valueY(c[1]);
         if (isUser && (pad_ptr->GetLogx() || pad_ptr->GetLogy())) {
-          logger::warning("Shape {} (ellipse) of pad {} is drawn distorted: TEllipse does not convert its radii on a log axis.", shapeIndex, padID);
+          logger::warning("The {} of pad {} is drawn distorted: TEllipse does not convert its radii on a log axis.", shapeName, padID);
         }
         // the radii are in pad coordinates (TEllipse converts only the centre)
         const double_t rx = (isUser) ? c[2] : c[2] * (span[2] - span[0]) * (pad_ptr->GetX2() - pad_ptr->GetX1());
@@ -5684,7 +5684,7 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
     if (!object) continue;
     // a region reaching to or below zero on a log axis spans to the frame edge as meant; other positions put there are reported
     if (atFrameEdge && kind != kind_t::region && kind != kind_t::region_x && kind != kind_t::region_y) {
-      logger::warning("Shape {} ({}) of pad {} is put at the edge of the frame where a position is at or below zero: a log axis has no position for it.", shapeIndex, enum_name(kind), padID);
+      logger::warning("The {} of pad {} is put at the edge of the frame where a position is at or below zero: a log axis has no position for it.", shapeName, padID);
     }
 
     // line: black, the default line width of the pad; fill: regions light grey and translucent, arrow heads in the line colour, ellipses open

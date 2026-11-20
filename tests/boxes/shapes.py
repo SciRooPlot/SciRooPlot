@@ -243,10 +243,10 @@ check("log y: a polygon below zero is cut at the lower edge of the frame", len(p
 messages = run.messages("log_not_positive", "named")
 edge = "is put at the edge of the frame where a position is at or below zero: a log axis has no position for it"
 lines = of("log_not_positive", "TLine")
-check("log y: a line at or below zero is at the lower edge of the frame, warned", len(lines) == 1 and close(lines[0].GetY1(), y1, 1e-6) and any(f"Shape 2 (horizontal_line) of pad 1 {edge}" in m for m in messages), " | ".join(messages))
+check("log y: a line at or below zero is at the lower edge of the frame, warned", len(lines) == 1 and close(lines[0].GetY1(), y1, 1e-6) and any(f"The horizontal line 1 of pad 1 {edge}" in m for m in messages), " | ".join(messages))
 corners = sorted(polys[1].GetY()[k] for k in range(polys[1].GetN())) if len(polys) == 2 else []
-check("log y: polygon points at or below zero are at the lower edge of the frame, warned", corners[:2] and all(close(c, y1, 1e-6) for c in corners[:2]) and any(f"Shape 4 (polygon) of pad 1 {edge}" in m for m in messages), " | ".join(messages))
-check("log y: regions reaching below zero are not warned about", not any("(region" in m and edge in m for m in messages), " | ".join(messages))
+check("log y: polygon points at or below zero are at the lower edge of the frame, warned", corners[:2] and all(close(c, y1, 1e-6) for c in corners[:2]) and any(f"The polygon 2 of pad 1 {edge}" in m for m in messages), " | ".join(messages))
+check("log y: regions reaching below zero are not warned about", not any("region" in m and edge in m for m in messages), " | ".join(messages))
 check("a shape of the base plot is drawn", len([o for o in of("from_base", "TLine") if close(o.GetY1(), 5.0)]) == 1)
 check("shapes of pad 0 are not drawn, warned when the plot is added", not of("pad0", "TLine") and "shapes added to pad 0 are not drawn" in pad0Said, pad0Said)
 arrows, ellipses, boxes = of("styles", "TArrow"), of("styles", "TEllipse"), of("styles", "TBox")
