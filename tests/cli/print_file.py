@@ -4,7 +4,8 @@ only what is there; also for files below a folder with ':' in its name, and for 
 (as the reader finds it); a name written in several cycles once, the value of a map under its key. A missing file, a file that is no
 ROOT file and a path not in the file fail with exit status 1 and one error. srp open without a file, with a missing file or one that is
 no ROOT file, and srp open and srp colorwheel without a graphical display (X11 only) end with exit status 1 and one error. srp
-colorwheel <file> writes an image file without ROOT's messages, and refuses a name that is no image file.
+colorwheel <file> writes an image file without ROOT's messages, and refuses a name that is no image file. File names may hold ~ and
+environment variables, as the inputs of data sources.
 Covers: stack and multigraph members, file below a folder with ':', several cycles of a name, map values, srp open and colorwheel
 without a file or display, colorwheel into a file."""
 
@@ -136,6 +137,12 @@ if sys.platform.startswith("linux"):  # X11: without DISPLAY there is no display
         except subprocess.TimeoutExpired:
             ok, detail = False, "still running after a minute"
         check(f"srp {args[0]} without a graphical display: exit 1, one error saying so", ok, detail)
+
+# a ~ and environment variables in the file name, as in the inputs of data sources
+out = run(SRP, "print", "${SRP_TESTS_PRINT_DIR}/" + os.path.basename(path), env={"SRP_TESTS_PRINT_DIR": os.path.dirname(path)})
+check("srp print expands environment variables in the file name", out.rc == 0 and listing(out.stdout)[0], out.tail())
+out = run(SRP, "colorwheel", "${SRP_TESTS_PRINT_DIR}/wheel_var.png", env={"SRP_TESTS_PRINT_DIR": folder}, timeout=120)
+check("srp colorwheel expands environment variables in the file name: written, no error", out.rc == 0 and os.path.isfile(os.path.join(folder, "wheel_var.png")) and not out.errors(), out.tail())
 
 # srp colorwheel <file> writes the wheel as an image without ROOT's messages; a name that is no image file (ROOT would write PostScript)
 # ends with exit status 1 and one error, nothing written

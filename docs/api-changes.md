@@ -77,6 +77,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `srp` with more than four words (e.g. `srp set <project> <name> two words`) ended with Boost's message "too many positional options" | Refused with "Too many arguments", saying to quote a value with spaces | CLI | Nothing. |
 | `srp get` and `srp projects` showed a stored setting value the declaration no longer allows, while the program used the default | They give the default the program uses (`srp get` warns about the value set, `srp projects` names it) | CLI | Nothing. |
 | An unreadable `settings.info` of a project was reported, but `srp projects` succeeded and `srp get`/`set` added that the program declares no setting | One error; `srp projects` exits with 1 | CLI | Nothing. |
+| `srp print`, `srp open` and `srp colorwheel` took a file name literally (`srp colorwheel "~/w.png"` wrote the file and reported a failure) | `~` and environment variables are expanded, as in the inputs of data sources | CLI | Nothing. |
 
 ## 4.0.0 → 4.1.0
 

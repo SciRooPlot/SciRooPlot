@@ -245,11 +245,14 @@ int RunCommand(const string& command, const string& project, const string& prope
     row("<mode>", "one of the plot modes");
     row("<level>", "debug | log | info | warning | error | silent");
   } else if (command == "open") {
-    const string& fileName = project;
-    if (fileName.empty()) {
+    if (project.empty()) {
       logger::error("Specify a file: srp open <file>.");
       return 1;
     }
+    // ~ and environment variables as in the inputs of data sources
+    const auto expanded = util::expand_path(project);
+    if (!expanded) return 1;  // reported
+    const string& fileName = *expanded;
     std::error_code existsError;
     if (util::is_missing_local_file(fileName, existsError)) {  // a remote file is opened through ROOT, as the inputs of data sources
       logger::error("Could not find file {}.", fileName);
@@ -273,7 +276,10 @@ int RunCommand(const string& command, const string& project, const string& prope
     }
     app->Run();
   } else if (command == "colorwheel") {
-    const string fileName = project;  // optional: save the wheel instead of showing it
+    // optional: save the wheel instead of showing it (~ and environment variables expanded, as ROOT would when saving)
+    const auto expanded = util::expand_path(project);
+    if (!expanded) return 1;  // reported
+    const string fileName = *expanded;
     if (!fileName.empty()) {
       // ROOT writes PostScript for any other ending
       static const std::set<string> imageEndings = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff", ".xpm", ".svg", ".pdf", ".eps", ".ps"};
@@ -319,8 +325,8 @@ int RunCommand(const string& command, const string& project, const string& prope
     }
     app->Run();
   } else if (command == "print") {
-    string fileName = project;
-    if (!PrintRootFileContents(fileName)) return 1;
+    const auto fileName = util::expand_path(project);  // as in the inputs of data sources
+    if (!fileName || !PrintRootFileContents(*fileName)) return 1;
   } else if (command == "settings") {
     // named as the srp commands that change them
     const auto row = rows(15);
