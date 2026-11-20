@@ -12,7 +12,7 @@ from srptest import DATA_1D, DATA_2D, DATA_3D, DATA_KINDS, Project, ROOT, S, bas
 STORED = {"x": "x axis range", "y": "minimum and maximum", "yaxis": "y axis range", "z": "minimum and maximum (2d)"}
 # every kind drawn as the input object it is that can store a range: a TEfficiency stores none of its own (its histograms are not
 # drawn); the projected kinds are covered by the projections below
-KINDS = tuple(k for k in DATA_1D + DATA_2D + DATA_3D if not DATA_KINDS[k][2] & {"formula", "projected"} and DATA_KINDS[k][1] != "TEfficiency")
+KINDS = tuple(k for k in DATA_1D + DATA_2D + DATA_3D if not DATA_KINDS[k][2] & {"formula", "given", "projected"} and DATA_KINDS[k][1] != "TEfficiency")
 EXPLICIT = {"x": ("X", 2.0, 6.0), "y": ("Y", 0.5, 12.0), "z": ("Z", 1.0, 50.0)}  # x values: bin edges of every kind with binned axes
 
 

@@ -15,7 +15,7 @@ Covers: an empty graph as first or marked data, the frame of a pad without data 
 
 from srptest import DATA_1D, DATA_2D, DATA_KINDS, ROOT, Project, S, add_data, base_of, captured, cases, check, close, describe, finish
 
-KINDS = tuple(k for k in DATA_1D + DATA_2D if "formula" not in DATA_KINDS[k][2])  # a formula is no input for SetFrame
+KINDS = tuple(k for k in DATA_1D + DATA_2D if not DATA_KINDS[k][2] & {"formula", "given"})  # a formula or points of the definition are no input for SetFrame
 HOW = ("first", "marked", "set")
 # an n-dimensional histogram is drawn as a projection, which SetFrame has not: it gives the frame as projected data marked SetDefinesFrame()
 todo = cases({"kind": list(KINDS), "how": list(HOW)}, valid=lambda c: c["how"] != "set" or "projected" not in DATA_KINDS[c["kind"]][2], always=lambda c: True)

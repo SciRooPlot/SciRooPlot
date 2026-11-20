@@ -132,7 +132,8 @@ def describe(case):
 # Every kind of data SciRooPlot draws, by kind: (dimension of the drawn data, class, properties). The data covers 1 to 10 on every axis
 # (-4 to 5 in the variant crossing) with positive values (usable on log axes): about 1 to 10 for 1d data, products of those for 2d and 3d data, about 0.1 to 0.8 for
 # efficiencies. Properties: binned (a histogram: the frame shows whole bins), polar (drawn in a polar grid, no cartesian frame), formula
-# (a function of the plot definition, no input object), cpp (a function of compiled C++ code: stored as values sampled over its range),
+# (a function of the plot definition, no input object), given (points of the plot definition, AddPoints: no input object; data_objects
+# gives the graph they make, as reference), cpp (a function of compiled C++ code: stored as values sampled over its range),
 # labels (alphanumeric bin labels on x: hist_labels is hist with a word for every bin),
 # projected (an n-dimensional histogram, drawn as its projection onto the first axis, or the first two), polygons (bins that are
 # polygons: the axes have no bins, a frame ends where it is asked to as for graphs).
@@ -159,6 +160,7 @@ DATA_KINDS = {
     "graph_bent": (1, "TGraphBentErrors", set()),
     "graph_multi": (1, "TGraphMultiErrors", set()),
     "graph_polar": (1, "TGraphPolar", {"polar"}),
+    "points": (1, "TGraph", {"given"}),
     "tf1": (1, "TF1", set()),
     "tf1_cpp": (1, "TF1", {"cpp"}),
     "function": (1, "TF1", {"formula"}),
@@ -211,6 +213,8 @@ def has_variant(kind, variant):
         return False
     if variant == "undefined":
         return cls == "TF1"
+    if variant == "empty" and "given" in props:  # AddPoints needs at least one point
+        return False
 
     if cls == "TEfficiency" or kind == "hist_poisson":
         return variant in COUNTS_VARIANTS
@@ -482,6 +486,7 @@ def data_objects(variant="normal"):
         hl.GetXaxis().SetBinLabel(b, f"bin {chr(ord('a') + b - 1)}")
     objects = {"hist": h, "hist_labels": hl, "hist_noerrors": hn, "hist_counts": hc, "hist_poisson": hpo, "hist_var": hv, "profile": p, "profile_spread": ps, "efficiency": eff, "efficiency_weighted": effW}
     objects.update({"thn": thn, "thn_sparse": sparse, "graph": g, "graph_errors": ge, "graph_asymm": ga, "graph_bent": gb, "graph_multi": gm, "graph_polar": gp})
+    objects["points"] = g.Clone("points")  # the graph the points of the plot definition make (the points of graph)
     objects.update({"hist2d": h2, "hist2d_var": h2v, "profile2d": p2, "hist2poly": poly, "efficiency2d": eff2, "thn_sparse2d": sparse2, "thn2d": thn2})
     objects.update({"graph2d": g2, "graph2d_errors": g2e, "graph2d_asymm": g2a, "hist3d": h3, "hist3d_var": h3v, "profile3d": p3})
     if variant in FUNCTION_VARIANTS:
@@ -704,8 +709,33 @@ def write_csv(path, columns, rows=None, delimiter=","):
             f.write(delimiter.join(text(values[k]) for values in columns.values()) + "\n")
 
 
+_GIVEN = {}  # the points of the kinds given in the plot definition, by variant
+
+
+def given_points(variant="normal"):
+    """the points (x values, y values) of the data kinds given in the plot definition (AddPoints), in a variant"""
+    if variant not in _GIVEN:
+        graph = data_objects(variant)["points"]
+        _GIVEN[variant] = ([graph.GetPointX(i) for i in range(graph.GetN())], [graph.GetPointY(i) for i in range(graph.GetN())])
+    return _GIVEN[variant]
+
+
+def number_text(v):
+    """a number as SciRooPlot writes it into names (the shortest form that reads back exactly, without a trailing .0)"""
+    text = repr(float(v))
+    return text[:-2] if text.endswith(".0") else text
+
+
+def points_name(variant="normal"):
+    """the name AddPoints gives its points: their x and y values"""
+    xs, ys = given_points(variant)
+    return ",".join(map(number_text, xs)) + ";" + ",".join(map(number_text, ys))
+
+
 def add_data(pad, kind, source="inputs", variant="normal"):
     """adds data of a kind (see data_objects) to a pad and returns it; source names the data source holding the variant"""
+    if "given" in DATA_KINDS[kind][2]:
+        return pad.AddPoints(*given_points(variant))
     if kind == "function":
         return pad.AddFunction(formula(kind, variant)).SetRangeX(*axis_range(variant))
     if kind == "function2d":
@@ -828,8 +858,10 @@ def drawn_type(kind):
 
 
 def data_name(kind, variant="normal"):
-    """the name of data of a kind in the plot definition: the formula of a function of the plot definition, else the input's name (in
-    messages: message_name)"""
+    """the name of data of a kind in the plot definition: the formula of a function of the plot definition, the coordinates of points of
+    the plot definition, else the input's name (in messages: message_name)"""
+    if "given" in DATA_KINDS[kind][2]:
+        return points_name(variant)
     return formula(kind, variant) if "formula" in DATA_KINDS[kind][2] else kind
 
 
@@ -2044,17 +2076,24 @@ def ratio_input(kind, source, variant):
     """an input of a ratio (Data) of a kind in a variant: formulas of the plot definition, projected kinds projected"""
     if "formula" in DATA_KINDS[kind][2]:
         return S.Data(formula(kind, variant), S.kUserFunctions)
+    if "given" in DATA_KINDS[kind][2]:
+        return S.Data(points_name(variant), S.kUserGraphs)
     d = S.Data(kind, source)
     if "projected" in DATA_KINDS[kind][2]:
         d.Project([0] if DATA_KINDS[kind][0] == 1 else [0, 1])
     return d
 
 
-def message_name(kind, variant="normal", source=None):
+def message_name(kind, variant="normal", source=None, label=None):
     """the name of data of a kind in messages: name:source (by default the source Project.inputs makes for the variant), a formula of
-    the plot definition by itself"""
+    the plot definition by itself, points of the plot definition by their legend label or else their number and x range"""
     if "formula" in DATA_KINDS[kind][2]:
         return formula(kind, variant)
+    if "given" in DATA_KINDS[kind][2]:
+        if label:
+            return f"points '{label}'"
+        xs, _ = given_points(variant)
+        return f"points ({len(xs)} at x = {number_text(xs[0])} to {number_text(xs[-1])})"
     return f"{kind}:{source or source_of(variant)}"
 
 
@@ -2513,8 +2552,9 @@ class Project:
         histograms in other storage types (STORED_KINDS only) in "inputs_<variant>_<storage>"."""
         for variant in variants:
             objects = data_objects(variant)
+            stocked = {k: o for k, o in objects.items() if "given" not in DATA_KINDS[k][2]}  # points of the plot definition are no input
             for storage in storages:
-                self.source(source_of(variant, storage), objects if storage == "double" else {k: stored(o, storage) for k, o in objects.items() if k in STORED_KINDS})
+                self.source(source_of(variant, storage), stocked if storage == "double" else {k: stored(o, storage) for k, o in stocked.items() if k in STORED_KINDS})
 
     def plot(self, group=".+", name=".+", mode="file", timeout=1800, env=None):
         """runs plot; env: variables changed for it (None as value: removed)"""
@@ -3427,6 +3467,8 @@ def random_definition(seed, nPlots, sources, project):
         dim, _, props = DATA_KINDS[kind]
         if "formula" in props:
             return {lang: f"Data({literal(formula(kind, variant), lang)}, kUserFunctions)" for lang in ("py", "cpp")}
+        if "given" in props:
+            return {lang: f"Data({literal(points_name(variant), lang)}, kUserGraphs)" for lang in ("py", "cpp")}
         project = {lang: call("Project", [[0] if dim == 1 else [0, 1]], lang) if "projected" in props else "" for lang in ("py", "cpp")}
         return {lang: f'Data("{kind}", "{source_of(variant)}"){project[lang]}' for lang in ("py", "cpp")}
 

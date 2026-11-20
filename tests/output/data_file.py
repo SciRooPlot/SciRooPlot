@@ -1,18 +1,19 @@
 """Mode data writes the input objects of the selected plots, as read, into Data.root of the output directory: each under its data source
 and its path in it (a data source restricted to a folder, source:folder, and a path in a name become subdirectories), equal to the object
 in the input file, for every data kind of srptest read from a file in every variant (every value at least once in the fast run); a
-function of the plot definition under its data source, named by its formula. Keys are written in a fixed order: the same plots give the
+function of the plot definition under its data source, named by its formula, points of the plot definition likewise, named by their
+coordinates. Keys are written in a fixed order: the same plots give the
 same file. The plots themselves are not painted. Only the data of the selected plots is written, also when the process read other data
 before; a plot whose data is missing is reported with its reasons and the run fails, as in the other modes.
-Covers: a data source restricted to a folder (also given with a trailing slash, or empty), a path in a name, functions of the plot
+Covers: a data source restricted to a folder (also given with a trailing slash, or empty), a path in a name, functions and points of the plot
 definition, the fixed key order, missing data, data read by earlier calls in the same process."""
 
-from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, captured, cases, check, data_objects, describe, finish, func_diff, graph_diff, has_variant, hist_diff, source_of
+from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, captured, cases, check, data_objects, describe, finish, func_diff, graph_diff, has_variant, hist_diff, points_name, source_of
 from srptest import formula as formula_of
 
 p = Project("data_file")
 p.inputs(VARIANTS)
-INPUT = tuple(kind for kind, (_, _, props) in DATA_KINDS.items() if "formula" not in props)
+INPUT = tuple(kind for kind, (_, _, props) in DATA_KINDS.items() if not props & {"formula", "given"})
 todo = cases({"kind": INPUT, "variant": VARIANTS}, valid=lambda c: has_variant(c["kind"], c["variant"]))
 for i, case in enumerate(todo):
     plot = S.Plot(f"d{i}", "data", base_of(case["kind"]))
@@ -20,6 +21,7 @@ for i, case in enumerate(todo):
     p.pm.AddPlot(plot)
 plot = S.Plot("formula", "data", "1d")
 add_data(plot[1], "function")
+add_data(plot[1], "points")
 p.pm.AddPlot(plot)
 # a path in a name, and a data source restricted to a folder
 f = ROOT.TFile(p.path("folders.root"), "RECREATE")
@@ -99,6 +101,10 @@ if written:
     func = next((key.ReadObj() for source in names if "/" not in source for key in written.Get(source).GetListOfKeys() if key.GetName() == formula), None)
     problem = func_diff(ROOT.TF1("reference", formula, 1.0, 10.0), func) if func else "not written"
     check("a function of the plot definition: under its data source, named by its formula", not problem, problem)
+    pointsName = points_name()
+    points = next((key.ReadObj() for source in names if "/" not in source for key in written.Get(source).GetListOfKeys() if key.GetName() == pointsName), None)
+    problem = graph_diff(data_objects()["points"], points) if points else "not written"
+    check("points of the plot definition: under their data source, named by their coordinates", not problem, problem)
     written.Close()
     first = names
     p.plot("data", ".+", "data")

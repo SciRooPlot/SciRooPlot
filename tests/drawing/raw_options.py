@@ -15,7 +15,7 @@ Covers: SAME, RX/RY, A of graphs, polar grid letters, arrow width, AXIS/AXIG.
 
 import re
 
-from srptest import DATA_KINDS, Project, S, add_data, base_of, captured, cases, check, data_name, data_objects, describe, drawn_type, finish, no_scale, option
+from srptest import DATA_KINDS, Project, S, add_data, base_of, captured, cases, check, data_name, data_objects, describe, drawn_type, finish, message_name, no_scale, option
 
 RAW = {  # raw ROOT options without an alias, by what the data is drawn as
     "hist1d": ["", "E", "E0", "E1", "E2", "E3", "E4", "E5", "E6", "HIST", "L", "C", "P", "P0", "B", "BAR", "HBAR", "LF2", "HIST F", "HIST P", "E P", "E2 P", "*H", "HIST LP", "HIST E", "HIST E1", "HIST E2", "HIST E3", "TEXT", "X0 E"],
@@ -113,7 +113,7 @@ run = p.plot("raw")
 
 
 def warnings_of(kind, text=""):
-    name = re.compile(rf"(?<![\w]){re.escape(data_name(kind))}(?![\w])")
+    name = re.compile(rf"(?<![\w]){re.escape(message_name(kind) if 'given' in DATA_KINDS[kind][2] else data_name(kind))}(?![\w])")
     return [w for w in run.warnings(text) if name.search(w)]
 
 

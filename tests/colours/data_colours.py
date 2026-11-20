@@ -9,7 +9,7 @@ without a base plot.
 Covers: each colour setter sets only its own part, marker and line of one data item from the same entry.
 """
 
-from srptest import DATA_KINDS, DEFAULT_COLORS, ROOT, Project, S, add_data, base_of, cases, check, colour_diff, data_objects, describe, drawn_type, finish, source_of
+from srptest import DATA_KINDS, DEFAULT_COLORS, ROOT, Project, S, add_data, base_of, cases, check, colour_diff, data_objects, describe, drawn_type, finish, has_variant, source_of
 
 L3 = [ROOT.kRed + 1, "#00aa55", (0.2, 0.3, 0.9)]  # every colour form
 L3_PAD0 = [ROOT.kOrange + 7, ROOT.kCyan + 2, ROOT.kMagenta + 3]
@@ -87,7 +87,8 @@ p.source("styled", styled)
 
 todo = cases(
     {"kind": list(DATA_KINDS), "pads": list(PADS), "setup": list(SETUPS), "before": [1, 8], "drawn": ["drawn", "undrawn"]},
-    valid=lambda c: (c["pads"] != "ref_func" or DATA_KINDS[c["kind"]][0] == 1) and (c["drawn"] == "drawn" or drawn_type(c["kind"]) in ("graph", "graph2d")),
+    # undrawn data is a graph without points (points of the plot definition have at least one); points of the plot definition have no input style to keep
+    valid=lambda c: (c["pads"] != "ref_func" or DATA_KINDS[c["kind"]][0] == 1) and (c["drawn"] == "drawn" or (drawn_type(c["kind"]) in ("graph", "graph2d") and has_variant(c["kind"], "empty"))) and not (c["setup"] == "keep" and "given" in DATA_KINDS[c["kind"]][2]),
     always=lambda c: c["kind"] in ("hist", "graph") and c["before"] == 1 and c["drawn"] == "drawn",
     named=[
         {"kind": "hist", "pads": "srp", "setup": "marker", "before": 1, "drawn": "drawn", "why": "a colour setter sets only its own part"},

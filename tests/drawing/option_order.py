@@ -79,10 +79,10 @@ def valid(case):
     kind, host, calls = case["kind"], case["host"], SEQUENCES[case["sequence"]]
     if ALIAS[drawn_type(kind)][1] is None and "alias_b" in calls:
         return False
-    if host == "template":
-        return "formula" not in DATA_KINDS[kind][2]
+    if host == "template":  # an input named in a template: no formula or points of the plot definition
+        return not DATA_KINDS[kind][2] & {"formula", "given"}
     if host == "ratio":
-        return kind in DATA_1D and not DATA_KINDS[kind][2] & {"formula", "projected"}
+        return kind in DATA_1D and not DATA_KINDS[kind][2] & {"formula", "given", "projected"}
     return True
 
 

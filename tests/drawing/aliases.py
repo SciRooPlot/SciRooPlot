@@ -200,7 +200,7 @@ for i, case in enumerate(todo):
         check(f"colour scale drawn by the frame only if asked for: {what}", frameScale == scale, f"frame '{frame}'")
         if any(word in data for word in ("LEGO", "SURF", "TRI")):
             check(f"3d view on an empty lego frame: {what}", "LEGO" in frame and "SURF" not in frame and frame.split().count("0") == 1 and ("POL" in frame) == ("POL" in data), f"frame '{frame}'")
-    name = data_name(kind)
+    name = message_name(kind) if "given" in DATA_KINDS[kind][2] else data_name(kind)  # points of the definition: named as in messages
     check(f"drawn under the name of the input: {what}", obj.GetName().split(":", 1)[1].startswith(name), obj.GetName())
     said = message_name(kind)
     found = [line for line in warned.get(alias, []) if f" {said}, drawing it as " in line or f" {said} (ROOT " in line or f"Graph {said} has no errors" in line or line.rstrip(".").endswith(f" {said}, using the default of ROOT")]

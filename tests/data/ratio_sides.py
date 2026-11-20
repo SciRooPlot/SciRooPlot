@@ -184,9 +184,9 @@ def input_warnings(kind, variant, source, drawnAlone):
     """the warnings of an input itself: a NaN value, a graph without points drawn alone"""
     found = []
     if variant in ("nan", "inf") and not DATA_KINDS[kind][1].startswith("TF"):
-        found.append((f" {kind}:{source} has", "NaN or infinite"))
+        found.append((f" {message_name(kind, variant, source)} has", "NaN or infinite"))
     if drawnAlone and stand_in(kind, variant) is not None:
-        found.append((f"Graph {kind}:{source} ", "has no points: it is not drawn"))
+        found.append((f"Graph {message_name(kind, variant, source)} ", "has no points: it is not drawn"))
     return found
 
 

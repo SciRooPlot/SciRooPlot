@@ -13,7 +13,7 @@ p = Project("input_styles")
 p.inputs()
 styled, plain = {}, {}
 for kind, obj in data_objects().items():
-    if not obj.InheritsFrom("TAttLine"):  # THn: no attributes of its own
+    if not obj.InheritsFrom("TAttLine") or "given" in DATA_KINDS[kind][2]:  # THn: no attributes of its own; points of the definition: no input
         continue
     styled[kind] = obj.Clone()
     styled[kind].SetLineStyle(STORED["GetLineStyle"])

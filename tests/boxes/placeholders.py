@@ -21,7 +21,7 @@ statistics of its grid), and the named cases.
 
 import math
 
-from srptest import DATA_KINDS, ROOT, Project, S, add_data, base_of, cases, check, data_name, describe, drawn_type, finish, has_variant, source_of, write_tree
+from srptest import DATA_KINDS, ROOT, Project, S, add_data, base_of, cases, check, describe, drawn_type, finish, has_variant, message_name, source_of, write_tree
 
 import numpy as np
 
@@ -238,7 +238,8 @@ for i, case in enumerate(todo):
     want = reference(drawn[0], word, frame)
     warned = [line for line in run.messages(name, "numbers") if "is not available" in line]
     if want is None:
-        check(f"{what}: left as it is, with a warning naming the data", found == [f"value {placeholder}"] and len(warned) == 1 and data_name(kind) in warned[0], f"{found} {warned}")
+        said = message_name(kind, case["variant"], source_of(case["variant"]), f"value {placeholder}" if case["place"] == "legend" else "data")
+        check(f"{what}: left as it is, with a warning naming the data", found == [f"value {placeholder}"] and len(warned) == 1 and said in warned[0], f"{found} {warned}")
         continue
     got = found[0].split(" ", 1)[1]
     ok = False

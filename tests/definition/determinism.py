@@ -34,7 +34,9 @@ for kind in S.DATA_KINDS:
         name = f"p{len(names):03d}"
         names.append(name)
         source = S.source_of(variant)
-        if kind in S.FORMULAS or kind == "function2d":
+        if "given" in S.DATA_KINDS[kind][2]:
+            add = f"AddPoints(*{S.given_points(variant)!r}, 'data')"
+        elif kind in S.FORMULAS or kind == "function2d":
             add = f"AddFunction({S.formula(kind, variant)!r}, 'f').SetRangeX(*{S.axis_range(variant)!r})" + (f".SetRangeY(*{S.axis_range(variant)!r})" if kind == "function2d" else "")
         else:
             add = f"AddData({kind!r}, {source!r}, 'data')" + (f".Project({[0] if S.DATA_KINDS[kind][0] == 1 else [0, 1]!r})" if "projected" in S.DATA_KINDS[kind][2] else "")
