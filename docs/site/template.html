@@ -743,7 +743,7 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
     </div>
     <div class="cmp-plots" id="teaserplots">
       <figure class="plot"><img id="teaserroot" src="img/compare/ptSpectrumRatio_root.png" alt="The figure made by the plain ROOT macro"><figcaption>plain ROOT</figcaption></figure>
-      <figure class="plot"><img id="teasersrp" src="img/ex/spectra/ptSpectrumRatio.png" alt="The same figure made by SciRooPlot"><figcaption>SciRooPlot</figcaption></figure>
+      <figure class="plot"><img id="teasersrp" src="img/compare/ptSpectrumRatio_srp.png" alt="The same figure made by SciRooPlot"><figcaption>SciRooPlot</figcaption></figure>
     </div>
   </div>
 </section>
@@ -2424,7 +2424,7 @@ function focusMethod() { // after jumping to a class of the method list: mark th
   if (li) { li.scrollIntoView({ block: "center" }); li.classList.add("flash"); setTimeout(() => li.classList.remove("flash"), 1600) } }
 
 /* ---------------- install */
-const srpImage = c => { const [, grp, name] = c.cmd.split(" "); return `img/ex/${grp}/${name}.png` };   // the SciRooPlot side is the example plot itself
+const srpImage = c => `img/compare/${c.id}_srp.png`;   // the SciRooPlot side is drawn by the Python code shown (render_compare.py)
 /* ---------------- ROOT vs SciRooPlot: the macros of docs/slides/root-examples next to the plot definitions that give the same figure */
 const CMP = [
   { id: "ptSpectrumRatio", tab: "Spectrum with ratio", title: "A spectrum compared with simulation, with a ratio panel",

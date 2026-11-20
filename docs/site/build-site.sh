@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds the web page into <out folder>: renders its plots with an installed SciRooPlot (the tour, the drawing option gallery,
-# the example project), records the terminal demo, runs the plain ROOT macros of docs/slides/root-examples, extracts the
+# the example project), records the terminal demo, runs the plain ROOT macros of docs/slides/root-examples and the snippets of the vs. ROOT page, extracts the
 # example code, the palettes and the example data, and fills the template (build.py).
 # usage: docs/site/build-site.sh <out folder>   (with env.sh of the installed SciRooPlot sourced; needs python3 with numpy, pandas and Pillow
 # and the tools of record-demo.sh)
@@ -54,11 +54,12 @@ srp select numpyfiles
 plot files '.+' png
 ls numpy-files-out/files/{overtraining,roc,learning}.png >/dev/null
 
-# the plain ROOT macros the vs. ROOT page compares with (the SciRooPlot side shows the example plots)
+# the plain ROOT macros the vs. ROOT page compares with, and the SciRooPlot side drawn by the Python code the page shows
 for macro in "${REPO}"/docs/slides/root-examples/*.C; do
   name=$(basename "${macro}" .C)
   root -l -b -q "${macro}(\"${DATA}\", \"${OUT}/img/compare/${name}_root.png\")"
 done
+python3 "${SITE}/render_compare.py" "${SITE}/template.html" "${OUT}/img/compare"
 
 python3 "${SITE}/extract_examples.py" "${REPO}/templates/example/DefinePlots.py" "${REPO}/templates/example/DefinePlots.cpp" > gen/examples.json
 python3 "${SITE}/extract_palettes.py" > gen/palettes.json
