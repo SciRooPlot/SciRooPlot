@@ -1443,6 +1443,46 @@ void PlotPainter::FinishPad(pad_state_t& padState)
 
 //**************************************************************************************************
 /**
+ * Gives the colour scale of a 3d histogram the look set on 'C' (pad 0, then the pad), its texts in the alpha of the pad unless 'C' sets
+ * one; the sizes and offsets only withSizes (a ColorScale() cell takes those of its own). True if a title offset is set.
+ */
+//**************************************************************************************************
+bool PlotPainter::ApplyContentLook(TAxis* zAxis, const Plot::Pad& pad, const Plot::Pad& padDefaults, const optional<float_t>& textAlpha, bool withSizes)
+{
+  bool ownTitleOffset{};
+  optional<float_t> titleAlpha = textAlpha, labelAlpha = textAlpha, axisAlpha;
+  for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
+    const auto& content = *contentSettings;
+    if (content.GetTitleFont()) zAxis->SetTitleFont(*content.GetTitleFont());
+    if (content.GetTitleColor()) zAxis->SetTitleColor(content.GetTitleColor()->ToIndex());
+    if (content.GetTitleCenter()) zAxis->CenterTitle(*content.GetTitleCenter());
+    if (content.GetLabelFont()) zAxis->SetLabelFont(*content.GetLabelFont());
+    if (content.GetLabelColor()) zAxis->SetLabelColor(content.GetLabelColor()->ToIndex());
+    if (content.GetLabelCenter()) zAxis->CenterLabels(*content.GetLabelCenter());
+    if (content.GetAxisColor()) zAxis->SetAxisColor(content.GetAxisColor()->ToIndex());
+    if (content.GetTickLength()) zAxis->SetTickLength(*content.GetTickLength());
+    if (content.GetTickOrientation()) zAxis->SetTicks((*content.GetTickOrientation()).data());
+    if (content.GetNumDivisions()) zAxis->SetNdivisions(*content.GetNumDivisions());
+    if (content.GetMaxDigits()) zAxis->SetMaxDigits(*content.GetMaxDigits());
+    if (content.GetNoExponent()) zAxis->SetNoExponent(*content.GetNoExponent());
+    if (content.GetTitleAlpha()) titleAlpha = content.GetTitleAlpha();
+    if (content.GetLabelAlpha()) labelAlpha = content.GetLabelAlpha();
+    if (content.GetAxisAlpha()) axisAlpha = content.GetAxisAlpha();
+    if (!withSizes) continue;
+    if (content.GetTitleSize()) zAxis->SetTitleSize(*content.GetTitleSize());
+    if (content.GetTitleOffset()) zAxis->SetTitleOffset(*content.GetTitleOffset());
+    ownTitleOffset = ownTitleOffset || content.GetTitleOffset();
+    if (content.GetLabelSize()) zAxis->SetLabelSize(*content.GetLabelSize());
+    if (content.GetLabelOffset()) zAxis->SetLabelOffset(*content.GetLabelOffset());
+  }
+  if (titleAlpha) zAxis->SetTitleColor(TColor::GetColorTransparent(zAxis->GetTitleColor(), *titleAlpha));
+  if (labelAlpha) zAxis->SetLabelColor(TColor::GetColorTransparent(zAxis->GetLabelColor(), *labelAlpha));
+  if (axisAlpha) zAxis->SetAxisColor(TColor::GetColorTransparent(zAxis->GetAxisColor(), *axisAlpha));
+  return ownTitleOffset;
+}
+
+//**************************************************************************************************
+/**
  * The z title and colour scale of a frame that is a 3d histogram: the binned z axis has a title of its own; the colour scale shows the
  * contents (the C axis). ROOT makes the scale of a 3d histogram once, with the look of the z axis at that time: it is made again with the
  * look of the scale (the texts of the pad and the defaults of a layout, then the settings of C; nothing of Z) and its title placed by the
@@ -1484,34 +1524,7 @@ void PlotPainter::StyleContentScale(pad_state_t& padState)
     if (auto titleSize = LayoutValue(pad, padDefaults, &Plot::Pad::layout_values_t::titleSize)) zAxis->SetTitleSize(*titleSize);
     if (auto titleOffset = LayoutValue(pad, padDefaults, &Plot::Pad::layout_values_t::titleOffsetZ)) zAxis->SetTitleOffset(*titleOffset);
     bool ownTitleOffset = zAxis->GetTitleOffset() != 0.f;  // a fixed distance from the layout
-    // texts in the alpha of the pad, as other axes
-    optional<float_t> titleAlpha = padState.textAlpha, labelAlpha = padState.textAlpha, axisAlpha;
-    for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
-      const auto& content = *contentSettings;
-      if (content.GetTitleFont()) zAxis->SetTitleFont(*content.GetTitleFont());
-      if (content.GetTitleSize()) zAxis->SetTitleSize(*content.GetTitleSize());
-      if (content.GetTitleColor()) zAxis->SetTitleColor(content.GetTitleColor()->ToIndex());
-      if (content.GetTitleOffset()) zAxis->SetTitleOffset(*content.GetTitleOffset());
-      ownTitleOffset = ownTitleOffset || content.GetTitleOffset();
-      if (content.GetTitleCenter()) zAxis->CenterTitle(*content.GetTitleCenter());
-      if (content.GetLabelFont()) zAxis->SetLabelFont(*content.GetLabelFont());
-      if (content.GetLabelSize()) zAxis->SetLabelSize(*content.GetLabelSize());
-      if (content.GetLabelColor()) zAxis->SetLabelColor(content.GetLabelColor()->ToIndex());
-      if (content.GetLabelOffset()) zAxis->SetLabelOffset(*content.GetLabelOffset());
-      if (content.GetLabelCenter()) zAxis->CenterLabels(*content.GetLabelCenter());
-      if (content.GetAxisColor()) zAxis->SetAxisColor(content.GetAxisColor()->ToIndex());
-      if (content.GetTickLength()) zAxis->SetTickLength(*content.GetTickLength());
-      if (content.GetTickOrientation()) zAxis->SetTicks((*content.GetTickOrientation()).data());
-      if (content.GetNumDivisions()) zAxis->SetNdivisions(*content.GetNumDivisions());
-      if (content.GetMaxDigits()) zAxis->SetMaxDigits(*content.GetMaxDigits());
-      if (content.GetNoExponent()) zAxis->SetNoExponent(*content.GetNoExponent());
-      if (content.GetTitleAlpha()) titleAlpha = content.GetTitleAlpha();
-      if (content.GetLabelAlpha()) labelAlpha = content.GetLabelAlpha();
-      if (content.GetAxisAlpha()) axisAlpha = content.GetAxisAlpha();
-    }
-    if (titleAlpha) zAxis->SetTitleColor(TColor::GetColorTransparent(zAxis->GetTitleColor(), *titleAlpha));
-    if (labelAlpha) zAxis->SetLabelColor(TColor::GetColorTransparent(zAxis->GetLabelColor(), *labelAlpha));
-    if (axisAlpha) zAxis->SetAxisColor(TColor::GetColorTransparent(zAxis->GetAxisColor(), *axisAlpha));
+    if (ApplyContentLook(zAxis, pad, padDefaults, padState.textAlpha, true)) ownTitleOffset = true;
     if (!ownTitleOffset) {
       // TPaletteAxis reads the divisions (with the max digits, which decide the power of ten taken out of the labels) from the z axis at
       // every paint, i.e. those given back below: the labels are measured with them
@@ -8819,12 +8832,8 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
       scale->SetContour(source->GetContour());
     }
     source->GetZaxis()->TAttAxis::Copy(*scale->GetZaxis());
-    for (const auto* content : AxisSettings(plot[static_cast<uint8_t>(memberPad->GetNumber())], defaults, 'C')) {
-      if (content->GetTitleFont()) scale->GetZaxis()->SetTitleFont(*content->GetTitleFont());
-      if (content->GetTitleColor()) scale->GetZaxis()->SetTitleColor(content->GetTitleColor()->ToIndex());
-      if (content->GetLabelFont()) scale->GetZaxis()->SetLabelFont(*content->GetLabelFont());
-      if (content->GetLabelColor()) scale->GetZaxis()->SetLabelColor(content->GetLabelColor()->ToIndex());
-    }
+    const auto& member = plot[static_cast<uint8_t>(memberPad->GetNumber())];
+    ApplyContentLook(scale->GetZaxis(), member, defaults, get_first(member.GetDefaultTextAlpha(), defaults.GetDefaultTextAlpha()), false);
     TString title = source->GetZaxis()->GetTitle();
     title.Remove(0, (title.Index(";") >= 0) ? title.Index(";") + 1 : title.Length());
     scale->GetZaxis()->SetTitle(title);

@@ -270,6 +270,7 @@ class PlotPainter
   struct item_state_t;  // and those for the data item drawn
   void FinishPad(pad_state_t& padState);
   void StyleContentScale(pad_state_t& padState);
+  static bool ApplyContentLook(TAxis* zAxis, const Plot::Pad& pad, const Plot::Pad& padDefaults, const std::optional<float_t>& textAlpha, bool withSizes);
   void PlaceStatsBox(pad_state_t& padState, std::unique_ptr<TPaveStats> stats, const Plot::Pad::StatsBox& statsBox);
   template <typename T>
   void DrawItem(item_state_t& state, T data_ptr, std::optional<draw_option_t> optionAlias);

@@ -1,7 +1,8 @@
 """The 'C' axis of a pad is the content of a 3d histogram (its z axis is binned): a range on it (both ends, or one) is the minimum and maximum
 of the frame and of the data, with the colour levels spread over it; its title is the title of the colour scale; a log scale on it is
 warned about (ROOT colours the boxes linearly) and not applied; the settings of 'Z' stay on the binned z axis and do not reach the colour
-scale; the colour scale takes the text colour and alpha of the pad; a 'C' axis in a pad without a 3d histogram is warned about.
+scale; the colour scale takes the text colour and alpha of the pad; a 'C' axis in a pad without a 3d histogram is warned about. The look
+set on 'C' (colours, alphas, ticks) is also that of the scale in a ColorScale() cell.
 Cases: every 3d histogram kind × a range on 'C' (both ends, minimum, maximum), a title on 'C', a log 'C', a range and title on 'Z', and the
 named cases.
 Reference: the frame and data read back (minimum, maximum, colour levels, the colour scale's axis title, the z axis: the bins holding
@@ -45,8 +46,23 @@ plot[1].AddData("hist2d", "inputs")
 plot[1]["C"].SetRange(1.0, 2.0)
 p.pm.AddPlot(plot)
 
+# the look of 'C' in a ColorScale() cell (that of the scale in the pad is painted afresh from the z axis when read back: not compared)
+plot = S.Plot("look_cell", S.PanelLayout([[S.Panel(), S.ColorScale(1)]]))
+plot.SetGroup("named")
+add_data(plot[1], KINDS[0]).SetDrawOption(S.colz)
+plot[1]["C"].SetLabelColor(S.kRed).SetLabelAlpha(0.2).SetAxisColor(S.kBlue).SetAxisAlpha(0.4).SetTickLength(0.05)
+p.pm.AddPlot(plot)
+
 run = p.plot()
 check("the plots are made without errors", not run.errors(), " | ".join(run.errors()[:3]))
+
+
+cell = run.pad("look_cell", "named", 2)
+scale = cell.GetPrimitive("color_scale_pad_2") if cell else None
+palette = scale.GetListOfFunctions().FindObject("palette") if scale else None
+look = (rgba(palette.GetAxis().GetLabelColor()), rgba(palette.GetAxis().GetLineColor()), round(palette.GetAxis().GetTickSize(), 4)) if palette else None
+check("the look of 'C' in a ColorScale() cell: label and axis colours with their alphas, tick length", look == (rgba(632, 0.2), rgba(600, 0.4), 0.05), str(look))
+
 for i, case in enumerate(todo):
     what = describe(case)
     frame = run.frame_hist(f"c{i}", "content")
