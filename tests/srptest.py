@@ -1664,15 +1664,15 @@ def interpolate(num, den, exp):
 
 def divide_points(num, den, binomial, exp):
     """the ratio of two Points objects as a dict like graph_values (with "bins": the index of each kept point), or None on an error"""
-    same = len(num.x) <= len(den.x) and not ((num.kind == "sym" and den.kind == "asym") or (num.kind == "asym" and den.kind == "sym")) and all(a == b for a, b in zip(num.x, den.x))
-    if same:
+    same = len(num.x) <= len(den.x) and all(a == b for a, b in zip(num.x, den.x))
+    if same:  # at the same x values the errors of the denominator take the kind of the numerator's (symmetric: their root mean square)
         values = den.y[: len(num.x)]
         if den.kind == "none" or num.kind == "none":
             errors = None
         elif num.kind == "sym":
-            errors = den.e
+            errors = den.e if den.kind == "sym" else [math.sqrt(0.5 * (lo**2 + hi**2)) for lo, hi in zip(den.lo, den.hi)]
         else:
-            errors = (den.lo, den.hi)
+            errors = (den.lo, den.hi) if den.kind == "asym" else (den.e, den.e)
     else:
         found = interpolate(num, den, exp)
         if found is None:
