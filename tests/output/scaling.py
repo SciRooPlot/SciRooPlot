@@ -3,8 +3,8 @@ scaled alike: the dashes and gaps of line styles 2 to 4 s times as long, the out
 filled; vector files (svg, pdf, eps) do not depend on it. screenscale s does the same for the plots shown on screen (mode show): the window
 shows the dashes and markers as the png at bitmapscale s (X11 has fixed patterns for styles 2 to 4, which SciRooPlot replaces by styles of
 its own). The screen part needs Xvfb and ImageMagick's import for the screenshot; it is left out without them. A program drawing on
-after GeneratePlots wrote files gets its own gStyle sizes back.
-Covers: dashes of line styles 2 to 4 and outlines of open markers scaled, the screen of mode show, gStyle after writing files."""
+after GeneratePlots wrote files gets its own gStyle sizes back; a scale that makes a plot smaller than a pixel is named in the error.
+Covers: dashes of line styles 2 to 4 and outlines of open markers scaled, the screen of mode show, gStyle after writing files, tiny scales."""
 
 import os
 import re
@@ -164,5 +164,9 @@ pm.GeneratePlots("png")
 print("SIZES", before == sizes(), before, sizes())""")
 check("gStyle after GeneratePlots with bitmapscale 2: the sizes of the program", "SIZES True" in out.stdout, out.tail())
 
+# a scale that makes the plots smaller than a pixel: named in the error
+p.srp("bitmapscale", "0.0001")
+tiny = p.plot(mode="png")
+check("a bitmapscale making a plot smaller than a pixel: the error names the scale", any("invalid dimensions" in e and "bitmapscale" in e for e in tiny.errors()), " | ".join(tiny.errors()[:2]))
 p.srp("bitmapscale", "1")
 finish()

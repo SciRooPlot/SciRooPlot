@@ -538,7 +538,9 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   double_t canvasWidth = std::round(mScale * plot.GetWidth().value_or(gStyle->GetCanvasDefW()));
   double_t canvasHeight = std::round(mScale * plot.GetHeight().value_or(gStyle->GetCanvasDefH()));
   if (canvasWidth <= 0 || canvasHeight <= 0) {
-    logger::error("Plot {} has invalid dimensions {}x{}.", Plot::Label(plot), canvasWidth, canvasHeight);
+    // a size of the plot is checked where it is set: the scale of the pictures (srp bitmapscale, screenscale) made it smaller than a pixel
+    const string scaleHint = (mScale != 1.) ? fmt::format(": the scale {} (srp bitmapscale, srp screenscale) makes it smaller than a pixel", mScale) : "";
+    logger::error("Plot {} has invalid dimensions {}x{}{}.", Plot::Label(plot), canvasWidth, canvasHeight, scaleHint);
     return nullptr;
   }
   // generate canvas with 'invisible' dummy size to avoid annoying popup window
