@@ -4,8 +4,9 @@ done as data/ratios.py does it (spline of a denominator at other positions, erro
 plain ratio as for any data. Every input kind divided by itself, and pairs of a histogram, a graph and a function. Each warning names its
 data (the modifiers of an input name that input; the denominator of a function numerator, prepared to sample it and to divide by,
 reports once), and every warning is expected.
+A ratio used as a template (ratio(name)) gives its numerator as data: the numerator with its modifiers, not those of the result.
 Covers: the ratio sides (both normalized, both rebinned, result scaled, numerator scaled), profiles
-rebinned before the division, a modifier refused where it is set naming the input of its side.
+rebinned before the division, a modifier refused where it is set naming the input of its side, a ratio as template.
 """
 
 from srptest import (
@@ -274,4 +275,21 @@ for side, named, other in (("numer", "hnum", "hden"), ("denom", "hden", "hnum"),
     _, printed = captured(lambda ratio=ratio, side=side: SIDES[side](ratio).RebinX(0))
     said = [line for line in printed.splitlines() if line.startswith("[ WARN")]
     check(f"a modifier refused on the {side} side names {named}", len(said) == 1 and named in said[0] and other not in said[0], printed.strip())
+
+# a ratio as template: its numerator with the numerator's modifiers (not the denominator, not the modifiers of the result)
+t = Project("ratio_template")
+t.inputs()
+alone = S.Plot("alone", "template", "1d")
+MODIFIERS["rebin_x"](alone[1].AddData("hist", "inputs"))
+t.pm.AddPlot(alone)
+templated = S.Plot("templated", "template", "1d")
+holder = S.Plot("holder", "unused", "1d")
+ratio = holder[1].AddRatio(MODIFIERS["rebin_x"](S.Data("hist", "inputs")), S.Data("hist_var", "inputs"))
+MODIFIERS["scale"](ratio)
+templated[1].AddData(ratio("hist"))
+t.pm.AddPlot(templated)
+templateRun = t.plot("template")
+ref, obs = templateRun.drawn("alone", "template"), templateRun.drawn("templated", "template")
+diff = hist_diff(ref[0][0], obs[0][0]) if ref and obs else "not drawn"
+check("a ratio as template gives its numerator with the numerator's modifiers", not diff, diff)
 finish()
