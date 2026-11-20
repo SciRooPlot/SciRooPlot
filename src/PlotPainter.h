@@ -427,7 +427,8 @@ class PlotPainter
     std::optional<color_t> color;
     std::optional<float_t> alpha;
   };
-  TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, coordinates_t coordinates, const box_text_t& text, TPad* pad);
+  TPave* GenerateBox(std::variant<std::shared_ptr<Plot::Pad::LegendBox>, std::shared_ptr<Plot::Pad::TextBox>> box, coordinates_t coordinates, const box_text_t& text, TPad* pad,
+                     const std::string& name);
   void AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box, const std::vector<std::string>& lines, uint8_t nColumns, uint16_t nRows, bool orderTopDown,
                      int16_t textFont, float_t textSize, TPad* pad);
   std::pair<TObject*, std::string> FindDrawn(TPad* pad, uint16_t dataID, const std::optional<uint8_t>& padID) const;

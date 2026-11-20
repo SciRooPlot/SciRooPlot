@@ -3,7 +3,8 @@ its outline, apart from it (also rows with drawn parts below or above the line, 
 a margin; the outline of a box is a line (no shadow); a text of a font sized in pixels
 (precision 3) has the same size in pixels in any canvas, and so has its box where the smaller side of the pad is the same; at bitmapscale s
 everything of a box is s times as large in pixels (within the few % rendered text grows more) and at the same place; an automatic box wider than the frame is
-warned about, so is a box at a position set for it that reaches beyond its pad (drawn, cut off at the pad).
+warned about, so is a box at a position set for it that reaches beyond its pad (drawn, cut off at the pad); the warnings name the box
+and its pad as show mode does (legend 1 of pad 1).
 Cases: legends (one column, two columns), texts and statistics boxes × a font sized relative to the pad (42) or in pixels (43) × plain
 text, TLatex with drawn parts (#sqrt, #frac), unicode, three rows × a wide, square and tall canvas × bitmapscale 1, 2 and 3; at every
 bitmapscale a box is at the same place (scaled), also a legend placed by SciRooPlot.
@@ -167,8 +168,8 @@ for i, case in enumerate(todo):
 
 long = p.plot("long")
 for box in ("legend", "text"):
-    check(f"an automatic {box} wider than the frame is warned about", any(f"The {box} (" in m and "is larger than the space inside the frame" in m for m in long.messages("too_long", "long")), " | ".join(long.messages("too_long", "long")))
-    check(f"a {box} at a position reaching beyond its pad is warned about", any(f"The {box} reaches beyond its pad" in m for m in long.messages("too_long_fixed", "long")), " | ".join(long.messages("too_long_fixed", "long")))
+    check(f"an automatic {box} wider than the frame is warned about, naming it and its pad", any(f"The {box} 1 of pad 1 (" in m and "is larger than the space inside the frame" in m for m in long.messages("too_long", "long")), " | ".join(long.messages("too_long", "long")))
+    check(f"a {box} at a position reaching beyond its pad is warned about, naming it and its pad", any(f"The {box} 1 of pad 1 reaches beyond its pad" in m for m in long.messages("too_long_fixed", "long")), " | ".join(long.messages("too_long_fixed", "long")))
 check("boxes at positions inside their pad give no such warning", not any("reaches beyond its pad" in m for m in run.warnings()), " | ".join(run.warnings()[:3]))
 
 groups = p.plot("groups")

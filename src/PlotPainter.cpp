@@ -1617,8 +1617,10 @@ void PlotPainter::PlaceStatsBox(pad_state_t& padState, unique_ptr<TPaveStats> st
   // the border is drawn centered on the edges of the box, so half of it sticks out on each side
   const double_t borderX = mScale * stats->GetLineWidth() / padWidthPixel;
   const double_t borderY = mScale * stats->GetLineWidth() / padHeightPixel;
-  const auto [upperLeftX, upperLeftY] = PlaceBox(statsBox, coordinates, pad_ptr, widthNDC, heightNDC, borderX, borderY, "statistics box");
-  if (!statsBox.IsAutoPlacement()) WarnIfBeyondPad("statistics box", upperLeftX, upperLeftY, widthNDC, heightNDC);
+  // named in messages as in show mode, with its pad
+  const string boxName = fmt::format("statistics box of data {} of pad {}", string(stats->GetName()).substr(6), pad_ptr->GetNumber());
+  const auto [upperLeftX, upperLeftY] = PlaceBox(statsBox, coordinates, pad_ptr, widthNDC, heightNDC, borderX, borderY, boxName);
+  if (!statsBox.IsAutoPlacement()) WarnIfBeyondPad(boxName, upperLeftX, upperLeftY, widthNDC, heightNDC);
   stats->SetX1NDC(upperLeftX);
   stats->SetY1NDC(upperLeftY - heightNDC);
   stats->SetX2NDC(upperLeftX + widthNDC);
@@ -5902,7 +5904,7 @@ bool PlotPainter::DrawBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<P
                           get_first(box->GetTextColor(), pad.GetDefaultTextColor(), padDefaults.GetDefaultTextColor()),
                           get_first(box->GetTextAlpha(), pad.GetDefaultTextAlpha(), padDefaults.GetDefaultTextAlpha())};
     const coordinates_t coordinates = get_first_or(frame_coordinates, box->GetCoordinateSystem(), pad.GetDefaultBoxCoordinates(), padDefaults.GetDefaultBoxCoordinates());
-    TPave* generated = GenerateBox(box, coordinates, text, pad_ptr);
+    TPave* generated = GenerateBox(box, coordinates, text, pad_ptr, name);
     if (generated) generated->SetUniqueID(generated->GetUniqueID() | coordinates);  // a double-click in show mode reports the position as given
     return generated;
   };
@@ -6020,7 +6022,7 @@ void PlotPainter::AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box
     for (uint16_t dataID : entry.GetSymbolOf()) {
       const auto [other_ptr, otherDrawnWith] = FindDrawn(pad, dataID, entry.GetRefPadID());
       if (!other_ptr) {
-        logger::warning("Legend row '{}': there is no data {} drawn in {}.", label, dataID, (entry.GetRefPadID()) ? "pad " + std::to_string(*entry.GetRefPadID()) : "this pad");
+        logger::warning("Legend row '{}': there is no data {} drawn in pad {}.", label, dataID, entry.GetRefPadID().value_or(static_cast<uint8_t>(pad->GetNumber())));
         continue;
       }
       parts.push_back(symbolPart(dataID, other_ptr, otherDrawnWith, ""));
@@ -6091,7 +6093,8 @@ void PlotPainter::AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box
  * The legend or text box with its rows or lines, styled and at its place in the pad (in the given coordinates).
  */
 //**************************************************************************************************
-TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> boxVariant, coordinates_t coordinates, const box_text_t& text, TPad* pad)
+TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared_ptr<Plot::Pad::TextBox>> boxVariant, coordinates_t coordinates, const box_text_t& text, TPad* pad,
+                                const string& name)
 {
   TPave* returnBox{nullptr};
 
@@ -6168,7 +6171,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           if (TNamed* data_ptr = findPlaceholderData(*entry.GetRefDataID(), entry.GetRefPadID())) {
             ReplacePlaceholders(line, data_ptr);
           } else {
-            logger::warning("Legend row '{}': there is no data {} drawn in {}.", line, *entry.GetRefDataID(), (entry.GetRefPadID()) ? "pad " + std::to_string(*entry.GetRefPadID()) : "this pad");
+            logger::warning("Legend row '{}': there is no data {} drawn in pad {}.", line, *entry.GetRefDataID(), entry.GetRefPadID().value_or(static_cast<uint8_t>(pad->GetNumber())));
           }
         }
       } else if (line.find('<') != string::npos) {
@@ -6293,7 +6296,9 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
 
     const double_t borderX = mScale * box->GetBorderWidth().value_or(0.) / padWidthPixel;
     const double_t borderY = mScale * box->GetBorderWidth().value_or(0.) / padHeightPixel;
-    auto [upperLeftX, upperLeftY] = PlaceBox(*box, coordinates, pad, totalWidthNDC, totalHeightNDC, borderX, borderY, (isLegend) ? "legend" : "text");
+    // named in messages as in show mode, with its pad
+    const string boxName = fmt::format("{} {} of pad {}", (isLegend) ? "legend" : "text", name.substr(name.find('_') + 1), pad->GetNumber());
+    auto [upperLeftX, upperLeftY] = PlaceBox(*box, coordinates, pad, totalWidthNDC, totalHeightNDC, borderX, borderY, boxName);
     bool alignedAtPosition{};
     if constexpr (!isLegend) {
       // a single line placed at a position is aligned at it as ROOT aligns a TLatex at its point (the tens 1, 2, 3: left, centre, right;
@@ -6304,7 +6309,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         upperLeftY += 0.5 * (3 - std::clamp(*align % 10, 1, 3)) * totalHeightNDC;
       }
     }
-    if (!box->IsAutoPlacement()) WarnIfBeyondPad((isLegend) ? "legend" : "text", upperLeftX, upperLeftY, totalWidthNDC, totalHeightNDC);
+    if (!box->IsAutoPlacement()) WarnIfBeyondPad(boxName, upperLeftX, upperLeftY, totalWidthNDC, totalHeightNDC);
 
     if constexpr (isLegend) {
       TLegend* legend = new TLegend(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "", "NDC NB");
@@ -6389,9 +6394,11 @@ void PlotPainter::DrawImage(const Plot::Pad::ImageBox& box, const Plot::Pad& pad
   double_t heightNDC = (box.GetHeight()) ? *box.GetHeight() * unitY : widthNDC * aspect;
   if (box.GetHeight() && !box.GetWidth()) widthNDC = heightNDC / aspect;
 
-  const auto [upperLeftX, upperLeftY] = PlaceBox(box, coordinates, pad_ptr, widthNDC, heightNDC, 0., 0., "image");
+  // named in messages as in show mode, with its pad
+  const string boxName = fmt::format("image {} of pad {}", name.substr(name.find('_') + 1), pad_ptr->GetNumber());
+  const auto [upperLeftX, upperLeftY] = PlaceBox(box, coordinates, pad_ptr, widthNDC, heightNDC, 0., 0., boxName);
   if (widthNDC <= 0. || heightNDC <= 0. || BeyondPad(upperLeftX, upperLeftY, widthNDC, heightNDC)) {
-    logger::warning("Image {} is not drawn: it does not fit into its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}).", name.substr(name.find('_') + 1), upperLeftX, upperLeftY, widthNDC, heightNDC);
+    logger::warning("Image {} of pad {} is not drawn: it does not fit into its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}).", name.substr(name.find('_') + 1), pad_ptr->GetNumber(), upperLeftX, upperLeftY, widthNDC, heightNDC);
     delete image;
     return;
   }
