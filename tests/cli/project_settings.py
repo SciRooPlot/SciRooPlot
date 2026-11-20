@@ -205,6 +205,15 @@ check(
     out.rc == 0 and "GOT 2147483647 -2147483648 1 0 False 10000000000.0" in out.stdout and dict(types) == {"a": "integer", "b": "integer", "c": "integer", "d": "integer", "e": "switch", "f": "number"},
     out.tail() + saved,
 )
+# numpy scalars as defaults: an integer is an integer, a float a number, a bool a switch (none of them an on/off switch by their truth)
+out = python("import numpy as np\nfrom SciRooPlot import *\npm = PlotManager('proj')\nprint('GOT', repr(pm.Setting('a', np.int64(5))), repr(pm.Setting('b', np.int32(0))), repr(pm.Setting('c', np.float32(0.5))), repr(pm.Setting('d', np.bool_(True))))\npm.SaveProject()", config=config)
+saved = open(settingsFile).read() if os.path.exists(settingsFile) else ""
+types = re.findall(r"^(\w+)\n\{\n\s*type (\w+)", saved, re.M)
+check(
+    "the type of a numpy default: integers integers, a float a number, a bool a switch",
+    out.rc == 0 and "GOT 5 0 0.5 True" in out.stdout and dict(types) == {"a": "integer", "b": "integer", "c": "number", "d": "switch"},
+    out.tail() + saved,
+)
 
 # an unreadable settings file: one error; srp projects fails, srp get says nothing more
 broken = config_folder("broken")

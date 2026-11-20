@@ -96,9 +96,55 @@ void exportLegendBox(py::module_& m);
 void exportLegendEntry(py::module_& m);
 void exportShape(py::module_& m);
 
-// custom caster for Data::data_dim_t: accepts "var", (var, nBins), (var, edges), (var, nBins, range)
+// a Python integer of any size, also a numpy one (anything with __index__ but bool), for the integer settings
+struct setting_int_t {
+  pybind11::int_ value;
+};
+// a bool, also numpy's (not anything with __bool__, such as a numpy float), for the switch settings
+struct setting_bool_t {
+  bool value;
+};
+
 namespace pybind11::detail
 {
+// custom caster for setting_int_t
+template <>
+struct type_caster<setting_int_t> {
+  PYBIND11_TYPE_CASTER(setting_int_t, const_name("int"));
+
+  bool load(handle src, bool)
+  {
+    namespace py = pybind11;
+    // without conversion, so that a numpy integer is not taken by the bool overload (it converts anything with __bool__)
+    if (py::isinstance<py::bool_>(src) || !py::hasattr(src, "__index__")) return false;
+    if (PyObject* index = PyNumber_Index(src.ptr())) {
+      value.value = py::reinterpret_steal<py::int_>(index);
+      return true;
+    }
+    PyErr_Clear();
+    return false;
+  }
+
+  static handle cast(const setting_int_t& src, return_value_policy, handle) { return src.value.inc_ref(); }
+};
+
+// custom caster for setting_bool_t (pybind11 before 2.12 knows numpy's bool only by its name before numpy 2, numpy.bool_)
+template <>
+struct type_caster<setting_bool_t> {
+  PYBIND11_TYPE_CASTER(setting_bool_t, const_name("bool"));
+
+  bool load(handle src, bool)
+  {
+    const std::string typeName = Py_TYPE(src.ptr())->tp_name;
+    if (!PyBool_Check(src.ptr()) && typeName != "numpy.bool" && typeName != "numpy.bool_") return false;
+    value.value = PyObject_IsTrue(src.ptr()) == 1;
+    return true;
+  }
+
+  static handle cast(const setting_bool_t& src, return_value_policy, handle) { return pybind11::bool_(src.value).release(); }
+};
+
+// custom caster for Data::data_dim_t: accepts "var", (var, nBins), (var, edges), (var, nBins, range)
 template <>
 struct type_caster<Data::data_dim_t> {
   using T = Data::data_dim_t;
@@ -329,15 +375,15 @@ void exportPlotManager(py::module_& m)
     .def("SetPlotsRootFile", &PlotManager::SetPlotsRootFile, arg("fileName"))
     .def("SetDataRootFile", &PlotManager::SetDataRootFile, arg("fileName"))
     .def("SaveProject", &PlotManager::SaveProject)
-    // bool first: a Python bool is also an int
-    .def("Setting", py::overload_cast<const string&, bool, const string&>(&PlotManager::Setting), arg("name"), arg("defaultValue"), arg("description") = "")
-    // any Python int: one beyond the C++ int would otherwise fall through to the bool overload
-    .def("Setting", [](PlotManager& pm, const string& name, const py::int_& defaultValue, const string& description) -> py::int_ {
+    // bool first: a Python bool is also an int; only a bool (also numpy's), not anything with __bool__ (a numpy float)
+    .def("Setting", [](PlotManager& pm, const string& name, const setting_bool_t& defaultValue, const string& description) { return pm.Setting(name, defaultValue.value, description); }, arg("name"), arg("defaultValue"), arg("description") = "")
+    // any Python integer, also a numpy one: one beyond the C++ int would otherwise fall through to the bool overload
+    .def("Setting", [](PlotManager& pm, const string& name, const setting_int_t& defaultValue, const string& description) -> py::int_ {
         int overflow{};
-        const int64_t value = PyLong_AsLongLongAndOverflow(defaultValue.ptr(), &overflow);
+        const int64_t value = PyLong_AsLongLongAndOverflow(defaultValue.value.ptr(), &overflow);
         if (overflow || value < std::numeric_limits<int>::min() || value > std::numeric_limits<int>::max()) {
-          logger::error("The default {} of setting {} is not an integer from {} to {}: the setting is not declared (declare a number instead).", py::str(py::object(defaultValue)).cast<string>(), name, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
-          return defaultValue;
+          logger::error("The default {} of setting {} is not an integer from {} to {}: the setting is not declared (declare a number instead).", py::str(py::object(defaultValue.value)).cast<string>(), name, std::numeric_limits<int>::min(), std::numeric_limits<int>::max());
+          return defaultValue.value;
         }
         return py::int_(pm.Setting(name, static_cast<int>(value), description)); }, arg("name"), arg("defaultValue"), arg("description") = "")
     .def("Setting", py::overload_cast<const string&, double, const string&>(&PlotManager::Setting), arg("name"), arg("defaultValue"), arg("description") = "")
