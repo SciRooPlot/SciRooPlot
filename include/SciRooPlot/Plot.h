@@ -1092,7 +1092,8 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   };
   virtual Data& Join(const join_tree_t& tree, const std::vector<std::string>& keys = {}, const std::string& alias = "");
   // tree of the same data source whose row is the number an integer column of this tree holds, counted within the joined tree beside each
-  // part of the tree (e.g. AO2D: JoinByIndex("O2collision", "fIndexCollisions") per DF_ folder); rows without a match are skipped
+  // part of the tree (e.g. AO2D: JoinByIndex("O2collision", "fIndexCollisions") per DF_ folder); rows without a match are skipped;
+  // the index column may also be one of a tree joined before, given as column (if the tree has none of that name) or as alias.column
   virtual Data& JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias = "");
   virtual Data& Entries(uint32_t nEntries);
   virtual Data& Entries(uint32_t entryMin, uint32_t entryMax);

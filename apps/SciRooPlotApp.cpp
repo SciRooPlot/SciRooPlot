@@ -68,6 +68,19 @@ using std::vector;
 using namespace SciRooPlot;
 namespace po = boost::program_options;
 bool PrintRootFileContents(const string& inputPath);
+// the settings changed by srp <setting> <value>, in the order srp settings shows them
+constexpr const char* kSettings[] = {"verbosity", "color", "plotmode", "matchmode", "matchcase", "screenscale", "bitmapscale"};
+string SettingValue(const string& setting)
+{
+  const Config& config = Config::Get();
+  if (setting == "verbosity") return Config::LogLevelName(config.Verbosity());
+  if (setting == "color") return Config::ColorModeName(config.Color());
+  if (setting == "plotmode") return config.PlotMode();
+  if (setting == "matchmode") return config.MatchContains() ? "contains" : "exact";
+  if (setting == "matchcase") return config.MatchCaseInsensitive() ? "insensitive" : "sensitive";
+  if (setting == "screenscale") return fmt::format("{}", config.ScreenScale());
+  return fmt::format("{}", config.BitmapScale());
+}
 int RunCommand(const string& command, const string& project, const string& property, const string& setting);
 std::unique_ptr<TApplication> OpenWindowApplication(const string& command);
 
@@ -203,7 +216,7 @@ int RunCommand(const string& command, const string& project, const string& prope
     row("print", "the definitions in the terminal");
     row("list", "the names in the terminal");
     heading("Settings");
-    row("srp settings", "show the settings");
+    row("srp settings", "show the settings (a setting without value: its value)");
     row("srp plotmode <mode>", "default plot mode (initially show)");
     row("srp color (bright | dark | off)", "colours of the messages");
     row("srp verbosity <level>", "lowest level of messages shown");
@@ -310,19 +323,18 @@ int RunCommand(const string& command, const string& project, const string& prope
     if (!PrintRootFileContents(fileName)) return 1;
   } else if (command == "settings") {
     // named as the srp commands that change them
-    const Config& config = Config::Get();
     const auto row = rows(15);
     heading("Settings");
-    row("verbosity", Config::LogLevelName(config.Verbosity()));
-    row("color", Config::ColorModeName(config.Color()));
-    row("plotmode", config.PlotMode());
-    row("matchmode", config.MatchContains() ? "contains" : "exact");
-    row("matchcase", config.MatchCaseInsensitive() ? "insensitive" : "sensitive");
-    row("screenscale", fmt::format("{}", config.ScreenScale()));
-    row("bitmapscale", fmt::format("{}", config.BitmapScale()));
-    row("current project", config.CurrentProject().empty() ? "none" : config.CurrentProject());
-  } else if (command == "color" || command == "verbosity" || command == "plotmode" || command == "matchmode" || command == "matchcase" || command == "screenscale" ||
-             command == "bitmapscale") {
+    for (const char* setting : kSettings) {
+      row(setting, SettingValue(setting));
+    }
+    row("current project", Config::Get().CurrentProject().empty() ? "none" : Config::Get().CurrentProject());
+  } else if (std::find(std::begin(kSettings), std::end(kSettings), command) != std::end(kSettings)) {
+    // without a value: the current one
+    if (project.empty()) {
+      std::cout << SettingValue(command) << std::endl;
+      return 0;
+    }
     if (!Config::GetMutable().SetSetting(command, project)) return 1;
   } else if (command == "info") {
     auto getenv = [](const char* name) {

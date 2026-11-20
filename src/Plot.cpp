@@ -3255,8 +3255,11 @@ void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const std::string& name, co
   if (!indexColumn.empty() && !tree.dataSource.empty()) {
     logger::throw_invalid_argument("Cannot join tree {} from {} to {}: by an index column only a tree of the same data source can be joined.", tree.name, tree.dataSource, name);
   }
-  if (!indexColumn.empty() && !isIdentifier(indexColumn)) {
-    logger::throw_invalid_argument("Cannot join tree {} to {}: '{}' is not a column name.", tree.name, name, indexColumn);
+  // the index column may belong to a tree joined before: column (searched in the tree, then in the joined trees) or alias.column
+  if (!indexColumn.empty()) {
+    const auto dot = indexColumn.find('.');
+    const bool isColumn = (dot == std::string::npos) ? isIdentifier(indexColumn) : isIdentifier(indexColumn.substr(0, dot)) && isIdentifier(indexColumn.substr(dot + 1));
+    if (!isColumn) logger::throw_invalid_argument("Cannot join tree {} to {}: '{}' is neither a column name nor alias.column.", tree.name, name, indexColumn);
   }
   if (keys.size() == 2 && keys[0] == keys[1]) {
     logger::throw_invalid_argument("Cannot join tree {} to {}: key column {} is given twice.", tree.name, name, keys[0]);

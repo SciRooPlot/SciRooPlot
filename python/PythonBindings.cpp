@@ -660,28 +660,32 @@ void defDataSetters(py::class_<Self, Options...>& cls)
     .def("Entries", overload_cast<uint32_t, uint32_t>(&Self::Entries), arg("entryMin"), arg("entryMax"), ref_int);
 }
 
+// Data from [name, dataSource] or (name, dataSource), [name] alone: denominator of a ratio, which takes the data source of the numerator
+Data dataFromSequence(const py::sequence& nameAndSource)
+{
+  const bool allStrings = std::all_of(nameAndSource.begin(), nameAndSource.end(), [](const py::handle& item) { return py::isinstance<py::str>(item); });
+  if (nameAndSource.size() == 0 || nameAndSource.size() > 2 || !allStrings) {
+    throw py::type_error("Data can only be created from [name, dataSource] or (name, dataSource) (or [name] for the denominator of a ratio).");
+  }
+  return Data(nameAndSource[0].cast<string>(), nameAndSource.size() == 2 ? nameAndSource[1].cast<string>() : string{});
+}
+
 void exportData(py::module_& m)
 {
   py::class_<Data> data(m, "Data");
   data
     .def(py::init<>())
     .def(py::init<const string&, const string&, const optional<string>&>(), arg("name"), arg("dataSource") = "", arg("label") = nullopt)
-    .def(py::init([](const py::list& nameAndSource) {
-           // [name] alone: denominator of a ratio, which takes the data source of the numerator
-           const bool allStrings = std::all_of(nameAndSource.begin(), nameAndSource.end(), [](const py::handle& item) { return py::isinstance<py::str>(item); });
-           if (nameAndSource.empty() || nameAndSource.size() > 2 || !allStrings) {
-             throw py::type_error("Data can only be created from a list [name, dataSource] (or [name] for the denominator of a ratio).");
-           }
-           return Data(nameAndSource[0].cast<string>(), nameAndSource.size() == 2 ? nameAndSource[1].cast<string>() : string{});
-         }),
-         arg("nameAndSource"))
+    .def(py::init([](const py::list& nameAndSource) { return dataFromSequence(nameAndSource); }), arg("nameAndSource"))
+    .def(py::init([](const py::tuple& nameAndSource) { return dataFromSequence(nameAndSource); }), arg("nameAndSource"))
     .def("__call__", [](const Data& self, const string& name, const optional<string>& dataSource) { return self(name, dataSource); }, arg("name"), arg("dataSource") = nullopt)
     .def("Print", &Data::Print)
     .def("GetDataSource", &Data::GetDataSource);
   defDataSetters(data);
   data.def("Scatter", overload_cast<const string&, const string&, const string&>(&Data::Scatter), arg("x"), arg("y"), arg("z"), ref_int);  // a 2d graph (cannot be divided)
-  // [name, dataSource] lists can be passed wherever data is expected, e.g. AddRatio(["h", "data"], ["h", "mc"])
+  // [name, dataSource] lists and (name, dataSource) tuples can be passed wherever data is expected, e.g. AddRatio(("h", "data"), ("h", "mc"))
   py::implicitly_convertible<py::list, Data>();
+  py::implicitly_convertible<py::tuple, Data>();
 }
 
 void exportRatio(py::module_& m)

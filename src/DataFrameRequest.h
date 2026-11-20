@@ -65,7 +65,8 @@ class DataFrameRequest
  public:
   DataFrameRequest(const DataInfo* info, std::string context, std::string objName) : mInfo(info), mContext(std::move(context)), mObjName(std::move(objName)) {}
 
-  bool Prepare(ROOT::RDF::RNode node, const std::vector<std::string>& requiredColumns = {});
+  // reasonOf: why ROOT refused an expression (e.g. its compiler error), given in the message naming the expression (empty: none known)
+  bool Prepare(ROOT::RDF::RNode node, const std::vector<std::string>& requiredColumns = {}, const std::function<std::string(const std::exception&)>& reasonOf = {});
   bool NeedsAutoRange() const;
   bool Book();
 
@@ -129,8 +130,13 @@ std::string DataFrameRequest<DataInfo>::AvailableColumns(ROOT::RDF::RNode& node)
 
 // book everything that is needed before the final result can be booked (defines, filters, entry counts, auto-detection of axis ranges)
 template <typename DataInfo>
-bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vector<std::string>& requiredColumns)
+bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vector<std::string>& requiredColumns, const std::function<std::string(const std::exception&)>& reasonOf)
 {
+  // ": reason (available columns: ...)" for the message about an expression ROOT refused
+  auto refusal = [&](const std::exception& exception) {
+    const std::string reason = (reasonOf) ? reasonOf(exception) : "";
+    return ((reason.empty()) ? "" : ": " + reason) + AvailableColumns(node);
+  };
   const auto& dataInfo = *mInfo;
   if (dataInfo.isProfileNoScatter) {
     mIsProfile = *dataInfo.isProfileNoScatter;
@@ -191,7 +197,12 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
       const auto& column = dataInfo.definitions.keys->at(i);
       const auto expression = toRootCode(dataInfo.definitions.values->at(i));
       // an existing column is replaced (e.g. to correct or recalibrate it)
-      node = (node.HasColumn(column)) ? node.Redefine(column, expression) : node.Define(column, expression);
+      try {
+        node = (node.HasColumn(column)) ? node.Redefine(column, expression) : node.Define(column, expression);
+      } catch (const std::runtime_error& e) {
+        logger::error("Illegal expression {} in Define {} for {}{}.", dataInfo.definitions.values->at(i), column, mContext, refusal(e));
+        return false;
+      }
     }
   }
   if (dataInfo.entries.max) {
@@ -210,8 +221,8 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     for (const auto& filter : *dataInfo.filters) {
       try {
         node = node.Filter(toRootCode(filter));
-      } catch (const std::runtime_error&) {
-        logger::error("Illegal filter expression {} for {}{}.", filter, mContext, AvailableColumns(node));
+      } catch (const std::runtime_error& e) {
+        logger::error("Illegal filter expression {} for {}{}.", filter, mContext, refusal(e));
         return false;
       }
     }
@@ -294,8 +305,8 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     bool isDouble{};
     try {
       isDouble = defineValue(colName, dataDim.var, columnType);
-    } catch (const std::runtime_error&) {
-      logger::error("Illegal expression {} for {}{}.", dataDim.var, mContext, AvailableColumns(node));
+    } catch (const std::runtime_error& e) {
+      logger::error("Illegal expression {} for {}{}.", dataDim.var, mContext, refusal(e));
       return false;
     }
     if (columnType.find("string") != std::string::npos) {
@@ -368,8 +379,8 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     try {
       std::string columnType;
       mIsTyped = defineValue("SRP_AXIS_W", *dataInfo.weight, columnType) && mIsTyped;
-    } catch (const std::runtime_error&) {
-      logger::error("Illegal weight expression {} for {}{}.", *dataInfo.weight, mContext, AvailableColumns(node));
+    } catch (const std::runtime_error& e) {
+      logger::error("Illegal weight expression {} for {}{}.", *dataInfo.weight, mContext, refusal(e));
       return false;
     }
     mHasWeights = true;

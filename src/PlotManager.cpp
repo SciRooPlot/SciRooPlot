@@ -3989,7 +3989,12 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
         }
       }
       const auto row = static_cast<Long64_t>(mFormula->EvalInstance());
-      return (row >= 0 && row < mNRows) ? mOffset + row : -1;
+      if (row >= 0 && row < mNRows) return mOffset + row;
+      // no match: the joined chain must still have a tree loaded, since the chain attaches it to its current tree only then
+      // (otherwise its columns are unknown to the reader of that tree, e.g. if the first row has no match); it keeps the tree
+      // when it is asked for the invalid entry
+      if (fTree && (!fTree->GetTree() || fTree->GetChainOffset() != mOffset)) fTree->LoadTree((mNRows > 0) ? mOffset : 0);
+      return -1;
     }
     void UpdateFormulaLeaves(const TTree* parent) override
     {
@@ -4076,14 +4081,40 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     }
   }
   if (!join.indexColumn.empty()) {
+    // the index column is one of the tree or of a tree joined before (alias.column, or column if the tree has none of that name):
+    // the chain loads its joined trees in the order of the joins, so the row of an earlier one is known when the index is evaluated
+    const string treeAlias = split_path(treeName).second;
+    const auto dot = join.indexColumn.find('.');
+    const string qualifier = (dot == string::npos) ? "" : join.indexColumn.substr(0, dot);
+    const string column = join.indexColumn.substr((dot == string::npos) ? 0 : dot + 1);
+    const TTree* indexTree = (qualifier.empty() || qualifier == treeAlias) ? firstTree : nullptr;
+    string indexExpression = column;
+    string indexTreeDescription = treeName;
+    if (!indexTree || !columnLeaf(indexTree, column)) {
+      vector<string> holders;  // aliases of the joined trees that have the column
+      for (const auto& other : joinedChains) {
+        if ((qualifier.empty() || qualifier == other->GetName()) && columnLeaf(other.get(), column)) holders.push_back(other->GetName());
+      }
+      const bool isJoinedAlias = std::any_of(joinedChains.begin(), joinedChains.end(), [&](const auto& other) { return qualifier == other->GetName(); });
+      if (!qualifier.empty() && qualifier != treeAlias && !isJoinedAlias) {
+        return fmt::format("index column {}: {} is neither {} nor a tree joined before", join.indexColumn, qualifier, treeAlias);
+      }
+      if (holders.empty()) {
+        if (!qualifier.empty()) return fmt::format("{} has no column {}", (qualifier == treeAlias) ? treeName : qualifier, column);
+        return (joinedChains.empty()) ? fmt::format("{} has no column {}", treeName, column) : fmt::format("neither {} nor a tree joined before has a column {}", treeName, column);
+      }
+      if (holders.size() > 1) return fmt::format("index column {} exists in {}, please write alias.column, e.g. {}.{}", column, util::join_strings(holders, " and "), holders[0], column);
+      indexExpression = holders[0] + "." + column;
+      indexTreeDescription = holders[0];
+      indexTree = std::find_if(joinedChains.begin(), joinedChains.end(), [&](const auto& other) { return holders[0] == other->GetName(); })->get();
+    }
     // the index column holds a single integer per row
-    auto* leaf = columnLeaf(firstTree, join.indexColumn);
-    if (!leaf) return fmt::format("{} has no column {}", treeName, join.indexColumn);
+    auto* leaf = columnLeaf(indexTree, column);
     if (isFloating(leaf) || leaf->GetLenStatic() > 1 || leaf->GetLeafCount()) {
-      return fmt::format("index column {} of {} is of type {}, but it must hold one integer per row", join.indexColumn, treeName, leaf->GetTypeName());
+      return fmt::format("index column {} of {} is of type {}, but it must hold one integer per row", column, indexTreeDescription, leaf->GetTypeName());
     }
     if (joinedTreeOf.empty()) return fmt::format("it has no rows in any input of {}", treeName);
-    joinedChain->SetTreeIndex(new RowIndex(joinedChain.get(), join.indexColumn, std::move(joinedTreeOf)));  // owned by the chain
+    joinedChain->SetTreeIndex(new RowIndex(joinedChain.get(), indexExpression, std::move(joinedTreeOf)));  // owned by the chain
   } else if (!join.keys.empty()) {
     for (const auto& key : join.keys) {
       for (const auto* tree : {static_cast<const TTree*>(firstTree), firstJoinedTree}) {
@@ -4137,18 +4168,24 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   auto start = std::chrono::steady_clock::now();
 
   // extract the reason for a failed data query: the first compiler error or error of ROOT's tree reader (if any) or the exception message
-  auto getErrorReason = [](const std::exception& exception, const string& rootOutput) {
+  auto getFirstError = [](const string& rootOutput, bool withReader) -> string {
     std::istringstream lines(rootOutput);
     for (string line; std::getline(lines, line);) {
       const auto compilerError = line.find("error: ");
-      const auto readerError = (str_starts_with(line, "Error in <TTreeReader")) ? line.find(">: ") : string::npos;
+      const auto readerError = (withReader && str_starts_with(line, "Error in <TTreeReader")) ? line.find(">: ") : string::npos;
       if (compilerError != string::npos || readerError != string::npos) {
         string reason = line.substr((compilerError != string::npos) ? compilerError + 7 : readerError + 3);
         if (str_ends_with(reason, ".")) reason.pop_back();
         return reason;
       }
     }
-    string reason = exception.what();
+    return "";
+  };
+  auto getCompilerError = [&getFirstError](const string& rootOutput) { return getFirstError(rootOutput, false); };
+  auto getErrorReason = [&getFirstError](const std::exception& exception, const string& rootOutput) {
+    string reason = getFirstError(rootOutput, true);
+    if (!reason.empty()) return reason;
+    reason = exception.what();
     reason.erase(0, reason.find_first_not_of(" \n"));
     reason = reason.substr(0, reason.find('\n'));
     if (str_ends_with(reason, ".")) reason.pop_back();
@@ -4351,7 +4388,9 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           // their range refers to all rows of the tree, so they apply the filter after it
           const bool hasEntryRange = info->entries.max.has_value();
           ROOT::RDF::RNode node = (hasEntryRange) ? base : matched;
-          if (defineAliases(node, *info) && request.Prepare(node, (hasEntryRange) ? matchColumns : vector<string>{})) {
+          // only a compiler error is a reason: RDataFrame's own message just points to it
+          auto reasonOf = [&](const std::exception&) { return getCompilerError(rootOutput.Text().substr(outputStart)); };
+          if (defineAliases(node, *info) && request.Prepare(node, (hasEntryRange) ? matchColumns : vector<string>{}, reasonOf)) {
             requests.push_back(std::move(request));
           } else {
             rejected.push_back(info);

@@ -38,8 +38,8 @@ def generate(target: Path) -> dict[str, str] | None:
             text = text.replace(spelling, plain)
         # std::array arguments are annotated with a class of pybind11-stubgen itself: keep the plain list type, so the stubs import nothing extra
         text = FIXED_SIZE.sub(r"\1", text).replace("import pybind11_stubgen.typing_ext\n", "")
-        # a Data argument also takes a [name, dataSource] list (py::implicitly_convertible), which the signatures do not show
-        text = DATA_ARGUMENT.sub(r"\1Data | list[str]", text)
+        # a Data argument also takes a [name, dataSource] list or (name, dataSource) tuple (py::implicitly_convertible), which the signatures do not show
+        text = DATA_ARGUMENT.sub(r"\1Data | list[str] | tuple[str, ...]", text)
         # std::vector arguments take any sequence; list is invariant, so a list variable of e.g. (str, float) stops would not match
         # list[tuple[int | str | ..., float]]: annotate the parameters as Sequence (list[str] stays, a str is itself a sequence of str)
         text = SIGNATURE.sub(lambda m: m[1] + LIST_PARAMETER.sub("typing.Sequence[", m[2]) + m[3], text)

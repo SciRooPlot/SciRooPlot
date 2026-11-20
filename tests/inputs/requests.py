@@ -506,7 +506,8 @@ def invalid(what, source, name, setup, text):
 
 for source, kind in (("tree", "tree"), ("csv", "table"), ("rntuple", "tree"), ("table", "tree")):
     invalid(f"{source}: a string column as axis", source, "t", lambda d: d.Project1D(("s", 10, [0.0, 1.0])), f"Expression s for {kind} {source}:t is not numeric.")
-    invalid(f"{source}: an unknown column", source, "t", lambda d: d.Project1D(("nope", 10, [0.0, 1.0])), f"Illegal expression nope for {kind} {source}:t (available columns:")
+    invalid(f"{source}: an unknown column", source, "t", lambda d: d.Project1D(("nope", 10, [0.0, 1.0])), f"Illegal expression nope for {kind} {source}:t: use of undeclared identifier 'nope' (available columns:")
+    invalid(f"{source}: an unknown column in a Define", source, "t", lambda d: d.Define("q", "2 * nope").Project1D(("q", 10, [0.0, 1.0])), f"Illegal expression 2 * nope in Define q for {kind} {source}:t: use of undeclared identifier 'nope' (available columns:")
     invalid(f"{source}: an unknown column in a filter", source, "t", lambda d: d.Project1D(("x", 10, [0.0, 1.0])).Filter("nope > 1"), f"Illegal filter expression nope > 1 for {kind} {source}:t")
     invalid(f"{source}: an unknown weight", source, "t", lambda d: d.Project1D(("x", 10, [0.0, 1.0]), "nope"), f"Illegal weight expression nope for {kind} {source}:t")
     invalid(f"{source}: an expression throwing while reading", source, "t", lambda d: d.Project1D(("std::stod(s)", 10, [0.0, 1.0])), f"{source}:t (projection of std::stod(s))")

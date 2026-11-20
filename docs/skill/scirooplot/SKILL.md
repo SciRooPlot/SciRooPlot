@@ -261,7 +261,7 @@ Cells: `Panel(w, h)` scales a panel; `Gap()` between panels makes them independe
 
 Identical names and chains. Differences:
 - `from SciRooPlot import *` exports everything: classes, the drawing option aliases (`points`, `colz`, …), `box_placement_t` corners and ROOT's colour/style constants (`kRed`, `kFullCircle`, `kDashed`, `kBird`, …), so `kRed + 1` works.
-- Braces become tuples/lists: `Project1D(("pt", 200, [0.1, 20.0]))`, `Project1D(("pt", [0.1, 0.5, 1.0]))`, `AddRatio(["num", "src"], ["den", "src"])`, `Join(["events", "otherSource"], ["run", "event"])`, colour lists `[kBlack, "#1f77b4", (0.2, 0.6, 0.3)]`, gradients `[("#0000ff", 0.0), (kRed, 1.0)]` or `[(0.0, 0.0, 1.0, 0.0), (1.0, 0.0, 0.0, 1.0)]`.
+- Braces become tuples/lists: `Project1D(("pt", 200, [0.1, 20.0]))`, `Project1D(("pt", [0.1, 0.5, 1.0]))`, `AddRatio(["num", "src"], ["den", "src"])` or `AddRatio(("num", "src"), ("den", "src"))` (never `{...}`: a Python set), `Join(["events", "otherSource"], ["run", "event"])`, colour lists `[kBlack, "#1f77b4", (0.2, 0.6, 0.3)]`, gradients `[("#0000ff", 0.0), (kRed, 1.0)]` or `[(0.0, 0.0, 1.0, 0.0), (1.0, 0.0, 0.0, 1.0)]`.
 - A list `["name", "src"]` is accepted wherever a `Data` is expected (the Python form of the C++ braces); templates are called the same way: `tmpl("name", "src")`.
 - Optional arguments may be left out as in C++; `std::optional` values are `None` when unset.
 - No `SRC_DIR` macro: use `Path(__file__).resolve().parent`. The program is plain Python; `plot` runs it with the interpreter from the environment script.

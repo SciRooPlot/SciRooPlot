@@ -160,8 +160,14 @@ settingsConfig = config_folder("config_settings")
 for setting, documented in values.items():
     got, out = bash_complete("srp", setting, "")
     check(f"srp {setting} offers the values of srp help", set(got) == documented, f"offers {sorted(got)}, documented {sorted(documented)}")
-    refused = [v for v in sorted(documented) if run(SRP, setting, v, config=settingsConfig).rc != 0]
+    refused, notShown = [], []
+    for v in sorted(documented):
+        if run(SRP, setting, v, config=settingsConfig).rc != 0:
+            refused.append(v)
+        elif (shown := run(SRP, setting, config=settingsConfig)).rc != 0 or shown.stdout.strip() != v:
+            notShown.append(f"{v}: {shown.stdout.strip() or shown.stderr.strip()}")
     check(f"srp {setting} accepts every documented value", not refused, f"refused {refused}")
+    check(f"srp {setting} without a value prints the value set", not notShown, f"{notShown}")
 for sh in SHELLS[1:]:  # the lists zsh offers come from the same helper
     out = shell('_scirooplot_helper load_srp_lists; printf "%s\\n" "${general_commands[@]}" "${project_commands[@]}" "${file_commands[@]}"', sh, config=config, interactive=True)
     check(f"{sh}: srp offers the commands of srp help", set(out.stdout.split()) == commands, f"{sorted(set(out.stdout.split()) ^ commands)}")

@@ -1973,7 +1973,7 @@ plot.ShareAxis('Z', {4, 5});</pre></div>` },
 <div class="tablewrap"><table><thead><tr><th>C++</th><th>Python</th></tr></thead><tbody>
 <tr><td><code>using namespace SciRooPlot;</code> (and <code>using Data = Plot::Pad::Data;</code> etc., as in the templates)</td><td><code>from SciRooPlot import *</code> (also the aliases, corners and ROOT constants such as <code>kRed</code>)</td></tr>
 <tr><td><code>{"pt", 200, {0.1, 20.0}}</code></td><td><code>("pt", 200, [0.1, 20.0])</code></td></tr>
-<tr><td><code>AddRatio({"num", "src"}, {"den", "src"})</code></td><td><code>AddRatio(["num", "src"], ["den", "src"])</code>: a list works wherever a <code>Data</code> is expected</td></tr>
+<tr><td><code>AddRatio({"num", "src"}, {"den", "src"})</code></td><td><code>AddRatio(["num", "src"], ["den", "src"])</code> or <code>AddRatio(("num", "src"), ("den", "src"))</code>: a list or tuple works wherever a <code>Data</code> is expected (Python's <code>{"num", "src"}</code> is a set, without order, and is refused)</td></tr>
 <tr><td><code>{kBlack, kRed + 1}</code></td><td><code>[kBlack, kRed + 1]</code></td></tr>
 <tr><td>optional arguments left out</td><td>left out, or <code>None</code></td></tr>
 <tr><td>project rebuilt with CMake by <code>plot</code></td><td>program run with the interpreter of the environment; type stubs give completion in editors</td></tr>
