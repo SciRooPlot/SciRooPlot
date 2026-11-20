@@ -2372,8 +2372,12 @@ auto Plot::Pad::Data::operator()(const string& name, const optional<string>& dat
 {
   Data data = *this;
   data.mType = "data";
-  // of a ratio: its numerator in full (selection and modifiers) with the ratio's look, not what the ratio's own modifiers do to the result
-  if (const auto* ratio = dynamic_cast<const Ratio*>(this)) data.mModify = ratio->GetNumModify();
+  // of a ratio: its numerator in full (selection and modifiers) with the ratio's look (also whether over- and underflow bins are shown), not
+  // what the ratio's own modifiers do to the result
+  if (const auto* ratio = dynamic_cast<const Ratio*>(this)) {
+    data.mModify = ratio->GetNumModify();
+    data.mModify.showOverflowBins = mModify.showOverflowBins;
+  }
   if (dataSource) data.mDataSource = *dataSource;
   data.mName = DataPath(name, data.mDataSource);
   return data;
