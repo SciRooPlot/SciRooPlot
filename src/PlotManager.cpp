@@ -120,6 +120,7 @@
 #include "DataFrameRequest.h"
 #include "PlotPainter.h"
 #include "Validation.h"
+#include "util/HepData.h"
 #include "util/Paths.h"
 #include "util/PropertyTree.h"
 #include "util/Regex.h"
@@ -481,7 +482,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<string>& 
       continue;
     }
     // a relative path is taken relative to the current directory (as the output directory), so that it can be stored with the project
-    const bool relative = !is_remote(*expandedInput) && std::filesystem::path(*expandedInput).is_relative();
+    const bool relative = !is_remote(*expandedInput) && !util::is_hepdata_input(*expandedInput) && std::filesystem::path(*expandedInput).is_relative();
     const string stored = (relative) ? std::filesystem::absolute(*expandedInput).lexically_normal().string() : input;
     auto& inputsOfDataSource = mInputs[dataSource];
     if (std::find(inputsOfDataSource.begin(), inputsOfDataSource.end(), stored) == inputsOfDataSource.end()) {
@@ -894,6 +895,15 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
   // literal: a match of a pattern is a path, not a pattern again (a file b?.root would match itself forever, run[1]/ no longer match)
   std::function<void(const string&, bool)> addEntry;
   addEntry = [&](const string& entry, bool literal) {
+    // a record of hepdata.net (hepdata:<record>[:folder]): its local copy, downloaded when missing, in the cache folder (srp cachedir) or
+    // the folder of the project
+    if (util::is_hepdata_input(entry)) {
+      const auto recordAndFolder = split_string(entry.substr(entry.find(':') + 1), ':', true);
+      std::filesystem::path folder = (mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName);
+      if (!Config::Get().CacheDir().empty()) folder = Config::Get().CacheDir();
+      if (const auto file = util::hepdata_file(recordAndFolder[0], folder)) addFile(*file, (recordAndFolder.size() > 1) ? recordAndFolder[1] : "");
+      return;
+    }
     auto fileAndFolder = split_input_path(entry);
     const string& filePart = fileAndFolder[0];
     const string folderPart = (fileAndFolder.size() > 1) ? fileAndFolder[1] : "";
