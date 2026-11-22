@@ -151,7 +151,16 @@ if "zsh" in SHELLS:
     check("zsh: without a terminal and with an insecure directory in fpath, env.sh registers the completion silently", out.stdout.strip() == "_plot_completions_zsh" and not out.stderr.strip(), out.tail())
 
 # the srp program alone
-for args, message in ((("init-py", "x"), "Source environment script"), (("cd",), "Source environment script"), (("nosuch",), "Unknown command nosuch"), ((), "Not enough arguments"), (("set", "proj", "x", "two", "words"), "Too many arguments")):
+for args, message in (
+    (("init-py", "x"), "Source environment script"),
+    (("cd",), "Source environment script"),
+    (("nosuch",), "Unknown command nosuch"),
+    ((), "Not enough arguments"),
+    (("set", "proj", "x", "two", "words"), "Too many arguments"),
+    (("remove", "proj", "junk"), "Too many arguments for srp remove"),
+    (("help", "junk"), "Too many arguments for srp help"),
+    (("plotmode", "png", "junk"), "Too many arguments for srp plotmode"),
+):
     out = run(SRP, *args, config=config)
     check(f"srp {' '.join(args) or '(nothing)'} without env.sh: exit 1, {message}", out.rc == 1 and len(out.errors()) == 1 and message in out.errors()[0], out.tail())
 finish()
