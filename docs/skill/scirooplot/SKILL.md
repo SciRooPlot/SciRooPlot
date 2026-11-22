@@ -203,7 +203,7 @@ Incompatible binnings are divided via spline interpolation (a histogram through 
 .Scatter("x", "y"[, "ex", "ey"])  .Scatter(x, y, exl, exh, eyl, eyh)    // graph from columns
 .Scatter("x", "y", "z")                                                  // points in 3D: a 2D graph (TGraph2D; scalar columns), e.g. points_colz or triangles
 .Filter("abs(eta) < 0.8").Filter("z == 8")  .Define("r", "sqrt(x*x+y*y)")  .Entries(100) / .Entries(800, 1200)
-.Join("scores")                                  // row by row, columns as 'scores.col' or 'col' if unique
+.Join("scores")                                  // row by row, columns as 'scores.col' or 'col' (the tree's own, else the first joined tree's)
 .Join("truth/events", {}, "truth")               // tree in another folder, with alias
 .Join({"events", "otherSource"}, {"run", "event"})   // from another data source, matched by up to two integer keys
 .Join("O2ft0", {"fIndexBCs"}, "ft0")             // same data source: keys matched within each input (AO2D: per DF_ folder)

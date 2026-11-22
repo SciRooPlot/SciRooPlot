@@ -4689,12 +4689,13 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
         for (const auto& match : joinMatches) {
           if (match->defineMatched) base = match->defineMatched(base);
         }
-        // a bare name stands for a joined column only if exactly one joined tree has it and the tree itself has not
-        map<string, int> nJoinedWith;
+        // a bare name stands for a joined column if the tree itself has none of that name: RDataFrame takes it from the first joined tree
+        // that has it
+        map<string, string> firstJoinedWith;  // bare name -> alias
         for (const auto& join : *joins) {
           const string prefix = join.GetAlias() + ".";
           for (const auto& column : df->GetColumnNames()) {
-            if (str_starts_with(column, prefix)) ++nJoinedWith[column.substr(prefix.size())];
+            if (str_starts_with(column, prefix)) firstJoinedWith.emplace(column.substr(prefix.size()), join.GetAlias());
           }
         }
         for (const auto& join : *joins) {
@@ -4710,7 +4711,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
             }
             const string bare = column.substr(prefix.size());
             const bool isOwn = tree && tree->GetListOfBranches() && tree->GetListOfBranches()->FindObject(bare.data());
-            if (!isOwn && bare.find('.') == string::npos && nJoinedWith[bare] == 1 && df->HasColumn(bare)) mask_unmatched(base, bare, matchedColumn);
+            if (!isOwn && bare.find('.') == string::npos && firstJoinedWith[bare] == join.GetAlias() && df->HasColumn(bare)) mask_unmatched(base, bare, matchedColumn);
           }
           renames.emplace_back(prefix + "matched", matchedColumn);
         }
