@@ -148,6 +148,7 @@ using util::find_container_key;
 using util::for_each_item;
 using util::ignore_root_messages_below;
 using util::input_file_name;
+using util::is_blank;
 using util::is_container;
 using util::is_missing_local_file;
 using util::is_remote;
@@ -490,10 +491,19 @@ void PlotManager::SetOutputDirectory(const string& path)
 //**************************************************************************************************
 void PlotManager::SetPlotsRootFile(const string& fileName)
 {
+  // a file name within the output directory, not that of the other file
+  if (is_blank(fileName) || fileName.find('/') != string::npos || fileName == mDataRootFile) {
+    logger::warning("The file name '{}' of the plots is ignored: it must be a name within the output directory, other than that of the data ({}).", fileName, mDataRootFile);
+    return;
+  }
   mPlotsRootFile = fileName;
 }
 void PlotManager::SetDataRootFile(const string& fileName)
 {
+  if (is_blank(fileName) || fileName.find('/') != string::npos || fileName == mPlotsRootFile) {
+    logger::warning("The file name '{}' of the data is ignored: it must be a name within the output directory, other than that of the plots ({}).", fileName, mPlotsRootFile);
+    return;
+  }
   mDataRootFile = fileName;
 }
 
