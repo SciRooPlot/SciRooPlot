@@ -27,6 +27,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| Automatic box placement took every drawn line as one pixel wide: a thick line or the end ticks of error bars could reach under a legend | Lines are kept clear of with their width, error bars with their end ticks: boxes may sit elsewhere in plots with thick lines | behaviour | Check the placement of automatic boxes, or place them. |
 | A picture that could not be written over an earlier file of its name (no permission) was logged as created, the earlier file left | Reported as not written | behaviour | Nothing. |
 | An ellipse in fractions of the frame or the pad (`AddEllipse` with `SetFrameCoordinates`/`SetPadCoordinates`) on a pad with a log axis was drawn far too small (TEllipse adds its radii in axis values) | The ellipse asked for, drawn as the polygon of its perimeter (a `TPolyLine` fill and outline in `Plots.root` instead of a `TEllipse`, only on such pads) | behaviour | Nothing. |
 | Placeholders (`<entries:1>`, `<mean:2@1>` …) in a legend title or a legend row without data (`LegendBox::AddEntry`) were left as written | Replaced as in texts (data named by number) | behaviour | Nothing. |

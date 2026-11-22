@@ -6716,7 +6716,9 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     const double_t halfCells = 4. * markerSize * mScale / cellSize;
     setRect(cellX(x) - halfCells, cellY(y) - halfCells, cellX(x) + halfCells, cellY(y) + halfCells, kObject);
   };
-  auto markLine = [&](double_t x1, double_t y1, double_t x2, double_t y2) {  // in pad coordinates
+  // a line (in pad coordinates) with the width it is drawn with: a line wider than one pixel (ROOT's width, times mScale) reaches beyond its cell
+  auto markLine = [&](double_t x1, double_t y1, double_t x2, double_t y2, double_t lineWidth = 1.) {
+    const double_t halfCells = 0.5 * std::max(lineWidth - 1., 0.) * mScale / cellSize;
     double_t cx1 = cellX(x1), cy1 = cellY(y1), cx2 = cellX(x2), cy2 = cellY(y2);
     if (!std::isfinite(cx1) || !std::isfinite(cy1) || !std::isfinite(cx2) || !std::isfinite(cy2)) return;
     // clip the line to the grid (Liang-Barsky) so lines far outside of the pad cost nothing
@@ -6738,7 +6740,15 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     const int32_t nSteps = static_cast<int32_t>(std::ceil(2. * std::max(std::abs(dx), std::abs(dy)) * (t1 - t0))) + 1;
     for (int32_t step = 0; step <= nSteps; ++step) {
       const double_t t = t0 + (t1 - t0) * step / nSteps;
-      setRect(cx1 + t * dx, cy1 + t * dy, cx1 + t * dx, cy1 + t * dy, kObject);
+      setRect(cx1 + t * dx - halfCells, cy1 + t * dy - halfCells, cx1 + t * dx + halfCells, cy1 + t * dy + halfCells, kObject);
+    }
+  };
+
+  // the ticks across both ends of a vertical error bar (gStyle's end error size in pixels, times mScale)
+  auto markEnds = [&](double_t x, double_t low, double_t high) {
+    const double_t halfCells = 0.5 * gStyle->GetEndErrorSize() * mScale / cellSize;
+    for (double_t end : {low, high}) {
+      setRect(cellX(x) - halfCells, cellY(end), cellX(x) + halfCells, cellY(end), kObject);
     }
   };
 
@@ -6896,6 +6906,8 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     const bool hasSteps = !hasErrors && !hasLine && !hasMarkers;
     const bool showEmpty = option.Contains("E0");
     const float_t markerSize = (hasMarkers || (hasErrors && !hasErrorArea)) ? hist->GetMarkerSize() : 0.f;
+    const double_t lineWidth = hist->GetLineWidth();
+    const bool hasEndTicks = option.Contains("E1");  // ticks across the ends of the error bars
     // the fill of a histogram drawn as steps, line or curve (THistPainter::PaintHist: a fill colour and style are needed):
     // steps are filled per bin, a line with option F2 down to the lower frame edge, a smoothed curve down to the base of the fill
     if ((hasSteps || hasLine) && hist->GetFillColor() != 0 && hist->GetFillStyle() != 0) {
@@ -6930,9 +6942,9 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       const double_t y = padY(content);
       const double_t low = padY(content - hist->GetBinErrorLow(bin)), high = padY(content + hist->GetBinErrorUp(bin));
       if (hasLine) {
-        if (previous) markLine(padX(axis->GetBinCenter(previous)), padY(hist->GetBinContent(previous)), xCenter, y);
+        if (previous) markLine(padX(axis->GetBinCenter(previous)), padY(hist->GetBinContent(previous)), xCenter, y, lineWidth);
       } else if (hasSteps || hasErrors) {
-        markLine(xLow, y, xUp, y);  // the step, or the error bar in x
+        markLine(xLow, y, xUp, y, lineWidth);  // the step, or the error bar in x
       }
       markPoint(xCenter, y, markerSize);
       if (hasErrorBand && previous) {
@@ -6945,9 +6957,10 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       } else if (hasErrorArea) {
         setRect(cellX(xLow), cellY(low), cellX(xUp), cellY(high), kObject);
       } else if (hasErrors) {
-        markLine(xCenter, low, xCenter, high);
+        markLine(xCenter, low, xCenter, high, lineWidth);
+        if (hasEndTicks) markEnds(xCenter, low, high);
       } else if (hasSteps && bin < axis->GetLast()) {
-        markLine(xUp, y, xUp, padY(hist->GetBinContent(bin + 1)));  // step to the next bin
+        markLine(xUp, y, xUp, padY(hist->GetBinContent(bin + 1)), lineWidth);  // step to the next bin
       }
     }
   };
@@ -6958,6 +6971,9 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     // lines between consecutive points only with L or C, or without any option (TGraphPainter::PaintGraph): markers alone leave the space between them free
     const bool hasLine = option.Contains("L") || option.Contains("C") || option.Strip(TString::kBoth).IsNull();
     const float_t markerSize = (option.Contains("P") || option.Contains("*")) ? graph->GetMarkerSize() : 0.f;
+    const double_t lineWidth = graph->GetLineWidth();
+    // ticks across the ends of the error bars (TGraphPainter: not with Z, nor with arrows)
+    const bool hasEndTicks = !option.Contains("Z") && !option.Contains(">");
     const int32_t n = graph->GetN();
     // the errors of point i (a graph without errors gives -1)
     auto errorXlow = [graph](int32_t i) { return std::max(graph->GetErrorXlow(i), 0.); };
@@ -6997,15 +7013,18 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       const double_t xUser = graph->GetPointX(i), yUser = graph->GetPointY(i);
       const double_t x = padX(xUser), y = padY(yUser);
       markPoint(x, y, markerSize);
-      if (hasLine && i > 0) markLine(padX(graph->GetPointX(i - 1)), padY(graph->GetPointY(i - 1)), x, y);
+      if (hasLine && i > 0) markLine(padX(graph->GetPointX(i - 1)), padY(graph->GetPointY(i - 1)), x, y, lineWidth);
       const double_t exLow = errorXlow(i), exHigh = errorXhigh(i);
       const double_t eyLow = errorYlow(i), eyHigh = errorYhigh(i);
       if (hasErrorBoxes) {
         setRect(cellX(padX(xUser - exLow)), cellY(padY(yUser - eyLow)), cellX(padX(xUser + exHigh)), cellY(padY(yUser + eyHigh)), kObject);
         continue;
       }
-      if (exLow > 0. || exHigh > 0.) markLine(padX(xUser - exLow), y, padX(xUser + exHigh), y);
-      if (eyLow > 0. || eyHigh > 0.) markLine(x, padY(yUser - eyLow), x, padY(yUser + eyHigh));
+      if (exLow > 0. || exHigh > 0.) markLine(padX(xUser - exLow), y, padX(xUser + exHigh), y, lineWidth);
+      if (eyLow > 0. || eyHigh > 0.) {
+        markLine(x, padY(yUser - eyLow), x, padY(yUser + eyHigh), lineWidth);
+        if (hasEndTicks) markEnds(x, padY(yUser - eyLow), padY(yUser + eyHigh));
+      }
       if (hasErrorBand && i > 0) {
         // the band from the previous point to this one
         const double_t yPrev = graph->GetPointY(i - 1);
@@ -7035,7 +7054,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
       const double_t xUser = xMin + (xMax - xMin) * i / (nPoints - 1);
       const double_t x = padX(xUser);
       const double_t y = padY(func->Eval(xUser));
-      if (i > 0) markLine(xPrev, yPrev, x, y);
+      if (i > 0) markLine(xPrev, yPrev, x, y, func->GetLineWidth());
       if (isFilled) polygon.emplace_back(x, y);
       xPrev = x;
       yPrev = y;
@@ -7057,14 +7076,15 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
     } else if (auto* box = dynamic_cast<TBox*>(obj)) {  // regions (shapes), in axis values like lines and ellipses
       setRect(cellX(padX(box->GetX1())), cellY(padY(box->GetY1())), cellX(padX(box->GetX2())), cellY(padY(box->GetY2())), kObject);
     } else if (auto* line = dynamic_cast<TLine*>(obj)) {
-      if (!line->TestBit(TLine::kLineNDC)) markLine(padX(line->GetX1()), padY(line->GetY1()), padX(line->GetX2()), padY(line->GetY2()));  // lines and arrows
-    } else if (auto* polyline = dynamic_cast<TPolyLine*>(obj)) {                                                                          // polygons (shapes): the outline, and with a fill the inside
+      // lines and arrows
+      if (!line->TestBit(TLine::kLineNDC)) markLine(padX(line->GetX1()), padY(line->GetY1()), padX(line->GetX2()), padY(line->GetY2()), line->GetLineWidth());
+    } else if (auto* polyline = dynamic_cast<TPolyLine*>(obj)) {  // polygons (shapes): the outline, and with a fill the inside
       vector<std::pair<double_t, double_t>> points;
       for (int32_t i = 0; i < polyline->GetN(); ++i) {
         points.emplace_back(padX(polyline->GetX()[i]), padY(polyline->GetY()[i]));
       }
       for (size_t i = 0; i + 1 < points.size(); ++i) {
-        markLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second);
+        markLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second, polyline->GetLineWidth());
       }
       if (polyline->GetFillStyle() != 0 && TString(polyline->GetOption()).Contains("f")) markPolygon(points);
     } else if (auto* ellipse = dynamic_cast<TEllipse*>(obj)) {
@@ -7077,7 +7097,7 @@ bool PlotPainter::FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeAr
         points.emplace_back(padX(ellipse->GetX1()) + dx * std::cos(theta) - dy * std::sin(theta), padY(ellipse->GetY1()) + dx * std::sin(theta) + dy * std::cos(theta));
       }
       for (size_t i = 0; i + 1 < points.size(); ++i) {
-        markLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second);
+        markLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second, ellipse->GetLineWidth());
       }
       if (ellipse->GetFillStyle() != 0) markPolygon(points);
     } else if (auto* subPad = dynamic_cast<TPad*>(obj); subPad && TString(subPad->GetName()).BeginsWith("ImageBox_")) {
