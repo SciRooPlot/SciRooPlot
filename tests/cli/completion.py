@@ -146,10 +146,10 @@ for words, want in ((("plot", "qa\\d"), ["qa3"]), (("plot", "ab", "h_\\d"), ["h_
 
 # srp: what is offered is what srp help documents and srp accepts
 helpText = run(SRP, "help").stdout
-commands = {m.group(1) for m in re.finditer(r"^\s+srp ([a-z-]+)", helpText, re.M)}
-modeRows = re.search(r"Plot modes\n(.*?)\n\S", helpText, re.S).group(1)
+commands = {m.group(1) for m in re.finditer(r"^\s+srp ([a-z-]+)", helpText, re.MULTILINE)}
+modeRows = re.search(r"Plot modes\n(.*?)\n\S", helpText, re.DOTALL).group(1)
 modes = {re.sub(r"\[.*", "", m) for row in modeRows.splitlines() for m in re.split(r"\s{2,}", row.strip())[0].split()}
-values = {"color": re.search(r"srp color \(([^)]*)\)", helpText).group(1), "matchmode": re.search(r"srp matchmode \(([^)]*)\)", helpText).group(1), "matchcase": re.search(r"srp matchcase \(([^)]*)\)", helpText).group(1), "verbosity": re.search(r"^\s+<level>\s+(.*)", helpText, re.M).group(1)}
+values = {"color": re.search(r"srp color \(([^)]*)\)", helpText).group(1), "matchmode": re.search(r"srp matchmode \(([^)]*)\)", helpText).group(1), "matchcase": re.search(r"srp matchcase \(([^)]*)\)", helpText).group(1), "verbosity": re.search(r"^\s+<level>\s+(.*)", helpText, re.MULTILINE).group(1)}
 values = {k: set(v.split(" | ")) for k, v in values.items()}
 values["plotmode"] = modes
 got, out = bash_complete("srp", "")
@@ -168,6 +168,10 @@ for setting, documented in values.items():
             notShown.append(f"{v}: {shown.stdout.strip() or shown.stderr.strip()}")
     check(f"srp {setting} accepts every documented value", not refused, f"refused {refused}")
     check(f"srp {setting} without a value prints the value set", not notShown, f"{notShown}")
+# srp cache (on [<folder>] | off): on and off (srp settings.py checks what is stored and shown)
+cacheValues = {re.sub(r"\s*\[.*\]", "", v) for v in re.search(r"srp cache \((.*?)\)\s{2,}", helpText).group(1).split(" | ")}
+got, out = bash_complete("srp", "cache", "")
+check("srp cache offers the values of srp help", set(got) == cacheValues == {"on", "off"}, f"offers {sorted(got)}, documented {sorted(cacheValues)}")
 for sh in SHELLS[1:]:  # the lists zsh offers come from the same helper
     out = shell('_scirooplot_helper load_srp_lists; printf "%s\\n" "${general_commands[@]}" "${project_commands[@]}" "${file_commands[@]}"', sh, config=config, interactive=True)
     check(f"{sh}: srp offers the commands of srp help", set(out.stdout.split()) == commands, f"{sorted(set(out.stdout.split()) ^ commands)}")

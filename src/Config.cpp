@@ -237,12 +237,20 @@ std::optional<bool> Config::ApplySetting(const string& key, const string& value)
     if (scale) (key == "screenscale" ? mScreenScale : mBitmapScale) = *scale;
     return scale.has_value();
   }
-  if (key == "cachedir") {
-    // off, or an absolute folder (a leading ~ is the home folder)
-    string dir = value;
+  if (key == "cache") {
+    // off, on, or on <absolute folder> (a leading ~ is the home folder)
+    string state = value;
+    string dir;
+    if (const auto space = value.find(' '); space != string::npos) {
+      state = value.substr(0, space);
+      dir = value.substr(space + 1);
+    }
     if (dir == "~" || util::str_starts_with(dir, "~/")) dir = expand_path("~").value_or("~") + dir.substr(1);
-    const bool valid = (value == "off" || (!dir.empty() && std::filesystem::path(dir).is_absolute()));
-    if (valid) mCacheDir = (value == "off") ? "" : std::filesystem::path(dir).lexically_normal().string();
+    const bool valid = (state == "off" && dir.empty() && value.find(' ') == string::npos) || (state == "on" && (dir.empty() || std::filesystem::path(dir).is_absolute()));
+    if (valid) {
+      mCacheOn = (state == "on");
+      mCacheLocation = (dir.empty()) ? "" : std::filesystem::path(dir).lexically_normal().string();
+    }
     return valid;
   }
   return std::nullopt;
@@ -302,7 +310,9 @@ bool Config::Save()
     tree.add("matchcase", mMatchCaseInsensitive ? "insensitive" : "sensitive");
     tree.add("screenscale", mScreenScale);
     tree.add("bitmapscale", mBitmapScale);
-    tree.add("cachedir", mCacheDir.empty() ? "off" : mCacheDir);
+    string cache = "off";
+    if (mCacheOn) cache = (mCacheLocation.empty()) ? "on" : "on " + mCacheLocation;
+    tree.add("cache", cache);
     // a failed write is reported once and not repeated at exit
     mChangedSettings.clear();
     mRewriteSettings = false;
@@ -996,13 +1006,24 @@ bool Config::SetSetting(const string& key, const string& value)
                                               {"matchcase", "sensitive | insensitive"},
                                               {"screenscale", "positive number, e.g. 1.5"},
                                               {"bitmapscale", "positive number, e.g. 1.5"},
-                                              {"cachedir", "an absolute folder, e.g. ~/.SciRooPlot/cache, or off"}};
+                                              {"cache", "on | on <absolute folder> | off"}};
   if (!ApplySetting(key, value).value_or(false)) {
     logger::error("Invalid {} '{}' ({}).", key, value, hints.at(key));
     return false;
   }
   mChangedSettings.insert(key);
   return true;
+}
+
+string Config::CacheFolder() const
+{
+  return (mCacheLocation.empty()) ? (mPath / "cache").string() : (std::filesystem::path(mCacheLocation) / "SciRooPlot").string();
+}
+
+// as srp settings shows it: off, or on with the folder of the copies
+string Config::CacheSettingValue() const
+{
+  return (mCacheOn) ? "on (" + CacheFolder() + ")" : "off";
 }
 
 // the settings the logger of the public headers needs, without exposing the configuration itself

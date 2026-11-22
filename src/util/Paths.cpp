@@ -23,6 +23,7 @@
 #include <cctype>
 #include <cstdlib>
 #include <filesystem>
+#include <fstream>
 #include <optional>
 #include <string>
 #include <vector>
@@ -100,5 +101,16 @@ std::optional<string> expand_path(const string& path)
     pos = next;
   }
   return expandedPath;
+}
+bool make_cache_folder(const std::string& folder, std::error_code& ec)
+{
+  std::filesystem::create_directories(folder, ec);
+  if (ec) return false;
+  const auto tag = std::filesystem::path(folder) / "CACHEDIR.TAG";
+  if (!std::filesystem::exists(tag, ec) && !ec) {
+    std::ofstream out(tag);
+    out << "Signature: 8a477f597d28d172789f06886806bc55\n# This file is a cache directory tag created by SciRooPlot (srp cache).\n";
+  }
+  return !ec;
 }
 }  // end namespace SciRooPlot::util

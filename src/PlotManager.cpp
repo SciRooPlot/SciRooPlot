@@ -895,13 +895,14 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
   // literal: a match of a pattern is a path, not a pattern again (a file b?.root would match itself forever, run[1]/ no longer match)
   std::function<void(const string&, bool)> addEntry;
   addEntry = [&](const string& entry, bool literal) {
-    // a record of hepdata.net (hepdata:<record>[:folder]): its local copy, downloaded when missing, in the cache folder (srp cachedir) or
-    // the folder of the project
+    // a record of hepdata.net (hepdata:<record>[:folder]): its local copy, downloaded when missing, in the cache folder (srp cache), also
+    // with the cache off (a record is downloaded whole in any case)
     if (util::is_hepdata_input(entry)) {
       const auto recordAndFolder = split_string(entry.substr(entry.find(':') + 1), ':', true);
-      std::filesystem::path folder = (mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName);
-      if (!Config::Get().CacheDir().empty()) folder = Config::Get().CacheDir();
-      if (const auto file = util::hepdata_file(recordAndFolder[0], folder)) addFile(*file, (recordAndFolder.size() > 1) ? util::hepdata_table_name(recordAndFolder[1]) : "");
+      const string cacheFolder = Config::Get().CacheFolder();
+      std::error_code cacheError;
+      util::make_cache_folder(cacheFolder, cacheError);  // a folder that cannot be made is reported with the download
+      if (const auto file = util::hepdata_file(recordAndFolder[0], cacheFolder)) addFile(*file, (recordAndFolder.size() > 1) ? util::hepdata_table_name(recordAndFolder[1]) : "");
       return;
     }
     auto fileAndFolder = split_input_path(entry);
@@ -1668,11 +1669,12 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   mExpandedInputs.clear();
   mRemoteFiles.clear();
   auto remoteFilesGuard = make_scope_guard([this]() { mRemoteFiles.clear(); });  // closed when the data is read
-  // remote inputs are read from local copies (srp cachedir), copied when first read and again when the remote file changed: every remote
+  // remote inputs are read from local copies (srp cache on), copied when first read and again when the remote file changed: every remote
   // open, also those of RDataFrame; afterwards ROOT reads through the cache only when asked to again (its default)
-  const string cacheDir = Config::Get().CacheDir();
-  const bool useCache = !cacheDir.empty() && TFile::SetCacheFileDir(cacheDir, false, true);
-  if (!cacheDir.empty() && !useCache) logger::warning("Cannot use the cache folder {} (srp cachedir): it cannot be created or written. Reading remote inputs directly.", cacheDir);
+  const string cacheDir = (Config::Get().CacheOn()) ? Config::Get().CacheFolder() : "";
+  std::error_code cacheError;
+  const bool useCache = !cacheDir.empty() && util::make_cache_folder(cacheDir, cacheError) && TFile::SetCacheFileDir(cacheDir, false, true);
+  if (!cacheDir.empty() && !useCache) logger::warning("Cannot use the cache folder {} (srp cache): it cannot be created or written. Reading remote inputs directly.", cacheDir);
   auto cacheGuard = make_scope_guard([useCache]() {
     if (useCache) TFile::SetCacheFileDir(TFile::GetCacheFileDir(), true, false);
   });
@@ -4217,7 +4219,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
   map<string, string> joinedTreeOf;    // join by an index column: part of the chain -> its joined tree, each as file|path
   map<string, Long64_t> rowsOfJoined;  // joined tree as file|path -> its number of rows
   // RDataFrame names the input of a row file/path: the inputs of the chain by that name, as file|path
-  // (a remote file read from its local copy, srp cachedir, by the path of the copy: the cache folder followed by the path of the url)
+  // (a remote file read from its local copy, srp cache, by the path of the copy: the cache folder followed by the path of the url)
   auto samplesOf = [](const string& part) {
     const string file = part.substr(0, part.find('|'));
     const string treePath = part.substr(part.find('|') + 1);

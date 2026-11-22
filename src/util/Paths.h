@@ -64,6 +64,9 @@ inline bool is_missing_local_file(const std::string& fileName, std::error_code& 
 // even '.root:': split after an existing file, an existing path is not split, otherwise after the first .root); a remote file after
 // its ending or the query following it
 std::vector<std::string> split_input_path(const std::string& input);
+// creates the folder of the local copies (srp cache) when missing and marks it as cache (CACHEDIR.TAG, skipped by backup tools); false if
+// it cannot be made
+bool make_cache_folder(const std::string& folder, std::error_code& ec);
 
 // folder ("" if none) and name of a path within a file or data source (a/b/c: a/b and c)
 inline std::pair<std::string, std::string> split_path(const std::string& path)

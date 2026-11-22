@@ -52,7 +52,11 @@ class Config
   bool MatchContains() const { return mMatchContains; }
   double ScreenScale() const { return mScreenScale; }
   double BitmapScale() const { return mBitmapScale; }
-  const std::string& CacheDir() const { return mCacheDir; }
+  // srp cache: whether remote input files are read from local copies, and the folder of all local copies (remote files, HEPData records),
+  // also with the cache off: <config folder>/cache, or <folder>/SciRooPlot for srp cache on <folder>
+  bool CacheOn() const { return mCacheOn; }
+  std::string CacheFolder() const;
+  std::string CacheSettingValue() const;
   const std::filesystem::path& Path() const { return mPath; }
 
   const std::string& ProjectsFile() const { return mProjectsFile; }
@@ -137,9 +141,10 @@ class Config
   std::string mPlotMode{"show"};
   bool mMatchCaseInsensitive{false};
   bool mMatchContains{false};
-  double mScreenScale{1.};  // size factor for plots shown on screen
-  double mBitmapScale{1.};  // resolution factor for bitmap files (png, jpg, gif)
-  std::string mCacheDir;    // folder of local copies of remote input files (empty: none)
+  double mScreenScale{1.};     // size factor for plots shown on screen
+  double mBitmapScale{1.};     // resolution factor for bitmap files (png, jpg, gif)
+  bool mCacheOn{false};        // remote input files read from local copies
+  std::string mCacheLocation;  // the folder of srp cache on <folder>, which holds the folder SciRooPlot of the copies (empty: the config folder)
   std::filesystem::path mPath;
   std::string mProjectsFile;
   std::string mSettingsFile;

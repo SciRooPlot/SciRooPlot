@@ -2,9 +2,9 @@
 errors, y<i>_<label> with one error source; a histogram where the table has one point per bin and every error is symmetric (a 1d and a
 2d table, bin labels kept), a graph otherwise (an asymmetric error source, a table of points without bins). HEPData's own objects stay
 readable, a data source restricted to a table works. What the record's ROOT file does not hold is reported: the error sources of tables
-without bins and of bins that overlap, tables with three independent variables. The record is downloaded once into the project's folder,
-or into the cache folder when one is set; a record that does not exist and a malformed record id are reported once and the other inputs
-are still read.
+without bins and of bins that overlap, tables with three independent variables. The record is downloaded once into the cache folder, also
+with srp cache off: the one of the config folder, or the folder SciRooPlot inside the folder of srp cache on <folder>, marked as cache
+(CACHEDIR.TAG); a record that does not exist and a malformed record id are reported once and the other inputs are still read.
 The record is served by a local web server as hepdata.net serves its ROOT download (a .tar.gz holding the ROOT file).
 Covers: an error label with characters not allowed in data names; two labels that become the same name; an asymmetric error with both
 shifts on one side; a table with two dependent variables of different points; a 2d table of points without bins; text bins with a bin
@@ -253,7 +253,9 @@ check_values(run)
 downloads = [r for r in requests if r.startswith("/record/ins12345")]
 check("the record is downloaded once", len(downloads) == 1, f"requests {requests}")
 stored = [os.path.join(root, f) for root, _, files in os.walk(os.environ["SCIROOPLOT_CONFIG_PATH"]) for f in files if f == "ins12345.root"]
-check("the record is kept in the folder of the project", len(stored) == 1 and os.sep + "hepdata" + os.sep in stored[0], f"{stored}")
+standard = os.path.join(os.environ["SCIROOPLOT_CONFIG_PATH"], "cache")
+check("the record is kept in the cache folder of the config folder (srp cache off)", stored == [os.path.join(standard, "hepdata", "ins12345.root")], f"{stored}")
+check("the cache folder of the config folder is marked as cache", os.path.exists(os.path.join(standard, "CACHEDIR.TAG")), f"{os.listdir(standard) if os.path.isdir(standard) else 'no folder'}")
 lines = run.lines("WARN")
 for what, text in (
     ("a record that does not exist is reported", "Cannot download HEPData record ins99999"),
@@ -286,10 +288,12 @@ run = p.plot("hepdata")
 check_values(run, " (the kept copy)")
 check("the kept copy is read without a download", not [r for r in requests if r.startswith("/record/ins12345")], f"requests {requests}")
 cache = p.path("cache")
-p.srp("cachedir", cache)
+p.srp("cache", "on", cache)
 run = p.plot("hepdata")
-p.srp("cachedir", "off")
+p.srp("cache", "off")
 check_values(run, " (cache folder)")
-check("with a cache folder the record is downloaded into it", os.path.exists(os.path.join(cache, "hepdata", "ins12345.root")), f"{os.listdir(cache) if os.path.isdir(cache) else 'no folder'}")
+own = os.path.join(cache, "SciRooPlot")
+check("with srp cache on <folder> the record is downloaded into the folder SciRooPlot inside it", os.path.exists(os.path.join(own, "hepdata", "ins12345.root")), f"{os.listdir(cache) if os.path.isdir(cache) else 'no folder'}")
+check("the folder SciRooPlot inside it is marked as cache, nothing else is put into <folder>", os.path.exists(os.path.join(own, "CACHEDIR.TAG")) and os.listdir(cache) == ["SciRooPlot"], f"{os.listdir(cache) if os.path.isdir(cache) else 'no folder'}")
 server.shutdown()
 finish()
