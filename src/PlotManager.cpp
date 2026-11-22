@@ -4136,8 +4136,10 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
     }
     return dir;
   };
+  // a data source only joined is expanded once per GeneratePlots call too (its warnings said once)
   auto expandedIt = mExpandedInputs.find(dataSource);
-  for (const auto& inputRaw : (expandedIt != mExpandedInputs.end()) ? expandedIt->second : ExpandInputs(dataSource)) {
+  if (expandedIt == mExpandedInputs.end()) expandedIt = mExpandedInputs.emplace(dataSource, ExpandInputs(dataSource)).first;
+  for (const auto& inputRaw : expandedIt->second) {
     const auto fileNamePath = split_input_path(expand_path(inputRaw).value_or(""));
     const string& fileName = fileNamePath[0];
     std::error_code existsError;
