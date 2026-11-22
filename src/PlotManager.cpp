@@ -3969,8 +3969,10 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
  */
 //**************************************************************************************************
 struct PlotManager::join_match_t {
-  string alias;
+  string alias;                                                     // of a join keeping rows without a match (empty for requiredMatch)
   std::function<ROOT::RDF::RNode(ROOT::RDF::RNode)> defineMatched;  // defines SRP_MATCHED_<alias> (reads the input of a row from SRP_SAMPLE)
+  // SRP_MATCHED_<alias> a row needs: a join without rows without a match reads its index from that joined tree
+  string requiredMatch;
 };
 namespace
 {
@@ -4315,18 +4317,19 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       return fmt::format("index column {} of {} is of type {}, but it must hold one integer per row", column, indexTreeDescription, leaf->GetTypeName());
     }
     if (joinedTreeOf.empty()) return fmt::format("it has no rows in any input of {}", treeName);
+    // an index read from a tree joined before that keeps rows without a match is only one if that tree has a match
+    const string holder = (indexTree != firstTree) ? indexTreeDescription : "";
+    const bool holderKeeps = std::any_of(joinMatches.begin(), joinMatches.end(), [&](const auto& match) { return match->alias == holder; });
+    const string holderMatched = (holderKeeps) ? "SRP_MATCHED_" + holder : "";
+    if (!join.keepUnmatched && holderKeeps) joinMatches.push_back(std::make_shared<join_match_t>(join_match_t{"", nullptr, holderMatched}));
     if (join.keepUnmatched) {
-      // a row has its match if its index is a row of the joined tree beside it; an index read from a tree joined before that keeps rows
-      // without a match is only one if that tree has a match
+      // a row has its match if its index is a row of the joined tree beside it (and the tree holding the index has its match)
       auto nRowsOf = std::make_shared<std::unordered_map<string, Long64_t>>();
       for (const auto& [part, joined] : joinedTreeOf) {
         for (const auto& sample : samplesOf(part)) {
           (*nRowsOf)[sample] = rowsOfJoined[joined];
         }
       }
-      const string holder = (indexTree != firstTree) ? indexTreeDescription : "";
-      const bool holderKeeps = std::any_of(joinMatches.begin(), joinMatches.end(), [&](const auto& match) { return match->alias == holder; });
-      const string holderMatched = (holderKeeps) ? "SRP_MATCHED_" + holder : "";
       const string indexColumn = "SRP_INDEX_" + join.GetAlias();
       auto defineMatched = [=](ROOT::RDF::RNode node) {
         node = define_as_long64(node, indexColumn, indexExpression);
@@ -4655,6 +4658,9 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       // key or by an index column whose value is missing for those rows
       vector<string> matchColumns;
       if (joins) {
+        for (const auto& match : joinMatches) {
+          if (!match->requiredMatch.empty()) matchColumns.push_back(match->requiredMatch);
+        }
         for (const auto& join : *joins) {
           if (join.keepUnmatched) continue;
           if (!join.keys.empty()) matchColumns.push_back(join.GetAlias() + "." + join.keys[0]);
@@ -4677,7 +4683,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       if (joins && !joinMatches.empty()) {
         base = base.DefinePerSample("SRP_SAMPLE", [](unsigned int, const ROOT::RDF::RSampleInfo& sample) { return sample.AsString(); });
         for (const auto& match : joinMatches) {
-          base = match->defineMatched(base);
+          if (match->defineMatched) base = match->defineMatched(base);
         }
         // a bare name stands for a joined column only if exactly one joined tree has it and the tree itself has not
         map<string, int> nJoinedWith;
@@ -4709,7 +4715,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       optional<ROOT::RDF::RResultPtr<ULong64_t>> nMatched;
       if (!matchColumns.empty()) {
         for (const auto& column : matchColumns) {
-          matched = matched.FilterAvailable(column);
+          matched = DataFrameRequest<data_info_t>::FilterMatched(matched, column);
         }
         nMatched = matched.Count();
       }

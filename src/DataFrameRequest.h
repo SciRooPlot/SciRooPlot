@@ -79,6 +79,15 @@ class DataFrameRequest
   std::optional<ULong64_t> GetEntriesPreFilter() { return (mEntriesPreFilter) ? std::optional<ULong64_t>(**mEntriesPreFilter) : std::nullopt; }
   ULong64_t GetEntriesPostFilter() { return **mEntriesPostFilter; }
 
+  // the rows with a match in joined trees: those with a value in a column of a joined tree, or SRP_MATCHED_<alias> true (a joined tree
+  // keeping rows without a match)
+  static ROOT::RDF::RNode FilterMatched(ROOT::RDF::RNode node, const std::string& column)
+  {
+    if (!util::str_starts_with(column, "SRP_MATCHED_")) return node.FilterAvailable(column);
+    auto isMatched = [](bool matched) { return matched; };
+    return node.Filter(isMatched, {column});
+  }
+
  private:
   using data_dim_t = Plot::Pad::Data::data_dim_t;
 
@@ -242,7 +251,7 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
   }
   // rows without values in these columns (no matching row in a joined tree) are skipped like filtered rows, after the entry range
   for (const auto& column : requiredColumns) {
-    node = node.FilterAvailable(column);
+    node = FilterMatched(node, column);
   }
   if (dataInfo.filters) {
     mEntriesPreFilter = node.Count();
