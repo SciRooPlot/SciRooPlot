@@ -3351,6 +3351,54 @@ optional<string> PlotManager::PositionReport(TObject* selected, TVirtualPad* pad
     const double_t rx = (isUser) ? ellipse->GetR1() : ellipse->GetR1() / (pad->GetX2() - pad->GetX1()) / ((inFrame) ? frame[2] - frame[0] : 1.);
     const double_t ry = (isUser) ? ellipse->GetR2() : ellipse->GetR2() / (pad->GetY2() - pad->GetY1()) / ((inFrame) ? frame[3] - frame[1] : 1.);
     position = point(ellipse->GetX1(), ellipse->GetY1()) + ", " + number(rx, id->coordinates) + ", " + number(ry, id->coordinates);
+  } else if (auto* drawnEllipse = dynamic_cast<TPolyLine*>(selected); drawnEllipse && id->kind == kind_t::ellipse) {
+    // an ellipse in fractions on a log pad, drawn as the polygon of its perimeter (an arc: the centre before and after it): the centre and
+    // the radii of the ellipse through the points, in fractions of the pad (the radius along x: that of the axis nearer to x)
+    const int32_t n = drawnEllipse->GetN();
+    const bool isArc = (n == PlotPainter::kEllipseSteps + 3);
+    const int32_t first = (isArc) ? 1 : 0, last = (isArc) ? n - 2 : n - 1;  // a full turn: the last point closes it
+    vector<std::pair<double_t, double_t>> points;
+    for (int32_t i = first; i < last; ++i) {
+      points.emplace_back(fraction(drawnEllipse->GetX()[i], true), fraction(drawnEllipse->GetY()[i], false));
+    }
+    if (points.size() < 3) return nullopt;
+    double_t cx{}, cy{};
+    if (isArc) {
+      cx = fraction(drawnEllipse->GetX()[0], true), cy = fraction(drawnEllipse->GetY()[0], false);
+    } else {
+      for (const auto& [px, py] : points) {
+        cx += px / points.size(), cy += py / points.size();
+      }
+    }
+    // the centred conic a u^2 + b u v + c v^2 = 1 through the points (least squares)
+    double_t m[3][4]{};
+    for (const auto& [px, py] : points) {
+      const double_t row[3] = {(px - cx) * (px - cx), (px - cx) * (py - cy), (py - cy) * (py - cy)};
+      for (int32_t i = 0; i < 3; ++i) {
+        for (int32_t j = 0; j < 3; ++j)
+          m[i][j] += row[i] * row[j];
+        m[i][3] += row[i];
+      }
+    }
+    for (int32_t i = 0; i < 3; ++i) {  // Gauss-Jordan
+      for (int32_t k = 0; k < 3; ++k) {
+        if (k == i || m[i][i] == 0.) continue;
+        const double_t f = m[k][i] / m[i][i];
+        for (int32_t j = i; j < 4; ++j)
+          m[k][j] -= f * m[i][j];
+      }
+    }
+    if (m[0][0] == 0. || m[1][1] == 0. || m[2][2] == 0.) return nullopt;
+    const double_t a = m[0][3] / m[0][0], b = m[1][3] / m[1][1], c = m[2][3] / m[2][2];
+    const double_t t = 0.5 * std::atan2(b, a - c);  // direction of a principal axis
+    const double_t alongT = a * std::cos(t) * std::cos(t) + b * std::sin(t) * std::cos(t) + c * std::sin(t) * std::sin(t);
+    const double_t acrossT = a + c - alongT;
+    if (!(alongT > 0.) || !(acrossT > 0.)) return nullopt;
+    const bool tNearX = std::abs(t) <= 0.25 * TMath::Pi();
+    const double_t rx = 1. / std::sqrt((tNearX) ? alongT : acrossT), ry = 1. / std::sqrt((tNearX) ? acrossT : alongT);
+    const bool inFrame = (id->coordinates == frame_coordinates);
+    position = point(axisValue(cx, true), axisValue(cy, false)) + ", " + number(rx / ((inFrame) ? frame[2] - frame[0] : 1.), id->coordinates) + ", " +
+               number(ry / ((inFrame) ? frame[3] - frame[1] : 1.), id->coordinates);
   } else if (auto* polygon = dynamic_cast<TPolyLine*>(selected)) {
     for (int32_t i = 0; i + 1 < polygon->GetN(); ++i) {  // the last point closes the polygon
       position += ((i) ? ", " : "") + point(polygon->GetX()[i], polygon->GetY()[i]);

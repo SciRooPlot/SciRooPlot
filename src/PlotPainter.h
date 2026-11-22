@@ -237,6 +237,8 @@ class PlotPainter
   static std::array<double_t, 4> FrameInPad(const TVirtualPad* pad);
   // added to the coordinate system kept as unique ID of a single-line text whose position is its alignment point (SetTextAlign)
   static constexpr uint32_t kAlignedAtPosition = 16;
+  // an ellipse in fractions on a log pad is drawn as polygon: steps along its perimeter (an arc: the centre before and after them)
+  static constexpr int32_t kEllipseSteps = 360;
   // the red, green and blue of nColors spread evenly over a gradient
   static std::vector<std::tuple<double_t, double_t, double_t>> GradientRGB(int32_t nColors, const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints);
 

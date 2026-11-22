@@ -5807,11 +5807,35 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
         if (isUser && (pad_ptr->GetLogx() || pad_ptr->GetLogy())) {
           logger::warning("The {} of pad {} is drawn distorted: TEllipse does not convert its radii on a log axis.", shapeName, padID);
         }
-        // the radii are in pad coordinates (TEllipse converts only the centre)
+        // fractions as radii in pad coordinates: on linear axes the axis units TEllipse adds to its centre
         const double_t rx = (isUser) ? c[2] : c[2] * (span[2] - span[0]) * (pad_ptr->GetX2() - pad_ptr->GetX1());
         const double_t ry = (isUser) ? c[3] : c[3] * (span[3] - span[1]) * (pad_ptr->GetY2() - pad_ptr->GetY1());
         const auto arc = shape->GetArc().value_or(std::pair<double_t, double_t>{0., 360.});
-        object = new TEllipse(x, y, rx, ry, arc.first, arc.second, shape->GetRotation().value_or(0.));
+        const double_t rotation = shape->GetRotation().value_or(0.);
+        if (isUser || !(pad_ptr->GetLogx() || pad_ptr->GetLogy())) {
+          object = new TEllipse(x, y, rx, ry, arc.first, arc.second, rotation);
+          break;
+        }
+        // on a log axis TEllipse adds the radii to the centre in axis values: an ellipse in fractions is drawn as the polygon of its
+        // perimeter computed in pad coordinates (an arc as a sector, from the centre and back to it, as TEllipse draws it)
+        const bool logX = pad_ptr->GetLogx(), logY = pad_ptr->GetLogy();
+        const double_t px = ToPad(x, logX), py = ToPad(y, logY);
+        const double_t theta = rotation * TMath::DegToRad();
+        const bool fullTurn = arc.second - arc.first >= 360.;
+        vector<double_t> xs, ys;
+        auto add = [&](double_t u, double_t v) {
+          xs.push_back(FromPad(u, logX));
+          ys.push_back(FromPad(v, logY));
+        };
+        if (!fullTurn) add(px, py);
+        for (int32_t i = 0; i <= kEllipseSteps; ++i) {
+          const double_t phi = (arc.first + (arc.second - arc.first) * i / kEllipseSteps) * TMath::DegToRad();
+          const double_t dx = rx * std::cos(phi), dy = ry * std::sin(phi);
+          add(px + dx * std::cos(theta) - dy * std::sin(theta), py + dx * std::sin(theta) + dy * std::cos(theta));
+        }
+        if (!fullTurn) add(px, py);
+        object = new TPolyLine(static_cast<int32_t>(xs.size()), xs.data(), ys.data(), "f");
+        outline = new TPolyLine(static_cast<int32_t>(xs.size()), xs.data(), ys.data());
         break;
       }
       case kind_t::polygon: {
@@ -5896,7 +5920,7 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
       if (!drawn) continue;
       drawn->SetUniqueID(drawnID);  // for the position reported by a double-click in show mode
       drawn->SetBit(kCanDelete);    // owned by the pad
-      const char* option = (drawn == object && regionOutline) ? "l" : ((drawn == object && kind == kind_t::polygon) ? "f" : "");
+      const char* option = (drawn == object && regionOutline) ? "l" : ((drawn == object && dynamic_cast<TPolyLine*>(drawn)) ? "f" : "");
       if (insertAfter) {
         // AddAfter makes a link without draw option (which then is the option of the object): with an option, the primitives after the
         // insertion point are added anew behind the shape, with their options
