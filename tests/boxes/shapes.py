@@ -10,7 +10,7 @@ cases (lines at the limits of a log axis, positions at or below zero on a log ax
 In fractions of the pad a vertical or horizontal line beside the frame is drawn there, as a region (not wholly outside of the pad); an ellipse given only a fill alpha
 is filled.
 Reference: the primitives of the pad and the same plot without the shape.
-Covers: shapes in their layers, a line at the limit of a log axis, and the named cases.
+Covers: shapes in their layers, a line at the limit of a log axis, lines at the edges of the frame and the pad, and the named cases.
 """
 
 import math
@@ -287,4 +287,22 @@ outsideSaid = [m for m in besideRun.messages("outside_pad", "beside") if "is not
 check("lines and regions in fractions of the pad wholly outside of it are not drawn, one warning each", not outside and len(outsideSaid) == 3, " | ".join(besideRun.messages("outside_pad", "beside")))
 ellipses = [o for o, _ in besideRun.links("beside", "beside") if o.ClassName() == "TEllipse"]
 check("an ellipse given only a fill alpha is filled", len(ellipses) == 1 and ellipses[0].GetFillStyle() == 1001, f"{[e.GetFillStyle() for e in ellipses]}")
+# lines at the edges of the frame (frame coordinates 0 and 1) and of the pad (pad coordinates 0 and 1), over many axis ranges: drawn
+edgeRanges = [(0.37 * i, 3.0 + 1.13 * i + 0.01 * i * i) for i in range(40)]
+e = Project("shapes_edges")
+e.source("s", {"h": h})
+for i, (lo, hi) in enumerate(edgeRanges):
+    plot = S.Plot(f"edges{i}", "edges", "1d")
+    plot[1].AddData("h", "s")
+    plot[1]["X"].SetRange(lo, hi)
+    plot[1]["Y"].SetRange(0.1 * i, 2.0 + 0.7 * i)
+    for edge in (0.0, 1.0):
+        plot[1].AddVerticalLine(edge).SetFrameCoordinates()
+        plot[1].AddHorizontalLine(edge).SetFrameCoordinates()
+        plot[1].AddVerticalLine(edge).SetPadCoordinates()
+        plot[1].AddHorizontalLine(edge).SetPadCoordinates()
+    e.pm.AddPlot(plot)
+edgesRun = e.plot("edges")
+undrawn = [f"{lo:g}..{hi:g}" for i, (lo, hi) in enumerate(edgeRanges) if len([o for o, _ in edgesRun.links(f"edges{i}", "edges") if o.ClassName() == "TLine"]) != 8]
+check("lines at the edges of the frame and of the pad are drawn, for every axis range", not undrawn, f"{len(undrawn)} ranges: {undrawn[:5]} " + " | ".join(edgesRun.warnings()[:2]))
 finish()

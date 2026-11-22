@@ -2,8 +2,11 @@
 pictures of mode png) both end with exit status 0 and write all they make (every plot in Plots.root, every picture complete); a run whose
 write of Plots.root is cut short leaves the Plots.root of the earlier run as it was; Ctrl-C (SIGINT
 to the process group, as a terminal sends it) ends a long run within seconds, in mode file and png, and leaves the Plots.root of an earlier
-run as it was (it is written at the end of a run); a Plots.root that is a symbolic link is written where it points, the link kept.
-Covers: two runs at once, a write of Plots.root cut short, Ctrl-C during a long run, a Plots.root linked elsewhere."""
+run as it was (it is written at the end of a run); a Plots.root that is a symbolic link is written where it points, the link kept (also
+a link to a file not written yet, through another link).
+The UserData.root of a project is replaced only when the program saves the project, and the files a process writes the in-memory inputs
+to are gone when it ends (also those of a process ended by a signal, once another one writes in-memory inputs).
+Covers: two runs at once, a write of Plots.root cut short, Ctrl-C during a long run, a Plots.root linked elsewhere, in-memory inputs."""
 
 import os
 import pty
@@ -12,7 +15,7 @@ import signal
 import subprocess
 import time
 
-from srptest import PLOT, ROOT, Project, S, check, finish
+from srptest import PLOT, ROOT, Project, S, check, config_folder, finish, python
 
 N = 300  # plots of the project: a run in mode file takes several seconds
 p = Project("runs", bases=("1d",))
@@ -115,4 +118,50 @@ check(
     linked.returncode == 0 and os.path.islink(os.path.join(out, "Plots.root")) and plots_in(target) == ["p0"] and not [f for f in os.listdir(os.path.dirname(target)) if f.endswith(".tmp")],
     f"exit status {linked.returncode}, link {os.path.islink(os.path.join(out, 'Plots.root'))}, target {plots_in(target)}",
 )
+# a link to a file not written yet (its folder exists), also through a second link: written where it points, the links kept
+os.remove(os.path.join(out, "Plots.root"))
+dangling = p.path("elsewhere", "later", "Plots.root")
+os.makedirs(os.path.dirname(dangling))
+os.symlink(os.path.relpath(dangling, p.path("elsewhere")), p.path("elsewhere", "hop.root"))
+os.symlink(p.path("elsewhere", "hop.root"), os.path.join(out, "Plots.root"))
+linked = subprocess.run([PLOT, "g", "p0", "file"], capture_output=True, text=True)
+check(
+    "a Plots.root that is a link to a file not written yet: written where it points, the links kept",
+    linked.returncode == 0 and os.path.islink(os.path.join(out, "Plots.root")) and os.path.islink(p.path("elsewhere", "hop.root")) and plots_in(dangling) == ["p0"],
+    f"exit status {linked.returncode}, link {os.path.islink(os.path.join(out, 'Plots.root'))}, target {plots_in(dangling) if os.path.exists(dangling) else 'missing'}",
+)
+
+# the in-memory inputs of a program: its project's UserData.root replaced only once the program saves the project (a second run of the
+# program at the same time reads the stored data meanwhile), the files of the process gone when it ends, also those of an ended process
+config = config_folder("userdata_config")
+deadPid = 4194304 + 1  # beyond the largest process id of Linux
+leftover = os.path.join(config, f"UserData_{deadPid}_123.root")
+program = f"""
+import ROOT, sys
+import SciRooPlot as S
+content = float(sys.argv[1])
+pm = S.PlotManager("mem")
+h = ROOT.TH1D("h", "", 1, 0.0, 1.0)
+h.SetBinContent(1, content)
+pm.AddDataSource("s", [h])
+def stored():
+    import os
+    if not os.path.exists({os.path.join(config, "mem", "UserData.root")!r}):
+        return None
+    f = ROOT.TFile.Open({os.path.join(config, "mem", "UserData.root")!r})
+    value = f.Get("s/h").GetBinContent(1) if f and not f.IsZombie() and f.Get("s/h") else None
+    if f:
+        f.Close()
+    return value
+print("BEFORE", stored())
+pm.SaveProject()
+print("AFTER", stored())
+"""
+first = python(program.replace("sys.argv[1]", "'1'"), config=config)
+open(leftover, "w").close()
+second = python(program.replace("sys.argv[1]", "'2'"), config=config)
+check("in-memory inputs: UserData.root of the project is written by SaveProject", "AFTER 1.0" in first.stdout, first.tail())
+check("in-memory inputs: a second run leaves UserData.root as it was until it saves the project", "BEFORE 1.0" in second.stdout and "AFTER 2.0" in second.stdout, second.tail())
+processFiles = [f for f in os.listdir(config) if f.startswith("UserData_")]
+check("in-memory inputs: no file of a process left when it ended, also of an ended process", not processFiles, str(processFiles))
 finish()

@@ -5,7 +5,8 @@ plain ratio as for any data. Every input kind divided by itself, and pairs of a 
 data (the modifiers of an input name that input; the denominator of a function numerator, prepared to sample it and to divide by,
 reports once), and every warning is expected.
 A ratio used as a template (ratio(name)) gives its numerator as data: the numerator with its modifiers, not those of the result, and
-the ratio's look (also its over- and underflow bins shown).
+the ratio's look (also its over- and underflow bins shown); a ratio of numerator and denominator data takes the look of the numerator,
+its over- and underflow bins shown too.
 Covers: the ratio sides (both normalized, both rebinned, result scaled, numerator scaled), profiles
 rebinned before the division, a modifier refused where it is set naming the input of its side, a ratio as template.
 """
@@ -297,4 +298,7 @@ diff = hist_diff(ref[0][0], obs[0][0]) if ref and obs else "not drawn"
 check("a ratio as template gives its numerator with the numerator's modifiers", not diff, diff)
 _, printed = captured(lambda: ratio("hist").Print())
 check("a ratio as template keeps the over- and underflow bins shown as set on the ratio (its look)", "show_overflow_bins: true" in printed, printed.strip()[-400:])
+# a ratio made of numerator and denominator data takes the numerator's look, its over- and underflow bins shown too
+_, printed = captured(lambda: S.Ratio(S.Data("hist", "inputs").SetShowOverflowBins(), S.Data("hist_var", "inputs")).Print())
+check("a ratio of numerator and denominator data shows the over- and underflow bins as set on the numerator", "show_overflow_bins: true" in printed and "numer_show_overflow_bins" not in printed, printed.strip()[-400:])
 finish()

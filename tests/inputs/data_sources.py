@@ -9,7 +9,7 @@ cycles of a key the latest counts; a directory hidden by a newer key of its name
 (src:folder) leaves tables out. A name starting with '/' is read from the top of its data source, with a warning where the data is
 added. Data of an unknown data source is reported missing with the reason, and a data source with an
 illegal name is refused. Inputs added after GeneratePlots (appended or replaced) and input files rewritten since are read by the next
-GeneratePlots; without a change the data is not read again.
+GeneratePlots, also the input of a data source a tree is joined from; without a change the data is not read again.
 Covers: the same file through a symlink in a directory source, or ./, chained once, tables read only when requested;
 the same table name in two inputs: the first wins, a second AddDataSource replacing an input warns, a file added
 before a second GeneratePlots: the tree read again over both, an input file rewritten between two GeneratePlots giving the old data, inputs below a directory with ':' in its name.
@@ -318,4 +318,36 @@ check("a file appended: its data found by the next GeneratePlots", values.get(("
 check("the inputs replaced: the next GeneratePlots reads the new one", values.get(("added", "h")) == "2.0", str(values))
 check("an input file rewritten: the next GeneratePlots reads it again", values.get(("rewritten", "h")) == "1.0", str(values))
 check("an input file rewritten: said once", out.text.count("Inputs of data source r changed since they were read") == 1, out.tail())
+
+# a data source used only to join a tree from: its input rewritten between two GeneratePlots
+out = python(f"""
+import ROOT
+import SciRooPlot as S
+main, joined = {p.path("joinsrc", "main.root")!r}, {p.path("joinsrc", "joined.root")!r}
+import os
+os.makedirs(os.path.dirname(main), exist_ok=True)
+ROOT.RDataFrame(10).Define("x", "1.0").Snapshot("t", main)
+ROOT.RDataFrame(10).Define("v", "1.0").Snapshot("u", joined)
+pm = S.PlotManager("rejoin")
+pm.AddBasePlot(S.PlotManager.MakeBasePlot("1d"))
+pm.AddDataSource("m", main)
+pm.AddDataSource("j", joined)
+plot = S.Plot("joined", "g", "1d")
+plot[1].AddData("t", "m").Join(["u", "j"]).Project1D(("v", 4, [0.0, 4.0]))
+pm.AddPlot(plot)
+pm.SetOutputDirectory({p.path("rejoin")!r})
+def report(step):
+    pm.GeneratePlots("file")
+    f = ROOT.TFile.Open({p.path("rejoin", "Plots.root")!r})
+    key = next(k for k in f.Get("g").GetListOfKeys() if k.GetName().split(":")[0] == "joined")
+    data = [o for o in key.ReadObj().GetPrimitive("Pad_1").GetListOfPrimitives() if o.GetName().startswith("1:")]
+    print("MEAN", step, data[0].GetMean() if data else None)
+    f.Close()
+report("first")
+ROOT.RDataFrame(10).Define("v", "2.0").Snapshot("u", joined)
+report("rewritten")
+""")
+means = dict(re.findall(r"^MEAN (\w+) (\S+)$", out.stdout, re.M))
+check("a data source joined from rewritten: the next GeneratePlots reads the joined data again", means.get("first") == "1.0" and means.get("rewritten") == "2.0", str(means) + " " + out.tail())
+check("a data source joined from rewritten: said naming the data source of the tree", "Inputs of data source m changed since they were read" in out.text, out.tail())
 finish()

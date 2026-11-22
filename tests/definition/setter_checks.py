@@ -22,7 +22,8 @@ as "legend default line width"), and a style setter given several invalid values
 where it has a name (the axis, the data, the plot with its group, which margin of a layout).
 Style numbers (markers, lines, fills) are not checked: ROOT draws an unknown style in its default style.
 Covers: the same tree joined again, a selection of data that is not projected, pad margins without room for the
-frame, ranges inverted by single-end setters, calls replacing each other.
+frame, ranges inverted by single-end setters, calls replacing each other, a projection range in bin numbers with a fraction,
+Normalize(min, max) without isDensity.
 """
 
 import os
@@ -346,9 +347,13 @@ NAMED = {
     "axis label font": (lambda: S.S.Plot("a", "g", "1d")[1]["Y"].SetLabelFont(999), "label font of axis Y (999)"),
     "text alignment": (lambda: S.S.Plot("a", "g", "1d")[1].AddText(0.5, 0.5, "t").SetTextAlign(5), "0 for the default"),
     "shape kind": (lambda: S.S.Plot("a", "g", "1d")[1].AddRegionX(1.0, 2.0).SetArc(0.0, 90.0), "ignored on this region X"),
+    "projection range in bin numbers with a fraction": (lambda: S.S.Data("h", "s").ProjectX(-0.8, 0.8), "range [-0.8, 0.8] of axis 1 is given in bin numbers"),
 }
 for what, (call, text) in NAMED.items():
     _, printed = S.captured(call)
     plain = re.sub(r"\x1b\[[0-9;]*m", "", printed)
     S.check(f"the message names what it refers to: {what}", text in plain, plain.strip())
+# a normalization range without isDensity would be taken as isDensity and minimum: refused by the conversion (in C++ a deleted overload)
+result, _ = S.captured(lambda: S.S.Data("h", "s").Normalize(2.0, 6.0))
+S.check("Normalize(min, max) without isDensity is refused", isinstance(result, TypeError), repr(result))
 S.finish()

@@ -52,6 +52,7 @@ TABLE = alias_table()
 REPRESENTATIVE = ("hist", "graph_errors", "hist2d", "graph2d_errors")  # every alias in the fast run
 FLAT_ONLY = ("lego", "surf", "polar", "box", "cont", "candle", "violin")  # aliases a TH2Poly is drawn flat (and cartesian) for
 NEED_ERRORS = ("band", "band_smooth", "boxes_nomarkers", "brackets")  # aliases that draw only the errors of a graph
+NOT_POLAR = ("bars", "band", "band_smooth", "boxes", "boxes_nomarkers", "brackets")  # aliases ROOT does not draw on a polar grid
 VARIANTS = ("empty", "single", "nan")  # hostile data: no entries or points, one, a NaN value
 
 
@@ -76,7 +77,7 @@ def expected(kind, alias, variant="normal"):
     entry = TABLE[alias][kindType]
     if entry == "-":
         return ("default" if kindType in ("hist1d", "graph") else None), "", False, 1
-    if kind in WITHOUT_ERRORS[variant] and alias in NEED_ERRORS:
+    if (kind in WITHOUT_ERRORS[variant] and alias in NEED_ERRORS) or (DATA_KINDS[kind][1] == "TGraphPolar" and alias in NOT_POLAR):
         return "default", "", False, 1
     drawnType = entry if entry in ("graph", "hist1d") else kindType
     opt = TABLE[alias][drawnType]
@@ -114,6 +115,8 @@ todo = cases(
         {"kind": "hist2poly", "alias": "candle", "why": "candles of a TH2Poly drawn flat"},
         {"kind": "hist2poly", "alias": "cont_colz", "why": "contours of a TH2Poly drawn flat"},
         {"kind": "graph_asymm", "alias": "text", "why": "a graph with asymmetric errors written as values (no errors shown)"},
+        {"kind": "graph_polar", "alias": "band", "why": "a band of a polar graph, which ROOT does not draw on its grid"},
+        {"kind": "graph_polar", "alias": "bars", "why": "bars of a polar graph, which ROOT draws cartesian"},
     ],
 )
 KEPT_FILL = ("hist", "hist_open", "hist_open_clipped")  # aliases filling the steps, drawn on a histogram keeping its input's style
@@ -155,6 +158,11 @@ for alias in KEPT_FILL:
 # area of a polar graph with a fill: the polygon through its points, filled on the polar grid (ROOT's F)
 plot = S.Plot("polar_area", "aliases", base_of("graph_polar"))
 add_data(plot[1], "graph_polar").SetDrawOption(S.area).SetFill(1001, ROOT.kOrange)
+p.pm.AddPlot(plot)
+# a log axis of a pad with a polar graph: ignored with a warning
+plot = S.Plot("polar_log", "aliases", base_of("graph_polar"))
+add_data(plot[1], "graph_polar")
+plot[1]["X"].SetLog()
 p.pm.AddPlot(plot)
 # hostile data: every alias on every kind with no entries or points, a single one, a NaN value
 variantCases = cases({"kind": list(DATA_KINDS), "alias": ALIASES, "variant": list(VARIANTS)}, valid=lambda c: has_variant(c["kind"], c["variant"]))
@@ -226,7 +234,8 @@ check("a histogram keeping its style with a fill colour: filled alike by every a
 drawn = run.drawn("polar_area", "aliases")
 grids = [o for o in run.pad("polar_area", "aliases").GetListOfPrimitives() if o.InheritsFrom("TGraphPolargram")] if run.pad("polar_area", "aliases") else []
 check("area of a polar graph with a fill: drawn on the polar grid, filled (F)", len(drawn) == 1 and drawn[0][0].InheritsFrom("TGraphPolar") and "F" in drawn[0][1].split() and len(grids) == 1, f"{[(o.ClassName(), opt) for o, opt in drawn]}, {len(grids)} grids")
-expectedWarnings = sum(expected(c["kind"], c["alias"])[3] for c in todo) + len(asymmetric) + len(REPEATED)
+expectedWarnings = sum(expected(c["kind"], c["alias"])[3] for c in todo) + len(asymmetric) + len(REPEATED) + 1  # the log axis of a polar pad
+check("a log axis of a pad with a polar graph: ignored with a warning", any("The log scale of the X axis of pad 1 is ignored: a polar grid has no x and y axes" in m for m in run.messages("polar_log", "aliases")), " | ".join(run.messages("polar_log", "aliases")))
 check("no other warnings", len(run.warnings()) == expectedWarnings, " | ".join(w for w in run.warnings() if "is not available" not in w)[:500])
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
 

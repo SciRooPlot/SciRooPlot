@@ -4,7 +4,9 @@ of its inputs, however they are split into files), by one or two integer keys fr
 skipped and counted in the reading summary; the joined data source may be restricted to a folder, the joined tree named by a path), by
 an index column holding the row number within the joined tree of the same input (AO2D-like DF_ folders: rows whose index is -1 or beyond
 the joined tree skipped, folders that are empty or have no joined rows, read in parallel; an index column with a dot in its name
-taken whole).
+taken whole, a leaf of a leaflist branch; an index column of a tree joined before that keeps rows without a match: rows without a match
+there skipped). Keeping rows without a match: alias.matched, the joined columns NaN, 0 or empty there (also Double32_t and strings; a
+column of two joined trees by its bare name that of the first), every row without a match for a joined tree without rows.
 Columns of the joined tree are reached as alias.column, or by their name where the tree has no column of that name (the tree's own column
 wins); filters (also on C strings of the joined tree), defines, weights, entry ranges (counted over the rows of the tree, before rows without a match are skipped) and ratios
 work on joined columns; two joins at once, and requests with other joins on the same tree, each give their own result. A join that is
@@ -128,7 +130,7 @@ def write_ft0(path, folder, bc, timeA, amplitudes):
     f.Close()
 
 
-AO = {k: [] for k in ("pt", "idx", "posZ", "mult", "part", "vz")}
+AO = {k: [] for k in ("pt", "idx", "posZ", "mult", "part", "vz", "bcVal")}
 AOC = {"timeA": [], "sumA": []}  # per collision: the FT0 time and summed amplitudes of its bunch crossing (nan without)
 for path, nColls in zip(ao2d, ((40, 0, 0, 25), (0, 60))):
     for d, nColl in enumerate(nColls):
@@ -156,6 +158,8 @@ for path, nColls in zip(ao2d, ((40, 0, 0, 25), (0, 60))):
         write_tree(path, {"fIndexCollisions": idx, "fPt": pt}, name="O2track", folder=folder)
         write_tree(path, {"fIndexMcParticles": part}, name="O2mctracklabel", folder=folder)
         write_tree(path, {"fVz": vz}, name="O2mcparticle", folder=folder)
+        bcVal = rng.uniform(0, 100, nColl + 5)  # a bunch crossing per row the collisions refer to (fIndexBCs)
+        write_tree(path, {"fVal": bcVal}, name="O2bc", folder=folder)
         ok = (idx >= 0) & (idx < nColl)
         okPart = (part >= 0) & (part < nPart)
         AO["pt"].extend(pt.tolist())
@@ -164,6 +168,7 @@ for path, nColls in zip(ao2d, ((40, 0, 0, 25), (0, 60))):
         AO["mult"].extend(np.where(ok, mult[np.clip(idx, 0, max(nColl - 1, 0))] if nColl else 0, 0).tolist())
         AO["part"].extend(np.where(okPart, part, -1).tolist())
         AO["vz"].extend(np.where(okPart, vz[np.clip(part, 0, nPart - 1)], np.nan).tolist())
+        AO["bcVal"].extend(np.where(ok, bcVal[collBC[np.clip(idx, 0, max(nColl - 1, 0))]] if nColl else 0.0, np.nan).tolist())
 AO = {k: np.array(v) for k, v in AO.items()}
 AOC = {k: np.array(v) for k, v in AOC.items()}
 aoMatched = AO["idx"] >= 0
@@ -171,6 +176,28 @@ noColl = p.path("AO2D_none.root")
 for d in range(2):
     write_tree(noColl, {"fPosZ": np.zeros(0)}, name="O2collision", folder=f"DF_{d}")
     write_tree(noColl, {"fIndexCollisions": np.zeros(5, dtype=np.int32), "fPt": np.ones(5)}, name="O2track", folder=f"DF_{d}")
+# keys k of a tree joined to trees with some of them: the columns of the joined trees of types without a value of their own in rows without
+# a match (Double32_t, strings), a column v in two joined trees, and a joined tree without rows
+km = p.path("keys.root")
+K = {"k": np.arange(12, dtype=np.int32)}
+write_tree(km, K, name="main")
+sideKeys, side2Keys = np.array([0, 2, 3, 5, 8, 9], dtype=np.int32), np.array([1, 2, 5, 6, 11], dtype=np.int32)
+write_tree(km, {"k": side2Keys, "v": side2Keys * 10.0}, name="side2")
+write_tree(km, {"k": np.zeros(0, dtype=np.int32), "v": np.zeros(0)}, name="emptySide")
+kmFile = ROOT.TFile(km, "UPDATE")
+side = ROOT.TTree("side", "")
+sideK, sideD32, sideV, sideS = np.zeros(1, np.int32), np.zeros(1), np.zeros(1), ROOT.std.string()
+side.Branch("k", sideK, "k/I")
+side.Branch("d32", sideD32, "d32/d")  # Double32_t
+side.Branch("v", sideV, "v/D")
+side.Branch("s", sideS)
+for key in sideKeys:
+    sideK[0], sideD32[0], sideV[0] = key, key + 0.5, key * 100.0
+    sideS.replace(0, sideS.size(), "text")
+    side.Fill()
+side.Write()
+kmFile.Close()
+inSide, inSide2 = np.isin(K["k"], sideKeys), np.isin(K["k"], side2Keys)
 # an index column with a dot in its name (a branch of a split object, event.fIndex): taken whole, not as alias.column
 dotted = ROOT.TFile(p.path("dotted.root"), "RECREATE")
 dottedColl = ROOT.TTree("coll", "")
@@ -185,9 +212,18 @@ dottedTrk.Branch("ev.idx", dottedIdx, "ev.idx/I")
 for i in range(20):
     dottedIdx[0] = i % 5
     dottedTrk.Fill()
+# an index column that is a leaf of a leaflist branch (ev.fIndex of a branch ev with leaves fIndex and other)
+leafTrk = ROOT.TTree("trkLeaf", "")
+leafIdx = np.zeros(2, dtype=np.int32)
+leafTrk.Branch("ev", leafIdx, "fIndex/I:other/I")
+for i in range(20):
+    leafIdx[0], leafIdx[1] = (3 * i) % 5, 7
+    leafTrk.Fill()
 dotted.Write()
 dotted.Close()
 p.pm.AddDataSource("dotted", p.path("dotted.root"))
+p.pm.AddDataSource("km", km)
+p.pm.AddDataSource("kmOther", km)
 for name, inputs in (("ao2d", [f"{path}:DF_*" for path in ao2d]), ("aoNone", f"{noColl}:DF_*")):
     p.pm.AddDataSource(name, inputs)
 for name, inputs in (("A", A), ("other", other), ("trk", tracks), ("evInfo", info), ("gid", items), ("mt", mt), ("tl", listFile), ("csv", p.path("table.csv")), ("rn", p.path("rn.root"))):
@@ -295,6 +331,32 @@ for form in ("fIndexMcParticles", "O2mctracklabel.fIndexMcParticles"):
         H(40, -15, 15, AO["vz"][both] - AO["posZ"][both]),
         lambda pad, form=form: pad.AddData("O2track", "ao2d").Join("O2mctracklabel").JoinByIndex("O2collision", "fIndexCollisions", "col").JoinByIndex("O2mcparticle", form, "mcp").Project1D(("mcp.fVz - col.fPosZ", 40, [-15.0, 15.0])),
     )
+case(
+    "by an index column of a tree joined before that keeps rows without a match: rows without a match there are skipped",
+    H(20, 0, 100, AO["bcVal"][aoMatched]),
+    lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions", "col", True).JoinByIndex("O2bc", "col.fIndexBCs", "bc").Project1D(("bc.fVal", 20, [0.0, 100.0])),
+)
+case("by an index column that is a leaf of a leaflist branch", H(5, -0.5, 4.5, [(3 * i) % 5 for i in range(20)]), lambda pad: pad.AddData("trkLeaf", "dotted").JoinByIndex("coll", "ev.fIndex").Project1D(("z", 5, [-0.5, 4.5])))
+case("keeping rows without a match: a Double32_t column NaN in the rows without", H(2, -0.5, 1.5, (~inSide).astype(float)), lambda pad: pad.AddData("main", "km").Join("side", ["k"], "sd", True).Project1D(("std::isnan(sd.d32)", 2, [-0.5, 1.5])))
+case("keeping rows without a match: a string column empty in the rows without", H(5, -0.5, 4.5, np.where(inSide, 4, 0)), lambda pad: pad.AddData("main", "km").Join("side", ["k"], "sd", True).Project1D(("sd.s.size()", 5, [-0.5, 4.5])))
+case(
+    "keeping rows without a match: a column of two joined trees by its bare name is that of the first, NaN in its rows without",
+    H(2, -0.5, 1.5, (~inSide).astype(float)),
+    lambda pad: pad.AddData("main", "km").Join("side", ["k"], "a", True).Join("side2", ["k"], "b", True).Project1D(("std::isnan(v)", 2, [-0.5, 1.5])),
+)
+case("keeping rows without a match: a column of two joined trees as alias.column of the second", H(2, -0.5, 1.5, (~inSide2).astype(float)), lambda pad: pad.AddData("main", "km").Join("side", ["k"], "a", True).Join("side2", ["k"], "b", True).Project1D(("std::isnan(b.v)", 2, [-0.5, 1.5])))
+for what, joinedTree in (("of the same data source", "emptySide"), ("of another data source", ["emptySide", "kmOther"])):
+    case(f"keeping rows without a match by a key: a joined tree without rows {what} leaves every row without a match", H(2, -0.5, 1.5, np.zeros(12)), lambda pad, joinedTree=joinedTree: pad.AddData("main", "km").Join(joinedTree, ["k"], "e", True).Project1D(("e.matched", 2, [-0.5, 1.5])))
+    case(
+        f"keeping rows without a match by a key: the columns of a joined tree without rows {what} NaN in every row",
+        H(2, -0.5, 1.5, np.ones(12)),
+        lambda pad, joinedTree=joinedTree: pad.AddData("main", "km").Join(joinedTree, ["k"], "e", True).Project1D(("std::isnan(v) && std::isnan(e.v)", 2, [-0.5, 1.5])),
+    )
+case(
+    "keeping rows without a match by an index column: a joined tree without rows in any input leaves every row without a match",
+    H(2, -0.5, 1.5, np.zeros(10)),
+    lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions", "col", True).Project1D(("col.matched", 2, [-0.5, 1.5])),
+)
 first = aoMatched & (np.arange(len(AO["pt"])) < 500)
 case("by an index column: the first entries of the tree, then rows without a match skipped", H(30, 0, 6, AO["pt"][first]), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPt", 30, [0.0, 6.0])).Entries(500))
 
@@ -319,7 +381,7 @@ FAILING = {  # what: (setup, the reason)
     "a key appearing twice in the joined tree of one input": (lambda pad: pad.AddData("O2collision", "ao2d").Join("O2dupft0", ["fIndexBCs"]), f"appears in more than one row of {ao2d[1]}:DF_1/O2dupft0"),
     "an index column that is no integer": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fPt"), "index column fPt of O2track is of type Double_t, but it must hold one integer per row"),
     "a tree joined by an index column without rows in any input": (lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions"), "it has no rows in any input of O2track"),
-    "a joined tree missing beside a tree joined by an index column": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2bc", "fIndexCollisions"), f"{ao2d[0]}:DF_0/O2bc does not exist"),
+    "a joined tree missing beside a tree joined by an index column": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2nobc", "fIndexCollisions"), f"{ao2d[0]}:DF_0/O2nobc does not exist"),
     "an alias equal to the name of the tree": (lambda pad: pad.AddData("events", "A").Join(byKey, ["run", "event"]), "the columns of both would be called events.column, please specify an alias"),
 }
 for i, (what, (setup, _)) in enumerate(FAILING.items()):

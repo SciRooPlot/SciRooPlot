@@ -7,10 +7,12 @@ same file. The plots themselves are not painted. Only the data of the selected p
 before; a plot whose data is missing is reported with its reasons and the run fails, as in the other modes; when no plot has its data,
 nothing is written (an earlier Data.root stays).
 Covers: a data source restricted to a folder (also given with a trailing slash, or empty), a path in a name, functions and points of the plot
-definition, the fixed key order, missing data, data read by earlier calls in the same process."""
+definition, the fixed key order, missing data, data read by earlier calls in the same process, a canvas of Plots.root drawn in the
+process that wrote it."""
 
 from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, captured, cases, check, data_objects, describe, finish, func_diff, graph_diff, has_variant, hist_diff, points_name, source_of
 from srptest import formula as formula_of
+from srptest import python
 
 p = Project("data_file")
 p.inputs(VARIANTS)
@@ -134,4 +136,24 @@ check("only the data of the selected plots, not that of earlier calls", created 
 created, printed = captured(lambda: p.pm.GeneratePlots("data", "missing", "missing"))
 kept = keys(p.path("in_process", "Data.root"))
 check("missing data of every plot in mode data: the earlier Data.root stays, nothing said saved", created is False and bool(names) and kept == names and "Saved data" not in printed, f"{kept}, before {names} | {printed.strip()[-300:]}")
+# a canvas read back from Plots.root and drawn in the process that wrote it (as a notebook checking its output does): ROOT deletes the
+# manager's canvas of that name, which the manager does not delete again when it ends
+out = python(f"""
+import ROOT
+import SciRooPlot as S
+ROOT.gROOT.SetBatch(True)
+pm = S.PlotManager("")
+pm.AddBasePlot(S.PlotManager.MakeBasePlot("1d"))
+plot = S.Plot("drawn", "g", "1d")
+plot[1].AddData(S.Function("x"), S.kUserFunctions)
+pm.AddPlot(plot)
+pm.SetOutputDirectory({p.path("redrawn")!r})
+pm.GeneratePlots("file")
+f = ROOT.TFile.Open({p.path("redrawn", "Plots.root")!r})
+canvas = f.Get("g/" + next(k.GetName() for k in f.Get("g").GetListOfKeys()))
+canvas.Draw()
+pm.GeneratePlots("file")
+print("DONE")
+""")
+check("a canvas of Plots.root drawn in the process that wrote it: the process ends cleanly, Plots.root written again", out.rc == 0 and "DONE" in out.stdout and out.text.count("Saved 1 plot") == 2, f"exit status {out.rc}: {out.text[-400:]}")
 finish()

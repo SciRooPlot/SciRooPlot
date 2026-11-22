@@ -6,7 +6,7 @@ leaves the data source as it was, and the caller's lists and files are left unch
 A second AddDataSource with the same name adds to the data source (an object of a name already there replaces it with a warning), with
 replace only the new inputs are left; objects and files can be mixed in one data source. A nameless object is skipped with a warning.
 Trees in lists, from memory or read from a file, are copied with all their entries. Two PlotManagers of one project keep the objects of
-both. The objects reach the plot program through the project (UserData.root); GeneratePlots in the defining process draws the same
+both (in UserData.root of the project once one of them saves it). The objects reach the plot program through the project (UserData.root); GeneratePlots in the defining process draws the same
 (without an output directory, or with its parent missing, one error for every mode that writes files, before painting; print, which
 writes none, shows the definitions; list, a mode of the plot command, is refused naming ListPlots).
 Covers: lists, directories and files handed over; trees in lists copied; same-name folders merged; the replace warning also across
@@ -270,6 +270,7 @@ for name in ("a", "b"):
     pad = key.ReadObj().GetPrimitive("Pad_1") if key else None
     data = [o for o in pad.GetListOfPrimitives() if o.GetName().startswith("1:")] if pad else []
     print("DRAWN", name, data[0].GetBinContent(1) if data else None)
+second.SaveProject()
 """)
 drawnHere = dict(re.findall(r"^DRAWN (\w) (\S+)$", out.stdout, re.M))
 check("a nameless object is skipped with a warning", "Cannot add nameless object of type TH1D to data source nameless" in out.text, out.tail())

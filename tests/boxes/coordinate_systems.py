@@ -9,7 +9,7 @@ panel of a layout, whose pads differ in size; a region in frame or user coordina
 A text of one line is aligned at its position by SetTextAlign (left, centre, right; bottom, middle, top), one of several lines has its
 upper left corner there.
 Cases: a single panel, a grid of touching panels (pads with and without margins), the main and ratio pad of 1d_ratio, log axes, a 3d
-view (boxes only), an empty layout cell (boxes only); each coordinate system, the built-in defaults and the defaults of the pads; every
+view (boxes only; a box in user coordinates there is placed in frame coordinates, with a warning), an empty layout cell (boxes only); each coordinate system, the built-in defaults and the defaults of the pads; every
 text alignment in each coordinate system on log axes.
 Reference: the frame of each drawn pad (its axis range within the pad, the margins for a 3d view) and the coordinates of the drawn objects.
 Covers: boxes in a multi-panel layout moved against the frame from pad to pad.
@@ -186,7 +186,13 @@ for system, (x, y) in ALIGN_SYSTEMS.items():
     setter(plot[1].AddText(x, y, ["two", "lines"]).SetTextAlign(22), "text", system, 1)
     p.pm.AddPlot(plot)
 
-run = p.plot("coords|coords_empty|coords_align")
+# a box in user coordinates in a 3d view: placed in frame coordinates, with a warning
+plot = S.Plot("view_user", "coords_view", "2d")
+plot[1].AddData("h2", "src", "data").SetDrawOption(S.lego)
+plot[1].AddText(0.3, 0.6, "user").SetUserCoordinates()
+plot[1].AddText(0.3, 0.6, "frame").SetFrameCoordinates()
+p.pm.AddPlot(plot)
+run = p.plot("coords|coords_empty|coords_align|coords_view")
 check("the plots are drawn without errors", not run.errors(), " | ".join(run.errors()[:3]))
 
 
@@ -323,4 +329,11 @@ check("an empty cell: the boxes are drawn", len(texts) == len(EMPTY_TEXTS), f"{l
 for text, (x, y) in zip(texts, EMPTY_TEXTS):
     check(f"an empty cell: a text at frame ({x}, {y}) is at that fraction of the cell", abs(text.GetX1NDC() - x) < TOL and abs(text.GetY2NDC() - y) < TOL, f"{text.GetX1NDC()} {text.GetY2NDC()}")
 
+viewTexts = [o for o in run.pad("view_user", "coords_view").GetListOfPrimitives() if o.GetName().startswith("TextBox_")] if run.pad("view_user", "coords_view") else []
+viewSaid = [m for m in run.messages("view_user", "coords_view") if "is placed in frame coordinates" in m]
+check(
+    "a box in user coordinates in a 3d view is placed in frame coordinates, with a warning",
+    len(viewTexts) == 2 and abs(viewTexts[0].GetX1NDC() - viewTexts[1].GetX1NDC()) < TOL and abs(viewTexts[0].GetY2NDC() - viewTexts[1].GetY2NDC()) < TOL and len(viewSaid) == 1,
+    f"{[(t.GetX1NDC(), t.GetY2NDC()) for t in viewTexts]} {viewSaid}",
+)
 finish()

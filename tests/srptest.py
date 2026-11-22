@@ -2928,10 +2928,10 @@ SETTER_VALUES = {
     "divideBinWidth": FLAG,
     "drawOption": {"plain": "e1 x0", "text": "  hist e  "},
     "optionAlias": {"plain": Code("points_line")},
-    "startX": {"plain": 2.5, "precise": 1 / 3},
-    "endX": {"plain": 7.5, "precise": 22 / 3},
-    "startY": {"plain": 1.5},
-    "endY": {"plain": 8.5},
+    "startX": {"plain": 2.5, "precise": 1 / 3, "false": 2.0},  # axis values; bin numbers (isUserCoord false) are whole
+    "endX": {"plain": 7.5, "precise": 22 / 3, "false": 7.0},
+    "startY": {"plain": 1.5, "false": 1.0},
+    "endY": {"plain": 8.5, "false": 8.0},
     "entryMin": {"plain": 10},
     "entryMax": {"plain": 50, "extreme": 4294967295},
     "nEntries": {"plain": 1000, "extreme": 4294967295},
@@ -3126,6 +3126,9 @@ SETTER_INVALID = {
     "alias": ["1x"],
     "tree": [""],
     "JoinByIndex.tree": ["", ["t2", "s2"]],  # by an index column only from the same data source
+    "Join.tree": ["", ["t2", "s2:a|b"]],  # '|' separates the joins in a plots file
+    "SetRefFunc.refFunc": ["  "],  # "" means none
+    "SetDataSource.dataSource": [""],
     "indexColumn": ["a b"],
     "symbolElements": ["zq"],
     "tickOrientation": ["x"],

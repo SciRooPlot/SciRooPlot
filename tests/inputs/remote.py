@@ -4,7 +4,9 @@ file is left out), a directory (every ROOT file below it, alphabetically), an en
 name (also before a folder), a restricted data source, trees and RNTuples chained over remote files. A remote file that cannot be
 opened, a wildcard matching nothing and a remote table are reported and the other inputs are still read.
 Needs the xrootd server and ROOT's XRootD plugin (skipped without them); the server runs on a free local port, serving a temporary directory.
-Covers: a wildcard level whose match is a directory without the file, a query before a folder.
+With srp cache on a remote file is read from a local copy, copied again once it changed on the server; no cache folder is made while
+only local inputs are read.
+Covers: a wildcard level whose match is a directory without the file, a query before a folder, a cached remote file changed on the server.
 """
 
 import atexit
@@ -149,12 +151,25 @@ case("a remote file that cannot be opened: the other inputs are read", [("h", "m
 case("no remote file matching a wildcard: the other inputs are read", [("h", "no_match", 2)])
 case("a remote table: the other inputs are read", [("h", "table", 2)])
 
+# read with srp cache on (below)
+local = ROOT.TFile(p.path("local.root"), "RECREATE")
+localHist = ROOT.TH1D("h", "", 4, 0.0, 4.0)
+localHist.SetBinContent(1, 5)
+localHist.Write()
+local.Close()
+p.pm.AddDataSource("local", p.path("local.root"))
+p.pm.AddDataSource("cached", [URL + "/cached.root"])
+for name, source in (("l0", "local"), ("c0", "cached")):
+    plot = S.Plot(name, f"cache_{source}", "1d")
+    plot[1].AddData("h", source)
+    p.pm.AddPlot(plot)
+
 # ROOT opens a root:// file on this machine as a local file wherever it is not opened with READ (RDataFrame): a server elsewhere is never local
 home = p.path("home")
 os.makedirs(home)
 with open(os.path.join(home, ".rootrc"), "w") as f:
     f.write("TFile.ForceRemote: 1\n")
-run = p.plot("remote", env={"HOME": home})
+run = p.plot("^remote$", env={"HOME": home})
 reported = missing(run)
 for name, (what, items, value) in expected.items():
     drawn = run.objects(name, "remote")
@@ -175,4 +190,22 @@ for what, text in (
     check(f"{what}, once", len(lines) == 1, f"{len(lines)} lines: {lines[:2]}")
 errors = [line for line in run.errors() if "nothing.root" not in line]  # ROOT reports the file it cannot open too
 check("no other errors", not errors, " | ".join(errors[:5]))
+
+# srp cache on: no cache folder made while only local inputs are read; a remote file read from its local copy, copied again once it
+# changed on the server
+cache = os.path.join(p.path("cache"), "SciRooPlot")  # the folder of the copies in the folder given
+p.srp("cache", "on", p.path("cache"))
+localRun = p.plot("cache_local", env={"HOME": home})
+check("srp cache on: no cache folder made, nothing said, while only local inputs are read", not os.path.exists(cache) and not localRun.warnings() and not localRun.errors(), " | ".join(localRun.warnings() + localRun.errors()))
+values = []
+for content in (1, 2):
+    write("cached.root", {"h": content})
+    os.chmod(os.path.join(served, "cached.root"), 0o755)
+    cachedRun = p.plot("cache_cached", env={"HOME": home})
+    drawn = cachedRun.objects("c0", "cache_cached")
+    values.append(drawn[0].GetBinContent(1) if drawn else None)
+    time.sleep(1.1)  # a new modification time for the file written next
+check("srp cache on: a remote file changed on the server is read again", values == [1, 2], f"values read {values}")
+check("srp cache on: the cache folder holds the copy", os.path.isdir(cache) and any(files for _, _, files in os.walk(cache)), str(list(os.walk(cache))[:2]))
+p.srp("cache", "off")
 finish()

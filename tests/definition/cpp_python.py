@@ -7,7 +7,8 @@ type each call returns): a C++ program saves them as Python does. Reference: the
 - every plot is the same as Python's, value by value, and each call gives the same messages (a thrown exception the same text).
 Cases written only in Python (a list for a Data) are left out. The invalid values of definition/setter_checks.py are reported alike in
 both languages (but values Python's conversion of the argument refuses, which C++ converts itself).
-Covers: braced lists of projections, invalid values reported alike in both languages.
+Covers: braced lists of projections, of contour levels and of hex colours, a ratio reached again after selecting a side, invalid values
+reported alike in both languages.
 """
 
 import os
@@ -35,6 +36,9 @@ BRACED = [
     ('Project(["x", "y"])', 'Project({"x", "y"})'),
     ('Project([("x", 50), ("y", 20)], "w")', 'Project({{"x", 50}, {"y", 20}}, "w")'),
     ('Profile(["x"], "y")', 'Profile({"x"}, "y")'),
+    ("SetContours([0.5, 2.0])", "SetContours({0.5, 2.})"),
+    ("SetContours([0.5])", "SetContours({0.5})"),
+    ("SetContours([5.0])", "SetContours({5})"),  # one level at 5, as the list in Python
 ]
 for i, (py, cpp) in enumerate(BRACED):
     for host, expr in (("data", 'p[1].AddData("h", "s")'), ("ratio", 'p[1].AddRatio("h", "s", "h2", "s2").Denom()')):
@@ -42,6 +46,49 @@ for i, (py, cpp) in enumerate(BRACED):
         cases.append(
             {"cls": "C++", "method": cpp, "params": (), "host": host, "variant": "braced", "why": "braced lists of projections", "py": f'p = Plot("{{name}}", "g", "1d")\n{expr}.{py}{tail}\npm.AddPlot(p)', "cpp": f'{{\n  Plot p("{{name}}", "g", "1d");\n  {expr}.{cpp}{tail};\n  pm.AddPlot(p);\n}}'}
         )
+
+# braced lists of colours given as hex strings of the same length (no pair of pointers taken as the range of a list); of pad defaults and
+# of the colour overview
+for setter in ("SetDefaultColors", "SetDefaultMarkerColors", "SetDefaultLineColors", "SetDefaultFillColors"):
+    cases.append(
+        {
+            "cls": "C++",
+            "method": f'{setter}({{"#ff0000", "#00ff00"}})',
+            "params": (),
+            "host": "pad",
+            "variant": "braced",
+            "why": "braced lists of hex colours",
+            "py": f'p = Plot("{{name}}", "g", "1d")\np[1].{setter}(["#ff0000", "#00ff00"])\np[1].AddData("h", "s")\npm.AddPlot(p)',
+            "cpp": f'{{\n  Plot p("{{name}}", "g", "1d");\n  p[1].{setter}({{"#ff0000", "#00ff00"}});\n  p[1].AddData("h", "s");\n  pm.AddPlot(p);\n}}',
+        }
+    )
+cases.append(
+    {
+        "cls": "C++",
+        "method": 'AddColorOverview(name, group, {"#ff0000", "#00ff00"})',
+        "params": (),
+        "host": "statement",
+        "variant": "braced",
+        "why": "braced lists of hex colours",
+        "py": 'pm.AddColorOverview("{name}", "g", ["#ff0000", "#00ff00"])',
+        "cpp": '{\n  pm.AddColorOverview("{name}", "g", {"#ff0000", "#00ff00"});\n}',
+    }
+)
+
+# a ratio reached again as plot[n](i) after a selection of a side: its modifiers act on the ratio itself in both languages
+for side in ("Numer()", "Denom()", "Both()"):
+    cases.append(
+        {
+            "cls": "C++",
+            "method": f"AddRatio(...).{side}.Normalize(); p[1](1).Scale(2.)",
+            "params": (),
+            "host": "ratio",
+            "variant": "reached again",
+            "why": "modifiers of a ratio reached again",
+            "py": f'p = Plot("{{name}}", "g", "1d")\np[1].AddRatio("h", "s", "h2", "s2").{side}.Normalize()\np[1](1).Scale(2.0)\npm.AddPlot(p)',
+            "cpp": f'{{\n  Plot p("{{name}}", "g", "1d");\n  p[1].AddRatio("h", "s", "h2", "s2").{side}.Normalize();\n  p[1](1).Scale(2.);\n  pm.AddPlot(p);\n}}',
+        }
+    )
 
 
 # invalid values (those of definition/setter_checks.py) on every setter where they are meant: each is reported alike in both languages;

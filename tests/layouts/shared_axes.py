@@ -3,7 +3,8 @@ declared with Plot::ShareAxis) show it with one scale: without a range set, the 
 room), for every pair of data kinds and data variants, on linear and log scales; the colour-scale cell of a z group shows that range, the
 panels show no scale of their own. The colour axis of a z group is z, for a 3d histogram its contents (C): it shares their range (a log
 scale of the group does not reach it, with a warning); a TF3 has no colour scale.
-A range, log scale or time format set in one pad of the group or in pad 0 holds for all of them (differing ranges: the first pad's,
+A range, log scale or time format set in one pad of the group or in pad 0 holds for all of them (a 3d histogram first in a group with
+a log map: the cell shows the log scale of the map, a warning names the 3d histogram) (differing ranges: the first pad's,
 with a warning). 3D views and polar drawings share no x and y axes: they and the flat pads beside them keep their own ranges (an explicit
 group warns that it leaves them out; a flat panel right of one warns that its hidden y axis is not shared). ShareAxis regroups: an empty list undoes the groups of the axis (the layout's too, with a warning
 that the layout shows the axis once), a single pad leaves its group (no warning for a group of ShareAxis), a pad listed twice or a pad the plot does not have is warned about,
@@ -167,8 +168,35 @@ refused = python("import SciRooPlot as S\nplot = S.Plot('a', 'b', '1d_2x1')\nplo
 check("ShareAxis with an unknown axis warns when defined", any("ShareAxis needs the axis 'X', 'Y' or 'Z' (got 'W')" in line for line in refused.lines()), refused.tail())
 check("ShareAxis with pad 0 warns when defined", any("pad 0" in line for line in refused.warnings()), refused.tail())
 
+# a log z axis in a z group of a 3d histogram (first) and a map: the cell shows the map's log scale, the warning names the 3d histogram,
+# also with the log scale set in pad 0
+for name, setLog in (("th3_first_log", lambda pl: pl[2]["Z"].SetLog()), ("th3_first_log0", lambda pl: pl[0]["Z"].SetLog())):
+    plot = S.Plot(name, chunks.add(name), "2d_2x1")
+    add_data(plot[1], "hist3d")
+    add_data(plot[2], "hist2d")
+    setLog(plot)
+    p.pm.AddPlot(plot)
+# the colour scale of 3d histograms in a cell with fonts in pixels: labels and title in the sizes of the panels, as that of a map
+for kind in ("hist3d", "hist2d"):
+    plot = S.Plot(f"pixels_{kind}", chunks.add(f"pixels_{kind}"), "2d_2x1")
+    plot[0].SetDefaultTextFont(43).SetDefaultTextSize(24)
+    add_data(plot[1], kind)
+    add_data(plot[2], kind)
+    p.pm.AddPlot(plot)
+
 run = chunks.plot(p)
 check("the plot runs wrote their files", not run.unwritten(), " | ".join(run.unwritten()))
+with run.held(colours=False):
+    for name in ("th3_first_log", "th3_first_log0"):
+        cell = run.pad(name, 3)
+        said = [line for line in run.warnings("whose boxes ROOT colours linearly") if f"Plot {name} from group " in line]
+        check(f"a 3d histogram first in a z group with a log map: the cell shows the log scale, one warning naming the 3d histogram ({name})", cell and cell.GetLogz() and len(said) == 1 and "pad 1" in said[0], f"cell log {cell.GetLogz() if cell else None}, {said}")
+    pixelSizes = {}
+    for kind in ("hist3d", "hist2d"):
+        cell = run.pad(f"pixels_{kind}", 3)
+        scale = cell.GetPrimitive("color_scale_pad_3") if cell else None
+        pixelSizes[kind] = (scale.GetZaxis().GetLabelSize(), scale.GetZaxis().GetTitleFont() % 10) if scale else None
+check("the colour scale of 3d histograms in a cell with fonts in pixels: labels as large as for maps", pixelSizes["hist3d"] is not None and pixelSizes["hist3d"] == pixelSizes["hist2d"], str(pixelSizes))
 errors = run.errors()
 check("no errors", not errors, " | ".join(errors[:5]))
 
@@ -311,7 +339,17 @@ grid = {a: [axis_range(names["ratios of a grid"], pad, a) for pad in (1, 2, 3, 4
 check("a grid with ratios: y per row, x per column", same(grid["Y"][0], grid["Y"][1]) and same(grid["Y"][2], grid["Y"][3]) and same(grid["X"][0], grid["X"][2]) and same(grid["X"][1], grid["X"][3]), str(grid))
 grid = {a: [axis_range(names["grid"], pad, a) for pad in (1, 2, 3, 4)] for a in "XY"}
 check("a 2x2 grid: y per row, x per column", same(grid["Y"][0], grid["Y"][1]) and same(grid["Y"][2], grid["Y"][3]) and same(grid["X"][0], grid["X"][2]) and same(grid["X"][1], grid["X"][3]), str(grid))
-known = ("set different maxima", "the layout shows", "listed in two groups", "no pad 7", "is left out of the pads sharing", "whose boxes ROOT colours linearly", "are hidden beside pad")
+known = (
+    "set different maxima",
+    "the layout shows",
+    "listed in two groups",
+    "no pad 7",
+    "is left out of the pads sharing",
+    "whose boxes ROOT colours linearly",
+    "are hidden beside pad",
+    "with a log z axis: ROOT then paints its colour scale without colours",
+    "implies a text size in pixel",
+)  # ROOT on the pixel-font plots
 extra = [line for line in run.lines("WARN") if not any(k in line for k in known)]
 check("no other warnings", not extra, " | ".join(extra[:5]))
 

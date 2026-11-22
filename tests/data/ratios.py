@@ -110,6 +110,13 @@ plot = S.Plot("formulas_pad_range", "ratios", "1d")
 plot[1]["X"].SetRange(1.0, 3.0)
 plot[1].AddRatio(S.Data("x*x", S.kUserFunctions), S.Data("x", S.kUserFunctions))
 p.pm.AddPlot(plot)
+# input functions divided where the denominator's range ends below the numerator's: sampled up to its end exactly
+funcRanges = [(0.1 * i, 1.0 + 0.37 * i, 0.9 + 0.29 * i) for i in range(24)]  # (low, end of the numerator, end of the denominator)
+for i, (lo, hiNum, hiDen) in enumerate(funcRanges):
+    p.source(f"funcs{i}", {"num": ROOT.TF1(f"num{i}", "x + 1", lo, hiNum), "den": ROOT.TF1(f"den{i}", "x + 2", lo, hiDen)})
+    plot = S.Plot(f"func_ends{i}", "ratios", "1d")
+    plot[1].AddRatio(S.Data("num", f"funcs{i}"), S.Data("den", f"funcs{i}"))
+    p.pm.AddPlot(plot)
 # graphs at the same x values divide point by point whatever their kinds of errors, also with a repeated x (no interpolation needed)
 repeatedX = (1.0, 2.0, 2.0)
 asymm, symm = ROOT.TGraphAsymmErrors(3), ROOT.TGraphErrors(3)
@@ -208,6 +215,13 @@ check(
     ratioPoints and math.isclose(ratioPoints[0], 1.0) and math.isclose(ratioPoints[-1], 3.0) and all(math.isclose(padRange[0][0].GetPointY(i), x) for i, x in enumerate(ratioPoints)),
     str(ratioPoints[:3]) + " | " + " | ".join(run.errors("formulas_pad_range")),
 )
+cutShort = []
+for i, (lo, hiNum, hiDen) in enumerate(funcRanges):
+    drawn = run.drawn(f"func_ends{i}", "ratios")
+    graph = drawn[0][0] if drawn and drawn[0][0].InheritsFrom("TGraph") else None
+    if not graph or graph.GetPointX(graph.GetN() - 1) != hiDen or run.warnings(f"func_ends{i}"):
+        cutShort.append(f"{lo:g}..{hiNum:g}/{hiDen:g}")
+check("functions divided where the denominator ends first: up to its end, without a point lost", not cutShort, str(cutShort[:4]) + " " + " | ".join(run.warnings()[:1]))
 for name, (num, den) in {"same_x_asymm": (asymm, symm), "same_x_symm": (symm, asymm)}.items():
     drawn = run.drawn(name, "ratios")
     got = [drawn[0][0].GetPointY(i) for i in range(drawn[0][0].GetN())] if drawn else []

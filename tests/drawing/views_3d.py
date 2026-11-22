@@ -5,7 +5,7 @@ before it with the background (ROOT paints the frame fill colour behind the box 
 histograms). The edges ROOT draws around every box, bar, cell and triangle of a 3d view have width 1 unless the data sets one (or keeps
 the width of its input); the faces of a 3d function are white unless it has a fill colour of its own. The points and lines of a 2d graph
 in 3d paint only themselves, also when its z range goes below zero. Likewise a polar graph is drawn only on the polar grid of a first polar
-graph, and 1d data of other kinds only in a cartesian frame.
+graph, and 1d data of other kinds only in a cartesian frame (not in a 3d frame).
 Covers: 3d views over a flat map and flat maps in a 3d view drawn silently, polar graphs and cartesian data in one pad drawn silently, a 2d graph drawn as points or lines covering the data before
 it, the colour boxes of a 3d histogram on walls in the palette maximum, wide black edges hiding the colours of small 3d boxes, black faces
 of 3d functions, a plane of colour behind the coloured points and a mesh under the lines of a 2d graph reaching below zero.
@@ -73,6 +73,15 @@ for i, case in enumerate(frames):
     plot = S.Plot(f"f{i}", "frames", "2d")
     add(plot[1], first, firstAlias)
     add(plot[1], case["kind"], case["alias"] or None)
+    add(plot[1], *after)
+    p.pm.AddPlot(plot)
+# 1d data after a first data drawn in 3d
+flat1d = [{"frame": frame, "kind": kind} for frame in ("view2d", "view3d") for kind in ("hist", "graph", "function")]
+for i, case in enumerate(flat1d):
+    first, firstAlias, after = FRAMES[case["frame"]]
+    plot = S.Plot(f"o{i}", "frames", "2d")
+    add(plot[1], first, firstAlias)
+    add(plot[1], case["kind"], None)
     add(plot[1], *after)
     p.pm.AddPlot(plot)
 
@@ -164,6 +173,12 @@ for i, case in enumerate(frames):
     messages = [line for line in run.messages(f"f{i}", "frames") if "[ WARN" in line or "[WARN" in line]
     refused = [line for line in messages if line.rstrip(".").endswith("It is not drawn")]
     check(f"{0 if drawn else 1} warning that it is not drawn: {what}", len(refused) == (0 if drawn else 1) and all(f" {message_name(case['kind'])} " in line for line in refused), " | ".join(messages))
+
+for i, case in enumerate(flat1d):
+    first, firstAlias, after = FRAMES[case["frame"]]
+    names = [obj.GetName().split(":", 2)[:2] for obj, _ in run.drawn(f"o{i}", "frames")]
+    refused = [line for line in run.messages(f"o{i}", "frames") if line.rstrip(".").endswith("It is not drawn")]
+    check(f"1d data in a 3d frame not drawn with one warning, the next data keeping its number: {case['kind']} after {first} ({case['frame']})", names == [["1", first], ["3", after[0]]] and len(refused) == 1, f"drawn {names}, {refused}")
 
 for i, case in enumerate(polars):
     what = describe(case)
