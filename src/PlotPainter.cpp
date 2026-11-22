@@ -1442,7 +1442,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
         previousWidth = width;
       }
       if (overlap) {
-        if (mReportedIgnored.insert("overlapping x labels").second) {
+        if (mReportedIgnored.insert("overlapping x labels " + std::to_string(padID)).second) {
           logger::warning("The labels of the X axis in pad {} run into each other: fewer divisions (SetNumDivisions), or SetNoExponent(false) for ROOT's power of ten (with room for it at the end of the axis, e.g. a right margin).", padID);
         }
       }
