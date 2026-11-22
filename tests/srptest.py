@@ -2959,7 +2959,6 @@ SETTER_VALUES = {
     "Plot.SetDimensions.height": {"plain": 600},
     "Plot.SetHeight.height": {"plain": 600},
     "BasePlotShape.SetRatioHeight.height": {"plain": 0.5, "precise": 1 / 3},
-    "BasePlotShape.SetPullHeight.height": {"plain": 0.5, "precise": 1 / 3},
     "width": {"plain": 3.0},
     "Plot.SetDimensions.width": {"plain": 800},
     "Plot.SetWidth.width": {"plain": 800},
@@ -3253,8 +3252,8 @@ SETTER_HOSTS = {
     },
     "BasePlotShape": {
         "shape": (
-            'p = PlotManager.MakeBasePlot("1d_wide_ratio_pull", PanelLayout(), BasePlotShape(){call})\np.SetName("{name}")\npm.AddBasePlot(p)',
-            '{\n  Plot p = PlotManager::MakeBasePlot("1d_wide_ratio_pull", PanelLayout(), BasePlotShape(){call});\n  p.SetName("{name}");\n  pm.AddBasePlot(p);\n}',
+            'p = PlotManager.MakeBasePlot("1d_wide_ratio", PanelLayout(), BasePlotShape(){call})\np.SetName("{name}")\npm.AddBasePlot(p)',
+            '{\n  Plot p = PlotManager::MakeBasePlot("1d_wide_ratio", PanelLayout(), BasePlotShape(){call});\n  p.SetName("{name}");\n  pm.AddBasePlot(p);\n}',
         )
     },
 }
@@ -3380,7 +3379,7 @@ def setter_cases():
 # ---------------------------------------------------------------------------------------------
 # random plot definitions: the interface combined at random, written in Python and in C++ alike
 # ---------------------------------------------------------------------------------------------
-RANDOM_BASES = ("1d", "1d_ratio", "1d_ratio_pull", "1d_wide", "1d_tall", "1d_2x1", "1d_3x1", "1d_2x2", "1d_2x1_ratio", "1d_2x1_gap", "1d_1x2_ratio_gap", "2d", "2d_wide", "2d_2x1", "2d_2x2", "2d_2x1_gap")
+RANDOM_BASES = ("1d", "1d_ratio", "1d_wide", "1d_tall", "1d_2x1", "1d_3x1", "1d_2x2", "1d_2x1_ratio", "1d_2x1_gap", "1d_1x2_ratio_gap", "2d", "2d_wide", "2d_2x1", "2d_2x2", "2d_2x1_gap")
 RANDOM_HOSTS = {
     "plot": "Plot",
     "pad": "Pad",
@@ -3405,23 +3404,20 @@ RANDOM_FIXED = {("Plot", "SetName"), ("Plot", "SetGroup"), ("Plot", "AppendGroup
 
 
 def base_pads(base):
-    """the pads of a shipped base plot: (dimension, panel pads, ratio pads, pull pads), numbered as documented: row by row, the ratio and
-    pull pads after the panels of their row, the colour-scale cell of a 2d grid after the panels of the first row"""
-    m = re.match(r"^(1d|2d)(?:_(?:wide|tall))?(?:_(\d+)x(\d+))?(_ratio)?(_pull)?(_gap)?$", base)
+    """the pads of a shipped base plot: (dimension, panel pads, ratio pads), numbered as documented: row by row, the ratio pads
+    after the panels of their row, the colour-scale cell of a 2d grid after the panels of the first row"""
+    m = re.match(r"^(1d|2d)(?:_(?:wide|tall))?(?:_(\d+)x(\d+))?(_ratio)?(_gap)?$", base)
     dim, cols, rows = int(m.group(1)[0]), int(m.group(2) or 1), int(m.group(3) or 1)
-    panels, ratios, pulls, pad = [], [], [], 1
+    panels, ratios, pad = [], [], 1
     for row in range(rows):
         panels += range(pad, pad + cols)
         pad += cols
-        if dim == 2 and cols * rows > 1 and not m.group(6) and row == 0:
+        if dim == 2 and cols * rows > 1 and not m.group(5) and row == 0:
             pad += 1
         if m.group(4):
             ratios += range(pad, pad + cols)
             pad += cols
-        if m.group(5):
-            pulls += range(pad, pad + cols)
-            pad += cols
-    return dim, panels, ratios, pulls
+    return dim, panels, ratios
 
 
 def _returns_self(cls, method, params):
@@ -3469,7 +3465,7 @@ def random_inputs(folder):
 
 def random_definition(seed, nPlots, sources, project):
     """A plot definition made at random, as Python and as C++ program (the same calls): nPlots plots of the base plots RANDOM_BASES, each
-    pad with data of every kind and variant of its dimension (data_objects; ratios of 1d data in ratio and pull pads, tree requests), boxes
+    pad with data of every kind and variant of its dimension (data_objects; ratios of 1d data in ratio pads, tree requests), boxes
     and shapes, and random setters of every host with their test values (random_calls). sources: {data source: file} (random_inputs)."""
     rng = random.Random(seed)
     pool = random_calls()
@@ -3504,10 +3500,10 @@ def random_definition(seed, nPlots, sources, project):
     plots = []
     for i in range(nPlots):
         base = rng.choice(RANDOM_BASES)
-        dim, panels, ratios, pulls = base_pads(base)
+        dim, panels, ratios = base_pads(base)
         statements = []  # {lang: statement on the plot p}
-        for pad in panels + ratios + pulls:
-            if pad in ratios + pulls:
+        for pad in panels + ratios:
+            if pad in ratios:
                 for _ in range(rng.randint(0, 2)):
                     num, den = (data(k, variant(k, True)) for k in (rng.choice(DATA_1D), rng.choice(DATA_1D)))
                     side = rng.choice(["ratio", "numer", "denom", "both", "result"])

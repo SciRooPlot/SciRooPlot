@@ -5,14 +5,13 @@ or per boundary), a gap leaves the margins of both sides, the outer frames are t
 own colour scale has the colour-scale margin on its right and a ColorScale() cell is that wide, all edges are whole pixels. The pads of
 a plot cover no frame of another one, each panel's pad holds its frame, and the pads are numbered in reading order without gaps and holes.
 The model of these rules (below) is computed from the documented lengths; it is checked against every name of the base-plot grammar
-<type>[_wide|_tall][_<columns>x<rows>][_ratio][_pull][_gap] (with BasePlotShape and the lengths of a PanelLayout), against generated
+<type>[_wide|_tall][_<columns>x<rows>][_ratio][_gap] (with BasePlotShape and the lengths of a PanelLayout), against generated
 layouts (grids with touching panels, gaps or spaces, wide and tall panels, ratio rows, own colour scales, colour-scale cells, spanning
 cells, strips and holes) and against the layouts of past bugs. Invalid arrangements throw naming the problem; an invalid value of a
 setter of a cell (Span, SpacingAbove, SpacingLeft) or of the whole layout is warned about and ignored (SetMargins with one invalid margin
 sets none); unknown base-plot names and 2d
-base plots with ratio or pull panels are refused with an error.
-Covers: spanning cells, BasePlotShape, colour scales in pixels, pull panels, holes, spacing per
-boundary.
+base plots with ratio panels are refused with an error.
+Covers: spanning cells, BasePlotShape, colour scales in pixels, holes, spacing per boundary.
 """
 
 import math
@@ -22,7 +21,7 @@ from srptest import Chunks, Project, S, cases, check, describe, finish, python
 
 # the lengths of the layout (PanelLayout.h), in pixels
 DEFAULT = {"panel": 638.0, "top": 32.0, "bottom": 118.0, "left": 118.0, "right": 32.0, "scale": 268.0, "spacing": 0.0}
-SHAPE = {"aspect": 1.618, "ratio": 0.37, "pull": 0.37}
+SHAPE = {"aspect": 1.618, "ratio": 0.37}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -177,17 +176,17 @@ def model(rows, lengths):
 # ---------------------------------------------------------------------------------------------
 # the shipped base plots, as the grammar describes them (PlotManager::MakeBasePlot)
 # ---------------------------------------------------------------------------------------------
-GRAMMAR = re.compile(r"^(1d|2d)(?:_(wide|tall))?(?:_(\d+)x(\d+))?(_ratio)?(_pull)?(_gap)?$")
+GRAMMAR = re.compile(r"^(1d|2d)(?:_(wide|tall))?(?:_(\d+)x(\d+))?(_ratio)?(_gap)?$")
 
 
 def base_rows(name, shape):
     """the cells of a base plot: a grid of main panels (2d: with colour scale, a grid without gaps one shared scale in a cell after the
-    first row spanning all rows), below each a ratio and/or pull panel, gaps between the panels"""
-    typ, form, cols, nrows, ratio, pull, gaps = GRAMMAR.match(name).groups()
+    first row spanning all rows), below each a ratio panel, gaps between the panels"""
+    typ, form, cols, nrows, ratio, gaps = GRAMMAR.match(name).groups()
     cols, nrows = int(cols or 1), int(nrows or 1)
     w = shape["aspect"] if form == "wide" else 1.0
     h = shape["aspect"] if form == "tall" else 1.0
-    below = ([shape["ratio"]] if ratio else []) + ([shape["pull"]] if pull else [])
+    below = [shape["ratio"]] if ratio else []
     shared = typ == "2d" and cols * nrows > 1 and not gaps
     rows = []
     for r in range(nrows):
@@ -214,15 +213,15 @@ def base_rows(name, shape):
 # ---------------------------------------------------------------------------------------------
 # the cases
 # ---------------------------------------------------------------------------------------------
-NAMES = [typ + form + grid + below + gaps for typ in ("1d", "2d") for form in ("", "_wide", "_tall") for grid in ("", "_2x1", "_1x2", "_2x2", "_3x1", "_1x3") for below in ("", "_ratio", "_pull", "_ratio_pull") for gaps in ("", "_gap") if not (typ == "2d" and below)]
+NAMES = [typ + form + grid + below + gaps for typ in ("1d", "2d") for form in ("", "_wide", "_tall") for grid in ("", "_2x1", "_1x2", "_2x2", "_3x1", "_1x3") for below in ("", "_ratio") for gaps in ("", "_gap") if not (typ == "2d" and below)]
 SHAPED = {  # base plots with other proportions or lengths
-    "1d_wide_ratio": ({"aspect": 1.25, "ratio": 0.25, "pull": 0.37}, {}),
-    "1d_tall_ratio_pull": ({"aspect": 1.4, "ratio": 0.3, "pull": 0.2}, {}),
+    "1d_wide_ratio": ({"aspect": 1.25, "ratio": 0.25}, {}),
+    "1d_tall_ratio": ({"aspect": 1.4, "ratio": 0.3}, {}),
     "1d_2x2_ratio_gap": (SHAPE, {"panel": 400.0, "top": 20.0, "bottom": 90.0, "left": 100.0, "right": 15.0}),
     "2d_2x1": (SHAPE, {"panel": 500.0, "scale": 200.0}),
     "2d_1x2_gap": (SHAPE, {"scale": 180.0, "left": 90.0}),
 }
-REFUSED = ["3d", "1d_0x1", "1d_x2", "2d_2x", "1d_ratio_wide", "1d_pull_ratio", "1d_gap_ratio", "1d_1000x1", "2d_ratio", "2d_pull", "2d_2x1_ratio_pull", "1D"]
+REFUSED = ["3d", "1d_0x1", "1d_x2", "2d_2x", "1d_ratio_wide", "1d_pull", "1d_ratio_pull", "1d_gap_ratio", "1d_1000x1", "2d_ratio", "2d_pull", "2d_2x1_ratio_pull", "1D"]
 
 # generated layouts: a grid of panels with the separation of its columns and rows, the shape of its panels and an extra
 generated = cases(
@@ -387,7 +386,7 @@ for name, (shape, given) in SHAPED.items():
         sizes.SetMargins(lengths["top"], lengths["bottom"], lengths["left"], lengths["right"])
     if "scale" in given:
         sizes.SetColorScaleMargin(given["scale"])
-    base = S.PlotManager.MakeBasePlot(name, sizes, S.BasePlotShape().SetAspectRatio(shape["aspect"]).SetRatioHeight(shape["ratio"]).SetPullHeight(shape["pull"]))
+    base = S.PlotManager.MakeBasePlot(name, sizes, S.BasePlotShape().SetAspectRatio(shape["aspect"]).SetRatioHeight(shape["ratio"]))
     base.SetName(f"shaped_{name}")
     p.pm.AddBasePlot(base)
     plot = S.Plot(f"shaped_{name}", chunks.add(f"shaped_{name}"), f"shaped_{name}")
@@ -397,14 +396,14 @@ for name, (shape, given) in SHAPED.items():
     plots[f"shaped_{name}"] = (f"base plot {name} with {shape} {given}", rows, lengths)
 ignored = S.BasePlotShape()  # values that are not positive and finite are ignored (warned when set, see below)
 for bad in (0.0, -1.0, float("nan"), float("inf")):
-    ignored.SetAspectRatio(bad).SetRatioHeight(bad).SetPullHeight(bad)
-base = S.PlotManager.MakeBasePlot("1d_wide_ratio_pull", S.PanelLayout(), ignored)
+    ignored.SetAspectRatio(bad).SetRatioHeight(bad)
+base = S.PlotManager.MakeBasePlot("1d_wide_ratio", S.PanelLayout(), ignored)
 base.SetName("shaped_ignored")
 p.pm.AddBasePlot(base)
 plot = S.Plot("shaped_ignored", chunks.add("shaped_ignored"), "shaped_ignored")
-fill(plot, base_rows("1d_wide_ratio_pull", SHAPE), DEFAULT)
+fill(plot, base_rows("1d_wide_ratio", SHAPE), DEFAULT)
 p.pm.AddPlot(plot)
-plots["shaped_ignored"] = ("base plot 1d_wide_ratio_pull with shapes that are not positive and finite", base_rows("1d_wide_ratio_pull", SHAPE), DEFAULT)
+plots["shaped_ignored"] = ("base plot 1d_wide_ratio with shapes that are not positive and finite", base_rows("1d_wide_ratio", SHAPE), DEFAULT)
 sizes = S.PanelLayout()
 for setter, calls in INVALID_LENGTHS.items():
     for args in calls:
@@ -450,8 +449,8 @@ for what, (call, message) in INVALID_SETTERS.items():
         check(f"invalid value throws: {what}", False, "no exception")
     except Exception as e:  # noqa: BLE001
         check(f"invalid value throws: {what}", message in str(e), str(e))
-shapes = python("import SciRooPlot as S\nshape = S.BasePlotShape()\nfor value in (0.0, -1.0, float('nan'), float('inf')):\n    shape.SetAspectRatio(value).SetRatioHeight(value).SetPullHeight(value)\nS.PlotManager.MakeBasePlot('1d_wide_ratio_pull', S.PanelLayout(), shape)\n")
-for setter in ("SetAspectRatio", "SetRatioHeight", "SetPullHeight"):
+shapes = python("import SciRooPlot as S\nshape = S.BasePlotShape()\nfor value in (0.0, -1.0, float('nan'), float('inf')):\n    shape.SetAspectRatio(value).SetRatioHeight(value)\nS.PlotManager.MakeBasePlot('1d_wide_ratio', S.PanelLayout(), shape)\n")
+for setter in ("SetAspectRatio", "SetRatioHeight"):
     warned = [line for line in shapes.warnings() if f"BasePlotShape::{setter}(" in line and "is ignored" in line]
     check(f"BasePlotShape::{setter} with 0, a negative, NaN or infinite value warns and keeps its value", len(warned) == 4 and shapes.rc == 0, shapes.tail())
 code = "".join(f"sizes.{setter}({', '.join(f'float({str(a)!r})' for a in args)})\n" for setter, calls in INVALID_LENGTHS.items() for args in calls)

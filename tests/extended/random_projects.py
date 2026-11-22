@@ -1,5 +1,5 @@
 """Any combination of the interface makes its plots, written in C++ as in Python: random plot definitions (every shipped base plot, data of
-every kind and variant in its panels, ratios in ratio and pull panels, tree requests, legends, texts and shapes, and the setters of every
+every kind and variant in its panels, ratios in ratio panels, tree requests, legends, texts and shapes, and the setters of every
 object with their test values, chained at random: srptest.random_definition).
 - the C++ program compiles and saves the same definitions as the Python program;
 - in every output mode (file, data, pdf, png, svg; macro with a display) every plot is made, the plot program ends normally and reports

@@ -2,14 +2,14 @@
 titles have the pixel sizes of the layout (31.52 and 39.4 by default, or those given to MakeBasePlot or the PanelLayout), as ROOT reads
 them (fractions of the smaller pad side, pixel fonts in pixels), in font 42; drawn 1d data has the line width and marker size of the layout;
 a colour scale is the colour-scale offset away from its frame and the colour-scale width wide (in its panel and in a ColorScale() cell);
-ratio and pull panels of base plots draw their reference line (at 1 and 0) with few divisions and a centred title.
+ratio panels of base plots draw their reference line at 1 with few divisions and a centred title.
 The labels and title of an axis are hidden towards a touching panel (below for x, on the left for y) in flat frames; a 3D view or a polar
 drawing shares no x and y axes and keeps its own; a flat panel beside one keeps them hidden (no room for them) with a warning, once per axis.
-Every data kind is drawn in every panel of a base plot of its dimension (1d: a grid with ratio and pull panels, 2d: a grid with one
+Every data kind is drawn in every panel of a base plot of its dimension (1d: a grid with ratio panels, 2d: a grid with one
 colour scale and a gap grid with own scales, 3d: a touching grid), in the map-with-projections layout and in layouts with spanning panels.
 A ColorScale() cell draws nothing but the scale: its own data, legends, texts, images and shapes, and boxes naming data of other pads,
 are left out with one warning naming them.
-Covers: sizes given to MakeBasePlot, colour scales in pixels, pull panels, labels hidden only where the axis is shared and flat panels beside 3d views keeping their labels hidden, boxes in a colour scale cell.
+Covers: sizes given to MakeBasePlot, colour scales in pixels, ratio panels between the rows of a grid, labels hidden only where the axis is shared and flat panels beside 3d views keeping their labels hidden, boxes in a colour scale cell.
 """
 
 from srptest import DATA_3D, DATA_KINDS, DATA_POLAR, ROOT, Project, S, add_data, cases, check, describe, finish
@@ -19,7 +19,7 @@ SIZES = {  # text, title, colour-scale offset and width, line width, marker size
     "given": (24.0, 30.0, 8.0, 30.0, 3, 2.0),
 }
 LAYOUTS = {  # by dimension of the data: layouts and the pads with data (a ColorScale() cell has none)
-    1: {"1d_2x1_ratio_pull": (1, 2, 3, 4, 5, 6), "tall_span": (1, 2, 3), "wide_span": (1, 2, 3)},
+    1: {"1d_2x2_ratio": (1, 2, 3, 4, 5, 6, 7, 8), "tall_span": (1, 2, 3), "wide_span": (1, 2, 3)},
     2: {"2d_2x2": (1, 2, 4, 5), "2d_2x1_gap": (1, 2), "projections": (2,)},
     3: {"2d_2x1": (1, 2), "projections": (2,)},
 }
@@ -27,7 +27,7 @@ OWN = {  # own layouts: a panel spanning two rows beside two after a gap, a pane
     "tall_span": [[S.Panel().Span(1, 2), S.Gap(), S.Panel(1, 0.62)], [S.Panel(1, 0.38)]],
     "wide_span": [[S.Panel(1, 0.75).Span(2)], [S.Gap()], [S.Panel(), S.Panel()]],
 }
-REFERENCE = {"1d_2x1_ratio_pull": {3: 1.0, 4: 1.0, 5: 0.0, 6: 0.0}}  # reference lines of the ratio and pull pads
+REFERENCE = {"1d_2x2_ratio": {3: 1.0, 4: 1.0, 7: 1.0, 8: 1.0}}  # reference lines of the ratio pads
 
 
 def layouts(kind):
@@ -49,7 +49,7 @@ def view(kind):
 
 p = Project("pad_look", bases=())
 p.inputs()
-for name in ("1d_2x1_ratio_pull", "2d_2x2", "2d_2x1_gap", "2d_2x1"):
+for name in ("1d_2x2_ratio", "2d_2x2", "2d_2x1_gap", "2d_2x1"):
     for sizes, (text, title, offset, width, line, marker) in SIZES.items():
         given = S.PanelLayout()
         if sizes != "default":
@@ -96,7 +96,7 @@ OWN_SIZES = {  # name: (what pad 1 draws, where the sizes are set, label size, t
     "beside a 3D view": ("lego", "pad", None, None, (0.0, False)),
 }
 for name, (kind, place, label, title, _) in OWN_SIZES.items():
-    plot = S.Plot(name.replace(" ", "_"), "look", "1d_2x1_ratio_pull_default" if kind == "hist" else "2d_2x1_default")
+    plot = S.Plot(name.replace(" ", "_"), "look", "1d_2x2_ratio_default" if kind == "hist" else "2d_2x1_default")
     add_data(plot[1], "hist" if kind == "hist" else "hist2d", "inputs").SetDrawOption(S.lego if kind == "lego" else S.points)
     add_data(plot[2], "hist" if kind == "hist" else "hist2d", "inputs")
     axis = plot[2 if place == "pad" else 0]["Y"]

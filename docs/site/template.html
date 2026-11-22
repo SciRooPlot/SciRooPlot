@@ -1044,7 +1044,7 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
       <tr><td><code>AddImage(x, y, "logo.png")</code> <code>.SetWidth(0.3)</code></td><td>image; in pdf from ROOT 6.42</td></tr>
       <tr><td><code>"&lt;mean[.2f]&gt;"</code> <code>"&lt;entries&gt;"</code> <code>"&lt;integral&gt;"</code> <code>"&lt;title&gt;"</code></td><td>numbers in labels</td></tr>
       <tr><td><code>#it{p}_{T}</code> <code>#sqrt{s}</code> <code>#pi^{0}</code></td><td>ROOT's TLatex</td></tr></table></section>
-    <section><h4>Base plots</h4><p><code>1d|2d [_wide|_tall] [_CxR] [_ratio] [_pull] [_gap]</code> (<code>_ratio</code>/<code>_pull</code> only with <code>1d</code>), e.g. <code>1d_ratio</code>, <code>2d_2x1</code>, <code>1d_3x2_gap</code></p>
+    <section><h4>Base plots</h4><p><code>1d|2d [_wide|_tall] [_CxR] [_ratio] [_gap]</code> (<code>_ratio</code> only with <code>1d</code>), e.g. <code>1d_ratio</code>, <code>2d_2x1</code>, <code>1d_3x2_gap</code></p>
       <p><code>MakeBasePlot("1d", PanelLayout().SetTextSize(26))</code>: your lengths, pixels</p></section>
   </div>
 </section>
@@ -1925,7 +1925,7 @@ srp set myProject syst off                # pm.Setting("syst", True, "draw syste
 <p>A time axis (<code>SetTimeFormat</code>) divides its range into a fixed number of seconds, so over many years its ticks do not fall on calendar years or decades (1969, 1979, …). For long ranges store decimal years and use a plain axis: its ticks land on 1960, 1970, ….</p>` },
   { id: "baseplots", g: "layout", t: "Base plots and own layouts", body: `<p>A base plot is the layout a plot is drawn on: canvas size, the arrangement of the pads, margins, fonts, text sizes and the colour sequence. You name it as the third argument of <code>Plot</code>; the plot itself then only holds data, titles and ranges. All shipped base plots share the same text sizes, tick lengths and line widths, so figures with different layouts look alike side by side in a paper or thesis.</p>
 <h3>Find or design a base plot</h3>
-<p>The name of a shipped one is built as <code>&lt;type&gt;[_wide|_tall][_&lt;columns&gt;x&lt;rows&gt;][_ratio][_pull][_gap]</code> (<code>_ratio</code> and <code>_pull</code> only for <code>1d</code>), e.g. <code>1d_2x1_ratio</code>. The <a href="#layouts">layout designer</a> lets you pick the parts or design your own grid, text sizes and margins, drawn to scale with the pad numbers and the code.</p>
+<p>The name of a shipped one is built as <code>&lt;type&gt;[_wide|_tall][_&lt;columns&gt;x&lt;rows&gt;][_ratio][_gap]</code> (<code>_ratio</code> only for <code>1d</code>), e.g. <code>1d_2x1_ratio</code>. The <a href="#layouts">layout designer</a> lets you pick the parts or design your own grid, text sizes and margins, drawn to scale with the pad numbers and the code.</p>
 <h3>Change a base plot</h3>
 <p>Take a shipped one, change what should hold for all plots built on it, and add it under a new name (or the same name, to replace it). Text sizes, line widths and margins go in as the lengths of a <code>PanelLayout</code>, in pixels; that keeps them equal in all panels, which setting <code>SetDefaultTextSize</code> on single pads would not.</p>
 <div class="code"><pre data-snip="baseplots"></pre></div>
@@ -2918,7 +2918,7 @@ const SIZE_FIELDS = [ // key, setter, label, step
   ["text", "Text", [["text", "SetTextSize", "Labels, legends, texts", 0.5], ["title", "SetTitleSize", "Axis titles", 0.5], ["labelOff", "SetLabelOffset", "Labels to axis", 0.5],
     ["xTitleOff", "SetXTitleOffset", "x title to axis", 0.5], ["yTitleOff", "SetYTitleOffset", "y title to axis (0: next to the labels)", 0.5], ["zTitleOff", "SetZTitleOffset", "z title to colour scale (0: next to the labels)", 0.5]]],
   ["lines", "Ticks, lines, markers", [["tick", "SetTickLength", "Tick length", 0.5], ["lw", "SetLineWidth", "Line width", 1], ["ms", "SetMarkerSize", "Marker size (1 = 8 pixels)", 0.1]]]];
-const SHAPE_DEFAULTS = { aspect: 1.618, ratioH: 0.37, pullH: 0.37 };  // BasePlotShape: aspect ratio of wide and tall panels; heights of the ratio and pull panels of the names
+const SHAPE_DEFAULTS = { aspect: 1.618, ratioH: 0.37 };  // BasePlotShape: aspect ratio of wide and tall panels; height of the ratio panels of the names
 const ATTACHED = 0.37;  // the size of a newly attached panel, in units of the standard panel (as the ratio panels of the names)
 const REF_DEFAULTS = { color: "kBlack", style: 1 };  // the look of the reference lines (SetRefFunc): black and solid, as in the ratio pads of MakeBasePlot
 // the panel unit: a panel and the panels attached to it on each side, listed from the panel outwards: { size, ref, compact, own } (size: the
@@ -2931,8 +2931,6 @@ const attached = (ref = "") => ({ size: ATTACHED, ref, compact: true, own: true,
 // the base plots to start from (names MakeBasePlot knows): the panel unit and its repetition (the look, text sizes and colours, stays)
 const TEMPLATES = [["1d: one panel", "1d", 1, 1, () => emptyUnit()],
   ["1d_ratio: a ratio below", "1d", 1, 1, () => ({ ...emptyUnit(), below: [attached("1")] })],
-  ["1d_pull: a pull below", "1d", 1, 1, () => ({ ...emptyUnit(), below: [attached("0")] })],
-  ["1d_ratio_pull: a ratio and a pull below", "1d", 1, 1, () => ({ ...emptyUnit(), below: [attached("1"), attached("0")] })],
   ["1d_3x1: three panels in a row", "1d", 3, 1, () => emptyUnit()],
   ["1d_2x2: four panels", "1d", 2, 2, () => emptyUnit()],
   ["1d_2x1_ratio: two panels with ratios", "1d", 2, 1, () => ({ ...emptyUnit(), below: [attached("1")] })],
@@ -2969,9 +2967,9 @@ function layApply(code) {
   } catch (e) { return false } }
 function layReset() { Object.assign(LAY, { ...UNIT_DEFAULTS, unit: { ...emptyUnit(), below: [attached("1")] }, aspect: SHAPE_DEFAULTS.aspect, full: false, name: "", custom: false, sel: null, S: { ...PL_DEFAULTS },
   colors: [...DEFAULT_COLORS], ref: { ...REF_DEFAULTS }, undo: null, colSel: null, commonTitles: true }); LAY.G = presetGrid() }
-// the names describe 1d units with panels below only, each a ratio (line at 1) or a pull (line at 0), in this order, few divisions, own title
-const BELOW = ["", "ratio", "pull", "ratio_pull"];
-const belowName = (p = LAY) => p.unit.below.map(a => a.ref === "1" ? "ratio" : a.ref === "0" ? "pull" : "?").join("_");
+// the names describe 1d units with at most a ratio panel below (line at 1, few divisions, own title)
+const BELOW = ["", "ratio"];
+const belowName = (p = LAY) => p.unit.below.map(a => a.ref === "1" ? "ratio" : "?").join("_");
 const named = (p = LAY) => !p.strip && !p.unit.above.length && !p.unit.left.length && !p.unit.right.length && (p.type === "1d" || !p.unit.below.length)
   && BELOW.includes(belowName(p)) && p.unit.below.every(a => a.compact && a.own && !a.apart && a.space == null);
 function presetName(p = LAY) {
@@ -3024,7 +3022,7 @@ function matchPreset(G) {
   return null }
 const sizesChanged = () => Object.keys(PL_DEFAULTS).filter(k => +LAY.S[k] !== PL_DEFAULTS[k]);
 const shapeSetters = () => [LAY.shape && LAY.aspect !== SHAPE_DEFAULTS.aspect ? `SetAspectRatio(${fmt(LAY.aspect)})` : "",  // only what the preset uses
-  ...LAY.unit.below.map(a => a.ref === "1" ? ["Ratio", a.size, SHAPE_DEFAULTS.ratioH] : ["Pull", a.size, SHAPE_DEFAULTS.pullH]).filter(([, v, d]) => v !== d).map(([k, v]) => `Set${k}Height(${fmt(v)})`)].filter(Boolean);
+  ...LAY.unit.below.filter(a => a.size !== SHAPE_DEFAULTS.ratioH).map(a => `SetRatioHeight(${fmt(a.size)})`)].filter(Boolean);
 const colorsChanged = () => LAY.colors.join("|") !== DEFAULT_COLORS.join("|");
 const refChanged = () => Object.keys(REF_DEFAULTS).some(k => LAY.ref[k] !== REF_DEFAULTS[k]);
 const hasRef = () => LAY.G.rows.some(r => r.ref);
@@ -3104,7 +3102,7 @@ function layoutCode(py) {
     L.push(py ? `layout = Plot("${name}", PanelLayout(${setters.length ? "sizes, " : ""}rows))` : `Plot layout("${name}", PanelLayout(${setters.length ? "sizes, " : ""}rows));`);
     g.shared.Z.filter(ids => ids.length > 1).forEach(ids => L.push(`layout.ShareAxis('Z', ${open}${ids.join(", ")}${close})${end}   ${cm} one colour scale for pads ${ids.join(", ")}`));  // a single map needs no group
     if (colorsChanged()) L.push(`layout[0].SetDefaultColors(${colorList(27)})${end}`);  // the rest of the look comes with the layout
-    // the pads with a reference line or a compact y axis (e.g. ratio and pull pads), grouped by what they get
+    // the pads with a reference line or a compact y axis (e.g. ratio pads), grouped by what they get
     const conv = new Map();
     g.pads.filter(p => !p.empty && (p.ref || p.compact)).forEach(p => { const k = JSON.stringify([p.ref, p.compact]); conv.set(k, [...(conv.get(k) || []), p.id]) });
     conv.forEach((ids, k) => { const [f, compact] = JSON.parse(k);
@@ -3167,7 +3165,7 @@ function layoutSVG(g, S, maxW, maxH) {
       yl.forEach((t, i) => { const y = p.compact ? fb - ystep * (i + 0.5) : fb - ystep * i; widest = Math.max(widest, textW(t, S.text));
         if (!(i === 0 && !p.compact && p.r1 < LAY.G.rows.length - 1 && !LAY.G.rows[p.r1].gapAfter)) out.push(txt(fl - S.labelOff - 0.2 * S.text, y + 0.36 * S.text, S.text, t, `text-anchor="end"`)) });
       const yx = S.yTitleOff > 0 ? fl - S.yTitleOff : fl - S.labelOff - 0.2 * S.text - widest - 0.62 * S.title;
-      const ty = p.compact ? (ft + fb) / 2 : ft, yTitle = !p.own ? "y title" : rv === 1 ? "ratio" : rv === 0 ? "pull" : "y title 2";
+      const ty = p.compact ? (ft + fb) / 2 : ft, yTitle = !p.own ? "y title" : rv === 1 ? "ratio" : "y title 2";
       if (!noTitleY.has(p.id)) out.push(`<text transform="translate(${T(yx)} ${T(ty)}) rotate(-90)" font-size="${T(S.title)}" ${font} fill="#000" text-anchor="${p.compact ? "middle" : "end"}" dominant-baseline="central">${yTitle}</text>`) }
     if (p.ref) { const dash = LINE_STYLES.find(x => x[0] === LAY.ref.style)[3], w = Math.max(0.6, S.lw * s);
       const ly = p.compact || rv === null || rv < 0 || rv > 100 ? fb - fh / 2 : fb - fh * rv / 100;  // on the drawn axis: centred on a compact one, else at its value (0 to 100)
@@ -3241,7 +3239,7 @@ function renderLayout() {
   const spaceIn = (attr, v, label) => `<input type="number" ${attr} value="${v == null ? "" : fmt(v)}" step="1" min="0" placeholder="${fmt(S.spacing)}" aria-label="${label} in pixels (empty: the space of all touching panels)">`;
   // the reference line of a panel: none, the usual ones, or a function typed in (pre = "a" for attached panels, "row" for rows of the grid)
   const refPick = (pre, at, ref, what) => { const other = !["", "1", "0"].includes(ref);
-    return `<select data-${pre}refsel="${at}" aria-label="reference line of ${what}">${[["", "none"], ["1", "at 1 (ratio)"], ["0", "at 0 (pull)"], ["other", "other…"]].map(([v, t]) =>
+    return `<select data-${pre}refsel="${at}" aria-label="reference line of ${what}">${[["", "none"], ["1", "at 1 (ratio)"], ["0", "at 0"], ["other", "other…"]].map(([v, t]) =>
       `<option value="${v}" ${(other ? "other" : ref) === v ? "selected" : ""}>${t}</option>`).join("")}</select>${other ? ` <input type="text" class="lb-reff" data-${pre === "a" ? "aref" : "rowref"}="${at}" value="${ref.replace(/"/g, "&quot;")}" spellcheck="false" aria-label="function of the reference line of ${what}">` : ""}` };
   const colsUI = `<div class="lb-twrap"><table class="lb-table"><tr><th>column</th><th>kind</th><th>width</th><th class="c" title="room for a colour scale on its right">colour scale</th><th class="c" title="this column keeps its own x title instead of one common title">own x title</th><th class="c" title="a gap after it: the panels on both sides get their own axes and labels">gap after</th><th title="pixels to the touching column after it; empty: the space of all touching panels">space after</th></tr>${G.cols.map((c, i) =>
     `<tr class="${c.kind ? "att" : ""}"><td>${i + 1}</td><td>${kindSel(`data-colkind="${i}"`, c.kind, [["", "normal"], ["short", "attached"]], `kind of column ${i + 1}`)}</td><td>${num(`data-colw="${i}"`, c.w, c.kind ? 0.01 : 0.05, 0.05, `width of column ${i + 1}`)}</td>
