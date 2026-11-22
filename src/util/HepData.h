@@ -22,16 +22,24 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace SciRooPlot::util
 {
 // an input hepdata:<record>, optionally restricted to a folder (hepdata:ins1419244:Table 1): a record of hepdata.net
 bool is_hepdata_input(const std::string& input);
+// a record id: letters and digits only (ins1419244, 72886); anything else after hepdata: is a file
+bool is_hepdata_record_id(const std::string& recordOrFile);
+// the record or file and the folder of an input hepdata:<record>[:folder] or hepdata:<file>[:folder] (file: .root, .tar.gz, .tgz)
+std::pair<std::string, std::string> split_hepdata_input(const std::string& input);
 // the name of a table in the local copy of a record: ':' cannot be part of a data name and is replaced by '_'
 std::string hepdata_table_name(std::string table);
 // the local copy of a HEPData record (ins1419244 or a record number) in <folder>/hepdata, downloaded in its latest version when missing,
 // with an object per dependent variable and error source next to HEPData's own (nullopt with a warning if it cannot be made)
 std::optional<std::string> hepdata_file(const std::string& record, const std::filesystem::path& folder);
+// the local copy of a downloaded HEPData file (a ROOT file of a table or record, or the record's .tar.gz) in <folder>/hepdata/files, made
+// again when the file is newer (nullopt with a warning if it cannot be made)
+std::optional<std::string> hepdata_local_file(const std::string& file, const std::filesystem::path& folder);
 }  // namespace SciRooPlot::util
 
 #endif  // SRC_UTIL_HEPDATA_H_

@@ -312,99 +312,62 @@ bool is_gzip_file(const string& file)
   unsigned char magic[2]{};
   return in.read(reinterpret_cast<char*>(magic), 2) && magic[0] == 0x1f && magic[1] == 0x8b;
 }
-}  // namespace
 
-bool is_hepdata_input(const string& input)
+// a record or file whose copy cannot be made is tried and reported once per run (several data sources may name it)
+std::mutex failedMutex;
+std::set<string> failedCopies;
+bool failed_before(const string& key)
 {
-  return str_starts_with(input, kHepDataScheme);
+  std::lock_guard lock(failedMutex);
+  return failedCopies.count(key) > 0;
+}
+void remember_failure(const string& key)
+{
+  std::lock_guard lock(failedMutex);
+  failedCopies.insert(key);
 }
 
-string hepdata_table_name(string table)
+// a string as one word of a shell command
+string shell_quoted(const string& str)
 {
-  std::replace(table.begin(), table.end(), ':', '_');
-  return table;
+  string result = "'";
+  for (char c : str) {
+    result += (c == '\'') ? string("'\\''") : string(1, c);
+  }
+  return result + "'";
 }
 
-std::optional<string> hepdata_file(const string& record, const std::filesystem::path& folder)
+// makes the copy <file> of a HEPData ROOT file, or of a .tar.gz holding one, with an object per dependent variable and error source next to
+// HEPData's own; label names it in the messages (false with a warning if it cannot be made)
+bool make_hepdata_copy(const string& source, const string& file, const string& label)
 {
-  const string file = (folder / "hepdata" / (record + ".root")).string();
   std::error_code ec;
-  if (std::filesystem::exists(file, ec)) return file;
-  // a record that cannot be had is tried and reported once per run (several data sources may name it)
-  static std::mutex failedMutex;
-  static std::set<string> failed;
-  {
-    std::lock_guard lock(failedMutex);
-    if (failed.count(file)) return std::nullopt;
-  }
-  bool made = false;
-  auto rememberFailure = make_scope_guard([&]() {
-    std::lock_guard lock(failedMutex);
-    if (!made) failed.insert(file);
-  });
-  const bool isRecordID = !record.empty() && std::all_of(record.begin(), record.end(), [](char c) { return std::isalnum(static_cast<unsigned char>(c)); });
-  if (!isRecordID) {
-    logger::warning("Skipping input {}{}: a HEPData record is given by its INSPIRE id (ins1419244) or its record number.", kHepDataScheme, record);
-    return std::nullopt;
-  }
-  std::filesystem::create_directories(std::filesystem::path(file).parent_path(), ec);
-  if (ec) {
-    logger::warning("Cannot download HEPData record {}: cannot create folder {} ({}).", record, std::filesystem::path(file).parent_path().string(), ec.message());
-    return std::nullopt;
-  }
-
-  // downloaded with curl (ROOT opens https only when built with Davix); the server can be replaced (tests, mirrors)
-  const char* server = std::getenv("SCIROOPLOT_HEPDATA_SERVER");
-  const string url = string((server) ? server : "https://www.hepdata.net") + "/record/" + record + "?format=root";
-  const string download = temporary_file(file) + ".download";
-  auto quoted = [](const string& str) {
-    string result = "'";
-    for (char c : str) {
-      result += (c == '\'') ? string("'\\''") : string(1, c);
-    }
-    return result + "'";
-  };
-  logger::info("Downloading HEPData record {} from {}.", record, url);
   Int_t status{};
   TString output;
-  {
-    auto quiet = ignore_root_messages_below(kFatal);  // ROOT reports a failed command itself
-    output = gSystem->GetFromPipe(("curl -sSfL --connect-timeout 30 --max-time 600 -o " + quoted(download) + " " + quoted(url)).data(), &status, true);
-  }
-  auto removeDownload = make_scope_guard([&download]() {
-    std::error_code removeError;
-    std::filesystem::remove(download, removeError);
-  });
-  if (status != 0) {
-    const bool noCurl = WIFEXITED(status) && WEXITSTATUS(status) == 127;
-    logger::warning("Cannot download HEPData record {}: {}.", record, (noCurl) ? "the program curl was not found" : string(output.Data()));
-    return std::nullopt;
-  }
-
   // hepdata.net serves the ROOT file packed in a .tar.gz (HEPData-<record>-v<version>-root.root); a bare ROOT file is taken as it is
-  string rootFile = download;
-  const string unpacked = download + ".unpacked";
+  string rootFile = source;
+  const string unpacked = temporary_file(file) + ".unpacked";
   auto removeUnpacked = make_scope_guard([&unpacked]() {
     std::error_code removeError;
     std::filesystem::remove_all(unpacked, removeError);
   });
-  if (is_gzip_file(download)) {
+  if (is_gzip_file(source)) {
     std::filesystem::create_directories(unpacked, ec);
     {
       auto quiet = ignore_root_messages_below(kFatal);
-      output = gSystem->GetFromPipe(("tar -xzf " + quoted(download) + " -C " + quoted(unpacked)).data(), &status, true);
+      output = gSystem->GetFromPipe(("tar -xzf " + shell_quoted(source) + " -C " + shell_quoted(unpacked)).data(), &status, true);
     }
     if (ec || status != 0) {
-      logger::warning("Cannot unpack the download of HEPData record {}: {}.", record, (ec) ? ec.message() : string(output.Data()));
-      return std::nullopt;
+      logger::warning("Cannot unpack {}: {}.", label, (ec) ? ec.message() : string(output.Data()));
+      return false;
     }
     rootFile.clear();
     for (const auto& entry : std::filesystem::recursive_directory_iterator(unpacked, ec)) {
       if (entry.is_regular_file() && entry.path().extension() == ".root" && (rootFile.empty() || entry.path().string() < rootFile)) rootFile = entry.path().string();
     }
     if (rootFile.empty()) {
-      logger::warning("Cannot use HEPData record {}: its download holds no ROOT file.", record);
-      return std::nullopt;
+      logger::warning("Cannot use {}: it holds no ROOT file.", label);
+      return false;
     }
   }
 
@@ -414,8 +377,8 @@ std::optional<string> hepdata_file(const string& record, const std::filesystem::
     in.reset(TFile::Open(rootFile.data(), "READ"));
   }
   if (!in || in->IsZombie()) {
-    logger::warning("Cannot read the download of HEPData record {}: it is no readable ROOT file.", record);
-    return std::nullopt;
+    logger::warning("Cannot read {}: it is no readable ROOT file.", label);
+    return false;
   }
   const string tmpFile = temporary_file(file);
   size_t nTables{};
@@ -425,8 +388,8 @@ std::optional<string> hepdata_file(const string& record, const std::filesystem::
   {
     TFile out(tmpFile.data(), "RECREATE");
     if (out.IsZombie()) {
-      logger::warning("Cannot write the copy of HEPData record {} to {}.", record, file);
-      return std::nullopt;
+      logger::warning("Cannot write the copy of {} to {}.", label, file);
+      return false;
     }
     static const std::regex doi(R"(hepdata\.\d+\.v(\d+))");
     for (auto* key : TRangeDynCast<TKey>(in->GetListOfKeys())) {
@@ -448,35 +411,136 @@ std::optional<string> hepdata_file(const string& record, const std::filesystem::
   }
   if (!nTables) {
     std::filesystem::remove(tmpFile, ec);
-    logger::warning("Cannot use HEPData record {}: its download contains no tables.", record);
-    return std::nullopt;
+    logger::warning("Cannot use {}: it contains no tables.", label);
+    return false;
   }
   if (!replace_file(tmpFile, file, ec)) {
-    logger::warning("Cannot write the copy of HEPData record {} to {} ({}).", record, file, ec.message());
-    return std::nullopt;
+    logger::warning("Cannot write the copy of {} to {} ({}).", label, file, ec.message());
+    return false;
   }
-  logger::info("Saved HEPData record {}{} to {}.", record, (version.empty()) ? "" : " (version " + version + ")", file);
+  logger::info("Saved {}{} to {}.", label, (version.empty()) ? "" : " (version " + version + ")", file);
   auto listed = [](const vector<string>& tables) {
     const size_t shown = std::min<size_t>(tables.size(), 5);
     const string more = (tables.size() > shown) ? ", and " + std::to_string(tables.size() - shown) + " more" : "";
     return join_strings(vector<string>(tables.begin(), tables.begin() + shown), ", ") + more;
   };
   if (!notes.threeD.empty()) {
-    logger::warning("HEPData record {}: {} not converted: a table with three independent variables has HEPData's own 3d histograms only (Hist3D_y1, ...).", record, listed(notes.threeD));
+    logger::warning("{}: {} not converted: a table with three independent variables has HEPData's own 3d histograms only (Hist3D_y1, ...).", label, listed(notes.threeD));
   }
   if (!notes.overlapping.empty()) {
-    logger::warning("HEPData record {}: no objects per error source for {}: the bins overlap, so the record's ROOT file does not hold the error of each point (y<i> has the total errors).",
-                    record, listed(notes.overlapping));
+    logger::warning("{}: no objects per error source for {}: the bins overlap, so HEPData's ROOT file does not hold the error of each point (y<i> has the total errors).",
+                    label, listed(notes.overlapping));
   }
   if (!notes.withoutBins.empty()) {
     const bool one = (notes.withoutBins.size() == 1);
-    logger::info("HEPData record {}: {} {} no bins: the record's ROOT file holds {} total errors only (y<i>, no y<i>_<label>).", record, listed(notes.withoutBins),
+    logger::info("{}: {} {} no bins: HEPData's ROOT file holds {} total errors only (y<i>, no y<i>_<label>).", label, listed(notes.withoutBins),
                  (one) ? "has" : "have", (one) ? "its" : "their");
   }
   for (const auto& [original, tableName] : renamed) {
-    logger::info("HEPData record {}: table '{}' is '{}' in the copy, as a data name cannot contain ':'.", record, original, tableName);
+    logger::info("{}: table '{}' is '{}' in the copy, as a data name cannot contain ':'.", label, original, tableName);
   }
-  made = true;
+  return true;
+}
+}  // namespace
+
+bool is_hepdata_input(const string& input)
+{
+  return str_starts_with(input, kHepDataScheme);
+}
+
+bool is_hepdata_record_id(const string& recordOrFile)
+{
+  return !recordOrFile.empty() && std::all_of(recordOrFile.begin(), recordOrFile.end(), [](char c) { return std::isalnum(static_cast<unsigned char>(c)); });
+}
+
+std::pair<string, string> split_hepdata_input(const string& input)
+{
+  const string rest = input.substr(std::min(input.size(), kHepDataScheme.size()));
+  const size_t colon = rest.find(':');
+  if (is_hepdata_record_id(rest.substr(0, colon))) return {rest.substr(0, colon), (colon == string::npos) ? "" : rest.substr(colon + 1)};
+  // a file: the folder follows the ending of its name
+  for (const string ending : {".root:", ".tar.gz:", ".tgz:"}) {
+    const size_t pos = rest.find(ending);
+    if (pos != string::npos) return {rest.substr(0, pos + ending.size() - 1), rest.substr(pos + ending.size())};
+  }
+  return {rest, ""};
+}
+
+string hepdata_table_name(string table)
+{
+  std::replace(table.begin(), table.end(), ':', '_');
+  return table;
+}
+
+std::optional<string> hepdata_file(const string& record, const std::filesystem::path& folder)
+{
+  const string file = (folder / "hepdata" / (record + ".root")).string();
+  std::error_code ec;
+  if (std::filesystem::exists(file, ec)) return file;
+  if (failed_before(file)) return std::nullopt;
+  bool made = false;
+  auto rememberFailure = make_scope_guard([&]() {
+    if (!made) remember_failure(file);
+  });
+  std::filesystem::create_directories(std::filesystem::path(file).parent_path(), ec);
+  if (ec) {
+    logger::warning("Cannot download HEPData record {}: cannot create folder {} ({}).", record, std::filesystem::path(file).parent_path().string(), ec.message());
+    return std::nullopt;
+  }
+
+  // downloaded with curl (ROOT opens https only when built with Davix); the server can be replaced (tests, mirrors)
+  const char* server = std::getenv("SCIROOPLOT_HEPDATA_SERVER");
+  const string url = string((server) ? server : "https://www.hepdata.net") + "/record/" + record + "?format=root";
+  const string download = temporary_file(file) + ".download";
+  logger::info("Downloading HEPData record {} from {}.", record, url);
+  Int_t status{};
+  TString output;
+  {
+    auto quiet = ignore_root_messages_below(kFatal);  // ROOT reports a failed command itself
+    output = gSystem->GetFromPipe(("curl -sSfL --connect-timeout 30 --max-time 600 -o " + shell_quoted(download) + " " + shell_quoted(url)).data(), &status, true);
+  }
+  auto removeDownload = make_scope_guard([&download]() {
+    std::error_code removeError;
+    std::filesystem::remove(download, removeError);
+  });
+  if (status != 0) {
+    const bool noCurl = WIFEXITED(status) && WEXITSTATUS(status) == 127;
+    logger::warning("Cannot download HEPData record {}: {}.", record, (noCurl) ? "the program curl was not found" : string(output.Data()));
+    return std::nullopt;
+  }
+  made = make_hepdata_copy(download, file, "HEPData record " + record);
+  if (!made) return std::nullopt;
+  return file;
+}
+
+std::optional<string> hepdata_local_file(const string& given, const std::filesystem::path& folder)
+{
+  const auto expanded = expand_path(given);
+  if (!expanded) return std::nullopt;  // reported
+  std::error_code ec;
+  const std::filesystem::path source = std::filesystem::absolute(*expanded, ec).lexically_normal();
+  if (given.empty() || ec || !std::filesystem::is_regular_file(source, ec)) {
+    if (!failed_before(string(kHepDataScheme) + given)) {
+      logger::warning("Skipping input {}{}: neither a HEPData record (its INSPIRE id, ins1419244, or its record number) nor an existing file.", kHepDataScheme, given);
+      remember_failure(string(kHepDataScheme) + given);
+    }
+    return std::nullopt;
+  }
+  // the copy is named after the file and its path, and made again when the file is newer than it
+  const string file = (folder / "hepdata" / "files" / (source.stem().string() + "-" + std::to_string(std::hash<string>{}(source.string())) + ".root")).string();
+  std::error_code timeError;
+  if (std::filesystem::exists(file, ec) && std::filesystem::last_write_time(file, timeError) >= std::filesystem::last_write_time(source, timeError) && !timeError) return file;
+  if (failed_before(file)) return std::nullopt;
+  std::filesystem::create_directories(std::filesystem::path(file).parent_path(), ec);
+  if (ec) {
+    logger::warning("Cannot convert HEPData file {}: cannot create folder {} ({}).", source.string(), std::filesystem::path(file).parent_path().string(), ec.message());
+    remember_failure(file);
+    return std::nullopt;
+  }
+  if (!make_hepdata_copy(source.string(), file, "HEPData file " + source.string())) {
+    remember_failure(file);
+    return std::nullopt;
+  }
   return file;
 }
 }  // namespace SciRooPlot::util

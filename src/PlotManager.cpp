@@ -483,7 +483,15 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<string>& 
     }
     // a relative path is taken relative to the current directory (as the output directory), so that it can be stored with the project
     const bool relative = !is_remote(*expandedInput) && !util::is_hepdata_input(*expandedInput) && std::filesystem::path(*expandedInput).is_relative();
-    const string stored = (relative) ? std::filesystem::absolute(*expandedInput).lexically_normal().string() : input;
+    string stored = (relative) ? std::filesystem::absolute(*expandedInput).lexically_normal().string() : input;
+    // a downloaded HEPData file (hepdata:<file>) relative to the current directory as well, where it exists (else it is reported as given)
+    if (util::is_hepdata_input(*expandedInput)) {
+      const auto [recordOrFile, folderPart] = util::split_hepdata_input(*expandedInput);
+      std::error_code existsError;
+      if (!util::is_hepdata_record_id(recordOrFile) && std::filesystem::path(recordOrFile).is_relative() && std::filesystem::is_regular_file(recordOrFile, existsError)) {
+        stored = string("hepdata:") + std::filesystem::absolute(recordOrFile).lexically_normal().string() + ((folderPart.empty()) ? "" : ":" + folderPart);
+      }
+    }
     auto& inputsOfDataSource = mInputs[dataSource];
     if (std::find(inputsOfDataSource.begin(), inputsOfDataSource.end(), stored) == inputsOfDataSource.end()) {
       inputsOfDataSource.push_back(stored);
@@ -898,11 +906,12 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
     // a record of hepdata.net (hepdata:<record>[:folder]): its local copy, downloaded when missing, in the cache folder (srp cache), also
     // with the cache off (a record is downloaded whole in any case)
     if (util::is_hepdata_input(entry)) {
-      const auto recordAndFolder = split_string(entry.substr(entry.find(':') + 1), ':', true);
+      const auto [recordOrFile, folderPart] = util::split_hepdata_input(entry);
       const string cacheFolder = Config::Get().CacheFolder();
       std::error_code cacheError;
-      util::make_cache_folder(cacheFolder, cacheError);  // a folder that cannot be made is reported with the download
-      if (const auto file = util::hepdata_file(recordAndFolder[0], cacheFolder)) addFile(*file, (recordAndFolder.size() > 1) ? util::hepdata_table_name(recordAndFolder[1]) : "");
+      util::make_cache_folder(cacheFolder, cacheError);  // a folder that cannot be made is reported with the copy
+      const auto file = (util::is_hepdata_record_id(recordOrFile)) ? util::hepdata_file(recordOrFile, cacheFolder) : util::hepdata_local_file(recordOrFile, cacheFolder);
+      if (file) addFile(*file, util::hepdata_table_name(folderPart));
       return;
     }
     auto fileAndFolder = split_input_path(entry);

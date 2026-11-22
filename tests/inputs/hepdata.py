@@ -5,6 +5,9 @@ readable, a data source restricted to a table works. What the record's ROOT file
 without bins and of bins that overlap, tables with three independent variables. The record is downloaded once into the cache folder, also
 with srp cache off: the one of the config folder, or the folder SciRooPlot inside the folder of srp cache on <folder>, marked as cache
 (CACHEDIR.TAG); a record that does not exist and a malformed record id are reported once and the other inputs are still read.
+A downloaded table or record (hepdata:<file>: a ROOT file of one table or of the record, or the record's .tar.gz; relative to the current
+directory) gives the same objects, from a copy in the cache folder that is made again when the file changes; the file itself is left as it
+is, a file that does not exist is reported once.
 The record is served by a local web server as hepdata.net serves its ROOT download (a .tar.gz holding the ROOT file).
 Covers: an error label with characters not allowed in data names; two labels that become the same name; an asymmetric error with both
 shifts on one side; a table with two dependent variables of different points; a 2d table of points without bins; text bins with a bin
@@ -182,6 +185,30 @@ lf = ROOT.TFile(p.path("local.root"), "RECREATE")
 local.Write()
 lf.Close()
 
+
+def write_single(values, stat):
+    """one table downloaded from hepdata.net as ROOT file: a bare ROOT file of that table"""
+    single = ROOT.TFile(p.path("table1.root"), "RECREATE")
+    write_table(single, 1, values, [("stat", stat)], edges=[0, 1, 2, 4])
+    single.Close()
+
+
+def content(path):
+    with open(path, "rb") as f:
+        return f.read()
+
+
+write_single([20.0, 10.0, 4.0], [2.0, 1.0, 0.5])
+shutil.copy(os.path.join(served, "record", "ins12345"), p.path("record.tar.gz"))
+originals = {name: content(p.path(name)) for name in ("table1.root", "record.tar.gz")}
+p.pm.AddDataSource("own", "hepdata:" + p.path("table1.root"))
+p.pm.AddDataSource("ownarchive", "hepdata:" + p.path("record.tar.gz") + ":Table 2")
+cwd = os.getcwd()
+os.chdir(os.path.dirname(p.path("table1.root")))
+p.pm.AddDataSource("ownrelative", "hepdata:table1.root")
+os.chdir(cwd)
+p.pm.AddDataSource("ownmissing", ["hepdata:" + p.path("nothing.root"), p.path("local.root")])
+
 # (what, data name, data source, expected class, values, errors below, errors above; 2d: values and errors per bin x, y)
 expected = [
     ("the total errors of a binned table with symmetric errors: a histogram", "Table 1/y1", "ref", "TH1D", [10, 5, 2], [5**0.5, 1.25**0.5, 0.3125**0.5], None),
@@ -209,6 +236,10 @@ expected = [
     ("a data source restricted to a table with a colon in its name", "y1_stat", "colon", "TH1D", [2, 4], [0.25, 0.5], None),
     ("a bare ROOT file as download (a mirror)", "Table 1/y1_stat", "bare", "TH1D", [10, 5, 2], [1, 0.5, 0.25], None),
     ("a record that does not exist in a second data source: the other inputs are read", "h", "nothing2", "TH1D", [7], [7**0.5], None),
+    ("a table downloaded as ROOT file (hepdata:<file>): an error source, found without the table name", "y1_stat", "own", "TH1D", [20, 10, 4], [2, 1, 0.5], None),
+    ("a record downloaded as .tar.gz (hepdata:<file>), restricted to a table", "y1_stat", "ownarchive", "TGraphAsymmErrors", [3, 2], [0.25, 0.5], [0.25, 0.5]),
+    ("a downloaded file given relative to the current directory", "y1_stat", "ownrelative", "TH1D", [20, 10, 4], [2, 1, 0.5], None),
+    ("a downloaded file that does not exist: the other inputs are read", "h", "ownmissing", "TH1D", [7], [7**0.5], None),
 ]
 # the labels of the drawn x axis by the data name of a case
 labelled = {"Table 3/y1_stat": ["pp", "PbPb"], "Table 9/y1_stat": ["a", "c"]}
@@ -260,10 +291,11 @@ lines = run.lines("WARN")
 for what, text in (
     ("a record that does not exist is reported", "Cannot download HEPData record ins99999"),
     ("a malformed record id is reported", "Skipping input hepdata:ins 1"),
-    ("a download that is no ROOT file is reported", "Cannot read the download of HEPData record insbroken: it is no readable ROOT file"),
-    ("a download without tables is reported", "Cannot use HEPData record insnotables: its download contains no tables"),
+    ("a download that is no ROOT file is reported", "Cannot read HEPData record insbroken: it is no readable ROOT file"),
+    ("a download without tables is reported", "Cannot use HEPData record insnotables: it contains no tables"),
     ("error sources of bins that overlap are reported", "HEPData record ins12345: no objects per error source for Table 8 (y1)"),
     ("a table with three independent variables is reported", "HEPData record ins12345: Table 10 not converted"),
+    ("a downloaded file that does not exist is reported", f"Skipping input hepdata:{p.path('nothing.root')}"),
 ):
     found = [line for line in lines if text in line]
     check(f"{what}, once", len(found) == 1, f"{len(found)} lines: {lines[:3]}")
@@ -281,6 +313,8 @@ axes = [y1.GetXaxis().GetTitle(), y1.GetYaxis().GetTitle(), y1.GetZaxis().GetTit
 check("a 2d table: the axis titles of its histograms", axes == ["x [cm]", "y [cm]", "z"], f"{axes}")
 made = sorted(k.GetName() for k in copy.Get("Table 8").GetListOfKeys() if k.GetName().startswith("y")) if copy else []
 check("bins that overlap: no objects per error source", made == ["y1"], f"{made}")
+check("downloaded files: nothing is downloaded", not [r for r in requests if "table1" in r or "tar.gz" in r], f"requests {requests}")
+check("downloaded files are left as they are", all(content(p.path(name)) == data for name, data in originals.items()), "changed")
 
 # a second run reads the kept copy; with a cache folder the record is downloaded into it
 requests.clear()
@@ -295,5 +329,15 @@ check_values(run, " (cache folder)")
 own = os.path.join(cache, "SciRooPlot")
 check("with srp cache on <folder> the record is downloaded into the folder SciRooPlot inside it", os.path.exists(os.path.join(own, "hepdata", "ins12345.root")), f"{os.listdir(cache) if os.path.isdir(cache) else 'no folder'}")
 check("the folder SciRooPlot inside it is marked as cache, nothing else is put into <folder>", os.path.exists(os.path.join(own, "CACHEDIR.TAG")) and os.listdir(cache) == ["SciRooPlot"], f"{os.listdir(cache) if os.path.isdir(cache) else 'no folder'}")
+
+# a downloaded file that changed: its copy is made again
+write_single([40.0, 20.0, 8.0], [4.0, 2.0, 1.0])
+later = os.path.getmtime(p.path("table1.root")) + 5
+os.utime(p.path("table1.root"), (later, later))
+run = p.plot("hepdata")
+index = next(i for i, case in enumerate(expected) if case[2] == "own")
+drawn = run.objects(f"h{index}", "hepdata")
+got = values_of(drawn[0]) if len(drawn) == 1 else None
+check("a downloaded file that changed is converted again", got is not None and all(close(a, b, 1e-6) for a, b in zip(got[0] + got[1], [40, 20, 8, 4, 2, 1], strict=True)), f"{got}")
 server.shutdown()
 finish()
