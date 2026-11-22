@@ -2271,6 +2271,15 @@ void PlotManager::ChainTrees(required_data_t& requiredData)
             logger::error("Cannot join {} to tree {}: {}.", join.GetDescription(), DataLocation(dataSource, treeName), *error);
             failedJoins.insert(join.ToString());
             isJoined = false;
+          } else if (!join.dataSource.empty() && !joinedChains.empty() && joinedChains.back()->GetName() == join.GetAlias()) {
+            // a tree of another data source: its inputs rewritten make this data source be read again too
+            auto& times = mInputTimes[dataSource.substr(0, dataSource.find(':'))];
+            for (const auto* element : *joinedChains.back()->GetListOfFiles()) {
+              const string fileName = element->GetTitle();
+              std::error_code timeError;
+              const auto time = std::filesystem::last_write_time(fileName, timeError);
+              if (!timeError && !is_remote(fileName) && fileName != mUserDataFile && fileName != UserDataProcessFile()) times[fileName] = time;
+            }
           }
           if (!isJoined) break;
         }
