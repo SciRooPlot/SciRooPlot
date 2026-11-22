@@ -3255,6 +3255,11 @@ auto Plot::Pad::Data::Profile2D(data_dim_t x, data_dim_t y, const string& profil
 auto Plot::Pad::Data::Define(const string& key, const string& value) -> decltype(*this)
 {
   if (is_blank(key) || is_blank(value)) logger::throw_invalid_argument("Define needs a column name and an expression.");
+  // the name is used in expressions, as those of joined columns
+  const bool isIdentifier = !std::isdigit(static_cast<unsigned char>(key[0])) && std::all_of(key.begin(), key.end(), [](unsigned char c) { return std::isalnum(c) || c == '_'; });
+  if (!isIdentifier) {
+    logger::throw_invalid_argument("Define cannot add the column '{}': a column name has letters, digits and _ and does not start with a digit.", key);
+  }
   if (mDataInfo.definitions.keys && mDataInfo.definitions.values) {
     mDataInfo.definitions.keys->push_back(key);
     mDataInfo.definitions.values->push_back(value);
