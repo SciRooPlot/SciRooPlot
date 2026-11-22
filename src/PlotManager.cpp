@@ -201,6 +201,43 @@ string PlotManager::UserDataFile(const string& projectName, const PlotManager* m
 
 //**************************************************************************************************
 /**
+ * The canvases painted that still exist: ROOT deletes a canvas when another one of its name is drawn (e.g. one read back from Plots.root),
+ * which a canvas kept for mode file must then neither be written nor deleted again. ROOT tells its cleanups about every canvas deleted.
+ */
+//**************************************************************************************************
+map<const TObject*, uint64_t>& PlotManager::PaintedCanvases()
+{
+  struct watcher_t : public TObject {
+    map<const TObject*, uint64_t> canvases;  // -> the number of the painting (another canvas may be made at the address of a deleted one)
+    void RecursiveRemove(TObject* object) override { canvases.erase(object); }
+  };
+  static watcher_t* watcher = []() {
+    auto* created = new watcher_t;  // never deleted: ROOT deletes the canvases left at the end of the process
+    gROOT->GetListOfCleanups()->Add(created);
+    return created;
+  }();
+  return watcher->canvases;
+}
+
+struct PlotManager::canvas_deleter_t {
+  uint64_t painting;  // the number of the painting of the canvas
+  void operator()(TCanvas* canvas) const
+  {
+    if (auto painted = PaintedCanvases().find(canvas); painted != PaintedCanvases().end() && painted->second == painting) {
+      PaintedCanvases().erase(painted);
+      delete canvas;
+    }
+  }
+  static bool Exists(const shared_ptr<TCanvas>& canvas)
+  {
+    const auto* deleter = std::get_deleter<canvas_deleter_t>(canvas);
+    auto painted = PaintedCanvases().find(canvas.get());
+    return deleter && painted != PaintedCanvases().end() && painted->second == deleter->painting;
+  }
+};
+
+//**************************************************************************************************
+/**
  * The file this process writes the in-memory inputs to: for a project one of the process in the config path, copied to its UserData.root
  * by SaveDataSources (two runs of the program at the same time each write their own), without a project the manager's file.
  */
@@ -245,7 +282,9 @@ bool PlotManager::SavePlotsToRootFile() const
     // a ROOT directory cannot hold an object and a subdirectory of the same name: a plot named like a subgroup of its group gets a suffix
     set<string> directories;
     set<string> plotPaths;
+    auto deleted = [](const shared_ptr<TCanvas>& canvas) { return !canvas_deleter_t::Exists(canvas); };  // by ROOT
     for (const auto& [uniqueName, canvas] : mCanvasRegistry) {
+      if (deleted(canvas)) continue;
       const size_t delimiterPos = uniqueName.find(":");
       const string subfolder = uniqueName.substr(delimiterPos + 1);
       plotPaths.insert(joinPath(subfolder, uniqueName.substr(0, delimiterPos)));
@@ -256,6 +295,7 @@ bool PlotManager::SavePlotsToRootFile() const
     }
     uint32_t nPlots{0u};
     for (const auto& [uniqueName, canvas] : mCanvasRegistry) {
+      if (deleted(canvas)) continue;
       size_t delimiterPos = uniqueName.find(":");
       string plotName = uniqueName.substr(0, delimiterPos);
       string subfolder = uniqueName.substr(delimiterPos + 1);
@@ -2431,8 +2471,10 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& mode)
   // labels and titles a layout hides towards touching panels: shown where a panel has no flat frame, which is known after a first paint
   const auto& pads = fullPlot.GetPads();
   const bool hidesLabels = std::any_of(pads.begin(), pads.end(), [](const auto& pad) { return !pad.second.GetHiddenNextTo().empty(); });
-  shared_ptr<TCanvas> canvas = (sharedAxes.empty() && !hidesLabels) ? Paint(painter, fullPlot) : ApplySharedAxes(painter, fullPlot, sharedAxes);
+  static uint64_t nPainted{};
+  shared_ptr<TCanvas> canvas((sharedAxes.empty() && !hidesLabels) ? Paint(painter, fullPlot).release() : ApplySharedAxes(painter, fullPlot, sharedAxes).release(), canvas_deleter_t{++nPainted});
   if (!canvas) return false;
+  PaintedCanvases()[canvas.get()] = nPainted;
   if (isBitmapMode) WarnNonAsciiTexts(canvas.get());
 
   if (TColor::GetFreeColorIndex() > std::numeric_limits<int16_t>::max()) {
