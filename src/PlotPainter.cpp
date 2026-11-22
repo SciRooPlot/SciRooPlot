@@ -7905,6 +7905,18 @@ bool PlotPainter::Divide(TH1* numerator, TH1* denominator, bool binomialErrors, 
   if (numerator->GetDimension() >= 2) sameBinning = sameBinning && sameAxisBinning(numerator->GetYaxis(), denominator->GetYaxis());
   if (numerator->GetDimension() >= 3) sameBinning = sameBinning && sameAxisBinning(numerator->GetZaxis(), denominator->GetZaxis());
   if (sameBinning) {
+    // labelled bins are divided by position, as ROOT does: labels in another order are not matched
+    for (int32_t dim = 0; verbose && dim < numerator->GetDimension(); ++dim) {
+      TAxis* a = std::array<TAxis*, 3>{numerator->GetXaxis(), numerator->GetYaxis(), numerator->GetZaxis()}[dim];
+      TAxis* b = std::array<TAxis*, 3>{denominator->GetXaxis(), denominator->GetYaxis(), denominator->GetZaxis()}[dim];
+      for (int32_t i = 1; a->IsAlphanumeric() && b->IsAlphanumeric() && i <= a->GetNbins(); ++i) {
+        if (strcmp(a->GetBinLabel(i), b->GetBinLabel(i)) != 0) {
+          logger::warning("The bin labels of {} and {} differ (bin {} of the {} axis: {} and {}): the bins are divided by position, not by label.", numerator->GetName(),
+                          denominator->GetName(), i, "xyz"[dim], a->GetBinLabel(i), b->GetBinLabel(i));
+          break;
+        }
+      }
+    }
     // without stored errors TH1::Divide takes the content, not its absolute value, as squared error: a negative bin gets a NaN error
     for (TH1* operand : {numerator, denominator}) {
       if (!operand->GetSumw2N()) operand->Sumw2();
