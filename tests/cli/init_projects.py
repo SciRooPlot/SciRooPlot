@@ -1,5 +1,5 @@
 """srp init-py, init-cpp, example-py and example-cpp (env.sh) make a registered, selected project in a new folder whose program has
-run: plot makes its plots without warnings or errors. They refuse, with a message and without registering or creating anything, an
+run, without warnings: plot makes its plots without warnings or errors. They refuse, with a message and without registering or creating anything, an
 existing project name (whose program stays where it is), an existing folder, @current, a name that is no project name and a missing name.
 C++ projects need cmake and a compiler (left out without them); the examples run in the full test only (they plot every example), also
 in every mode writing files, without warnings (but the one that pdf files lack images with ROOT before 6.42, and mode html refused there).
@@ -25,6 +25,7 @@ for i, case in enumerate(todo):
     program = run(SRP, "get", "proj", "program", config=config).stdout.strip()
     where = os.path.join(folder, "proj")
     check(f"makes a selected project in a new folder: {what}", out.rc == 0 and program.startswith(where + "/") and "@current proj" in open(os.path.join(config, "projects.info")).read() and os.path.isfile(os.path.join(config, "proj", "plots.info")), out.tail())
+    check(f"without warnings: {what}", not out.warnings(), out.tail())
     made = shell("plot '.+' '.+' file", case["shell"], config=config, timeout=1800)
     check(f"plot makes its plots without warnings or errors: {what}", made.rc == 0 and not made.warnings() and not made.errors() and "Created plot" in made.text, made.tail())
     if case["kind"].startswith("example"):  # the example in every mode writing files (html needs ROOT 6.42, pdf images too: said once)
