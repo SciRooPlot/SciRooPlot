@@ -9,7 +9,8 @@
   size, SciRooPlot compensates)
 - Axis::SetLabelAngle turns the alphanumeric labels of an x axis by that angle as painted (ROOT's orientations or one per label); numeric
   axes, y axes and the labels of hbars warn and are left as they are; Data::SetTextAngle turns the values written by TEXT (0 to 90, with
-  a warning beyond) and the labels of points_text, and warns for data that writes no values
+  a warning beyond) and the labels of points_text, and warns for data that writes no values (Data::SetTextFormat likewise); x labels
+  running into each other are said once for each pad
 Cases: a ratio layout (linear and log main pad) and panels side by side with labels at the shared edges × the flag on or off; layouts of
 one, two and three panels, an hbars side panel, 3d views × the divisions set or not; every angle of ROOT's orientations and others.
 Reference: the pixels of each pad painted alone at its edges; ROOT's scaling of the divisions; ROOT's angles of its label orientations.
@@ -159,6 +160,13 @@ p.pm.AddPlot(plot)
 plot = S.Plot("no_text", "texts", "1d")
 plot[1].AddData("lab", "s").SetTextAngle(30.0)
 p.pm.AddPlot(plot)
+plot = S.Plot("no_text_format", "texts", "1d")
+plot[1].AddData("lab", "s").SetTextFormat(".2f")
+p.pm.AddPlot(plot)
+plot = S.Plot("wide_two_pads", "wide", "1d_2x1")  # labels running into each other in both pads: said for each
+for padID in (1, 2):
+    plot[padID].AddData("wide_1e12", "s")
+p.pm.AddPlot(plot)
 for name, (_, _, exponent, _) in WIDE.items():
     plot = S.Plot(name, "wide", "1d")
     plot[1].AddData(name, "s")
@@ -307,4 +315,7 @@ padObj = run.pad("points_text", "texts")
 latex = [t for t in padObj.GetListOfPrimitives() if t.IsA() == ROOT.TLatex.Class()] if padObj else []
 check("points_text: the values turned by the text angle", latex and {t.GetTextAngle() for t in latex} == {90.0} and {t.GetTextAlign() for t in latex} == {12})
 check("a text angle on data that writes no values: one warning", sum("has no effect" in w for w in run.messages("no_text", "texts")) == 1, " | ".join(run.messages("no_text", "texts")))
+check("a text format on data that writes no values: one warning", sum("text format" in w and "has no effect" in w for w in run.messages("no_text_format", "texts")) == 1, " | ".join(run.messages("no_text_format", "texts")))
+said = [w for w in run.messages("wide_two_pads", "wide") if "run into each other" in w]
+check("labels running into each other in two pads: said once for each pad", len(said) == 2 and any("in pad 1 " in w for w in said) and any("in pad 2 " in w for w in said), " | ".join(said))
 finish()

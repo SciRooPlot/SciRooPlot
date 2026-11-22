@@ -9,7 +9,8 @@ Cases: every data kind of a flat frame × a range on x or y (2d data, graphs) in
 wider histogram that gives the frame, and the named cases.
 Reference: the input objects (bins holding the range ends, points inside it).
 Covers: a data range without bins or points (also with the clipped aliases), the range of a 2d graph (y ignored, x lost in the saved canvas), the range of functions in 3d
-views (cut to the coordinates of the view), a range beyond a function sampled over its range (warned once), and the named cases.
+views (cut to the coordinates of the view), a range beyond a function sampled over its range (warned once), a range of data drawn into a
+3d view it does not give the frame of (does not apply: warned once), and the named cases.
 """
 
 from srptest import DATA_1D, DATA_2D, DATA_KINDS, ROOT, Project, S, add_data, axis_range, base_of, cases, check, close, data_objects, describe, finish, points_of
@@ -91,6 +92,10 @@ for kind in SAMPLED:
     plot = S.Plot(f"beyond_{kind}", "named", base_of(kind))
     add_data(plot[1], kind).SetRangeX(0.0, 12.0)
     p.pm.AddPlot(plot)
+plot = S.Plot("range_in_view", "named", "2d")  # a range of data drawn into a 3d view it does not give the frame of: said
+plot[1].AddData("hist2d", "inputs").SetDrawOption(S.lego)
+plot[1].AddData("hist2d", "inputs").SetDrawOption(S.lego).SetRangeX(2.0, 3.0)
+p.pm.AddPlot(plot)
 
 run = p.plot()
 check("the plots are made without errors", not run.errors(), " | ".join(run.errors()[:3]))
@@ -177,4 +182,6 @@ for kind in SAMPLED:
     drawn = [o for o in run.objects(f"beyond_{kind}", "named") if o.InheritsFrom("TF1")]
     lo, hi = axis_range()
     check(f"a range beyond a sampled function ({kind}): warned once, drawn over its range", len(warned) == 1 and drawn and close(drawn[0].GetXmin(), lo) and close(drawn[0].GetXmax(), hi), f"{warned} {(drawn[0].GetXmin(), drawn[0].GetXmax()) if drawn else None}")
+said = [m for m in run.messages("range_in_view", "named") if "does not apply in a 3d view" in m]
+check("a range of data drawn into a 3d view it does not give the frame of: one warning", len(said) == 1, " | ".join(run.messages("range_in_view", "named")))
 finish()

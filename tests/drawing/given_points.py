@@ -2,7 +2,8 @@
 order by every alias that draws it as a graph, with the values of the input; only area sorts them (the area below the points needs the
 order of x), with one warning, but for a polar graph (the polygon through its points, in their order); drawn as a histogram (hist, text, ...) or its steps (hist_clipped) a graph becomes bins, whose order is that of x. A function keeps
 the number of points it is sampled at (SetNpx, SetNpy, SetNpz), few or many, for every alias it can be drawn with. Points given in the
-plot definition (AddPoints) are named in messages by their label, or by their number and x range.
+plot definition (AddPoints) are named in messages by their label, or by their number and x range. A number of points along y given to a
+1d function is said to apply only to 2d and 3d functions.
 Covers: area sorted the points of a graph silently, points of the definition named by all their coordinates (warnings of kilobytes).
 """
 
@@ -99,7 +100,12 @@ plot = S.Plot("named", "given", "1d")
 plot[1].AddPoints(xs, ys, "rising")
 plot[1].AddPoints(xs, ys)
 named.pm.AddPlot(plot)
+plot = S.Plot("npy_1d", "given", "1d")  # points along y for a 1d function: said
+plot[1].AddFunction("x*x").SetRangeX(0.0, 2.0).SetNpx(50, 20)
+named.pm.AddPlot(plot)
 namedRun = named.plot("given")
 said = sorted(w.split("]", 1)[-1].strip().split(" has ")[0] for w in namedRun.warnings("NaN or infinite"))
 check("points of the definition named by their label, or their number and x range", said == sorted(["points 'rising'", "points (400 at x = 0 to 199.5)"]), str(said)[:300])
+said = [w for w in namedRun.messages("npy_1d", "given") if "points along y" in w]
+check("a number of points along y for a 1d function: one warning", len(said) == 1, " | ".join(namedRun.messages("npy_1d", "given")))
 finish()
