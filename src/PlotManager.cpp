@@ -3977,7 +3977,7 @@ struct PlotManager::join_match_t {
 namespace
 {
 // the types of basic columns as RDataFrame names them (branches as ROOT does, defined columns as C++ does), with the value of each in rows
-// without a match: NaN for floating point, 0 for integers and bool, empty for arrays (and calls f with that value)
+// without a match: NaN for floating point, 0 for integers and bool, empty for strings and arrays (and calls f with that value)
 template <typename F>
 bool with_default_of(const string& type, F&& f)
 {
@@ -3990,11 +3990,11 @@ bool with_default_of(const string& type, F&& f)
     }
     return false;
   };
-  return as(Float_t{}, {"Float_t", "float"}) || as(Double_t{}, {"Double_t", "double"}) || as(Int_t{}, {"Int_t", "int"}) || as(UInt_t{}, {"UInt_t", "unsigned int"}) ||
+  return as(Float_t{}, {"Float_t", "float", "Float16_t"}) || as(Double_t{}, {"Double_t", "double", "Double32_t"}) || as(Int_t{}, {"Int_t", "int"}) || as(UInt_t{}, {"UInt_t", "unsigned int"}) ||
          as(Short_t{}, {"Short_t", "short"}) || as(UShort_t{}, {"UShort_t", "unsigned short"}) || as(Char_t{}, {"Char_t", "char"}) ||
          as(UChar_t{}, {"UChar_t", "unsigned char"}) || as(static_cast<signed char>(0), {"signed char"}) || as(Long64_t{}, {"Long64_t", "long long"}) ||
          as(ULong64_t{}, {"ULong64_t", "unsigned long long"}) || as(Long_t{}, {"Long_t", "long"}) || as(ULong_t{}, {"ULong_t", "unsigned long"}) ||
-         as(Bool_t{}, {"Bool_t", "bool"});
+         as(Bool_t{}, {"Bool_t", "bool"}) || as(string{}, {"string", "std::string"});
 }
 // a joined column with its default value in rows without a match (whose joined row is only a stand-in: ROOT cannot read arrays with a separate
 // size column in a missing row); false if its type has no default
@@ -4699,7 +4699,11 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           const string matchedColumn = "SRP_MATCHED_" + join.GetAlias();
           for (const auto& column : df->GetColumnNames()) {
             if (!str_starts_with(column, prefix)) continue;
-            mask_unmatched(base, column, matchedColumn);
+            if (!mask_unmatched(base, column, matchedColumn)) {
+              logger::warning("Column {} of type {} for {} has no value for rows without a match: they read the value of another row (filter on {}matched).", column,
+                              df->GetColumnType(column), DataLocation(dataSource, name), prefix);
+              continue;
+            }
             const string bare = column.substr(prefix.size());
             const bool isOwn = tree && tree->GetListOfBranches() && tree->GetListOfBranches()->FindObject(bare.data());
             if (!isOwn && bare.find('.') == string::npos && nJoinedWith[bare] == 1 && df->HasColumn(bare)) mask_unmatched(base, bare, matchedColumn);
