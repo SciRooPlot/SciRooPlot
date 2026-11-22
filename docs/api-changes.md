@@ -52,6 +52,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A `JoinByIndex` without `keepUnmatched` whose index column is read from a tree joined before with `keepUnmatched` joined rows without a match there to the row the index of the stand-in row gave | Such rows are skipped and counted as rows without a match | behaviour | Nothing. |
 | With `keepUnmatched`, joined columns of type `Double32_t`, `Float16_t` and `std::string` kept the value of another row in rows without a match | NaN, NaN and empty there; a column of a type without such a value is named in a warning | behaviour | Nothing. |
 | With `keepUnmatched`, a column of two joined trees written by its bare name read the value of another row in rows without a match | It is that of the first joined tree having it (unless the tree has one), with its value for rows without a match | behaviour | Nothing. |
+| `keepUnmatched` with a joined tree without rows in any input lost the plot with an error | Every row is kept, without a match | behaviour | Nothing. |
 | Python: a modifier of a ratio reached again as `plot[n](i)` acted on the side selected last (`Numer()`, `Denom()`, `Both()`) | It acts on the ratio itself, as in C++ and as when the ratio was added (also in copies of plots and pads) | behaviour | Write `Numer()`, `Denom()` or `Both()` after `plot[n](i)` where the inputs are meant. |
 | `SetShowOverflowBins` of the numerator given to `Ratio(numerator, denominator)` was lost | The ratio keeps it, as the rest of the numerator's look | behaviour | Nothing. |
 

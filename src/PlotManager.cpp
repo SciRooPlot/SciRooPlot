@@ -3973,6 +3973,8 @@ struct PlotManager::join_match_t {
   std::function<ROOT::RDF::RNode(ROOT::RDF::RNode)> defineMatched;  // defines SRP_MATCHED_<alias> (reads the input of a row from SRP_SAMPLE)
   // SRP_MATCHED_<alias> a row needs: a join without rows without a match reads its index from that joined tree
   string requiredMatch;
+  // a joined tree without rows: its columns (alias.column, column) defined in every row
+  vector<std::pair<string, string>> renames;
 };
 namespace
 {
@@ -4239,6 +4241,32 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     return samples;
   };
   const string matchedColumn = "SRP_MATCHED_" + join.GetAlias();
+  // a join keeping rows without a match to a tree without rows in any input: no row has a match, and the columns of the tree have their
+  // values for that in every row (no tree is joined)
+  auto keepAllUnmatched = [&]() -> optional<string> {
+    auto match = std::make_shared<join_match_t>(join_match_t{join.GetAlias()});
+    vector<std::pair<string, string>> columns;  // defined column -> type
+    for (auto* leaf : TRangeDynCast<TLeaf>(const_cast<TTree*>(firstJoinedTree)->GetListOfLeaves())) {
+      auto* branch = (leaf) ? leaf->GetBranch() : nullptr;
+      if (!branch || branch->GetMother() != branch || branch->GetListOfBranches()->GetEntries() > 0) continue;  // top-level branches only
+      const string column = (branch->GetNleaves() == 1) ? string(branch->GetName()) : string(branch->GetName()) + "." + leaf->GetName();
+      string type = leaf->GetTypeName();
+      if (leaf->GetLenStatic() > 1 || leaf->GetLeafCount()) type = "ROOT::VecOps::RVec<" + type + ">";
+      const string defined = "SRP_UNMATCHED_" + join.GetAlias() + "_" + std::to_string(columns.size());
+      columns.emplace_back(defined, type);
+      match->renames.emplace_back(join.GetAlias() + "." + column, defined);
+      if (column.find('.') == string::npos) match->renames.emplace_back(column, defined);
+    }
+    match->defineMatched = [matchedColumn, columns](ROOT::RDF::RNode node) {
+      node = node.Define(matchedColumn, []() { return false; });
+      for (const auto& [column, type] : columns) {
+        with_default_of(type, [&node, &column = column](auto value) { node = node.Define(column, [value]() { return value; }); });
+      }
+      return node;
+    };
+    joinMatches.push_back(match);
+    return nullopt;
+  };
   if (join.dataSource.empty()) {
     // taken from each input of the tree: the name of the joined tree starts where the name of the tree starts
     const auto nLevels = std::count(treeName.begin(), treeName.end(), '/') + 1;
@@ -4320,7 +4348,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     if (isFloating(leaf) || leaf->GetLenStatic() > 1 || leaf->GetLeafCount()) {
       return fmt::format("index column {} of {} is of type {}, but it must hold one integer per row", column, indexTreeDescription, leaf->GetTypeName());
     }
-    if (joinedTreeOf.empty()) return fmt::format("it has no rows in any input of {}", treeName);
+    if (joinedTreeOf.empty()) return (join.keepUnmatched) ? keepAllUnmatched() : fmt::format("it has no rows in any input of {}", treeName);
     // an index read from a tree joined before that keeps rows without a match is only one if that tree has a match
     const string holder = (indexTree != firstTree) ? indexTreeDescription : "";
     const bool holderKeeps = std::any_of(joinMatches.begin(), joinMatches.end(), [&](const auto& match) { return match->alias == holder; });
@@ -4363,7 +4391,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     }
     // a tree of the same data source: its keys are matched within the joined tree beside each input (e.g. per AO2D DF_ folder)
     if (join.dataSource.empty()) {
-      if (joinedTreeOf.empty()) return fmt::format("it has no rows in any input of {}", treeName);
+      if (joinedTreeOf.empty()) return (join.keepUnmatched) ? keepAllUnmatched() : fmt::format("it has no rows in any input of {}", treeName);
       auto rowsByKey = std::make_shared<rows_by_key_t>();
       for (const auto& [part, joined] : joinedTreeOf) {
         if (rowsByKey->count(joined)) continue;
@@ -4416,6 +4444,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       joinedChains.push_back(joinedChain);
       return nullopt;
     }
+    if (join.keepUnmatched && joinedChain->GetEntries() == 0) return keepAllUnmatched();
     auto index = [&]() {
       auto quiet = ignore_root_messages_below(kFatal);  // duplicates and keys that are too large are reported below
       return std::make_unique<TTreeIndex>(joinedChain.get(), join.keys[0].data(), (join.keys.size() > 1) ? join.keys[1].data() : "0");
@@ -4714,6 +4743,11 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
             if (!isOwn && bare.find('.') == string::npos && firstJoinedWith[bare] == join.GetAlias() && df->HasColumn(bare)) mask_unmatched(base, bare, matchedColumn);
           }
           renames.emplace_back(prefix + "matched", matchedColumn);
+        }
+        for (const auto& match : joinMatches) {
+          for (const auto& [column, defined] : match->renames) {
+            if (!df->HasColumn(column)) renames.emplace_back(column, defined);
+          }
         }
       }
       for (const auto& column : cStringColumns) {
