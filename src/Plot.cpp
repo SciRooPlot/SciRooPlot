@@ -2208,6 +2208,7 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const Ratio& ratio, const optional<string>
 //**************************************************************************************************
 Plot::Pad::Data& Plot::Pad::SetRefFunc(const string& refFunc)
 {
+  if (!refFunc.empty() && is_blank(refFunc)) logger::throw_invalid_argument("Empty function expression (SetRefFunc(\"\") means none).");
   ReplaceData(mRefFunc, Data(refFunc, kUserFunctions, nullopt));
   return *mRefFunc;
 }
@@ -2705,6 +2706,10 @@ auto Plot::Pad::Data::ApplyLayout(const Data& dataLayout) -> decltype(*this)
 }
 auto Plot::Pad::Data::SetDataSource(const string& dataSource) -> decltype(*this)
 {
+  if (dataSource.empty()) {
+    logger::warning("SetDataSource(\"\"){} is ignored: a data source needs a name.", (mName.empty()) ? "" : " of " + mName);
+    return *this;
+  }
   mDataSource = dataSource;
   return *this;
 }
@@ -3320,6 +3325,9 @@ void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const std::string& name, co
   }
   if (auto illegal = find_illegal_name_char(tree.dataSource.substr(0, tree.dataSource.find(':')))) {  // may be restricted to a folder: dataSource:some/folder
     logger::throw_invalid_argument("Cannot join tree {} to {}: data source '{}' contains illegal character '{}'.", tree.name, name, tree.dataSource, *illegal);
+  }
+  if (tree.dataSource.find('|') != std::string::npos) {  // the separator of the joins in a plots file
+    logger::throw_invalid_argument("Cannot join tree {} to {}: data source '{}' contains illegal character '|'.", tree.name, name, tree.dataSource);
   }
   if (keys.size() > 2) {
     logger::throw_invalid_argument("Cannot join tree {} to {}: at most two key columns are possible.", tree.name, name);
