@@ -182,6 +182,8 @@ p.pm.AddDataSource("nothing2", ["hepdata:ins99999", p.path("local.root")])
 p.pm.AddDataSource("malformed", ["hepdata:ins 1", p.path("local.root")])
 p.pm.AddDataSource("broken", ["hepdata:insbroken", p.path("local.root")])
 p.pm.AddDataSource("notables", ["hepdata:insnotables", p.path("local.root")])
+p.pm.AddDataSource("norecord", ["hepdata:", p.path("local.root")])
+p.pm.AddDataSource("notable", "hepdata:ins12345:Table 99")
 local = ROOT.TH1D("h", "", 1, 0.0, 1.0)
 local.SetBinContent(1, 7.0)
 lf = ROOT.TFile(p.path("local.root"), "RECREATE")
@@ -229,6 +231,7 @@ expected = [
     ("a malformed record id: the other inputs are read", "h", "malformed", "TH1D", [7], [7**0.5], None),
     ("a download that is no ROOT file: the other inputs are read", "h", "broken", "TH1D", [7], [7**0.5], None),
     ("a download without tables: the other inputs are read", "h", "notables", "TH1D", [7], [7**0.5], None),
+    ("an input without record or file: the other inputs are read", "h", "norecord", "TH1D", [7], [7**0.5], None),
     ("an asymmetric error with both shifts on one side: below and above as their signs say", "Table 6/y1_a_b", "ref", "TGraphAsymmErrors", [1, 2, 3], [0.25, 0.25, 0], [0.125, 0.5, 0.25]),
     ("a label that becomes the name of another source gets the number of its own", "Table 6/y1_a_b_3", "ref", "TGraphAsymmErrors", [1, 2, 3], [0.5] * 3, [0.5] * 3),
     ("a second dependent variable with its own points: a histogram of them", "Table 6/y2_stat", "ref", "TH1D", [4, 5], [0.5, 0.25], None),
@@ -250,6 +253,9 @@ for i, (what, name, source, cls, values, low, high) in enumerate(expected):
     plot = S.Plot(f"h{i}", "hepdata", "2d" if cls in ("TH2D", "TGraph2DErrors") else "1d")
     plot[1].AddData(name, source)
     p.pm.AddPlot(plot)
+plot = S.Plot("missing_table", "hepdata", "1d")
+plot[1].AddData("y1", "notable")
+p.pm.AddPlot(plot)
 
 
 def values_of(obj):
@@ -299,9 +305,12 @@ for what, text in (
     ("error sources of bins that overlap are reported", "HEPData record ins12345: no objects per error source for Table 8 (y1)"),
     ("a table with three independent variables is reported", "HEPData record ins12345: Table 10 not converted"),
     ("a downloaded file that does not exist is reported", f"Skipping input hepdata:{p.path('nothing.root')}"),
+    ("an input without record or file is reported", "Skipping input 'hepdata:': no HEPData record"),
 ):
     found = [line for line in lines if text in line]
     check(f"{what}, once", len(found) == 1, f"{len(found)} lines: {lines[:3]}")
+found = run.errors("Subdirectory Table 99 not found")
+check("a table missing in a record points to the listing of its tables, once", len(found) == 1 and found[0].endswith("(its tables: srp print hepdata:ins12345)."), f"{found}")
 infos = run.lines("INFO")
 for what, text in (
     ("tables without bins are named: no error sources", "HEPData record ins12345: Table 4, Table 7 have no bins"),

@@ -2089,7 +2089,11 @@ void PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
           if (!folder) {
             // inputs that do not contain the folder of a restricted data source (dataSource:some/folder) are simply not part of it
             if (isRestricted) continue;
-            logger::error("Subdirectory {} not found in file {} (data source {}).", folderPath, fileName, baseSource);
+            // a table missing in the copy of a HEPData record: srp print lists its tables with their data names
+            const std::filesystem::path copy(fileName);
+            const bool isRecord = (copy.parent_path() == std::filesystem::path(Config::Get().CacheFolder()) / "hepdata");
+            const string hint = (isRecord) ? " (its tables: srp print hepdata:" + copy.stem().string() + ")" : "";
+            logger::error("Subdirectory {} not found in file {} (data source {}){}.", folderPath, fileName, baseSource, hint);
             continue;
           }
         }

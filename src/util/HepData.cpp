@@ -523,7 +523,11 @@ std::optional<string> hepdata_local_file(const string& given, const std::filesys
   const std::filesystem::path source = std::filesystem::absolute(*expanded, ec).lexically_normal();
   if (given.empty() || ec || !std::filesystem::is_regular_file(source, ec)) {
     if (!failed_before(string(kHepDataScheme) + given)) {
-      logger::warning("Skipping input {}{}: neither a HEPData record (its INSPIRE id, ins1419244, or its record number) nor an existing file.", kHepDataScheme, given);
+      if (given.empty()) {
+        logger::warning("Skipping input '{}': no HEPData record (its INSPIRE id, ins1419244, or its record number) or file given.", kHepDataScheme);
+      } else {
+        logger::warning("Skipping input {}{}: neither a HEPData record (its INSPIRE id, ins1419244, or its record number) nor an existing file.", kHepDataScheme, given);
+      }
       remember_failure(string(kHepDataScheme) + given);
     }
     return std::nullopt;
