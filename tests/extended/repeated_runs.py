@@ -108,8 +108,8 @@ if found:
             # ROOT keeps the identifier of every directory it writes (a TObjString in a TList), whatever is deleted
             kept = {cls: k for cls, k in grown.items() if not (cls in ("TObjString", "TList") and 0 < k <= written)}
             check(f"mode {mode}: run {n + 1} leaves as many objects of every class as run {n}", not kept, f"{str(kept)[:600]} ({written} directories written)")
-made = sum(line.count("pm.AddPlot") for line in lines) * RUNS * 3
-check("every plot made in every run", out.text.count("Created plot") == made, f"{out.text.count('Created plot')} of {made}")
+made = sum(line.count("pm.AddPlot") for line in lines) * RUNS * 2  # modes file and png (mode data paints nothing)
+check("every plot made in modes file and png in every run", out.text.count("Created plot") == made, f"{out.text.count('Created plot')} of {made}")
 errors = [line for line in out.text.splitlines() if "[ ERR" in line or "Error in <" in line]
 check("no errors", not errors, " | ".join(errors[:5]))
 finish()
