@@ -383,7 +383,8 @@ void DefineSpectraPlots(PlotManager& pm)
     plot[2].AddData("key", "energyScan").SetDrawOption(col);
     plot[2].SetPalette(key, std::nullopt, 12);
     plot[2]['Z'].SetRange(0.5, 12.5);
-    plot[2]['X'].SetNumDivisions(0);
+    plot[2]['X'].SetLabelSize(0.f).SetTickLength(0.f);  // no axis along the key (also in ROOT's web canvas)
+    plot[2]['Y'].SetTickLength(0.f);
     plot[3].AddHorizontalLine(1.0).SetLine(kDashed, 3.0, kBlack).SetBehindData();
     plot[3]['X'].SetTitle("#it{p}_{T} (GeV/#it{c})");
     plot[3]['Y'].SetRange(0.85, 1.15).SetTitle("model / data");
