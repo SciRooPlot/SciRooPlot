@@ -6655,16 +6655,20 @@ void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, bo
   bool coversData{};
   const bool found = fitsIntoFrame && FindFreeSpace(pad, freeArea, width, height, placement, lowerLeftX, lowerLeftY, coversData);
   if (found && !coversData) return;
-  if (fitsIntoFrame) {
-    logger::hint("Could not find enough space to place the {} properly.", boxType);
-    if (found) return;
-  } else {
-    logger::hint("The {} ({:.2f} x {:.2f}) is larger than the space inside the frame ({:.2f} x {:.2f}, in units of the pad size): use fewer lines, more columns or a smaller text size.",
-                 boxType, width, height, freeWidthNDC, freeHeightNDC);
+  if (found) {
+    logger::hint("There is no free space for the {} inside the frame: it lies on the data, beside the other boxes (lower left corner ({:.3g}, {:.3g}), in units of the pad).",
+                 boxType, lowerLeftX, lowerLeftY);
+    return;
   }
   // just place it in the top left corner of the frame
   lowerLeftX = freeArea[0];
   lowerLeftY = freeArea[3] - height;
+  if (fitsIntoFrame) {
+    logger::hint("There is no free space for the {} inside the frame, not even beside the other boxes: it lies on the data and the other boxes in the top left corner of the frame.", boxType);
+  } else {
+    logger::hint("The {} ({:.2f} x {:.2f}) is larger than the space inside the frame ({:.2f} x {:.2f}, in units of the pad size): it lies in the top left corner of the frame, on the data; use fewer lines, more columns or a smaller text size.",
+                 boxType, width, height, freeWidthNDC, freeHeightNDC);
+  }
 }
 
 //**************************************************************************************************
