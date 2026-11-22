@@ -1513,6 +1513,9 @@ void PlotPainter::StyleContentScale(pad_state_t& padState)
   PlaceZTitle(pad_ptr, zAxis, {{zAxis->GetBinLowEdge(zAxis->GetFirst()), zAxis->GetBinUpEdge(zAxis->GetLast()), false}});
   TList* functions = axisHist_ptr->GetListOfFunctions();
   if (TObject* palette = functions->FindObject("palette")) {
+    if (pad_ptr->GetLogz()) {
+      logger::warning("Pad {} draws a 3d histogram with a log z axis: ROOT then paints its colour scale without colours (a ColorScale() cell shows them).", pad_ptr->GetNumber());
+    }
     TAttAxis zLook;
     zAxis->TAttAxis::Copy(zLook);
     // the bits of the look are kept apart from TAttAxis: they are given back with it
