@@ -47,6 +47,7 @@
 #include <fstream>
 #include <functional>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <optional>
 #include <set>
@@ -124,6 +125,12 @@ int main(int argc, char* argv[])
       command = vm["command"].as<string>();
     } else {
       logger::error("Not enough arguments (srp help lists the commands).");
+      return 1;
+    }
+    // the most words a command takes (with the command itself), as srp help shows them
+    static const std::map<string, int> maxWords{{"help", 1}, {"info", 1}, {"settings", 1}, {"clean", 1}, {"reset", 1}, {"projects", 2}, {"select", 2}, {"remove", 2}, {"confdir", 2}, {"print", 2}, {"open", 2}, {"colorwheel", 2}, {"rename", 3}, {"get", 3}, {"unset", 3}, {"cache", 3}, {"add", 4}, {"set", 4}, {"plotmode", 2}, {"color", 2}, {"verbosity", 2}, {"matchmode", 2}, {"matchcase", 2}, {"screenscale", 2}, {"bitmapscale", 2}};
+    if (auto words = maxWords.find(command); words != maxWords.end() && argc - 1 > words->second) {
+      logger::error("Too many arguments for srp {} (srp help shows its arguments; quote a value containing spaces).", command);
       return 1;
     }
     if (vm.count("project")) {
