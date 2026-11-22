@@ -5748,12 +5748,15 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
         // compared in pad coordinates: 10^log10(limit) is not always the limit, so a line at a limit of a log axis would count as outside
         const bool logAxis = (isVertical) ? pad_ptr->GetLogx() : pad_ptr->GetLogy();
         const double_t padPos = ToPad(pos, logAxis);
-        // in fractions of the pad it may lie beside the frame (spanning its height or width), as a region, but not outside of the pad
-        if (cutAtFrame && (padPos < ((isVertical) ? pad_ptr->GetUxmin() : pad_ptr->GetUymin()) || padPos > ((isVertical) ? pad_ptr->GetUxmax() : pad_ptr->GetUymax()))) {
+        // in fractions of the pad it may lie beside the frame (spanning its height or width), as a region, but not outside of the pad;
+        // with a tolerance: a position at an edge given in frame or pad coordinates comes back off by rounding
+        const double_t frameMin = (isVertical) ? pad_ptr->GetUxmin() : pad_ptr->GetUymin(), frameMax = (isVertical) ? pad_ptr->GetUxmax() : pad_ptr->GetUymax();
+        const double_t padMin = (isVertical) ? pad_ptr->GetX1() : pad_ptr->GetY1(), padMax = (isVertical) ? pad_ptr->GetX2() : pad_ptr->GetY2();
+        if (cutAtFrame && (padPos < frameMin - 1e-9 * (frameMax - frameMin) || padPos > frameMax + 1e-9 * (frameMax - frameMin))) {
           skip("its position is outside of the frame");
           continue;
         }
-        if (!cutAtFrame && (padPos < ((isVertical) ? pad_ptr->GetX1() : pad_ptr->GetY1()) || padPos > ((isVertical) ? pad_ptr->GetX2() : pad_ptr->GetY2()))) {
+        if (!cutAtFrame && (padPos < padMin - 1e-9 * (padMax - padMin) || padPos > padMax + 1e-9 * (padMax - padMin))) {
           skip("its position is outside of the pad");
           continue;
         }
