@@ -230,12 +230,17 @@ for case in plains + cases:
 
 def new_messages(case, plain, phase):
     """the messages of a phase that the plain call does not give (the plot named as in the plain one; points named by their values lying
-    outside the frame in both)"""
+    outside the frame in both; a box on the data at another place or size, e.g. of another alignment or margin)"""
     outside = re.compile(r"Data .+ lies entirely ")
-    left = [outside.sub("Data {data} lies entirely ", line.replace(plain["name"], "{name}")) for line in plain[phase] or []]
+    onData = re.compile(r"(at the position set for it lies on drawn data) \(.*\)")
+
+    def normal(line, name):
+        return onData.sub(r"\1", outside.sub("Data {data} lies entirely ", line.replace(name, "{name}")))
+
+    left = [normal(line, plain["name"]) for line in plain[phase] or []]
     new = []
     for line in case[phase] or []:
-        line = outside.sub("Data {data} lies entirely ", line.replace(case["name"], "{name}"))
+        line = normal(line, case["name"])
         if line in left:
             left.remove(line)
         else:

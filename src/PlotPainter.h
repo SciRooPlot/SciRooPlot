@@ -436,12 +436,23 @@ class PlotPainter
   std::pair<TObject*, std::string> FindDrawn(TPad* pad, uint16_t dataID, const std::optional<uint8_t>& padID) const;
   std::pair<int16_t, float_t> EntryText(const Plot::Pad::LegendEntry& entry, int16_t textFont, float_t textSize, const TVirtualPad* pad) const;
   void DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults, uint8_t padID, TPad* pad_ptr, Plot::Pad::Shape::layer_t layer, TObject* insertAfter);
+  // the cells of a grid over a pad occupied by what is drawn, by kind: bit 1 for objects, bit 2 for filled bins of maps (a box goes on top
+  // of a map only if there is no other room), bit 3 for boxes placed before (avoided also by a box that has to go on top of the data),
+  // bit 4 for shapes (avoided like objects, but no data a box covers)
+  struct occupancy_t {
+    static constexpr uint8_t kObject{1u}, kMap{2u}, kBox{4u}, kShape{8u};
+    int32_t nx{};
+    int32_t ny{};
+    std::vector<uint8_t> blocked;
+  };
+  occupancy_t OccupiedCells(TPad* pad);
+  bool CoversData(TPad* pad, double_t lowerLeftX, double_t lowerLeftY, double_t width, double_t height);
   bool FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY, bool& coversData);
   void FindBoxPosition(TPad* pad, double_t width, double_t height, box_placement_t placement, const std::string& boxType, double_t& lowerLeftX, double_t& lowerLeftY);
   static std::pair<double_t, double_t> SizeUnit(coordinates_t coordinates, const TVirtualPad* pad);  // the NDC of a size of 1 set for a box
   template <typename BoxType>
   std::pair<double_t, double_t> PlaceBox(const BoxType& box, coordinates_t coordinates, TPad* pad, double_t widthNDC, double_t heightNDC, double_t borderX, double_t borderY, const std::string& boxType);
-  static void HintIfBeyondPad(const std::string& boxType, double_t upperLeftX, double_t upperLeftY, double_t widthNDC, double_t heightNDC);
+  void HintAtPlacedBox(TPad* pad, const std::string& boxType, double_t upperLeftX, double_t upperLeftY, double_t widthNDC, double_t heightNDC);
   static bool BeyondPad(double_t upperLeftX, double_t upperLeftY, double_t widthNDC, double_t heightNDC);
   template <typename BoxType>
   static void ApplyBoxStyle(const BoxType& box, TPave* pave);

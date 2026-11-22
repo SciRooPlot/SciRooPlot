@@ -13,8 +13,8 @@ Reference: the pixels painted for the data (the canvas painted with and without 
 Covers: functions drawn with a fill, histograms with an error option but no errors drawn as
 steps, lines and bands of histograms through the bin centres, graphs without errors drawn with error boxes or bands, multi-error graphs
 by their largest errors, the edges of bands between the cells of the placement, 2d graphs and functions drawn as maps, the frame of 3d
-views of functions, boxes on top of each other when there is no room, a box asked for a corner placed before one taking the best
-corner, and the named cases.
+views of functions, boxes on top of each other when there is no room, a box asked for a corner placed before one taking the best corner, the
+hint for a box placed by hand on the data, and the named cases.
 """
 
 import re
@@ -297,7 +297,8 @@ check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
 in_chunks(todo, compare)
 
 # a box asked for a corner gets it before a box free to take any corner: with a rising graph the best corner is the top left, which the
-# text asks for, so the legend added before it goes elsewhere
+# text asks for, so the legend added before it goes elsewhere; a box at a position set for it that lies on the data gets a hint (verbosity
+# hint), one in free space or beside the frame none
 rising = ROOT.TGraph(20)
 for i in range(20):
     rising.SetPoint(i, i + 0.5, 1.0 + i)
@@ -309,6 +310,12 @@ plot[1].AddData("rising", "rising").SetLegendLabel("rising data")
 plot[1].AddLegend()
 plot[1].AddText(S.top_left, "text asked for the top left")
 q.pm.AddPlot(plot)
+plot = S.Plot("by_hand", "order", "1d")
+plot[1].AddData("rising", "rising").SetLegendLabel("rising data")
+plot[1].AddText(0.55, 0.75, "a text on the points").SetFrameCoordinates()
+plot[1].AddText(0.05, 0.95, "a text in free space").SetFrameCoordinates()
+plot[1].AddLegend(0.55, 0.25).SetFrameCoordinates()
+q.pm.AddPlot(plot)
 order = q.plot("order")
 with order.held():
     pad = order.pad("corner_first", "order")
@@ -316,4 +323,9 @@ with order.held():
     text = pad.GetPrimitive("TextBox_1") if pad else None
     placed = (rect(legend), rect(text)) if legend and text else None
 check("a box asked for a corner is placed before a box free to take the best corner: the text gets the top left", placed is not None and placed[1][0] < placed[0][0] and placed[1][3] > placed[0][3], f"{placed}")
+hints = order.hints("lies on drawn data")
+check("a text placed by hand on the data gets a hint", any("text 1 of pad 1" in h for h in hints), " | ".join(hints))
+check("a text and a legend placed by hand in free space get none", not any("text 2 of pad 1" in h or "legend 1 of pad 1" in h for h in hints), " | ".join(hints))
+quiet = q.plot("order", env={"SCIROOPLOT_VERBOSITY": None})
+check("at the default verbosity the look at boxes placed by hand gives nothing", quiet.file and not quiet.hints(), " | ".join(quiet.hints()))
 finish()
