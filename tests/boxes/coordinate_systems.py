@@ -11,11 +11,14 @@ upper left corner there.
 Cases: a single panel, a grid of touching panels (pads with and without margins), the main and ratio pad of 1d_ratio, log axes, a 3d
 view (boxes only; a box in user coordinates there is placed in frame coordinates, with a warning), an empty layout cell (boxes only); each coordinate system, the built-in defaults and the defaults of the pads; every
 text alignment in each coordinate system on log axes.
+The position a double-click in show mode reports for each of them (logged at verbosity debug) is the one given, in the coordinate system
+given, also for a text aligned at its position and an ellipse in fractions on log axes (drawn as a polygon).
 Reference: the frame of each drawn pad (its axis range within the pad, the margins for a 3d view) and the coordinates of the drawn objects.
 Covers: boxes in a multi-panel layout moved against the frame from pad to pad.
 """
 
 import math
+import re
 
 from srptest import ROOT, WORK, Project, S, cases, check, describe, finish
 
@@ -345,4 +348,30 @@ check(
     len(viewTexts) == 2 and abs(viewTexts[0].GetX1NDC() - viewTexts[1].GetX1NDC()) < TOL and abs(viewTexts[0].GetY2NDC() - viewTexts[1].GetY2NDC()) < TOL and len(viewSaid) == 1,
     f"{[(t.GetX1NDC(), t.GetY2NDC()) for t in viewTexts]} {viewSaid}",
 )
+# the positions a double-click in show mode reports, logged at verbosity debug: as given, in the coordinate system given (a text of one line
+# aligned at its position: that position; an ellipse in fractions on log axes, drawn as a polygon: its centre and radii)
+
+q = Project("reports")
+plot = S.Plot("reports", "reports", "1d")
+plot[1]["X"].SetRange(1.0, 100.0).SetLog()
+plot[1]["Y"].SetRange(1.0, 1000.0).SetLog()
+plot[1].AddText(0.3, 0.6, "aligned text").SetTextAlign(22)
+plot[1].AddText(0.1, 0.9, ["upper left", "corner"])
+plot[1].AddLegend(0.6, 0.9).AddEntry("a row")
+plot[1].AddEllipse((0.5, 0.5), 0.2, 0.1).SetFrameCoordinates()
+plot[1].AddEllipse((0.4, 0.3), 0.1, 0.05).SetPadCoordinates()
+plot[1].AddArrow((2.0, 5.0), (20.0, 50.0))
+q.pm.AddPlot(plot)
+reported = q.plot("reports", env={"SCIROOPLOT_VERBOSITY": "debug"})
+said = [re.sub(r"\x1b\[[0-9;]*m", "", line) for line in reported.lines("DEBU") if "Plot reports" in line]
+for what, want in (
+    ("a text of one line aligned at its position: that position", 'Pad 1, text 1 "aligned text": (0.3, 0.6)'),
+    ("a text of several lines: its upper left corner", 'Pad 1, text 2 "upper left…": (0.1, 0.9)'),
+    ("a legend: its upper left corner", 'Pad 1, legend 1 "a row": (0.6, 0.9)'),
+    ("an ellipse in fractions of the frame on log axes (a polygon): its centre and radii", "Pad 1, ellipse 1: ((0.5, 0.5), 0.2, 0.1)"),
+    ("an ellipse in fractions of the pad on log axes: its centre and radii", "Pad 1, ellipse 2: ((0.4, 0.3), 0.1, 0.05)"),
+    ("an arrow in axis values on log axes", "Pad 1, arrow 1: ((2, 5), (20, 50))"),
+):
+    check(f"the position reported at verbosity debug: {what}", sum(line.endswith(want) for line in said) == 1, " | ".join(said))
+check("each box and shape is reported once", len(said) == 6, " | ".join(said))
 finish()

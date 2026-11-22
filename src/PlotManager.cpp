@@ -2482,6 +2482,8 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& mode)
   if (!canvas) return false;
   PaintedCanvases()[canvas.get()] = nPainted;
   if (isBitmapMode) WarnNonAsciiTexts(canvas.get());
+  // at verbosity debug: where its boxes, images and shapes are, as a double-click in show mode reports them (for scripts and agents)
+  if (!logger::muted() && logger::detail::verbosity() >= logger::detail::level::debug) LogPositions(fullPlot, canvas.get());
 
   if (TColor::GetFreeColorIndex() > std::numeric_limits<int16_t>::max()) {
     // ROOT colour indices are of type short, which limits the number of custom colours
@@ -3213,6 +3215,28 @@ optional<size_t> PlotManager::NextBrowseIndex(size_t index, bool forward) const
     if (!mBrowseSkip[candidate]) return candidate;
   }
   return nullopt;
+}
+
+//**************************************************************************************************
+/**
+ * Logs (verbosity debug) the line a double-click in show mode prints for each legend, text, statistics box, image and shape of the plot.
+ */
+//**************************************************************************************************
+void PlotManager::LogPositions(const Plot& plot, TCanvas* canvas) const
+{
+  vector<string> lines;  // a shape drawn as two objects (a region and its outline) is reported once
+  for (auto* padObj : *canvas->GetListOfPrimitives()) {
+    auto* pad = dynamic_cast<TPad*>(padObj);
+    if (!pad || !str_starts_with(pad->GetName(), "Pad_")) continue;
+    for (auto* obj : *pad->GetListOfPrimitives()) {
+      auto* imagePad = dynamic_cast<TPad*>(obj);  // an image is drawn in a sub-pad of its pad
+      const auto report = (imagePad && str_starts_with(imagePad->GetName(), "ImageBox_")) ? PositionReport(imagePad, imagePad) : PositionReport(obj, pad);
+      if (report && std::find(lines.begin(), lines.end(), *report) == lines.end()) lines.push_back(*report);
+    }
+  }
+  for (const auto& line : lines) {
+    logger::debug("Plot {}: {}", Plot::Label(plot), line);
+  }
 }
 
 //**************************************************************************************************

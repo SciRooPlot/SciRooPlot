@@ -163,6 +163,7 @@ class PlotManager
   std::optional<size_t> NextBrowseIndex(size_t index, bool forward) const;
   bool HandleOpenWindows(bool& closeAll);
   std::optional<std::string> PositionReport(TObject* selected, TVirtualPad* pad) const;
+  void LogPositions(const Plot& plot, TCanvas* canvas) const;
   void WaitForOpenWindows();
   static void SetTerminalKeys(bool on);
   static char TerminalKey();
