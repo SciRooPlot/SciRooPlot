@@ -113,4 +113,21 @@ bool make_cache_folder(const std::string& folder, std::error_code& ec)
   }
   return !ec;
 }
+
+std::string written_file(const std::string& file, bool warn)
+{
+  namespace fs = std::filesystem;
+  std::error_code ec;
+  fs::path path = file;
+  for (int32_t nLinks = 0; fs::is_symlink(path, ec); ++nLinks) {
+    if (nLinks == 40) {  // the limit of the system (ELOOP)
+      if (warn) logger::warning("{} is a symbolic link in a loop: it is replaced by the file written.", file);
+      return file;
+    }
+    const fs::path target = fs::read_symlink(path, ec);
+    if (ec) return file;
+    path = (target.is_absolute()) ? target : path.parent_path() / target;  // a relative target from the folder of the link
+  }
+  return path.string();
+}
 }  // end namespace SciRooPlot::util

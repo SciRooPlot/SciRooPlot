@@ -83,7 +83,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Old | New | Kind | Action |
 |---|---|---|---|
 | A project folder held `plots.info`, `dataSources.info`, `tabcomp.csv`, `UserData.root` | Also `settings.info`: the settings the program declares, written by `SaveProject` (removed when it declares none) | file format | Nothing. |
-| Modes `file` and `data` wrote `Plots.root` and `Data.root` in place: two runs finishing at once or a failed write could leave a broken file | Written to `<name>.<pid>.tmp` beside it (beside where it points, if it is a symbolic link) and renamed when complete; a failed write keeps the earlier file and is reported | behaviour | Nothing. |
+| Modes `file` and `data` wrote `Plots.root` and `Data.root` in place: two runs finishing at once or a failed write could leave a broken file | Written to `<name>.<pid>.tmp` beside it (beside where it points, if it is a symbolic link, also one to a file not written yet) and renamed when complete; a failed write keeps the earlier file and is reported | behaviour | Nothing. |
 
 ### Command line
 

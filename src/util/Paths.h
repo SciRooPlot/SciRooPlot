@@ -76,20 +76,15 @@ inline std::pair<std::string, std::string> split_path(const std::string& path)
   return {path.substr(0, pos), path.substr(pos + 1)};
 }
 
-// the file written for an output file: where it points if it is a symbolic link (the target replaced, the link kept), itself otherwise
-inline std::string written_file(const std::string& file)
-{
-  std::error_code ec;
-  if (!std::filesystem::is_symlink(file, ec)) return file;
-  const auto target = std::filesystem::weakly_canonical(file, ec);
-  return (ec) ? file : target.string();
-}
+// the file written for an output file: where it points if it is a symbolic link, also to a file that does not exist yet (the target
+// replaced, the link kept; links to links followed), itself otherwise or for links in a loop (warned about if warn is set)
+std::string written_file(const std::string& file, bool warn = false);
 
 // an output file is written to a temporary file beside it (beside the target of a link) and renamed once complete (replace_file), so
 // that an interrupted write, a failed one or two runs finishing at the same time cannot leave a truncated file behind
 inline std::string temporary_file(const std::string& file)
 {
-  return written_file(file) + "." + std::to_string(getpid()) + ".tmp";
+  return written_file(file, true) + "." + std::to_string(getpid()) + ".tmp";
 }
 inline bool replace_file(const std::string& tmpFile, const std::string& file, std::error_code& ec)
 {
