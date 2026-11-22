@@ -9220,6 +9220,10 @@ string PlotPainter::CppQuoted(const string& text)
 {
   string quoted = "\"";
   for (const char c : text) {
+    if (c == '\n' || c == '\r') {  // a string literal cannot span lines
+      quoted += (c == '\n') ? "\\n" : "\\r";
+      continue;
+    }
     if (c == '"' || c == '\\') quoted += '\\';
     quoted += c;
   }
