@@ -8,9 +8,10 @@ with srp cache off: the one of the config folder, or the folder SciRooPlot insid
 A downloaded table or record (hepdata:<file>: a ROOT file of one table or of the record, or the record's .tar.gz; relative to the current
 directory) gives the same objects, from a copy in the cache folder that is made again when the file changes; the file itself is left as it
 is, a file that does not exist is reported once.
-srp print hepdata:<record or file>[:<table>] lists the data names of the copy (table/object with its class and the title of its values, not
-HEPData's own objects) and says per table what the record's ROOT file does not hold; a table that is not in the record fails with one
-error naming the tables there.
+srp print hepdata:<record or file>[:<table>] lists every data name of the copy per table (object with its class and the title of its
+values): the objects SciRooPlot made, each with what it holds (the total errors, or the HEPData objects of its error source), apart from
+HEPData's own; it says per table what the record's ROOT file does not hold; a table that is not in the record fails with one error naming
+the tables there.
 The record is served by a local web server as hepdata.net serves its ROOT download (a .tar.gz holding the ROOT file).
 Covers: an error label with characters not allowed in data names; two labels that become the same name; an asymmetric error with both
 shifts on one side; a table with two dependent variables of different points; a 2d table of points without bins; text bins with a bin
@@ -362,19 +363,36 @@ listing = p.srp("print", "hepdata:ins12345")
 lines = printed(listing)
 
 
-def under(table):
-    """the lines listed below a table, up to the next table"""
+def under(table, group):
+    """the objects listed for a table in a group ("made by SciRooPlot" or "HEPData's own"), without the indentation"""
     start = next((i for i, line in enumerate(lines) if line.startswith(table + "/")), None)
     if start is None:
         return []
     rest = lines[start + 1 :]
-    end = next((i for i, line in enumerate(rest) if not line.startswith("- ")), len(rest))
-    return rest[:end]
+    rest = rest[: next((i for i, line in enumerate(rest) if not line.startswith(" ")), len(rest))]
+    head = next((i for i, line in enumerate(rest) if line.strip().startswith(group)), None)
+    if head is None:
+        return []
+    items = rest[head + 1 :]
+    return [line.strip() for line in items[: next((i for i, line in enumerate(items) if not line.strip().startswith("- ")), len(items))]]
 
 
-check("srp print hepdata:<record> lists the data names per table", listing.returncode == 0 and any(line.startswith("- [TH1D] y1_stat") for line in under("Table 1")) and any(line.startswith("- [TGraphAsymmErrors] y1_sys_lumi") for line in under("Table 2")), listing.stdout + listing.stderr)
-check("srp print hepdata:<record> shows the title of the values", any(line.startswith("- [TH1D] y1 ") and "yield" in line for line in under("Table 1")), "\n".join(under("Table 1")))
-check("srp print hepdata:<record> leaves out HEPData's own objects", not [line for line in lines if line.startswith("- ") and line.split("] ", 1)[-1].startswith(("Hist", "Graph"))], listing.stdout)
+made_group, own_group = "made by SciRooPlot", "HEPData's own"
+check(
+    "srp print hepdata:<record> lists the objects SciRooPlot made per table",
+    listing.returncode == 0 and any(line.startswith("- [TH1D] y1_stat") for line in under("Table 1", made_group)) and any(line.startswith("- [TGraphAsymmErrors] y1_sys_lumi") for line in under("Table 2", made_group)),
+    listing.stdout + listing.stderr,
+)
+check("srp print hepdata:<record> shows the title of the values", any(line.startswith("- [TH1D] y1 ") and "yield" in line for line in under("Table 1", made_group)), "\n".join(under("Table 1", made_group)))
+check("srp print hepdata:<record> names what a made object holds: the total errors", any(line.startswith("- [TH1D] y1 ") and line.endswith("total errors") for line in under("Table 1", made_group)), "\n".join(under("Table 1", made_group)))
+check("srp print hepdata:<record> names the error source a made object comes from", any(line.startswith("- [TH1D] y1_stat ") and line.endswith("(Hist1D_y1_e1)") for line in under("Table 1", made_group)), "\n".join(under("Table 1", made_group)))
+check("srp print hepdata:<record> names both halves of an asymmetric error source", any(line.startswith("- [TGraphAsymmErrors] y1_sys_lumi ") and line.endswith("(Hist1D_y1_e2plus, Hist1D_y1_e2minus)") for line in under("Table 2", made_group)), "\n".join(under("Table 2", made_group)))
+check(
+    "srp print hepdata:<record> lists HEPData's own objects apart from the made ones",
+    [line.split("] ", 1)[-1].split()[0] for line in under("Table 2", own_group)] == ["Hist1D_y1", "Hist1D_y1_e1", "Hist1D_y1_e2plus", "Hist1D_y1_e2minus", "Graph1D_y1"] and not [line for line in under("Table 2", made_group) if line.split("] ", 1)[-1].startswith(("Hist", "Graph"))],
+    listing.stdout,
+)
+check("srp print hepdata:<record> lists HEPData's own 3d histograms of a table it cannot convert", [line.split("] ", 1)[-1] for line in under("Table 10", own_group)] == ["Hist3D_y1", "Hist3D_y1_e1"] and not under("Table 10", made_group), listing.stdout)
 for table, text in (("Table 4", "no bins"), ("Table 8", "overlap"), ("Table 10", "three independent variables")):
     heading = next((line for line in lines if line.startswith(table + "/")), "")
     check(f"srp print hepdata:<record> says what {table} lacks ({text})", text in heading, heading or listing.stdout)
@@ -385,7 +403,7 @@ wrong = p.srp("print", "hepdata:ins12345:Table 2.")
 errors = [line for line in (wrong.stdout + wrong.stderr).splitlines() if "ERR" in line]
 check("srp print hepdata:<record>:<table not there> fails with one error naming the tables", wrong.returncode == 1 and len(errors) == 1 and "Table 2." in errors[0] and "Table 1" in errors[0], wrong.stdout + wrong.stderr)
 own = p.srp("print", "hepdata:" + p.path("table1.root"))
-check("srp print hepdata:<file> lists a downloaded file", own.returncode == 0 and any(line.startswith("- [TH1D] y1_stat") for line in printed(own)), own.stdout + own.stderr)
+check("srp print hepdata:<file> lists a downloaded file", own.returncode == 0 and any(line.strip().startswith("- [TH1D] y1_stat") for line in printed(own)), own.stdout + own.stderr)
 none = p.srp("print", "hepdata:ins99999")
 check("srp print hepdata:<record that does not exist> fails", none.returncode == 1, none.stdout + none.stderr)
 check("a downloaded file that changed is converted again", got is not None and all(close(a, b, 1e-6) for a, b in zip(got[0] + got[1], [40, 20, 8, 4, 2, 1], strict=True)), f"{got}")

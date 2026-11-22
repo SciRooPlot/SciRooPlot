@@ -89,30 +89,32 @@ struct record_notes_t {
   vector<string> threeD;       // tables with three independent variables: 3d histograms only
 };
 
-// adds to the copy of a table an object per dependent variable y<i> and error source: y<i> with the total errors, y<i>_<label> with one
-// error source; a histogram for a binned table with one point per bin (text bins: per bin with a value) and symmetric errors, a graph
-// otherwise
-void add_variables(TDirectory* table, TDirectory* out, const string& tableName, record_notes_t& notes)
+// HEPData's objects of a table by their key, and its dependent variables made of them (pointing into the objects); for the copy of a table
+// and for srp print, which reads them from the copy
+struct hepdata_table_t {
+  vector<std::pair<string, std::unique_ptr<TObject>>> objects;
+  std::map<int, hepdata_variable_t> variables;
+  bool has3d{};  // HEPData's 3d histograms of a table with three independent variables
+};
+hepdata_table_t read_hepdata_table(TDirectory* table)
 {
   static const std::regex objectName(R"((Graph|Hist)([12])D_y(\d+)(_e(\d+)(plus|minus)?)?)");
-  std::map<int, hepdata_variable_t> variables;
-  vector<std::unique_ptr<TObject>> owned;
-  bool has3d = false;
+  hepdata_table_t read;
   for (auto* key : TRangeDynCast<TKey>(table->GetListOfKeys())) {
     if (!key || key_inherits(key, TDirectory::Class())) continue;
     std::unique_ptr<TObject> obj(key->ReadObj());
     if (!obj) continue;
     if (auto* hist = dynamic_cast<TH1*>(obj.get())) hist->SetDirectory(nullptr);
-    out->WriteTObject(obj.get(), key->GetName());  // everything as downloaded
+    TObject* object = read.objects.emplace_back(key->GetName(), std::move(obj)).second.get();
     std::smatch match;
     const string name = key->GetName();
-    if (str_starts_with(name, "Hist3D_y")) has3d = true;
+    if (str_starts_with(name, "Hist3D_y")) read.has3d = true;
     if (!std::regex_match(name, match, objectName)) continue;
-    auto& variable = variables[std::stoi(match[3])];
-    auto* hist = dynamic_cast<TH1*>(obj.get());
+    auto& variable = read.variables[std::stoi(match[3])];
+    auto* hist = dynamic_cast<TH1*>(object);
     if (match[1] == "Graph") {
-      if (match[2] == "1") variable.graph = dynamic_cast<TGraphAsymmErrors*>(obj.get());
-      if (match[2] == "2") variable.graph2d = dynamic_cast<TGraph2DErrors*>(obj.get());
+      if (match[2] == "1") variable.graph = dynamic_cast<TGraphAsymmErrors*>(object);
+      if (match[2] == "2") variable.graph2d = dynamic_cast<TGraph2DErrors*>(object);
     } else if (!hist) {
       continue;
     } else if (!match[4].matched) {
@@ -132,12 +134,40 @@ void add_variables(TDirectory* table, TDirectory* out, const string& tableName, 
         if (!match[6].matched) source.down = hist;
       }
     }
-    owned.push_back(std::move(obj));
   }
-  if (has3d && variables.empty()) notes.threeD.push_back(tableName);
+  return read;
+}
+
+// the names y<i>_<label> of the error sources of y<i> by their number: the label in characters allowed in data names; a label that becomes
+// the same as another one gets the number of its source
+std::map<int, string> source_names(const string& name, const hepdata_variable_t& variable)
+{
+  std::map<int, string> sourceNames;
+  std::set<string> names{name};
+  for (const auto& [number, source] : variable.sources) {
+    if (!source.up || !source.down) continue;
+    string label = source.label;
+    std::replace_if(label.begin(), label.end(), [](char c) { return !std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '-'; }, '_');
+    string variantName = name + "_" + label;
+    if (!names.insert(variantName).second) names.insert(variantName += "_" + std::to_string(number));
+    sourceNames[number] = variantName;
+  }
+  return sourceNames;
+}
+
+// adds to the copy of a table an object per dependent variable y<i> and error source: y<i> with the total errors, y<i>_<label> with one
+// error source; a histogram for a binned table with one point per bin (text bins: per bin with a value) and symmetric errors, a graph
+// otherwise
+void add_variables(TDirectory* table, TDirectory* out, const string& tableName, record_notes_t& notes)
+{
+  const auto read = read_hepdata_table(table);
+  for (const auto& [keyName, object] : read.objects) {
+    out->WriteTObject(object.get(), keyName.data());  // everything as downloaded
+  }
+  if (read.has3d && read.variables.empty()) notes.threeD.push_back(tableName);
 
   bool withoutBins = false;
-  for (const auto& [index, variable] : variables) {
+  for (const auto& [index, variable] : read.variables) {
     const string name = "y" + std::to_string(index);
     const bool is2d = (variable.graph2d != nullptr);
     if (!variable.graph && !is2d) continue;
@@ -171,14 +201,9 @@ void add_variables(TDirectory* table, TDirectory* out, const string& tableName, 
       }
     }
     if (sourcesLost) notes.overlapping.push_back(tableName + " (" + name + ")");
-    std::set<string> names{name};
-    for (const auto& [number, source] : variable.sources) {
-      if (sourcesLost || !source.up || !source.down) continue;
-      // in characters allowed in data names; a label that becomes the same as another one gets the number of its source
-      string label = source.label;
-      std::replace_if(label.begin(), label.end(), [](char c) { return !std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '-'; }, '_');
-      string variantName = name + "_" + label;
-      if (!names.insert(variantName).second) names.insert(variantName += "_" + std::to_string(number));
+    for (const auto& [number, variantName] : source_names(name, variable)) {
+      if (sourcesLost) break;
+      const auto& source = variable.sources.at(number);
       auto& errors = variants.emplace_back(variantName, vector<std::pair<double, double>>{}).second;
       for (int i = 0; i < n; ++i) {
         const double up = source.up->GetBinContent(binOf(source.up, i));
@@ -591,37 +616,61 @@ bool print_hepdata(const string& input, const std::filesystem::path& folder)
     }
   }
 
-  // the objects SciRooPlot made (y<i>, y<i>_<label>) per table, with what the ROOT file of the record does not hold
+  // per table the objects SciRooPlot made (y<i>, y<i>_<label>) with what they are made of, then HEPData's own, and what the ROOT file of the
+  // record does not hold
   static const std::regex made(R"(y(\d+)(_.+)?)");
   static const std::regex hepdataSource(R"(Hist[12]D_y(\d+)_e\d+(plus|minus)?)");
   logger::print("HEPData {} {} (copy {}): data names <table>/<name>", (is_hepdata_record_id(recordOrFile)) ? "record" : "file", recordOrFile, *copy);
   for (auto* tableKey : tables) {
     auto* table = dynamic_cast<TDirectory*>(tableKey->ReadObj());
     if (!table) continue;
-    vector<TKey*> objects;
+    const auto read = read_hepdata_table(table);
+    // what the made objects are made of: the values of y<i> with its total errors, or with the errors of one source as error bars
+    std::map<string, string> origins;
+    for (const auto& [index, variable] : read.variables) {
+      const string name = "y" + std::to_string(index);
+      origins[name] = "total errors";
+      for (const auto& [number, variantName] : source_names(name, variable)) {
+        const auto& source = variable.sources.at(number);
+        origins[variantName] = "errors " + source.label + " (" + source.up->GetName() + ((source.down != source.up) ? string(", ") + source.down->GetName() : "") + ")";
+      }
+    }
+    // the title of the values: the z axis of 2d data, the y axis otherwise
+    auto valueTitle = [](TObject* object) -> string {
+      if (auto* hist = dynamic_cast<TH1*>(object)) {
+        if (hist->GetDimension() == 3) return "";
+        return ((hist->GetDimension() == 1) ? hist->GetYaxis() : hist->GetZaxis())->GetTitle();
+      }
+      if (auto* graph2d = dynamic_cast<TGraph2D*>(object)) return graph2d->GetZaxis()->GetTitle();
+      if (auto* graph = dynamic_cast<TGraph*>(object)) return graph->GetYaxis()->GetTitle();
+      return "";
+    };
+    vector<string> madeLines, ownLines;
     std::set<string> withSources;    // y<i> with objects per error source
     std::set<string> sourcesInFile;  // y<i> with error sources in HEPData's histograms
     bool hasBins = false;
-    bool has3d = false;
-    for (auto* key : TRangeDynCast<TKey>(table->GetListOfKeys())) {
-      if (!key) continue;
-      const string name = key->GetName();
+    for (const auto& [name, object] : read.objects) {
       std::smatch match;
+      const string line = "  - [" + string(object->ClassName()) + "] " + name;
       if (std::regex_match(name, match, made)) {
-        objects.push_back(key);
         if (match[2].matched) withSources.insert("y" + string(match[1]));
-      } else if (std::regex_match(name, match, hepdataSource)) {
-        sourcesInFile.insert("y" + string(match[1]));
+        const string title = (match[2].matched) ? "" : valueTitle(object.get());
+        const auto origin = origins.find(name);
+        const string about = (title.empty() ? "" : title + ", ") + ((origin != origins.end()) ? origin->second : "");
+        madeLines.push_back(line + (about.empty() ? "" : "  " + about));
+        continue;
       }
+      if (std::regex_match(name, match, hepdataSource)) sourcesInFile.insert("y" + string(match[1]));
       if (str_starts_with(name, "Hist1D_y") || str_starts_with(name, "Hist2D_y")) hasBins = true;
-      if (str_starts_with(name, "Hist3D_y")) has3d = true;
+      const string title = valueTitle(object.get());
+      ownLines.push_back(line + (title.empty() ? "" : "  " + title));
     }
     vector<string> lost;
     for (const auto& variable : sourcesInFile) {
       if (!withSources.count(variable)) lost.push_back(variable);
     }
     string note;
-    if (objects.empty() && has3d) {
+    if (madeLines.empty() && read.has3d) {
       note = "three independent variables: only HEPData's own Hist3D_y<i>";
     } else if (!hasBins) {
       note = "no bins: total errors only";
@@ -629,25 +678,16 @@ bool print_hepdata(const string& input, const std::filesystem::path& folder)
       note = "the bins overlap: no error sources of " + join_strings(lost, ", ");
     }
     logger::print("{}/{}", table->GetName(), (note.empty()) ? "" : " (" + note + ")");
-    for (auto* key : objects) {
-      std::unique_ptr<TObject> object(key->ReadObj());
-      string title;
-      if (object && string(key->GetName()).find('_') == string::npos) {
-        // the values: the z axis of 2d data, the y axis otherwise
-        if (auto* hist = dynamic_cast<TH1*>(object.get())) {
-          hist->SetDirectory(nullptr);
-          title = ((hist->GetDimension() == 2) ? hist->GetZaxis() : hist->GetYaxis())->GetTitle();
-        } else if (auto* graph2d = dynamic_cast<TGraph2D*>(object.get())) {
-          graph2d->SetDirectory(nullptr);
-          title = graph2d->GetZaxis()->GetTitle();
-        } else if (auto* graph = dynamic_cast<TGraph*>(object.get())) {
-          title = graph->GetYaxis()->GetTitle();
-        }
-      }
-      logger::print("- [{}] {}{}", key->GetClassName(), key->GetName(), (title.empty()) ? "" : "  " + title);
+    if (!madeLines.empty()) logger::print("  made by SciRooPlot (the values with these errors as error bars):");
+    for (const auto& line : madeLines) {
+      logger::print("{}", line);
+    }
+    // HEPData fills its histograms without weights: their errors are no uncertainties, an error source is the contents of its _e<k>
+    if (!ownLines.empty()) logger::print("  HEPData's own{}:", (hasBins || read.has3d) ? " (Hist...: no real errors, _e<k>: errors as contents)" : "");
+    for (const auto& line : ownLines) {
+      logger::print("{}", line);
     }
   }
-  logger::print("HEPData's own objects (Graph1D_y1, Hist1D_y1_e1, ...): srp print {}", *copy);
   return true;
 }
 }  // namespace SciRooPlot::util
