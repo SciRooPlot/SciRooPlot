@@ -27,6 +27,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| A picture that could not be written over an earlier file of its name (no permission) was logged as created, the earlier file left | Reported as not written | behaviour | Nothing. |
 | An ellipse in fractions of the frame or the pad (`AddEllipse` with `SetFrameCoordinates`/`SetPadCoordinates`) on a pad with a log axis was drawn far too small (TEllipse adds its radii in axis values) | The ellipse asked for, drawn as the polygon of its perimeter (a `TPolyLine` fill and outline in `Plots.root` instead of a `TEllipse`, only on such pads) | behaviour | Nothing. |
 | Placeholders (`<entries:1>`, `<mean:2@1>` …) in a legend title or a legend row without data (`LegendBox::AddEntry`) were left as written | Replaced as in texts (data named by number) | behaviour | Nothing. |
 | A histogram with Poisson errors (`TH1::SetBinErrorOption(TH1::kPoisson)`) drawn as a graph (`points_line`, `points_arrows`, `brackets`) got symmetric errors, and its empty bins (an upper error of 1.84) were left out | Its asymmetric errors, as ROOT draws them for the histogram (`points`); empty bins with their upper error | behaviour | Nothing. |

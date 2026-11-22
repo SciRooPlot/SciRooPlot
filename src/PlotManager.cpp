@@ -2826,9 +2826,11 @@ bool PlotManager::WriteOutput(Plot& fullPlot, const string& mode, const shared_p
   auto noPdfImagesGuard = filter_root_messages([silenceNoPdfImages](Int_t, Bool_t, const char* location, const char* msg) {
     return silenceNoPdfImages && TString(location) == "TASImage::Paint" && TString(msg).Contains("PDF");
   });
-  canvas->SaveAs(fullName.data());
+  // written: the file exists and, if one was there before, it was written again (a failed write leaves the earlier file)
   std::error_code writtenError;
-  if (!std::filesystem::is_regular_file(fullName, writtenError)) {
+  const auto writtenBefore = (std::filesystem::is_regular_file(fullName, writtenError)) ? optional(std::filesystem::last_write_time(fullName, writtenError)) : nullopt;
+  canvas->SaveAs(fullName.data());
+  if (!std::filesystem::is_regular_file(fullName, writtenError) || (writtenBefore && std::filesystem::last_write_time(fullName, writtenError) == *writtenBefore)) {
     logger::error("Could not write {}.", fullName);
     return false;
   }
