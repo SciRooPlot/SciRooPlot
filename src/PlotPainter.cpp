@@ -6492,7 +6492,11 @@ std::pair<double_t, double_t> PlotPainter::PlaceBox(const BoxType& box, coordina
     FindBoxPosition(pad, widthNDC + borderX, heightNDC + borderY, *box.GetPlacement(), boxType, lowerLeftX, lowerLeftY);
     return {lowerLeftX + 0.5 * borderX, lowerLeftY + 0.5 * borderY + heightNDC};
   }
-  if (coordinates == frame_coordinates) {
+  // a 3d view has no user coordinates in the pad (ROOT's would be those of its internal view)
+  if (coordinates == user_coordinates && pad->GetView()) {
+    logger::warning("The {} at ({}, {}) in user coordinates is placed in frame coordinates: a 3d view has no user coordinates in its pad.", boxType, box.GetXPosition(), box.GetYPosition());
+  }
+  if (coordinates == frame_coordinates || (coordinates == user_coordinates && pad->GetView())) {
     const auto [x1, y1, x2, y2] = FrameInPad(pad);
     return {x1 + box.GetXPosition() * (x2 - x1), y1 + box.GetYPosition() * (y2 - y1)};
   }

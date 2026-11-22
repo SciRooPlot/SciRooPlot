@@ -57,6 +57,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Python: a modifier of a ratio reached again as `plot[n](i)` acted on the side selected last (`Numer()`, `Denom()`, `Both()`) | It acts on the ratio itself, as in C++ and as when the ratio was added (also in copies of plots and pads) | behaviour | Write `Numer()`, `Denom()` or `Both()` after `plot[n](i)` where the inputs are meant. |
 | `SetShowOverflowBins` of the numerator given to `Ratio(numerator, denominator)` was lost | The ratio keeps it, as the rest of the numerator's look | behaviour | Nothing. |
 | A polar graph drawn with `bars`, `band`, `band_smooth`, `boxes`, `boxes_nomarkers` or `brackets` painted nothing or cartesian rectangles over the grid; a log x or y axis of its pad garbled it | Drawn with its default option, with a warning; the log scale is ignored with a warning | behaviour | Nothing. |
+| A box in user coordinates in a pad with a 3d view was placed by ROOT's internal coordinates of the view | Placed in frame coordinates, with a warning | behaviour | Give its position in frame or pad coordinates. |
 | 1d data in a pad whose frame is drawn in 3d was not drawn, without a message (its legend row stayed) | Not drawn, with a warning; the data after it keeps its number | behaviour | Nothing. |
 
 ### Input validation
