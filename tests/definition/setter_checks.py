@@ -23,7 +23,7 @@ where it has a name (the axis, the data, the plot with its group, which margin o
 Style numbers (markers, lines, fills) are not checked: ROOT draws an unknown style in its default style.
 Covers: the same tree joined again, a selection of data that is not projected, pad margins without room for the
 frame, ranges inverted by single-end setters, calls replacing each other, a projection range in bin numbers with a fraction,
-Normalize(min, max) without isDensity.
+Normalize(min, max) without isDensity, a Define column name that is no identifier, an empty base plot name.
 """
 
 import os
@@ -356,4 +356,10 @@ for what, (call, text) in NAMED.items():
 # a normalization range without isDensity would be taken as isDensity and minimum: refused by the conversion (in C++ a deleted overload)
 result, _ = S.captured(lambda: S.S.Data("h", "s").Normalize(2.0, 6.0))
 S.check("Normalize(min, max) without isDensity is refused", isinstance(result, TypeError), repr(result))
+# the column name of Define is used in expressions: one that is no identifier is refused where set; an empty base plot name is ignored
+refused, _ = S.captured(lambda: S.S.Data("tracks", "s").Define("a b", "1"))
+S.check("Define with a column name that is no identifier: refused where set", isinstance(refused, Exception) and "a column name has letters, digits and _" in str(refused), str(refused))
+basePlot = S.S.Plot("base_name", "g", "1d")
+_, printed = S.captured(lambda: basePlot.SetBasePlot(""))
+S.check("SetBasePlot with an empty name: ignored with a warning where set", "The empty name of the base plot of base_name is ignored" in printed, printed)
 S.finish()
