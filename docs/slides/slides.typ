@@ -1534,7 +1534,7 @@
           plot[1].AddData("f1", "input", "Fit");
           plot[1].AddData("g1", "input", "Graph").SetLegend(2);
 
-          // legend 1 ("Data", "Fit") at rel. (x, y) pos. in pad
+          // legend 1 ("Data", "Fit") at rel. (x, y) pos. in frame
           plot[1].AddLegend(0.68, 0.8);
           // legend 2 ("Graph")
           plot[1].AddLegend(0.06, 0.06);
@@ -1557,7 +1557,7 @@
           plot[1].AddData("f1", "input", "Fit")
           plot[1].AddData("g1", "input", "Graph").SetLegend(2)
 
-          # legend 1 ("Data", "Fit") at rel. (x, y) pos. in pad
+          # legend 1 ("Data", "Fit") at rel. (x, y) pos. in frame
           plot[1].AddLegend(0.68, 0.8)
           # legend 2 ("Graph")
           plot[1].AddLegend(0.06, 0.06)
@@ -2066,7 +2066,7 @@
     gutter: 2%,
     [
       #api-section("Cyclic defaults (lists)", (
-        [`SetDefaultColors(colors)`], [Cyclic colour list applied to fill/text where relevant.],
+        [`SetDefaultColors(colors)`], [Cyclic colour list for the markers, lines and fills of the data.],
         [`SetDefaultMarkerColors(colors)`], [Cyclic marker colour list.],
         [`SetDefaultMarkerStyles(styles)`], [Cyclic marker style list.],
         [`SetDefaultLineColors(colors)`], [Cyclic line colour list.],
@@ -2101,7 +2101,7 @@
         [`SetTitle(title)`], [Axis title.],
         [#names("SetRange(min, max)", "SetMinRange(min)", "SetMaxRange(max)")], [Set the axis range, fully or partially.],
         [#names("SetRoomAboveMax(frameFraction)", "SetRoomBelowMin(frameFraction)")], [Keep this fraction of the frame free beyond the drawn data (e.g. for a legend).],
-        [`SetColor(color)`], [Set both axis-line and tick colour.],
+        [`SetColor(color)`], [Colour of the axis line, ticks, labels and title.],
         [#names("SetAxisColor(color)", "SetAxisAlpha(alpha)")], [Axis line colour or transparency.],
         [#names("SetNumDivisions(n)", "SetMaxDigits(n)", "SetTickLength(len)")], [Tick divisions, max digits before scientific notation, and tick length.],
         [#names("SetLog(isLog = true)", "SetGrid(isGrid = true)")], [Logarithmic axis, or grid lines.],
