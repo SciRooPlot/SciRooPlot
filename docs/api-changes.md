@@ -84,6 +84,8 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 |---|---|---|---|
 | A project folder held `plots.info`, `dataSources.info`, `tabcomp.csv`, `UserData.root` | Also `settings.info`: the settings the program declares, written by `SaveProject` (removed when it declares none) | file format | Nothing. |
 | Modes `file` and `data` wrote `Plots.root` and `Data.root` in place: two runs finishing at once or a failed write could leave a broken file | Written to `<name>.<pid>.tmp` beside it (beside where it points, if it is a symbolic link, also one to a file not written yet) and renamed when complete; a failed write keeps the earlier file and is reported | behaviour | Nothing. |
+| The in-memory inputs of `AddDataSource` were written into the project's `UserData.root` in place: two runs of the program at once could break it | Written to `UserData_<pid>_<project>.root` in the config path while the program runs and copied to `UserData.root` by `SaveProject` (replaced at once) | file format | Nothing. |
+| Without a project, the file of the in-memory inputs (`UserData_<pid>_<address>.root` in the config path) stayed when the program was ended by a signal | Such files of ended processes are removed when the next process writes one | file format | Nothing. |
 
 ### Command line
 

@@ -201,6 +201,18 @@ string PlotManager::UserDataFile(const string& projectName, const PlotManager* m
 
 //**************************************************************************************************
 /**
+ * The file this process writes the in-memory inputs to: for a project one of the process in the config path, copied to its UserData.root
+ * by SaveDataSources (two runs of the program at the same time each write their own), without a project the manager's file.
+ */
+//**************************************************************************************************
+string PlotManager::UserDataProcessFile() const
+{
+  if (mProjectName.empty() || mUserDataFile.empty()) return mUserDataFile;
+  return (Config::Get().Path() / fmt::format("UserData_{}_{}.root", gSystem->GetPid(), mProjectName)).string();
+}
+
+//**************************************************************************************************
+/**
  * Destructor for PlotManager.
  */
 //**************************************************************************************************
@@ -519,20 +531,44 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     logger::error("No valid config path; cannot store the objects of data source {}.", dataSource);
     return;
   }
+  const string userDataFile = UserDataProcessFile();
   // started fresh once per process: a second PlotManager of the same project keeps the data the first one stored
   static std::set<string> startedFiles;
-  const string mode = (startedFiles.count(mUserDataFile)) ? "UPDATE" : "RECREATE";
-  // the folder of the file: the project's folder, or without a project the config path, which does not exist before srp first ran
+  const string mode = (startedFiles.count(userDataFile)) ? "UPDATE" : "RECREATE";
+  // the folder of the file: the config path, which does not exist before srp first ran
   std::error_code dirError;
-  std::filesystem::create_directories(std::filesystem::path(mUserDataFile).parent_path(), dirError);
+  std::filesystem::create_directories(std::filesystem::path(userDataFile).parent_path(), dirError);
+  if (!startedFiles.count(userDataFile)) {
+    // the files of processes that ended without removing theirs (ended by a signal, e.g. a batch time limit)
+    static const std::regex processFile(R"(UserData_(\d{1,9})_.+\.root)");
+    std::error_code listError;
+    for (const auto& entry : std::filesystem::directory_iterator(Config::Get().Path(), listError)) {
+      const string fileName = entry.path().filename().string();
+      std::smatch match;
+      if (std::regex_match(fileName, match, processFile) && kill(static_cast<pid_t>(std::stol(match[1])), 0) != 0 && errno == ESRCH) {
+        std::filesystem::remove(entry.path(), listError);
+      }
+    }
+  }
+  // the file of a project's process is removed when the process ends (SaveDataSources copied it to the project's UserData.root)
+  static struct remove_at_exit_t {
+    std::set<string> files;
+    ~remove_at_exit_t()
+    {
+      std::error_code ec;
+      for (const auto& file : files)
+        std::filesystem::remove(file, ec);
+    }
+  } removeAtExit;
+  if (userDataFile != mUserDataFile) removeAtExit.files.insert(userDataFile);
 
   TDirectory::TContext keepCurrentDirectory;  // the calling program's current directory stays as it is
-  TFile file(mUserDataFile.data(), mode.data());
+  TFile file(userDataFile.data(), mode.data());
   if (file.IsZombie()) {
     logger::error("Could not save ROOT data to data source {}.", dataSource);
     return;
   }
-  startedFiles.insert(mUserDataFile);
+  startedFiles.insert(userDataFile);
 
   TDirectory* dir = file.GetDirectory(dataSource.data());
   if (dir && replace) {
@@ -543,7 +579,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     dir = file.mkdir(dataSource.data());
   }
   if (!dir) {
-    logger::error("Could not create directory {} in {}.", dataSource, mUserDataFile);
+    logger::error("Could not create directory {} in {}.", dataSource, userDataFile);
     return;
   }
   // Lists and directories become folders of the data source (a list without a name, for which ROOT reports its class name,
@@ -627,7 +663,7 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
     if (object) add(object, dir, "");
   }
   file.Close();
-  AddDataSource(dataSource, {mUserDataFile + ":" + dataSource}, replace);
+  AddDataSource(dataSource, {userDataFile + ":" + dataSource}, replace);
 }
 
 void PlotManager::AddDataSource(const string& dataSource, TObject* input, bool replace)
@@ -671,12 +707,25 @@ void PlotManager::ForgetBufferedData(const string& dataSource)
 void PlotManager::SaveDataSources(const optional<string>& file) const
 {
   ptree dataSourcesTree;
+  // the in-memory inputs this process wrote are stored as those of the project's UserData.root, to which they are copied (replaced at once)
+  const string processFile = UserDataProcessFile();
+  bool hasProcessFile{};
   for (const auto& [dataSource, inputs] : mInputs) {
     ptree inputsOfDataSource;
     for (const auto& input : inputs) {
-      inputsOfDataSource.add("INPUT", input);
+      const bool inProcessFile = processFile != mUserDataFile && str_starts_with(input, processFile + ":");
+      hasProcessFile = hasProcessFile || inProcessFile;
+      inputsOfDataSource.add("INPUT", (inProcessFile) ? mUserDataFile + input.substr(processFile.size()) : input);
     }
     dataSourcesTree.put_child(dataSource, inputsOfDataSource);
+  }
+  if (hasProcessFile) {
+    std::error_code ec;
+    std::filesystem::create_directories(std::filesystem::path(mUserDataFile).parent_path(), ec);
+    const string tmpFile = util::temporary_file(mUserDataFile);
+    if (!std::filesystem::copy_file(processFile, tmpFile, std::filesystem::copy_options::overwrite_existing, ec) || !util::replace_file(tmpFile, mUserDataFile, ec)) {
+      logger::error("Cannot write the in-memory inputs to {}: {}.", mUserDataFile, ec.message());
+    }
   }
   if (const auto path = InfoFile(file, Config::Get().DataSourcesFile(mProjectName), "save the data sources")) WriteInfoFile(dataSourcesTree, *path, "data sources");
 }
@@ -1717,7 +1766,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       const string fileName = split_input_path(expand_path(input).value_or(""))[0];
       std::error_code timeError;
       const auto time = std::filesystem::last_write_time(fileName, timeError);
-      if (!timeError && !is_remote(fileName) && fileName != mUserDataFile) times[fileName] = time;
+      if (!timeError && !is_remote(fileName) && fileName != mUserDataFile && fileName != UserDataProcessFile()) times[fileName] = time;
     }
   }
   if (nItemsToRead) {

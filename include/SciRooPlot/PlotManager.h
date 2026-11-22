@@ -176,6 +176,7 @@ class PlotManager
   static std::function<bool(const std::string&, const std::string&)> PlotMatcher(const std::string& name, const std::string& group);
   static std::string WildcardHint(const std::string& name, const std::string& group);
   static std::string UserDataFile(const std::string& projectName, const PlotManager* manager);
+  std::string UserDataProcessFile() const;
   static bool IsValidDataSourceName(const std::string& dataSource);
   void ForgetBufferedData(const std::string& dataSource);
   bool SaveDataToRootFile(const std::set<std::pair<std::string, std::string>>& keys) const;
