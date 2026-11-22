@@ -9,7 +9,7 @@ taken whole, a leaf of a leaflist branch; an index column of a tree joined befor
 there skipped). Keeping rows without a match: alias.matched, the joined columns NaN, 0 or empty there (also Double32_t and strings; a
 column of two joined trees by its bare name that of the first), every row without a match for a joined tree without rows.
 Columns of the joined tree are reached as alias.column, or by their name where the tree has no column of that name (the tree's own column
-wins); filters (also on C strings of the joined tree), defines, weights, entry ranges (counted over the rows of the tree, before rows without a match are skipped) and ratios
+wins), those of the tree also as <tree>.column; filters (also on C strings of the joined tree), defines, weights, entry ranges (counted over the rows of the tree, before rows without a match are skipped) and ratios
 work on joined columns; two joins at once, and requests with other joins on the same tree, each give their own result. A join that is
 not possible is reported with the reason and loses the plot: keys appearing more than once, keys that are no integers or reach 2^53,
 row counts that differ (per input, or in total from another data source), a joined tree or key column missing (also in only one input),
@@ -313,6 +313,11 @@ aoPt, aoZ, aoMult = AO["pt"][aoMatched], AO["posZ"][aoMatched], AO["mult"][aoMat
 case("by an index column: a column of the joined tree in the same DF folder", H(20, -10, 10, aoZ), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPosZ", 20, [-10.0, 10.0])))
 case("by an index column: rows without a row in the joined tree are skipped", H(30, 0, 6, aoPt), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPt", 30, [0.0, 6.0])))
 case("by an index column: an expression of both trees, with an alias", H(30, 0, 300, aoPt * aoMult), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions", "coll").Project1D(("fPt * coll.fMult", 30, [0.0, 300.0])))
+case(
+    "by an index column: the tree's own columns named <tree>.column",
+    H(30, 0, 300, aoPt * aoMult),
+    lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions", "coll").Project1D(("O2track.fPt * coll.fMult", 30, [0.0, 300.0])).Filter("O2track.fIndexCollisions >= 0"),
+)
 case("by an index column: a column with a dot in its name", H(5, -0.5, 4.5, [i % 5 for i in range(20)]), lambda pad: pad.AddData("trk", "dotted").JoinByIndex("coll", "ev.idx").Project1D(("z", 5, [-0.5, 4.5])))
 case("by an index column: a filter on a joined column", H(30, 0, 6, aoPt[aoZ > 0]), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPt", 30, [0.0, 6.0])).Filter("fPosZ > 0"))
 withFT0 = ~np.isnan(AOC["timeA"])

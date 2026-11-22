@@ -5038,6 +5038,15 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           }
         }
       }
+      // with joins the columns of the tree itself can be named <tree>.column too, as those of a joined tree (e.g. to tell one apart from a
+      // joined column of the same name)
+      if (joins && !joins->empty() && tree && tree->GetListOfBranches()) {
+        const string prefix = split_path(name).second + ".";
+        for (const auto* branch : *tree->GetListOfBranches()) {
+          const string column = branch->GetName();
+          if (column.find('.') == string::npos) renames.emplace_back(prefix + column, column);
+        }
+      }
       for (const auto& column : cStringColumns) {
         if (!df->HasColumn(column) || df->GetColumnType(column) != "ROOT::VecOps::RVec<Char_t>") continue;
         base = base.Redefine(column, [](const ROOT::RVec<Char_t>& chars) { return string(chars.data(), strnlen(chars.data(), chars.size())); }, {column});

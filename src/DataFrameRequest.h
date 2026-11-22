@@ -133,7 +133,7 @@ std::string DataFrameRequest<DataInfo>::AvailableColumns(ROOT::RDF::RNode& node)
     if (!util::str_starts_with(column, "SRP_")) columns.push_back(column);
   }
   for (const auto& [name, column] : mRenames) {
-    if (node.HasColumn(column)) columns.push_back(name);
+    if (node.HasColumn(column) && !util::str_ends_with(name, "." + column)) columns.push_back(name);  // not <tree>.column beside the column
   }
   std::sort(columns.begin(), columns.end());
   std::string list;
