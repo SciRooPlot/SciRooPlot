@@ -3234,7 +3234,9 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
     if (axisLayout.GetMinRange()) userRangeMin = axisLayout.GetMinRange();
     if (axisLayout.GetMaxRange()) userRangeMax = axisLayout.GetMaxRange();
 
-    if (axisLayout.GetLog()) {
+    if (axisLayout.GetLog() && *axisLayout.GetLog() && padState.polargram && axisLabel != 'Z') {
+      ReportIgnored(fmt::format("The log scale of the {} axis of pad {}", axisLabel, padID), "a polar grid has no x and y axes");
+    } else if (axisLayout.GetLog()) {
       if (axisLabel == 'X') {
         pad_ptr->SetLogx(*axisLayout.GetLog());
       } else if (axisLabel == 'Y') {
@@ -4632,6 +4634,16 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
       const draw_option_t unavailable = *optionAlias;
       optionAlias = defaultAlias(data_ptr);
       Warn(state, "Drawing option {} is not available for {} {}, drawing it as {}.", enum_name(unavailable), (is_hist_1d<data_type>()) ? "1d histogram" : "graph", DataName(*data), enum_name(*optionAlias));
+    }
+  }
+  if constexpr (is_graph_1d<data_type>()) {
+    // TGraphPainter::PaintGraphPolar draws markers, error bars, lines, curves and fills: bands, boxes and brackets paint nothing, bars
+    // cartesian rectangles over the grid
+    static const std::set<draw_option_t> notPolar{bars, band, band_smooth, boxes, boxes_nomarkers, brackets};
+    if (optionAlias && notPolar.count(*optionAlias) && data_ptr->InheritsFrom(TGraphPolar::Class())) {
+      const draw_option_t unavailable = *optionAlias;
+      optionAlias = defaultAlias(data_ptr);
+      Warn(state, "Drawing option {} is not available for polar graph {}, drawing it as {}.", enum_name(unavailable), DataName(*data), enum_name(*optionAlias));
     }
   }
   if (!optionAlias && !data->GetDrawOption()) optionAlias = defaultAlias(data_ptr);
