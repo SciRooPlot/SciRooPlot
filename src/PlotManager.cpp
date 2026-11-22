@@ -4589,7 +4589,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       auto quiet = ignore_root_messages_below(kFatal);  // duplicates and keys that are too large are reported below
       return std::make_unique<TTreeIndex>(joinedChain.get(), join.keys[0].data(), (join.keys.size() > 1) ? join.keys[1].data() : "0");
     }();
-    if (index->IsZombie()) return "cannot build an index of its keys";
+    if (index->IsZombie()) return (joinedChain->GetEntries() == 0) ? fmt::format("it has no rows in data source {}", join.dataSource) : "cannot build an index of its keys";
     const Long64_t* major = index->GetIndexValues();
     const Long64_t* minor = index->GetIndexValuesMinor();
     // ROOT looks up the keys of the tree as double, which holds integers exactly only below 2^53
