@@ -3,7 +3,8 @@
 of its inputs, however they are split into files), by one or two integer keys from another data source (rows of the tree without a match
 skipped and counted in the reading summary; the joined data source may be restricted to a folder, the joined tree named by a path), by
 an index column holding the row number within the joined tree of the same input (AO2D-like DF_ folders: rows whose index is -1 or beyond
-the joined tree skipped, folders that are empty or have no joined rows, read in parallel; an index column with a dot in its name
+the joined tree skipped, also into a joined tree whose first column is an array with a size column, folders that are empty or have no
+joined rows, read in parallel; an index column with a dot in its name
 taken whole, a leaf of a leaflist branch; an index column of a tree joined before that keeps rows without a match: rows without a match
 there skipped). Keeping rows without a match: alias.matched, the joined columns NaN, 0 or empty there (also Double32_t and strings; a
 column of two joined trees by its bare name that of the first), every row without a match for a joined tree without rows.
@@ -13,7 +14,8 @@ work on joined columns; two joins at once, and requests with other joins on the 
 not possible is reported with the reason and loses the plot: keys appearing more than once, keys that are no integers or reach 2^53,
 row counts that differ (per input, or in total from another data source), a joined tree or key column missing (also in only one input),
 a tree written by a multi-threaded Snapshot joined row by row, a tree in a list, a table or an RNTuple, an undefined data source, an
-alias equal to the name of the tree, an index column missing or not integer, a joined tree without rows in any input.
+alias equal to the name of the tree, an index column missing or not integer, a joined tree without rows in any input (or in its data
+source).
 Covers: joins (row by row, by key, by an index column, inner join, shuffled tracks, entry ranges, ratios, the error cases).
 """
 
@@ -130,7 +132,7 @@ def write_ft0(path, folder, bc, timeA, amplitudes):
     f.Close()
 
 
-AO = {k: [] for k in ("pt", "idx", "posZ", "mult", "part", "vz", "bcVal")}
+AO = {k: [] for k in ("pt", "idx", "posZ", "mult", "part", "vz", "bcVal", "bcTime")}
 AOC = {"timeA": [], "sumA": []}  # per collision: the FT0 time and summed amplitudes of its bunch crossing (nan without)
 for path, nColls in zip(ao2d, ((40, 0, 0, 25), (0, 60))):
     for d, nColl in enumerate(nColls):
@@ -169,6 +171,10 @@ for path, nColls in zip(ao2d, ((40, 0, 0, 25), (0, 60))):
         AO["part"].extend(np.where(okPart, part, -1).tolist())
         AO["vz"].extend(np.where(okPart, vz[np.clip(part, 0, nPart - 1)], np.nan).tolist())
         AO["bcVal"].extend(np.where(ok, bcVal[collBC[np.clip(idx, 0, max(nColl - 1, 0))]] if nColl else 0.0, np.nan).tolist())
+        # the FT0 row given by the bunch crossing of the track's collision taken as row number (beyond the FT0 rows: none)
+        bcRow = collBC[np.clip(idx, 0, max(nColl - 1, 0))] if nColl else np.full(nTrk, -1)
+        okBC = ok & (bcRow < len(ft0BC))
+        AO["bcTime"].extend(np.where(okBC, timeA.astype(np.float32)[np.clip(bcRow, 0, max(len(ft0BC) - 1, 0))] if len(ft0BC) else 0.0, np.nan).tolist())
 AO = {k: np.array(v) for k, v in AO.items()}
 AOC = {k: np.array(v) for k, v in AOC.items()}
 aoMatched = AO["idx"] >= 0
@@ -222,6 +228,8 @@ for i in range(20):
 dotted.Write()
 dotted.Close()
 p.pm.AddDataSource("dotted", p.path("dotted.root"))
+write_tree(p.path("emptyKeys.root"), {"run": np.zeros(0, dtype=np.int32), "event": np.zeros(0, dtype=np.int32)}, name="events")
+p.pm.AddDataSource("emptyKeys", p.path("emptyKeys.root"))
 p.pm.AddDataSource("km", km)
 p.pm.AddDataSource("kmOther", km)
 for name, inputs in (("ao2d", [f"{path}:DF_*" for path in ao2d]), ("aoNone", f"{noColl}:DF_*")):
@@ -357,6 +365,12 @@ case(
     H(2, -0.5, 1.5, np.zeros(10)),
     lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions", "col", True).Project1D(("col.matched", 2, [-0.5, 1.5])),
 )
+withBC = ~np.isnan(AO["bcTime"])
+case(
+    "by an index column of a tree joined before into a tree whose first column is an array with a size column (FT0-like)",
+    H(40, -2, 2, AO["bcTime"][withBC]),
+    lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions", "col").JoinByIndex("O2ft0", "col.fIndexBCs", "ft").Project1D(("ft.fTimeA", 40, [-2.0, 2.0])),
+)
 first = aoMatched & (np.arange(len(AO["pt"])) < 500)
 case("by an index column: the first entries of the tree, then rows without a match skipped", H(30, 0, 6, AO["pt"][first]), lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fIndexCollisions").Project1D(("fPt", 30, [0.0, 6.0])).Entries(500))
 
@@ -382,6 +396,7 @@ FAILING = {  # what: (setup, the reason)
     "an index column that is no integer": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fPt"), "index column fPt of O2track is of type Double_t, but it must hold one integer per row"),
     "a tree joined by an index column without rows in any input": (lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions"), "it has no rows in any input of O2track"),
     "a joined tree missing beside a tree joined by an index column": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2nobc", "fIndexCollisions"), f"{ao2d[0]}:DF_0/O2nobc does not exist"),
+    "a tree joined by keys from another data source without rows": (lambda pad: pad.AddData("tracks", "trk").Join(["events", "emptyKeys"], ["run", "event"], "ev"), "it has no rows in data source emptyKeys"),
     "an alias equal to the name of the tree": (lambda pad: pad.AddData("events", "A").Join(byKey, ["run", "event"]), "the columns of both would be called events.column, please specify an alias"),
 }
 for i, (what, (setup, _)) in enumerate(FAILING.items()):
