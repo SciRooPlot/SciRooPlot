@@ -2338,6 +2338,11 @@ void PlotManager::ChainTrees(required_data_t& requiredData)
           if (!isJoined) break;
         }
         if (!isJoined) continue;
+        // an input whose tree has no rows is read as such, as without joins (ROOT warns for it when the chain of a joined tree is split
+        // up for the threads of the event loop)
+        auto noEmptyTreeWarning = filter_root_messages([](Int_t, Bool_t, const char* location, const char* msg) {
+          return TString(location) == "TChain::AddFile" && TString(msg).BeginsWith("Adding tree with no entries");
+        });
         ProcessDataRequests("tree", dataSource, treeName, ":" + dataSource, [chain, joinedChains]() { return std::make_unique<ROOT::RDataFrame>(*chain); /* joinedChains: keeps the joined trees alive */ }, chain.get(), describeInputs(treeInputs), joins, joinMatches);
       }
     }
