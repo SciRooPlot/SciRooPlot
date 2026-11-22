@@ -6,7 +6,7 @@
 - <name>, <source>, <projection> and <selection> from the definition of the data (the name without request or projection, the data
   source, what is filled in the notation of TTree::Draw, which entries or bins with the axis titles of the input); <title> the title of the
   drawn object; an empty one takes one separating space with it
-- in a legend label the data of its row, in a text the data named by number (<mean:2>, <mean:1@2> for data 1 of pad 2), the format in
+- in a legend label the data of its row, in a text, a legend title or a legend row without data (AddEntry) the data named by number (<mean:2>, <mean:1@2> for data 1 of pad 2), the format in
   brackets ([.2f], [>8.2f], [d]); a placeholder without number in a text, a number without data, a malformed number or format and a word
   that is no placeholder are left as they are, with a warning (a known word followed by other text, <mean value>, is text); a format
   given to a text (<name[.2f]>) is ignored with a warning
@@ -130,6 +130,13 @@ p.pm.AddPlot(plot)
 plot = S.Plot("legend_number", "texts", "1d")
 plot[1].AddData("h", "s", "<mean:1>")
 plot[1].AddLegend()
+p.pm.AddPlot(plot)
+plot = S.Plot("legend_title_entry", "texts", "1d")
+plot[1].AddData("h", "s", "data")
+legend = plot[1].AddLegend()
+legend.SetTitle("<entries[d]:1> in total")
+legend.AddEntry("<entries[d]:1> entries")
+legend.AddEntry("<mean>")
 p.pm.AddPlot(plot)
 plot = S.Plot("stats_title", "texts", "1d")
 plot[1].AddData("h", "s").SetShowStats("e", "<name> <source> <entries[d]>")
@@ -265,6 +272,9 @@ for text in MALFORMED:
     check(f"a warning: {text} is not valid", sum(f"Placeholder {text} is not valid: the data is named as" in line for line in messages) == 1, " | ".join(messages))
 check("a known word followed by other text is text", not any("<mean value>" in line for line in messages), " | ".join(messages))
 check("a number in a legend label is left as it is, with a warning", labels("legend_number", "texts") == ["<mean:1>"] and any("a legend label shows the data of its row" in m for m in run.messages("legend_number", "texts")), f"{labels('legend_number', 'texts')}")
+found = labels("legend_title_entry", "texts")
+check("a legend title and a row without data name their data by number as texts do", found == ["1000 in total", "data", "1000 entries", "<mean>"], f"{found}")
+check("a legend row without data and a placeholder without number: a warning", sum("<mean> in a text needs the number" in m for m in run.messages("legend_title_entry", "texts")) == 1, " | ".join(run.messages("legend_title_entry", "texts")))
 for name in ("stats_title", "stats_title_graph"):
     padObj = run.pad(name, "texts")
     stats = [o for o in padObj.GetListOfPrimitives() if o.InheritsFrom("TPaveStats")] if padObj else []
