@@ -4837,15 +4837,20 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
         for (const auto& join : *joins) {
           if (join.keepUnmatched) continue;
           if (!join.keys.empty()) matchColumns.push_back(join.GetAlias() + "." + join.keys[0]);
-          // joined by an index column: any column of the joined tree has no value without a match
+          // joined by an index column: a column of the joined tree has no value without a match (a single value: RDataFrame takes an array
+          // with a size column for missing in every row, ROOT bug 85)
           if (!join.indexColumn.empty()) {
             const string prefix = join.GetAlias() + ".";
+            string first;
             for (const auto& column : df->GetColumnNames()) {
-              if (str_starts_with(column, prefix)) {
-                matchColumns.push_back(column);
+              if (!str_starts_with(column, prefix)) continue;
+              if (first.empty()) first = column;
+              if (!str_contains(df->GetColumnType(column), "RVec") && !str_contains(df->GetColumnType(column), "vector")) {
+                first = column;
                 break;
               }
             }
+            if (!first.empty()) matchColumns.push_back(first);
           }
         }
       }
