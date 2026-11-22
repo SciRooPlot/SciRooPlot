@@ -264,9 +264,12 @@ for i, case in enumerate(todo):
         # shapes: drawn in axis values, in the order they were added (an arrow is a TLine too)
         lines = [o for o in prims if o.ClassName() in ("TLine", "TArrow")]
         regions = [o for o in prims if o.ClassName() == "TBox"]
-        ellipse = next((o for o in prims if o.ClassName() == "TEllipse"), None)
-        polygon = next((o for o in prims if o.ClassName() == "TPolyLine"), None)
         s = systems[(padID, "line")]
+        # an ellipse in fractions on a log pad is drawn as the polygon of its perimeter (fill and outline) before the polygon
+        ellipseAsPolygon = s != "user" and (logx or logy)
+        polylines = [o for o in prims if o.ClassName() == "TPolyLine"]
+        ellipse = polylines[0] if ellipseAsPolygon and polylines else next((o for o in prims if o.ClassName() == "TEllipse"), None)
+        polygon = (polylines[2] if len(polylines) > 2 else None) if ellipseAsPolygon else (polylines[0] if polylines else None)
 
         def point(x, y):
             return inSystem(toPad(x, True), True, s), inSystem(toPad(y, False), False, s)
@@ -288,11 +291,17 @@ for i, case in enumerate(todo):
         if s != "pad":  # cut at the frame
             cut = [max(cut[0], frameEdges[0]), max(cut[1], frameEdges[1]), min(cut[2], frameEdges[2]), min(cut[3], frameEdges[3])]
         same(box(regions[3]), tuple(cut), f"region beyond the frame ({'kept' if s == 'pad' else 'cut'})")
-        cx, cy = point(ellipse.GetX1(), ellipse.GetY1())
-        if s == "user":
-            radii = (ellipse.GetR1(), ellipse.GetR2())
+        if ellipseAsPolygon:  # its centre and radii from the extent of the perimeter in fractions of the pad
+            px = [toPad(ellipse.GetX()[k], True) for k in range(ellipse.GetN())]
+            py = [toPad(ellipse.GetY()[k], False) for k in range(ellipse.GetN())]
+            cx, cy = inSystem(0.5 * (min(px) + max(px)), True, s), inSystem(0.5 * (min(py) + max(py)), False, s)
+            radii = (length(0.5 * (max(px) - min(px)), True, s), length(0.5 * (max(py) - min(py)), False, s))
         else:
-            radii = (length(ellipse.GetR1() / w, True, s), length(ellipse.GetR2() / h, False, s))
+            cx, cy = point(ellipse.GetX1(), ellipse.GetY1())
+            if s == "user":
+                radii = (ellipse.GetR1(), ellipse.GetR2())
+            else:
+                radii = (length(ellipse.GetR1() / w, True, s), length(ellipse.GetR2() / h, False, s))
         if s != "user" or not (logx or logy):  # TEllipse does not convert its radii on log axes (warned)
             same((cx, cy) + radii, given("ellipse", s, padID), "ellipse")
         pts = []

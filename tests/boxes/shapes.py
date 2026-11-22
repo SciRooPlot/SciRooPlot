@@ -8,7 +8,8 @@ polygon with a set line gets its outline as a second TPolyLine right after its f
 Cases: every kind × every layer × a histogram, a graph, a map and a log axis giving the frame × the default or a set look, and the named
 cases (lines at the limits of a log axis, positions at or below zero on a log axis, shapes of a base plot and of pad 0, arrow heads, arcs).
 In fractions of the pad a vertical or horizontal line beside the frame is drawn there, as a region (not wholly outside of the pad); an ellipse given only a fill alpha
-is filled.
+is filled; an ellipse in fractions on a log pad is the ellipse asked for, drawn as the polygon of its perimeter (TEllipse adds its radii in
+axis values).
 Reference: the primitives of the pad and the same plot without the shape.
 Covers: shapes in their layers, a line at the limit of a log axis, lines at the edges of the frame and the pad, and the named cases.
 """
@@ -271,6 +272,14 @@ plot[1].AddVerticalLine(0.05).SetPadCoordinates()
 plot[1].AddRegionX(0.0, 0.08).SetPadCoordinates()
 plot[1].AddEllipse((5.0, 0.5), 1.0, 0.2).SetFillAlpha(0.5)
 q.pm.AddPlot(plot)
+# an ellipse in fractions of the frame on a log pad: the ellipse asked for, as the polygon of its perimeter (an arc as a sector)
+plot = S.Plot("log_ellipse", "beside", "1d")
+plot[1].AddData("h", "s")
+plot[1]["X"].SetLog()
+plot[1]["Y"].SetLog()
+plot[1].AddEllipse((0.5, 0.5), 0.2, 0.1).SetFrameCoordinates()
+plot[1].AddEllipse((0.5, 0.5), 0.2, 0.1).SetFrameCoordinates().SetArc(0.0, 90.0)
+q.pm.AddPlot(plot)
 # wholly outside of the pad: not drawn, one warning each
 plot = S.Plot("outside_pad", "beside", "1d")
 plot[1].AddData("h", "s")
@@ -287,6 +296,25 @@ outsideSaid = [m for m in besideRun.messages("outside_pad", "beside") if "is not
 check("lines and regions in fractions of the pad wholly outside of it are not drawn, one warning each", not outside and len(outsideSaid) == 3, " | ".join(besideRun.messages("outside_pad", "beside")))
 ellipses = [o for o, _ in besideRun.links("beside", "beside") if o.ClassName() == "TEllipse"]
 check("an ellipse given only a fill alpha is filled", len(ellipses) == 1 and ellipses[0].GetFillStyle() == 1001, f"{[e.GetFillStyle() for e in ellipses]}")
+logPad = besideRun.pad("log_ellipse", "beside")
+polygons = [o for o, _ in besideRun.links("log_ellipse", "beside") if o.ClassName() == "TPolyLine"]
+
+
+def frame_extent(polygon):
+    """the extent of a polygon in fractions of the frame (pad coordinates are log10 of the values)"""
+    xs = [math.log10(polygon.GetX()[i]) for i in range(polygon.GetN())]
+    ys = [math.log10(polygon.GetY()[i]) for i in range(polygon.GetN())]
+    fx = [(x - logPad.GetUxmin()) / (logPad.GetUxmax() - logPad.GetUxmin()) for x in xs]
+    fy = [(y - logPad.GetUymin()) / (logPad.GetUymax() - logPad.GetUymin()) for y in ys]
+    return [round(v, 3) for v in (min(fx), max(fx), min(fy), max(fy))]
+
+
+extents = [frame_extent(o) for o in polygons] if logPad else []
+check(
+    "an ellipse in fractions of the frame on a log pad: the ellipse asked for (fill and outline), an arc as a sector",
+    len(polygons) == 4 and extents[0] == extents[1] == [0.3, 0.7, 0.4, 0.6] and extents[2] == extents[3] == [0.5, 0.7, 0.5, 0.6] and not besideRun.messages("log_ellipse", "beside"),
+    f"{extents} | {' | '.join(besideRun.messages('log_ellipse', 'beside'))}",
+)
 # lines at the edges of the frame (frame coordinates 0 and 1) and of the pad (pad coordinates 0 and 1), over many axis ranges: drawn
 edgeRanges = [(0.37 * i, 3.0 + 1.13 * i + 0.01 * i * i) for i in range(40)]
 e = Project("shapes_edges")
