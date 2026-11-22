@@ -1317,7 +1317,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio(Ratio&&) = default;
   Ratio& operator=(const Ratio& other) = default;
   Ratio& operator=(Ratio&& other) = default;
-  std::shared_ptr<Data> Clone() const override { return std::make_shared<Ratio>(*this); }
+  std::shared_ptr<Data> Clone() const override;  // the copy's modifiers act on the ratio itself, as when it was added
   void Print() const { Plot::Print(GetPropertyTree(), "Ratio"); }
 
   Ratio& SetCorrelated(bool correlated = true);

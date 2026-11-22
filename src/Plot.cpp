@@ -1996,6 +1996,8 @@ Plot::Pad::Data& Plot::Pad::GetData(uint16_t dataID)
   if (dataID < 1 || dataID > mData.size()) {
     logger::throw_out_of_range("Data with ID {} is not defined: only data already added to the pad can be accessed.", dataID);
   }
+  // modifiers of a ratio reached again act on the ratio itself, as when it was added (C++ reaches it as Data, whose modifiers are not virtual)
+  if (auto* ratio = dynamic_cast<Ratio*>(mData[dataID - 1].get())) ratio->mModMode = Ratio::Mode::Res;
   return *mData[dataID - 1];
 }
 
@@ -3735,6 +3737,12 @@ auto Plot::Pad::Ratio::Result() -> decltype(*this)
 {
   mModMode = Mode::Res;
   return *this;
+}
+std::shared_ptr<Plot::Pad::Data> Plot::Pad::Ratio::Clone() const
+{
+  auto clone = std::make_shared<Ratio>(*this);
+  clone->mModMode = Mode::Res;
+  return clone;
 }
 auto Plot::Pad::Ratio::Project(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
