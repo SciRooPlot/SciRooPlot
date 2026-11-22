@@ -4038,6 +4038,16 @@ shared_ptr<TFile> PlotManager::OpenInput(const string& fileName) const
   auto opened = (remote) ? mRemoteFiles.find(fileName) : mRemoteFiles.end();
   if (opened != mRemoteFiles.end()) return opened->second;
   TDirectory::TContext keepDirectory;  // histograms made later must not end up in a file that stays open
+  // a cached copy (srp cache on) whose remote file changed: ROOT copies the file again, but keeps the old copy if one exists (ROOT bug 86);
+  // the old copy (ROOT names it by the path of the URL) is removed when ROOT finds it outdated, so that the new copy takes its place (the
+  // first open of a remote file in a reading is this one)
+  const string cachedCopy = (remote && !string(TFile::GetCacheFileDir()).empty()) ? TFile::GetCacheFileDir() + string(TUrl(fileName.data()).GetFile()) : "";
+  auto cacheUpdateGuard = filter_root_messages([&cachedCopy](Int_t level, Bool_t, const char* location, const char* msg) {
+    if (cachedCopy.empty() || level != kWarning || !location || string(location) != "TFile::OpenFromCache" || !str_contains(msg, "forcing an update")) return false;
+    std::error_code ec;
+    std::filesystem::remove(cachedCopy, ec);
+    return true;
+  });
   shared_ptr<TFile> file = open_input_file(fileName);
   if (remote) mRemoteFiles[fileName] = (file && !file->IsZombie()) ? file : nullptr;
   return file;
