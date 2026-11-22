@@ -4212,10 +4212,14 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
    private:
     TVirtualIndex* mIndex;
   };
-  // the leaf of a top-level column with a single value per row (null if the tree has none), and whether it holds floating-point values
+  // the leaf of a top-level column with a single value per row, or of a leaf of a leaflist branch (branch.leaf; null if the tree has
+  // none), and whether it holds floating-point values
   auto columnLeaf = [](const TTree* tree, const string& column) -> TLeaf* {
     auto* branch = (tree) ? const_cast<TTree*>(tree)->GetBranch(column.data()) : nullptr;
-    return (branch && branch->GetNleaves() == 1) ? static_cast<TLeaf*>(branch->GetListOfLeaves()->At(0)) : nullptr;
+    if (branch) return (branch->GetNleaves() == 1) ? static_cast<TLeaf*>(branch->GetListOfLeaves()->At(0)) : nullptr;
+    const auto dot = column.find('.');
+    auto* leaflist = (tree && dot != string::npos) ? const_cast<TTree*>(tree)->GetBranch(column.substr(0, dot).data()) : nullptr;
+    return (leaflist && leaflist->GetListOfBranches()->GetEntries() == 0) ? leaflist->GetLeaf(column.substr(dot + 1).data()) : nullptr;
   };
   auto isFloating = [](const TLeaf* leaf) {
     const string type = leaf->GetTypeName();
