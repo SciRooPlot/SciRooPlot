@@ -27,6 +27,8 @@ namespace SciRooPlot::util
 {
 // an input hepdata:<record>, optionally restricted to a folder (hepdata:ins1419244:Table 1): a record of hepdata.net
 bool is_hepdata_input(const std::string& input);
+// the name of a table in the local copy of a record: ':' cannot be part of a data name and is replaced by '_'
+std::string hepdata_table_name(std::string table);
 // the local copy of a HEPData record (ins1419244 or a record number) in <folder>/hepdata, downloaded in its latest version when missing,
 // with an object per dependent variable and error source next to HEPData's own (nullopt with a warning if it cannot be made)
 std::optional<std::string> hepdata_file(const std::string& record, const std::filesystem::path& folder);

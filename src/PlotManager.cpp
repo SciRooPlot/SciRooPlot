@@ -901,7 +901,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
       const auto recordAndFolder = split_string(entry.substr(entry.find(':') + 1), ':', true);
       std::filesystem::path folder = (mProjectName.empty()) ? Config::Get().Path() : Config::Get().ProjectPath(mProjectName);
       if (!Config::Get().CacheDir().empty()) folder = Config::Get().CacheDir();
-      if (const auto file = util::hepdata_file(recordAndFolder[0], folder)) addFile(*file, (recordAndFolder.size() > 1) ? recordAndFolder[1] : "");
+      if (const auto file = util::hepdata_file(recordAndFolder[0], folder)) addFile(*file, (recordAndFolder.size() > 1) ? util::hepdata_table_name(recordAndFolder[1]) : "");
       return;
     }
     auto fileAndFolder = split_input_path(entry);
