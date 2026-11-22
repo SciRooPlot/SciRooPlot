@@ -2771,9 +2771,14 @@ std::unique_ptr<TCanvas> PlotManager::ApplySharedAxes(PlotPainter& painter, Plot
       common("minima", [](const Plot::Pad::Axis& axis) { return axis.GetMinRange(); }, [](Plot::Pad::Axis& axis, double_t min) { axis.SetMinRange(min); }, true);
       common("maxima", [](const Plot::Pad::Axis& axis) { return axis.GetMaxRange(); }, [](Plot::Pad::Axis& axis, double_t max) { axis.SetMaxRange(max); }, true);
       if (axisLabel == 'Z') {
-        auto isLog = [&](uint8_t padID) {
-          const auto& axes = fullPlot[padID].GetAxes();
-          return !contentPads.count(padID) && axes.count('Z') && axes.at('Z').GetLog().value_or(false);
+        auto isLog = [&](uint8_t padID) {  // its own setting, else that of pad 0
+          if (contentPads.count(padID)) return false;
+          for (uint8_t from : {padID, uint8_t{0}}) {
+            auto pad = pads.find(from);
+            auto axis = (pad != pads.end()) ? pad->second.GetAxes().find('Z') : std::map<char, Plot::Pad::Axis>::const_iterator{};
+            if (pad != pads.end() && axis != pad->second.GetAxes().end() && axis->second.GetLog()) return *axis->second.GetLog();
+          }
+          return false;
         };
         auto content = std::find_if(group.pads.begin(), group.pads.end(), [&](uint8_t padID) { return contentPads.count(padID) > 0; });
         if (content != group.pads.end() && std::any_of(group.pads.begin(), group.pads.end(), isLog)) {

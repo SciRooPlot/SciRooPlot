@@ -8922,12 +8922,17 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
   }
   TPad* memberPad{nullptr};
   TH1* source{nullptr};
+  // the first panel with a scale, one of a 2d map before one of a 3d histogram (whose log z is its binned axis, not its colours)
   for (uint8_t member : *group) {
     auto frame = mScaleHists.find(member);
-    if (frame == mScaleHists.end()) continue;
-    memberPad = dynamic_cast<TPad*>(canvas->GetPrimitive(("Pad_" + std::to_string(member)).data()));
-    source = frame->second;
-    if (memberPad) break;
+    auto* pad = (frame != mScaleHists.end()) ? dynamic_cast<TPad*>(canvas->GetPrimitive(("Pad_" + std::to_string(member)).data())) : nullptr;
+    if (!pad) continue;
+    const bool isContent = mContentScales.count(member) > 0;
+    if (!memberPad || !isContent) {
+      memberPad = pad;
+      source = frame->second;
+    }
+    if (!isContent) break;
   }
   if (!memberPad) {
     logger::warning("Pad {} is the cell of a colour scale and stays empty: no panel of the z group of pad {} draws a 2d histogram, graph or function, or a 3d histogram.", padID, shown);
