@@ -2341,6 +2341,9 @@ void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, optional<draw_opt
   if (auto view = pad_ptr->GetView()) {
     // for 3d view ignore individual data ranges and always let it coincide with the axes: the ranges of the frame's axes, since the
     // view holds the coordinates it paints in (-1 to 1 in polar, cylindrical and spherical systems, logarithms on a log scale)
+    if (!is_func<data_type>() && dataIndex != 0 && (hasRangeX || hasRangeY)) {  // a function: the range it is defined over
+      Warn(state, "The range of {} does not apply in a 3d view, which shows the range of its frame: set the range on the pad instead.", DataName(*data));
+    }
     double_t minArr[3];
     double_t maxArr[3];
     view->GetRange(minArr, maxArr);
