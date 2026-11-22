@@ -15,7 +15,8 @@ not possible is reported with the reason and loses the plot: keys appearing more
 row counts that differ (per input, or in total from another data source), a joined tree or key column missing (also in only one input),
 a tree written by a multi-threaded Snapshot joined row by row, a tree in a list, a table or an RNTuple, an undefined data source, an
 alias equal to the name of the tree, an index column missing or not integer, a joined tree without rows in any input (or in its data
-source).
+source). A data source only joined has its inputs expanded once per run (its warnings said once); ROOT's warning about inputs whose tree
+has no rows is not shown.
 Covers: joins (row by row, by key, by an index column, inner join, shuffled tracks, entry ranges, ratios, the error cases).
 """
 
@@ -230,6 +231,7 @@ dotted.Close()
 p.pm.AddDataSource("dotted", p.path("dotted.root"))
 write_tree(p.path("emptyKeys.root"), {"run": np.zeros(0, dtype=np.int32), "event": np.zeros(0, dtype=np.int32)}, name="events")
 p.pm.AddDataSource("emptyKeys", p.path("emptyKeys.root"))
+p.pm.AddDataSource("evInfoMissing", [info, p.path("missing_*.root")])  # joined only, with an input matching no file
 p.pm.AddDataSource("km", km)
 p.pm.AddDataSource("kmOther", km)
 for name, inputs in (("ao2d", [f"{path}:DF_*" for path in ao2d]), ("aoNone", f"{noColl}:DF_*")):
@@ -403,6 +405,11 @@ for i, (what, (setup, _)) in enumerate(FAILING.items()):
     plot = S.Plot(f"f{i}", "failing", "1d")
     setup(plot[1]).Project1D(("x", 10, [0.0, 1.0]))
     p.pm.AddPlot(plot)
+# a data source only joined, by two groups of requests: its inputs expanded once (the input matching no file said once)
+for name, setup in (("tracks", lambda pad: pad.AddData("tracks", "trk").Join(["events", "evInfoMissing"], ["run", "event"]).Project1D(("cent", 10, [0.0, 100.0]))), ("items", lambda pad: pad.AddData("items", "gid").Join(["byGid", "evInfoMissing"], ["gid"]).Project1D(("val", 10, [0.0, 1.0])))):
+    plot = S.Plot(name, "joinwarn", "1d")
+    setup(plot[1])
+    p.pm.AddPlot(plot)
 
 run = p.plot("joins")
 for plotName, (what, ref, contents) in expected.items():
@@ -416,6 +423,10 @@ nUnmatched = int((~matched).sum())
 check("rows without a match are counted in the reading summary", f"{nUnmatched} rows without a match skipped" in run.log, " | ".join(line for line in run.log.splitlines() if " - trk:" in line))
 warned = [w for w in run.warnings() if "run into each other" not in w]  # the look of long index labels
 check("the joins give no warnings or errors", not warned and not run.errors(), " | ".join(warned + run.errors()))
+check("no ROOT warning about inputs whose tree has no rows", "Adding tree with no entries" not in run.log, " | ".join(line for line in run.log.splitlines() if "no entries" in line))
+warnRun = p.plot("joinwarn")
+said = [w for w in warnRun.warnings() if "No files match" in w]
+check("a data source only joined, by two groups of requests: an input matching no file said once", len(said) == 1, " | ".join(said))
 
 failed = p.plot("failing")
 for i, (what, (_, reason)) in enumerate(FAILING.items()):
