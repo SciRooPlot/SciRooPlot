@@ -227,6 +227,7 @@ class PlotManager
   std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Plot::Pad::Data::data_info_t>>> mDataInfoBuffer;
   std::map<std::string, std::vector<std::string>> mInputs;          // dataSource name -> inputs as added (files, file.root:folder, directories, wildcard patterns)
   std::map<std::string, std::vector<std::string>> mExpandedInputs;  // dataSource name -> its expanded inputs, determined once per GeneratePlots call
+  std::set<std::string> mWarnedHiddenTrees;                         // data source, file and tree of a tree also in folders not read: warned once per GeneratePlots call
   // data source -> its local input files with their modification times when it was last read: data of a rewritten file is read again
   std::map<std::string, std::map<std::string, std::filesystem::file_time_type>> mInputTimes;
   struct tree_input_t {
@@ -273,6 +274,7 @@ class PlotManager
                            const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, TTree* tree, const std::string& inputsDescription = "",
                            const std::optional<std::vector<Plot::Pad::Data::data_info_t::join_t>>& joins = std::nullopt,
                            const std::vector<std::shared_ptr<join_match_t>>& joinMatches = {});
+  void WarnTreeInOtherFolders(const std::string& dataSource, const std::string& fileName, const std::string& treeName, const std::string& inFolder, const std::vector<std::string>& folders);
   std::vector<tree_input_t> FindTreeInputs(const std::string& dataSource, const std::string& treeName);
   // an input file opened for reading; a remote one is opened once per reading of the data (each open costs a round trip, on the grid
   // a catalogue lookup) and kept open until it ends, also if it cannot be opened

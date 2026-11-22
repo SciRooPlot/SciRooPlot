@@ -1767,6 +1767,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     }
   }
   mExpandedInputs.clear();
+  mWarnedHiddenTrees.clear();
   mRemoteFiles.clear();
   auto remoteFilesGuard = make_scope_guard([this]() { mRemoteFiles.clear(); });  // closed when the data is read
   // remote inputs are read from local copies (srp cache on), copied when first read and again when the remote file changed: every remote
@@ -2117,6 +2118,26 @@ void PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
 
         for (const auto& pathStr : emptySubDirs) {
           required.erase(pathStr);
+        }
+        // a tree found in a folder of a whole file: the folders beside it that hold the tree too are not read (said once per file);
+        // not for a tree asked for with its folder (reco/events): that folder is the one meant
+        for (const auto& [treeName, treeInputs] : mTreeInputs[dataSource]) {
+          const auto& found = treeInputs.back();
+          if (found.file != fileName || found.isFolderInput || found.isRNTuple || treeName.find('/') != string::npos) continue;
+          const auto [treeDir, treeLeaf] = split_path(found.treePath);
+          if (treeDir.empty()) continue;
+          const auto [parentPath, folderName] = split_path(treeDir);
+          TDirectory* parent = (parentPath.empty()) ? static_cast<TDirectory*>(&inputFile) : inputFile.GetDirectory(parentPath.data());
+          if (!parent) continue;
+          vector<string> siblings{folderName};
+          set<string> visited{folderName};
+          for (auto* key : TRangeDynCast<TKey>(parent->GetListOfKeys())) {
+            if (!key || !key_inherits(key, TDirectory::Class()) || !visited.insert(key->GetName()).second) continue;
+            auto* sibling = open_directory(parent, key);
+            auto* treeKey = (sibling) ? sibling->GetKey(treeLeaf.data()) : nullptr;
+            if (treeKey && key_inherits(treeKey, TTree::Class())) siblings.emplace_back(key->GetName());
+          }
+          if (siblings.size() > 1) WarnTreeInOtherFolders(dataSource, fileName, treeName, (parentPath.empty()) ? "" : parentPath + "/", siblings);
         }
         // trees can also be in further inputs: keep looking for them
         for (const auto& [treeName, treeInputs] : mTreeInputs[dataSource]) {
@@ -4127,6 +4148,24 @@ void PlotManager::WarnNonAsciiTexts(TVirtualPad* pad)
 
 //**************************************************************************************************
 /**
+ * Warns (once per GeneratePlots call) that a tree of a whole file is read only from the first of the folders holding it (folders: that one
+ * first, then the others beside it; inFolder: the path of the folder they are in, with a trailing '/').
+ */
+//**************************************************************************************************
+void PlotManager::WarnTreeInOtherFolders(const string& dataSource, const string& fileName, const string& treeName, const string& inFolder, const vector<string>& folders)
+{
+  if (folders.size() < 2 || !mWarnedHiddenTrees.insert(dataSource + "\n" + fileName + "\n" + treeName).second) return;
+  // the folders to name instead: the common start of their names and a wildcard (DF_*)
+  string common = folders[0];
+  for (const auto& folder : folders) {
+    common.resize(std::mismatch(common.begin(), common.end(), folder.begin(), folder.end()).first - common.begin());
+  }
+  logger::warning("Tree {} is in {} folders of {} ({}, {}, ...): only the one in {} is read (data source {}). To read all of them, give the folders in the data source, e.g. {}:{}{}*.",
+                  treeName, folders.size(), fileName, folders[0], folders[1], folders[0], dataSource, fileName, inFolder, common);
+}
+
+//**************************************************************************************************
+/**
  * Find a tree in the inputs of a data source (the same way as when reading the data source).
  */
 //**************************************************************************************************
@@ -4136,7 +4175,9 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
   string path;
   string name;
   std::tie(path, name) = split_path(treeName);  // not a structured binding: the lambda below captures them
-  // first match should be the one in the current folder; traverse deeper only if not found
+  // first match should be the one in the current folder; traverse deeper only if not found; the folders beside the one the tree is found in
+  // that hold it too are not read (siblings: their names, for the warning below)
+  vector<string> siblings;
   std::function<optional<string>(TDirectory*)> find;
   find = [&](TDirectory* dir) -> optional<string> {
     if (auto* key = dir->GetKey(name.data()); key && key_inherits(key, TTree::Class())) {
@@ -4145,11 +4186,24 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
       return (dirPath.empty() ? "" : dirPath + "/") + name;
     }
     set<string> visited;  // keys can appear in several cycles: the latest directory of a name (newer data of the name does not hide it)
+    vector<TKey*> dirKeys;
     for (auto* key : TRangeDynCast<TKey>(dir->GetListOfKeys())) {
-      if (!key || !key_inherits(key, TDirectory::Class()) || !visited.insert(key->GetName()).second) continue;
-      if (auto* subDir = open_directory(dir, key)) {
-        if (auto treePath = find(subDir)) return treePath;
+      if (key && key_inherits(key, TDirectory::Class()) && visited.insert(key->GetName()).second) dirKeys.push_back(key);
+    }
+    for (size_t k = 0; k < dirKeys.size(); ++k) {
+      auto* subDir = open_directory(dir, dirKeys[k]);
+      if (!subDir) continue;
+      auto treePath = find(subDir);
+      if (!treePath) continue;
+      if (siblings.empty() && treePath->find('/') == strlen(subDir->GetName())) {
+        for (size_t other = k + 1; other < dirKeys.size(); ++other) {
+          auto* otherDir = open_directory(dir, dirKeys[other]);
+          auto* key = (otherDir) ? otherDir->GetKey(name.data()) : nullptr;
+          if (key && key_inherits(key, TTree::Class())) siblings.emplace_back(dirKeys[other]->GetName());
+        }
+        if (!siblings.empty()) siblings.insert(siblings.begin(), dirKeys[k]->GetName());
       }
+      return treePath;
     }
     return nullopt;
   };
@@ -4175,7 +4229,9 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
     if (fileNamePath.size() > 1) dir = subDirectory(dir, fileNamePath[1]);
     if (dir && !path.empty()) dir = subDirectory(dir, path);
     if (!dir) continue;
+    siblings.clear();
     if (auto treePath = find(dir)) treeInputs.push_back({fileName, *treePath, fileNamePath.size() > 1, false});
+    if (!siblings.empty()) WarnTreeInOtherFolders(dataSource, fileName, treeName, (fileNamePath.size() > 1) ? fileNamePath[1] + "/" : "", siblings);
   }
   return treeInputs;
 }

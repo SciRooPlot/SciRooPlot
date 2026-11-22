@@ -1,8 +1,8 @@
 """A tree or RNTuple found in several inputs of a data source is read as one chain, its rows in the documented order (skill, Data sources):
 the inputs in the order given, the files of a directory and of a wildcard alphabetically (also a wildcard in a directory of the path),
 the folders of a wildcard in a file (file.root:DF_*) in the order of the file, also in every file of a directory (dir/:DF_*, also of a
-wildcard in the directory); a whole file contributes its first match of the name (the search: its folder first, then its sub-folders), a
-data source restricted to a folder (src:DF_1, src:DF_[45]) that folder of every file
+wildcard in the directory); a whole file contributes its first match of the name (the search: its folder first, then its sub-folders;
+other folders beside the one found that hold the tree too are reported, once per file), a data source restricted to a folder (src:DF_1, src:DF_[45]) that folder of every file
 holding it; inputs without the tree and trees without rows add nothing; in-memory trees join the chain where they were added. Entries(n)
 and Entries(a, b) count the rows of the whole chain, across the boundaries of its inputs. RNTuples are chained when they have the same
 path in every input (also given as a path in the name). Inputs that cannot be chained are reported, the plot is lost: a column of another
@@ -155,7 +155,14 @@ for source, (_, name, order, inputs) in sources.items():
     n = len(rows(order))
     want = f" - {location} {n} entries" + (f" from {inputs}," if inputs else ",")
     check(f"{source}: the reading summary names the inputs of the chain", summary and all(want in line for line in summary), f"{summary[:2]}, expected '{want}'")
-expectedWarnings = [f"No folders match DF_[13] in {p.path('ao', 'AO2D_2.root')} (data source folders_some)", "labels of the X axis"]  # the look of long index labels
+# a whole file with the tree in several folders: the folders not read are named once per file, with the data source to give instead
+hidden = [w for w in run.warnings() if "only the one in" in w]
+for f, prefix in (("AO2D_1.root", "DF_"), ("AO2D_2.root", "")):
+    folders = [folder for folder in key_order(p.path("ao", f)) if (f, folder) in folderBlocks]
+    want = f"Tree O2track is in {len(folders)} folders of {p.path('ao', f)} ({folders[0]}, {folders[1]}, ...): only the one in {folders[0]} is read (data source whole_files). To read all of them, give the folders in the data source, e.g. {p.path('ao', f)}:{prefix}*."
+    check(f"a whole file with the tree in several folders ({f}) is reported once, naming the folders and what to give instead", sum(want in w for w in hidden) == 1, " | ".join(hidden))
+check("a file with the tree in one folder only is not reported", not [w for w in hidden if "AO2D_10.root" in w], " | ".join(hidden))
+expectedWarnings = [f"No folders match DF_[13] in {p.path('ao', 'AO2D_2.root')} (data source folders_some)", "labels of the X axis", "only the one in"]  # the look of long index labels
 other = [w for w in run.warnings() if not any(e in w for e in expectedWarnings)]
 check("the chains give no other warnings", not other, " | ".join(other[:5]))
 check("the chains give no errors", not run.errors(), " | ".join(run.errors()[:5]))
