@@ -499,9 +499,69 @@ string hepdata_table_name(string table)
   return table;
 }
 
-std::optional<string> hepdata_file(const string& record, const std::filesystem::path& folder)
+std::optional<string> hepdata_file(const string& recordId, const std::filesystem::path& folder)
 {
-  const string file = (folder / "hepdata" / (record + ".root")).string();
+  // a record with a version (ins1419244v2) reads that version; without one the latest, as hepdata.net says it is (asked once per run), and
+  // when that cannot be found out the newest copy there is; the copies are named after their version (<record>v<n>.root, a download
+  // from a server that tells no version <record>.root) and kept, a version never changes
+  static const std::regex versioned(R"(^(.*\d)v(\d+)$)");
+  std::smatch match;
+  const bool pinned = std::regex_match(recordId, match, versioned);
+  const string record = (pinned) ? match[1].str() : recordId;
+  // downloaded with curl (ROOT opens https only when built with Davix); the server can be replaced (tests, mirrors)
+  const char* server = std::getenv("SCIROOPLOT_HEPDATA_SERVER");
+  const string recordUrl = string((server) ? server : "https://www.hepdata.net") + "/record/" + record;
+  auto curl = [](const string& arguments, const string& url, string& output) {
+    Int_t status{};
+    {
+      auto quiet = ignore_root_messages_below(kFatal);  // ROOT reports a failed command itself
+      output = gSystem->GetFromPipe(("curl -sSfL --connect-timeout 30 --max-time 600 " + arguments + shell_quoted(url)).data(), &status, true).Data();
+    }
+    if (status != 0 && WIFEXITED(status) && WEXITSTATUS(status) == 127) output = "the program curl was not found";
+    return status == 0;
+  };
+
+  std::optional<int32_t> version;
+  if (pinned) {
+    version = std::stoi(match[2].str());
+  } else {
+    static std::mutex latestMutex;
+    static std::map<string, std::pair<std::optional<int32_t>, string>> latest;  // per record: its latest version, or why it is not known
+    std::lock_guard lock(latestMutex);
+    auto [entry, isNew] = latest.try_emplace(record);
+    if (isNew) {
+      string output;
+      if (!curl("", recordUrl + "?format=json&light=true", output)) {
+        entry->second.second = output;
+      } else if (static const std::regex count(R"("version_count"\s*:\s*(\d+))"); std::regex_search(output, match, count) && std::stoi(match[1].str()) > 0) {
+        entry->second.first = std::stoi(match[1].str());
+      } else {
+        entry->second.second = "the server tells no version";
+      }
+    }
+    version = entry->second.first;
+    if (!version) {
+      // the newest copy there is
+      std::error_code ec;
+      std::map<int32_t, string> copies;  // by version (0: not known)
+      const std::regex copyName("^" + record + R"((?:v(\d+))?\.root$)");
+      for (const auto& file : std::filesystem::directory_iterator(folder / "hepdata", ec)) {
+        const string name = file.path().filename().string();
+        if (std::regex_match(name, match, copyName)) copies[(match[1].matched) ? std::stoi(match[1].str()) : 0] = file.path().string();
+      }
+      if (!copies.empty()) {
+        const auto& [copyVersion, copy] = *copies.rbegin();
+        if (!failed_before("latest:" + record)) {
+          logger::warning("Cannot find out the latest version of HEPData record {} ({}): reading the copy {}{}.", record, entry->second.second, copy,
+                          (copyVersion) ? " (version " + std::to_string(copyVersion) + ")" : "");
+          remember_failure("latest:" + record);
+        }
+        return copy;
+      }
+    }
+  }
+
+  const string file = (folder / "hepdata" / (record + ((version) ? "v" + std::to_string(*version) : "") + ".root")).string();
   std::error_code ec;
   if (std::filesystem::exists(file, ec)) return file;
   if (failed_before(file)) return std::nullopt;
@@ -511,31 +571,21 @@ std::optional<string> hepdata_file(const string& record, const std::filesystem::
   });
   std::filesystem::create_directories(std::filesystem::path(file).parent_path(), ec);
   if (ec) {
-    logger::warning("Cannot download HEPData record {}: cannot create folder {} ({}).", record, std::filesystem::path(file).parent_path().string(), ec.message());
+    logger::warning("Cannot download HEPData record {}: cannot create folder {} ({}).", recordId, std::filesystem::path(file).parent_path().string(), ec.message());
     return std::nullopt;
   }
-
-  // downloaded with curl (ROOT opens https only when built with Davix); the server can be replaced (tests, mirrors)
-  const char* server = std::getenv("SCIROOPLOT_HEPDATA_SERVER");
-  const string url = string((server) ? server : "https://www.hepdata.net") + "/record/" + record + "?format=root";
+  const string url = recordUrl + "?format=root" + ((version) ? "&version=" + std::to_string(*version) : "");
   const string download = temporary_file(file) + ".download";
-  logger::info("Downloading HEPData record {} from {}.", record, url);
-  Int_t status{};
-  TString output;
-  {
-    auto quiet = ignore_root_messages_below(kFatal);  // ROOT reports a failed command itself
-    output = gSystem->GetFromPipe(("curl -sSfL --connect-timeout 30 --max-time 600 -o " + shell_quoted(download) + " " + shell_quoted(url)).data(), &status, true);
-  }
+  logger::info("Downloading HEPData record {} from {}.", recordId, url);
   auto removeDownload = make_scope_guard([&download]() {
     std::error_code removeError;
     std::filesystem::remove(download, removeError);
   });
-  if (status != 0) {
-    const bool noCurl = WIFEXITED(status) && WEXITSTATUS(status) == 127;
-    logger::warning("Cannot download HEPData record {}: {}.", record, (noCurl) ? "the program curl was not found" : string(output.Data()));
+  if (string output; !curl("-o " + shell_quoted(download) + " ", url, output)) {
+    logger::warning("Cannot download HEPData record {}: {}.", recordId, output);
     return std::nullopt;
   }
-  made = make_hepdata_copy(download, file, "HEPData record " + record);
+  made = make_hepdata_copy(download, file, "HEPData record " + recordId);
   if (!made) return std::nullopt;
   return file;
 }

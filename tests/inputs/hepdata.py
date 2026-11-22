@@ -2,8 +2,10 @@
 errors, y<i>_<label> with one error source; a histogram where the table has one point per bin and every error is symmetric (a 1d and a
 2d table, bin labels kept), a graph otherwise (an asymmetric error source, a table of points without bins). HEPData's own objects stay
 readable, a data source restricted to a table works. What the record's ROOT file does not hold is reported: the error sources of tables
-without bins and of bins that overlap, tables with three independent variables. The record is downloaded once into the cache folder, also
-with srp cache off: the one of the config folder, or the folder SciRooPlot inside the folder of srp cache on <folder>, marked as cache
+without bins and of bins that overlap, tables with three independent variables. The record is downloaded once per version into the
+cache folder (hepdata:<record>v<n> reads version n; without a version the latest one the server tells, asked once per run, and when that
+cannot be found out the newest copy, with a warning), also with srp cache off: the one of the config folder, or the folder SciRooPlot
+inside the folder of srp cache on <folder>, marked as cache
 (CACHEDIR.TAG); a record that does not exist and a malformed record id are reported once and the other inputs are still read.
 A downloaded table or record (hepdata:<file>: a ROOT file of one table or of the record, or the record's .tar.gz; relative to the current
 directory) gives the same objects, from a copy in the cache folder that is made again when the file changes; the file itself is left as it
@@ -23,11 +25,13 @@ import array
 import functools
 import http.server
 import itertools
+import json
 import math
 import os
 import shutil
 import tarfile
 import threading
+import urllib.parse
 
 from srptest import ROOT, Project, S, check, close, finish, missing
 
@@ -35,11 +39,32 @@ served = os.path.join(os.environ.get("SRP_TESTS_WORK", "."), "hepdata-server")
 shutil.rmtree(served, ignore_errors=True)
 os.makedirs(os.path.join(served, "record"))
 requests = []
+VERSIONS = {"ins12345": 3}  # the latest version the server tells per record (format=json&light=true); other records: none told, as a mirror
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
+    """as hepdata.net: the record's JSON with its version_count, a version given as version=<n> (served from record/<record>.v<n> if there
+    is one), else the record"""
+
     def log_message(self, *args):
-        requests.append(self.path)
+        requests.append(self.asked)
+
+    def do_GET(self):
+        self.asked = self.path
+        path, _, query = self.path.partition("?")
+        args = urllib.parse.parse_qs(query)
+        record = path.rsplit("/", 1)[-1]
+        if args.get("format") == ["json"]:
+            body = json.dumps({"record": {"version": 1}, "version": VERSIONS[record], "version_count": VERSIONS[record]} if record in VERSIONS else {}).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if "version" in args and os.path.exists(os.path.join(served, "record", f"{record}.v{args['version'][0]}")):
+            self.path = f"/record/{record}.v{args['version'][0]}"
+        super().do_GET()
 
 
 server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(Handler, directory=served))
@@ -291,11 +316,13 @@ def check_values(run, label=""):
 
 run = p.plot("hepdata")
 check_values(run)
-downloads = [r for r in requests if r.startswith("/record/ins12345")]
-check("the record is downloaded once", len(downloads) == 1, f"requests {requests}")
-stored = [os.path.join(root, f) for root, _, files in os.walk(os.environ["SCIROOPLOT_CONFIG_PATH"]) for f in files if f == "ins12345.root"]
+downloads = [r for r in requests if r.startswith("/record/ins12345") and "format=root" in r]
+check("the record is downloaded once, in the latest version the server tells", downloads == ["/record/ins12345?format=root&version=3"], f"requests {requests}")
+check("the latest version is asked for once", len([r for r in requests if r.startswith("/record/ins12345?format=json")]) == 1, f"requests {requests}")
+stored = [os.path.join(root, f) for root, _, files in os.walk(os.environ["SCIROOPLOT_CONFIG_PATH"]) for f in files if f.startswith("ins12345")]
 standard = os.path.join(os.environ["SCIROOPLOT_CONFIG_PATH"], "cache")
-check("the record is kept in the cache folder of the config folder (srp cache off)", stored == [os.path.join(standard, "hepdata", "ins12345.root")], f"{stored}")
+check("the record is kept in the cache folder of the config folder (srp cache off), named after its version", stored == [os.path.join(standard, "hepdata", "ins12345v3.root")], f"{stored}")
+check("a record from a server that tells no version is kept without one", os.path.exists(os.path.join(standard, "hepdata", "insbare.root")), f"{os.listdir(os.path.join(standard, 'hepdata'))}")
 check("the cache folder of the config folder is marked as cache", os.path.exists(os.path.join(standard, "CACHEDIR.TAG")), f"{os.listdir(standard) if os.path.isdir(standard) else 'no folder'}")
 lines = run.lines("WARN")
 for what, text in (
@@ -311,7 +338,7 @@ for what, text in (
     found = [line for line in lines if text in line]
     check(f"{what}, once", len(found) == 1, f"{len(found)} lines: {lines[:3]}")
 found = run.errors("Subdirectory Table 99 not found")
-check("a table missing in a record points to the listing of its tables, once", len(found) == 1 and found[0].endswith("(its tables: srp print hepdata:ins12345)."), f"{found}")
+check("a table missing in a record points to the listing of the tables of the version read, once", len(found) == 1 and found[0].endswith("(its tables: srp print hepdata:ins12345v3)."), f"{found}")
 infos = run.lines("INFO")
 for what, text in (
     ("tables without bins are named: no error sources", "HEPData record ins12345: Table 4, Table 7 have no bins"),
@@ -333,14 +360,14 @@ check("downloaded files are left as they are", all(content(p.path(name)) == data
 requests.clear()
 run = p.plot("hepdata")
 check_values(run, " (the kept copy)")
-check("the kept copy is read without a download", not [r for r in requests if r.startswith("/record/ins12345")], f"requests {requests}")
+check("the kept copy is read without a download", not [r for r in requests if r.startswith("/record/ins12345") and "format=root" in r], f"requests {requests}")
 cache = p.path("cache")
 p.srp("cache", "on", cache)
 run = p.plot("hepdata")
 p.srp("cache", "off")
 check_values(run, " (cache folder)")
 own = os.path.join(cache, "SciRooPlot")
-check("with srp cache on <folder> the record is downloaded into the folder SciRooPlot inside it", os.path.exists(os.path.join(own, "hepdata", "ins12345.root")), f"{os.listdir(cache) if os.path.isdir(cache) else 'no folder'}")
+check("with srp cache on <folder> the record is downloaded into the folder SciRooPlot inside it", os.path.exists(os.path.join(own, "hepdata", "ins12345v3.root")), f"{os.listdir(cache) if os.path.isdir(cache) else 'no folder'}")
 check("the folder SciRooPlot inside it is marked as cache, nothing else is put into <folder>", os.path.exists(os.path.join(own, "CACHEDIR.TAG")) and os.listdir(cache) == ["SciRooPlot"], f"{os.listdir(cache) if os.path.isdir(cache) else 'no folder'}")
 
 # a downloaded file that changed: its copy is made again
@@ -407,5 +434,49 @@ check("srp print hepdata:<file> lists a downloaded file", own.returncode == 0 an
 none = p.srp("print", "hepdata:ins99999")
 check("srp print hepdata:<record that does not exist> fails", none.returncode == 1, none.stdout + none.stderr)
 check("a downloaded file that changed is converted again", got is not None and all(close(a, b, 1e-6) for a, b in zip(got[0] + got[1], [40, 20, 8, 4, 2, 1], strict=True)), f"{got}")
+
+
+# versions: hepdata:<record>v<n> reads version n; without a version the latest the server tells, a newer one downloaded when there is one;
+# when the latest version cannot be found out, the newest copy there is (with a warning)
+def serve_version(version, first):
+    """version <version> of record ins12345 (the first bin of Table 1 holding first), as hepdata.net serves it"""
+    path = os.path.join(served, f"HEPData-ins12345-v{version}-root.root")
+    versioned = ROOT.TFile(path, "RECREATE")
+    write_table(versioned, 1, [first, 5.0, 2.0], [("stat", [1.0, 0.5, 0.25])], edges=[0, 1, 2, 4])
+    versioned.Close()
+    with tarfile.open(os.path.join(served, "record", f"ins12345.v{version}"), "w:gz") as archive:
+        archive.add(path, arcname=os.path.basename(path))
+
+
+def first_bin(version):
+    """the first bin of Table 1/y1 in the kept copy of that version"""
+    f = ROOT.TFile.Open(os.path.join(standard, "hepdata", f"ins12345v{version}.root"))
+    value = f.Get("Table 1/y1").GetBinContent(1) if f else None
+    if f:
+        f.Close()
+    return value
+
+
+serve_version(2, 100.0)
+serve_version(4, 200.0)
+requests.clear()
+pinned = p.srp("print", "hepdata:ins12345v2:Table 1")
+check("hepdata:<record>v<n> downloads version n, without asking for the latest", pinned.returncode == 0 and requests == ["/record/ins12345?format=root&version=2"] and first_bin(2) == 100.0, f"{requests} {first_bin(2)}")
+requests.clear()
+p.srp("print", "hepdata:ins12345v2:Table 1")
+check("a version that is kept is read without a request", requests == [], f"{requests}")
+VERSIONS["ins12345"] = 4
+requests.clear()
+newer = p.srp("print", "hepdata:ins12345:Table 1")
+check("a newer latest version is downloaded, the copies of the others are kept", newer.returncode == 0 and "/record/ins12345?format=root&version=4" in requests and first_bin(4) == 200.0 and first_bin(3) == 10.0, f"{requests} {first_bin(4)} {first_bin(3)}")
+VERSIONS.clear()
+requests.clear()
+unknown = p.srp("print", "hepdata:ins12345:Table 1")
+warned = [line for line in (unknown.stdout + unknown.stderr).splitlines() if "Cannot find out the latest version of HEPData record ins12345" in line]
+check(
+    "when the latest version cannot be found out, the newest copy is read, with a warning naming it",
+    unknown.returncode == 0 and len(warned) == 1 and "ins12345v4.root (version 4)" in warned[0] and not [r for r in requests if "format=root" in r],
+    unknown.stdout + unknown.stderr,
+)
 server.shutdown()
 finish()
