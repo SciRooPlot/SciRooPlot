@@ -1356,14 +1356,27 @@ void PlotPainter::FinishPad(pad_state_t& padState)
     DrawShapes(pad, padDefaults, padID, pad_ptr, Plot::Pad::Shape::layer_t::after_data, nullptr);
   }
 
-  // legends, texts and images: the ones with a given position before the statistics boxes, the automatically placed ones after them,
-  // so that every automatic placement knows the boxes already there
-  auto placeBoxes = [&](bool fixedPositions) {
+  // boxes in three passes, so that every automatic placement knows the boxes already there: those with a given position, then the
+  // automatic ones asked for a corner (they get it before a box free to take any corner does), then those taking the best corner;
+  // legends, texts and images; the statistics boxes come after those with a given position and before the automatic ones of a pass
+  enum class pass_t : uint8_t {
+    fixed,
+    corner,
+    best,
+  };
+  auto passOf = [](const auto& box) { return (!box.IsAutoPlacement()) ? pass_t::fixed : ((*box.GetPlacement() == best_corner) ? pass_t::best : pass_t::corner); };
+  auto placeStats = [&](pass_t pass) {
+    for (auto& [stats, statsBox] : statsBoxes) {
+      if (stats && passOf(*statsBox) == pass) PlaceStatsBox(padState, std::move(stats), *statsBox);
+    }
+  };
+  auto placeBoxes = [&](pass_t pass) {
+    if (pass != pass_t::fixed) placeStats(pass);
     uint8_t legendIndex{};
     for (const auto& box : pad.GetLegendBoxes()) {
       ++legendIndex;
-      if (box->IsAutoPlacement() == fixedPositions || box->HasForeignRows()) continue;  // a legend with rows of other pads comes once all are drawn
-      box->MergeLegendEntries(static_cast<uint16_t>(pad.GetData().size()));             // put the rows added by the user between those of the data
+      if (passOf(*box) != pass || box->HasForeignRows()) continue;           // a legend with rows of other pads comes once all are drawn
+      box->MergeLegendEntries(static_cast<uint16_t>(pad.GetData().size()));  // put the rows added by the user between those of the data
       if (!DrawBox(box, pad, padDefaults, pad_ptr, "LegendBox_" + std::to_string(legendIndex))) {
         logger::warning("Legend {} of pad {} is empty: it is not drawn.", legendIndex, padID);
       }
@@ -1371,7 +1384,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
     uint8_t textIndex{};
     for (const auto& box : pad.GetTextBoxes()) {
       ++textIndex;
-      if (box->IsAutoPlacement() == fixedPositions || box->RefersToOtherPads()) continue;  // a text naming data of other pads comes once all are drawn
+      if (passOf(*box) != pass || box->RefersToOtherPads()) continue;  // a text naming data of other pads comes once all are drawn
       if (!DrawBox(box, pad, padDefaults, pad_ptr, "TextBox_" + std::to_string(textIndex))) {
         logger::warning("Text {} of pad {} is empty: it is not drawn.", textIndex, padID);
       }
@@ -1379,18 +1392,14 @@ void PlotPainter::FinishPad(pad_state_t& padState)
     uint8_t imageIndex{};
     for (const auto& box : pad.GetImageBoxes()) {
       ++imageIndex;
-      if (box->IsAutoPlacement() == fixedPositions) continue;
+      if (passOf(*box) != pass) continue;
       DrawImage(*box, pad, padDefaults, pad_ptr, "ImageBox_" + std::to_string(imageIndex));
     }
+    if (pass == pass_t::fixed) placeStats(pass);
   };
-  placeBoxes(true);
-
-  // statistics boxes, placed after the boxes with a given position and before the automatically placed ones
-  for (auto& [stats, statsBox] : statsBoxes) {
-    PlaceStatsBox(padState, std::move(stats), *statsBox);
+  for (const auto pass : {pass_t::fixed, pass_t::corner, pass_t::best}) {
+    placeBoxes(pass);
   }
-
-  placeBoxes(false);
   if (canDrawShapes) DrawShapes(pad, padDefaults, padID, pad_ptr, Plot::Pad::Shape::layer_t::on_top, nullptr);
 
   // viewing angles of 3D drawings: the pad's own, else those of pad 0

@@ -13,7 +13,8 @@ Reference: the pixels painted for the data (the canvas painted with and without 
 Covers: functions drawn with a fill, histograms with an error option but no errors drawn as
 steps, lines and bands of histograms through the bin centres, graphs without errors drawn with error boxes or bands, multi-error graphs
 by their largest errors, the edges of bands between the cells of the placement, 2d graphs and functions drawn as maps, the frame of 3d
-views of functions, boxes on top of each other when there is no room, and the named cases.
+views of functions, boxes on top of each other when there is no room, a box asked for a corner placed before one taking the best
+corner, and the named cases.
 """
 
 import re
@@ -294,4 +295,25 @@ def overlap(a, b, tol):
 
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
 in_chunks(todo, compare)
+
+# a box asked for a corner gets it before a box free to take any corner: with a rising graph the best corner is the top left, which the
+# text asks for, so the legend added before it goes elsewhere
+rising = ROOT.TGraph(20)
+for i in range(20):
+    rising.SetPoint(i, i + 0.5, 1.0 + i)
+rising.SetName("rising")
+q = Project("box_order")
+q.source("rising", {"rising": rising})
+plot = S.Plot("corner_first", "order", "1d")
+plot[1].AddData("rising", "rising").SetLegendLabel("rising data")
+plot[1].AddLegend()
+plot[1].AddText(S.top_left, "text asked for the top left")
+q.pm.AddPlot(plot)
+order = q.plot("order")
+with order.held():
+    pad = order.pad("corner_first", "order")
+    legend = pad.GetPrimitive("LegendBox_1") if pad else None
+    text = pad.GetPrimitive("TextBox_1") if pad else None
+    placed = (rect(legend), rect(text)) if legend and text else None
+check("a box asked for a corner is placed before a box free to take the best corner: the text gets the top left", placed is not None and placed[1][0] < placed[0][0] and placed[1][3] > placed[0][3], f"{placed}")
 finish()
