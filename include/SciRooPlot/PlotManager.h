@@ -97,6 +97,7 @@ class PlotManager
   // in-memory objects are copied into the project: a named list or a directory becomes a folder of the dataSource,
   // the contents of a nameless list or of a file are added directly
   void AddDataSource(const std::string& dataSource, const std::vector<TObject*>& inputs, bool replace = false);
+  void AddDataSource(const std::string& dataSource, std::initializer_list<TObject*> inputs, bool replace = false) { AddDataSource(dataSource, std::vector<TObject*>(inputs), replace); }
   void AddDataSource(const std::string& dataSource, TObject* input, bool replace = false);
 
   void SaveDataSources(const std::optional<std::string>& file = {}) const;
@@ -119,6 +120,7 @@ class PlotManager
   // Other proportions are taken from shape, e.g. MakeBasePlot("1d_wide_ratio", PanelLayout(), BasePlotShape().SetAspectRatio(4. / 3.).SetRatioHeight(0.3)).
   static Plot MakeBasePlot(const std::string& name = "1d", const PanelLayout& sizes = PanelLayout(), const BasePlotShape& shape = BasePlotShape());
   void AddColorOverview(const std::string& name, const std::string& group, const std::vector<color_t>& colors = {});
+  void AddColorOverview(const std::string& name, const std::string& group, std::initializer_list<color_t> colors) { AddColorOverview(name, group, std::vector<color_t>(colors)); }
   void AddColorOverview(const std::string& name, const std::string& group, const std::string& basePlot, uint8_t padID = 1);
 
   void SavePlots(const std::string& name = ".+", const std::string& group = ".+", const std::optional<std::string>& file = {}) const;

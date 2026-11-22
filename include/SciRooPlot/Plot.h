@@ -686,22 +686,26 @@ class Plot::Pad : public FillSetters<Pad>
   Pad& SetDefaultTextFont(int16_t font);
   Pad& SetDefaultAlpha(float_t alpha);
   Pad& SetDefaultColors(const std::vector<color_t>& colors);
+  Pad& SetDefaultColors(std::initializer_list<color_t> colors) { return SetDefaultColors(std::vector<color_t>(colors)); }  // a braced list of colours (also hex strings)
   Pad& SetDefaultColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultColors(const std::vector<std::pair<color_t, float_t>>& gradient, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultMarkerAlpha(float_t alpha);
   Pad& SetDefaultMarkerSize(float_t size);
   Pad& SetDefaultMarkerColors(const std::vector<color_t>& colors);
+  Pad& SetDefaultMarkerColors(std::initializer_list<color_t> colors) { return SetDefaultMarkerColors(std::vector<color_t>(colors)); }  // a braced list of colours (also hex strings)
   Pad& SetDefaultMarkerColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultMarkerColors(const std::vector<std::pair<color_t, float_t>>& gradient, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultMarkerStyles(const std::vector<int16_t>& styles);
   Pad& SetDefaultLineAlpha(float_t alpha);
   Pad& SetDefaultLineWidth(float_t width);
   Pad& SetDefaultLineColors(const std::vector<color_t>& colors);
+  Pad& SetDefaultLineColors(std::initializer_list<color_t> colors) { return SetDefaultLineColors(std::vector<color_t>(colors)); }  // a braced list of colours (also hex strings)
   Pad& SetDefaultLineColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultLineColors(const std::vector<std::pair<color_t, float_t>>& gradient, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultLineStyles(const std::vector<int16_t>& styles);
   Pad& SetDefaultFillAlpha(float_t alpha);
   Pad& SetDefaultFillColors(const std::vector<color_t>& colors);
+  Pad& SetDefaultFillColors(std::initializer_list<color_t> colors) { return SetDefaultFillColors(std::vector<color_t>(colors)); }  // a braced list of colours (also hex strings)
   Pad& SetDefaultFillColors(const std::vector<std::tuple<float_t, float_t, float_t, float_t>>& rgbEndpoints, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultFillColors(const std::vector<std::pair<color_t, float_t>>& gradient, std::optional<float_t> alpha = {}, std::optional<int32_t> nColors = {});
   Pad& SetDefaultFillStyles(const std::vector<int16_t>& styles);
@@ -1018,6 +1022,8 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   Data& SetContours(const std::vector<double>& contours);  // colour levels (also of the colour scale, if this is the first map of the pad)
   Data& SetContours(int32_t nContours);                    // n equal colour levels (a 3d histogram: its boxes too)
   Data& SetNpx(int32_t nx, std::optional<int32_t> ny = {});
+  // a braced list of levels: {5} is one level at 5
+  Data& SetContours(std::initializer_list<double> contours) { return SetContours(std::vector<double>(contours)); }
 
   // data modifiers
   // the optional range in x restricts the integral or the maximum to the bins reaching into it (points within it for graphs)
@@ -1384,6 +1390,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   Ratio& SetFill(int16_t style, color_t color, float_t alpha = 1.f) { return SetFill<int16_t&, color_t&, float_t&>(style, color, alpha); }
   Ratio& SetFillColor(color_t color) { return SetFillColor<color_t&>(color); }
   Ratio& SetContours(const std::vector<double>& contours) { return SetContours<const std::vector<double>&>(contours); }
+  Ratio& SetContours(std::initializer_list<double> contours) { return SetContours(std::vector<double>(contours)); }
   Ratio& SetNpx(int32_t nx, std::optional<int32_t> ny) { return SetNpx<int32_t&, std::optional<int32_t>&>(nx, ny); }
 
   // data modifiers: act on the ratio itself (default), or on numerator and/or denominator before the division
