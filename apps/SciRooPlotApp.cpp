@@ -85,7 +85,7 @@ constexpr const char* kSettings[] = {"verbosity", "color", "plotmode", "matchmod
 string SettingValue(const string& setting)
 {
   const Config& config = Config::Get();
-  if (setting == "verbosity") return Config::LogLevelName(config.Verbosity());
+  if (setting == "verbosity") return Config::LogLevelName(config.VerbositySetting());
   if (setting == "color") return Config::ColorModeName(config.Color());
   if (setting == "plotmode") return config.PlotMode();
   if (setting == "matchmode") return config.MatchContains() ? "contains" : "exact";
@@ -262,7 +262,7 @@ int RunCommand(const string& command, const string& project, const string& prope
     row("<setting>", "declared and read by the program with Setting");
     row("<group> <name>", "regular expressions for plot groups and names");
     row("<mode>", "one of the plot modes");
-    row("<level>", "debug | log | info | warning | error | silent");
+    row("<level>", "debug | hint | log | info | warning | error | silent");
   } else if (command == "open") {
     if (project.empty()) {
       logger::error("Specify a file: srp open <file>.");

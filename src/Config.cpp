@@ -68,6 +68,8 @@ string Config::LogLevelName(int level)
       return "info";
     case LogLevel::log:
       return "log";
+    case LogLevel::hint:
+      return "hint";
     case LogLevel::debug:
       return "debug";
     default:
@@ -82,6 +84,7 @@ std::optional<int> Config::ParseLogLevel(const string& name)
   if (name == "warning") return LogLevel::warning;
   if (name == "info") return LogLevel::info;
   if (name == "log") return LogLevel::log;
+  if (name == "hint") return LogLevel::hint;
   if (name == "debug") return LogLevel::debug;
   return std::nullopt;
 }
@@ -120,6 +123,11 @@ std::optional<double> Config::ParseScale(const string& value)
 Config::Config()
 {
   LoadConfig();
+  // the verbosity of this process alone (e.g. hints for a program reading the output), stored settings untouched
+  if (const char* verbosity = gSystem->Getenv("SCIROOPLOT_VERBOSITY")) {
+    mLogLevelOverride = ParseLogLevel(verbosity);
+    if (!mLogLevelOverride) std::cerr << "Ignoring invalid SCIROOPLOT_VERBOSITY '" << verbosity << "' (debug | hint | log | info | warning | error | silent)." << std::endl;
+  }
   std::atexit([] { Instance().Save(); });
 }
 Config& Config::Instance()
@@ -999,7 +1007,7 @@ ptree Config::Project::GetTree() const
 // sets a setting as the srp command of its name does; a bad value is reported and changes nothing
 bool Config::SetSetting(const string& key, const string& value)
 {
-  static const std::map<string, string> hints{{"verbosity", "debug | log | info | warning | error | silent"},
+  static const std::map<string, string> hints{{"verbosity", "debug | hint | log | info | warning | error | silent"},
                                               {"color", "bright | dark | off"},
                                               {"plotmode", "srp help lists the modes"},
                                               {"matchmode", "exact | contains"},

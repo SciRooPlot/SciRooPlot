@@ -2,7 +2,8 @@
 documents, shown by srp settings and kept in settings.info, and refuse anything else with exit status 1 and one error, changing nothing.
 Without a value they print the current value, changing nothing. srp cache on keeps the copies in the cache folder of the config folder,
 srp cache on <folder> in a folder SciRooPlot of its own inside <folder>; srp settings shows that folder.
-Without a settings file the documented defaults hold. A settings.info edited by hand with an unknown key or an invalid value is reported once
+Without a settings file the documented defaults hold (verbosity log). SCIROOPLOT_VERBOSITY sets the verbosity of one process: the stored
+one stays as it is, an invalid value is reported once and ignored. A settings.info edited by hand with an unknown key or an invalid value is reported once
 per entry and written again without it, keeping the valid entries."""
 
 import os
@@ -12,7 +13,7 @@ from srptest import SRP, WORK, cases, check, config_files, config_folder, descri
 
 MODES = ["show", "spread", "pdf", "eps", "ps", "svg", "png", "jpg", "gif", "gif+20", "gif+20++", "gif+20++3", "root", "html", "json", "xml", "macro", "file", "data", "print", "list"]
 VALID = {
-    "verbosity": ["debug", "log", "info", "warning", "error", "silent"],
+    "verbosity": ["debug", "hint", "log", "info", "warning", "error", "silent"],
     "color": ["bright", "dark", "off"],
     "plotmode": MODES,
     "matchmode": ["exact", "contains"],
@@ -31,7 +32,7 @@ INVALID = {
     "bitmapscale": ["0", "-2", "abc", "nan", "inf", "2x"],
     "cache": ["relative/folder", "yes", "/tmp/srp-cache"],
 }
-DEFAULTS = {"plotmode": "show", "matchmode": "exact", "matchcase": "sensitive", "screenscale": "1", "bitmapscale": "1", "cache": "off", "current project": "none"}
+DEFAULTS = {"verbosity": "log", "plotmode": "show", "matchmode": "exact", "matchcase": "sensitive", "screenscale": "1", "bitmapscale": "1", "cache": "off", "current project": "none"}
 # the value srp settings shows for a stored value (the cache: on with the folder of the copies)
 SHOWN = {("cache", "on"): lambda config: f"on ({os.path.join(config, 'cache')})"}
 
@@ -51,6 +52,12 @@ def shown(config):
 config = config_folder("config_defaults")
 got = shown(config)
 check("defaults without a settings file", all(got.get(k) == v for k, v in DEFAULTS.items()), f"{got}")
+# SCIROOPLOT_VERBOSITY (the tests run with hint) sets the verbosity of one process: srp shows and keeps the stored one
+run(SRP, "verbosity", "warning", config=config)
+out = run(SRP, "verbosity", config=config, env={"SCIROOPLOT_VERBOSITY": "debug"})
+check("SCIROOPLOT_VERBOSITY leaves the stored verbosity as it is", out.stdout.split()[-1:] == ["warning"] and "verbosity warning" in read_text(os.path.join(config, "settings.info")), out.tail())
+out = run(SRP, "verbosity", config=config, env={"SCIROOPLOT_VERBOSITY": "loud"})
+check("an invalid SCIROOPLOT_VERBOSITY is reported once and ignored", out.rc == 0 and out.text.count("Ignoring invalid SCIROOPLOT_VERBOSITY 'loud'") == 1, out.tail())
 
 todo = cases({"setting": list(VALID), "value": sorted({v for values in list(VALID.values()) + list(INVALID.values()) for v in values})}, valid=lambda c: c["value"] in VALID[c["setting"]] + INVALID[c["setting"]], always=lambda c: True)
 for i, case in enumerate(todo):

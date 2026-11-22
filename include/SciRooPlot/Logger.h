@@ -40,13 +40,15 @@ namespace logger
 {
 namespace detail
 {
-// the levels of `srp verbosity` and the modes of `srp color`, read from the user settings by the library
+// the levels of `srp verbosity` (or SCIROOPLOT_VERBOSITY for one process) and the modes of `srp color`, read from the user settings by
+// the library; hints are what a plot shows at a glance (a box on the data, labels running into each other): for whoever cannot look
 enum level : int {
   silent,
   error,
   warning,
   info,
   log,
+  hint,
   debug,
 };
 enum color_mode : int {
@@ -125,7 +127,7 @@ inline void print_separator()
   logger::print("{:-<60}", "-");
 }
 
-// while set, infos and warnings are not printed (e.g. while a plot is painted a second time: the first paint gave them already)
+// while set, infos, hints and warnings are not printed (e.g. while a plot is painted a second time: the first paint gave them already)
 inline bool& muted()
 {
   static bool isMuted{};
@@ -171,6 +173,16 @@ inline void debug(std::string_view fmt_str, Args&&... args)
 {
   if (detail::verbosity() >= detail::level::debug) {
     fmt::print(stderr, "{}[ DEBU ]{} ", begin_color(Color::Cyan), end_color());
+    fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
+    fmt::print(stderr, "\n");
+  }
+}
+
+template <typename... Args>
+inline void hint(std::string_view fmt_str, Args&&... args)
+{
+  if (!muted() && detail::verbosity() >= detail::level::hint) {
+    fmt::print(stderr, "{}[ HINT ]{} ", begin_color(Color::Blue), end_color());
     fmt::print(stderr, fmt::runtime(fmt_str), std::forward<Args>(args)...);
     fmt::print(stderr, "\n");
   }

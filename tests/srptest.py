@@ -36,6 +36,7 @@ FULL = os.environ.get("SRP_TESTS_FULL") == "1"
 shutil.rmtree(WORK, ignore_errors=True)
 os.makedirs(WORK)
 os.environ["SCIROOPLOT_CONFIG_PATH"] = os.path.join(WORK, "config")  # read once per process: set before SciRooPlot is used
+os.environ["SCIROOPLOT_VERBOSITY"] = "hint"  # every message of the programs the tests run, also the hints (not shown by default)
 
 # the module is in lib/ of a build directory and in lib/pythonX.Y/site-packages of an installation
 for path in [os.path.join(PREFIX, "lib"), *glob.glob(os.path.join(PREFIX, "lib", "python*", "site-packages"))]:
@@ -2261,7 +2262,7 @@ class Run:
             self.file = ROOT.TFile.Open(snapshot)
 
     def lines(self, kind):
-        """the lines of a kind: ERR, WARN, INFO"""
+        """the lines of a kind: ERR, WARN, HINT, INFO"""
         return [line for line in self.log.splitlines() if f"[ {kind}" in line or f"[{kind}" in line]
 
     def errors(self, text=""):
@@ -2358,6 +2359,10 @@ class Run:
     def warnings(self, text=""):
         """the warnings of the run containing text"""
         return [line for line in self.lines("WARN") if text in line]
+
+    def hints(self, text=""):
+        """the hints of the run containing text (what a plot shows at a glance)"""
+        return [line for line in self.lines("HINT") if text in line]
 
     def messages(self, name, group):
         """the messages logged while a plot was made (the plots are made one after the other, each ending with "Created plot ...")"""
@@ -2502,6 +2507,9 @@ class Chunks:
 
     def warnings(self, text=""):
         return [line for run in self.runs.values() for line in run.warnings(text)]
+
+    def hints(self, text=""):
+        return [line for run in self.runs.values() for line in run.hints(text)]
 
     @contextlib.contextmanager
     def held(self, colours=True):

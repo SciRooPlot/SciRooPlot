@@ -1,4 +1,4 @@
-"""Collects the errors and warnings SciRooPlot prints, from its sources, for the messages topic of the site.
+"""Collects the errors, warnings and hints SciRooPlot prints, from its sources, for the messages topic of the site.
 Usage: extract_messages.py <repository> > messages.json"""
 import glob
 import json
@@ -9,8 +9,8 @@ ROOT = sys.argv[1]
 AREA = {"Config.cpp": "Projects and settings", "Paths.cpp": "Projects and settings", "PanelLayout.cpp": "Layouts",
         "Plot.cpp": "Plot definitions", "PythonBindings.cpp": "Plot definitions", "PlotManager.cpp": "Data, files and plotting",
         "PlotPainter.cpp": "Drawing"}
-KIND = {"error": "error", "warning": "warning", "throw_invalid_argument": "error, stops the program"}
-CALL = re.compile(r'logger::(error|warning|throw_invalid_argument)\s*\(\s*((?:"(?:[^"\\]|\\.)*"\s*)+)')
+KIND = {"error": "error", "warning": "warning", "hint": "hint (srp verbosity hint)", "throw_invalid_argument": "error, stops the program"}
+CALL = re.compile(r'logger::(error|warning|hint|throw_invalid_argument)\s*\(\s*((?:"(?:[^"\\]|\\.)*"\s*)+)')
 LITERAL = re.compile(r'"((?:[^"\\]|\\.)*)"')
 # settings the painter ignores: ReportIgnored(<setting>, <reason>), in the modifiers ignored(<modifier>, <reason>) ("<modifier> of <data>")
 IGNORED = re.compile(r"(?<![\w:])(ReportIgnored|ignored)\(")

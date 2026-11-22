@@ -421,8 +421,7 @@ for plotName, (what, ref, contents) in expected.items():
     check(f"{what}: computed from the raw arrays", not diff, diff)
 nUnmatched = int((~matched).sum())
 check("rows without a match are counted in the reading summary", f"{nUnmatched} rows without a match skipped" in run.log, " | ".join(line for line in run.log.splitlines() if " - trk:" in line))
-warned = [w for w in run.warnings() if "run into each other" not in w]  # the look of long index labels
-check("the joins give no warnings or errors", not warned and not run.errors(), " | ".join(warned + run.errors()))
+check("the joins give no warnings or errors", not run.warnings() and not run.errors(), " | ".join(run.warnings() + run.errors()))
 check("no ROOT warning about inputs whose tree has no rows", "Adding tree with no entries" not in run.log, " | ".join(line for line in run.log.splitlines() if "no entries" in line))
 warnRun = p.plot("joinwarn")
 said = [w for w in warnRun.warnings() if "No files match" in w]

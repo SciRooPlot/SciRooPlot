@@ -36,7 +36,7 @@ srp select <project>                # make it the current project
 srp set <project> outdir <dir>      # where files are saved (subfolders per group)
 srp set <project> <name> <value>    # a setting the program declares and reads: pm.Setting("<name>", <default>, "<description>")
 srp projects [<project>] | srp settings | srp help
-srp verbosity (debug|log|info|warning|error|silent) ; srp plotmode (show|pdf|png|...) ; srp matchmode (exact|contains)
+srp verbosity (debug|hint|log|info|warning|error|silent) ; srp plotmode (show|pdf|png|...) ; srp matchmode (exact|contains)
 ```
 
 ## The `plot` app
@@ -287,7 +287,7 @@ Identical names and chains. Differences:
 - A relative input path is taken relative to the current directory (as the output directory) and stored as an absolute path; for paths that stay valid wherever the program runs, build them from the program's folder (`SRC_DIR`) or start them with an environment variable such as `${HOME}`.
 - `from SciRooPlot import *` also brings the drawing option aliases (`line`, `text`, `box`, `col`, …) and the helpers `graph`, `histo`, `table`: a user variable of the same name hides them.
 - In bash, quote patterns containing `(`, `)` or `|`.
-- Verify by generating: `plot <group> <name> png` and look at the file, or `plot ... list`. Warnings in the output name the plot and data.
+- Verify by generating: `SCIROOPLOT_VERBOSITY=hint plot <group> <name> png` and look at the file, or `plot ... list`. Warnings in the output name the plot and data; hints (`[ HINT ]`, shown only at verbosity `hint`) report what a person sees at a glance but a program reading the output does not: a box that found no free room and covers data, a box larger than the frame or reaching beyond its pad, x labels running into each other. `SCIROOPLOT_VERBOSITY` sets the verbosity of one command and leaves the user's `srp verbosity` as it is.
 
 ## Where to look for more
 

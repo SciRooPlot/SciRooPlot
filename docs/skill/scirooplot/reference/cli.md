@@ -13,7 +13,7 @@ Project initialization:    srp init-cpp <project> [<dir>] | srp init-py <project
 Project configuration:     srp get (<project>|@current) <property> | srp set ... <property> <value> | srp unset ... <property>
                            property = program | outdir | <setting>   (settings are declared and read by the program, pm.Setting("<name>", <default>, ...))
 Project access:            srp confdir [<project>] (config folder) | srp cd [<project>] (program folder) | srp edit [<project>] (source files) | srp out [<project>] (output folder in the file manager)
-Settings:                  srp settings | srp <setting> without a value prints it | srp color (bright|dark|off) | srp verbosity (debug|log|info|warning|error|silent) | srp plotmode <mode> (any mode of plot, e.g. show|spread|pdf|png|gif+<centiseconds>; the default of plot, initially show)
+Settings:                  srp settings | srp <setting> without a value prints it | srp color (bright|dark|off) | srp verbosity (debug|hint|log|info|warning|error|silent) | srp plotmode <mode> (any mode of plot, e.g. show|spread|pdf|png|gif+<centiseconds>; the default of plot, initially show)
                            srp matchmode (exact|contains) | srp matchcase (sensitive|insensitive) | srp screenscale <factor> | srp bitmapscale <factor> | srp cache (on [<folder>]|off) (local copies of remote inputs: in the config folder, or in <folder>/SciRooPlot)
 Maintenance:               srp info | srp update | srp reinstall | srp clean | srp reset | srp help
 Utilities:                 srp print <file>[:<path>] (contents of a ROOT file, or below a path in it; a path to one object gives its axes, binning, entries and contents) | srp print hepdata:<record>[:<table>] (the data names of a HEPData record or downloaded file, per table) | srp open <file> (in a TBrowser)
@@ -21,7 +21,7 @@ Utilities:                 srp print <file>[:<path>] (contents of a ROOT file, o
 ```
 Project settings: the program declares them with `pm.Setting(name, default, description, choices)` (a bool default makes a switch set `on`/`off`, an int or float default a number, a text default a text, restricted to the choices if given) and gets the value given with `srp set`, otherwise the default. `srp set` checks the value and refuses undeclared names, Tab completes the names (in zsh with their descriptions) and the values of switches and choices, `srp unset` goes back to the default, `srp projects` lists them, and `plot` runs the program again after a value changed. The names `program`, `outdir` and `plots` are reserved.
 
-The verbosity applies to log messages only: output a command is asked for (`srp projects`, `srp settings`, `srp print`, `plot … list`, `plot … print`, `Print()`) is always shown.
+The verbosity applies to log messages only (`hint` adds what a plot shows at a glance, such as a box covering data or labels running into each other, for programs reading the output; `SCIROOPLOT_VERBOSITY=<level>` sets it for one command without changing the stored setting): output a command is asked for (`srp projects`, `srp settings`, `srp print`, `plot … list`, `plot … print`, `Print()`) is always shown.
 
 Files: `~/.SciRooPlot/` (or `$SCIROOPLOT_CONFIG_PATH/`) holds `settings.info`, `projects.info` (programs, output folders, setting values, current project) and one folder per project with `plots.info`, `dataSources.info` and `settings.info` (the settings declared) written by `pm.SaveProject()`.
 

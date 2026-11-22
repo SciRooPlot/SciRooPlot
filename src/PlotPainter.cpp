@@ -1443,7 +1443,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
       }
       if (overlap) {
         if (mReportedIgnored.insert("overlapping x labels " + std::to_string(padID)).second) {
-          logger::warning("The labels of the X axis in pad {} run into each other: fewer divisions (SetNumDivisions), or SetNoExponent(false) for ROOT's power of ten (with room for it at the end of the axis, e.g. a right margin).", padID);
+          logger::hint("The labels of the X axis in pad {} run into each other: fewer divisions (SetNumDivisions), or SetNoExponent(false) for ROOT's power of ten (with room for it at the end of the axis, e.g. a right margin).", padID);
         }
       }
     }
@@ -1623,7 +1623,7 @@ void PlotPainter::PlaceStatsBox(pad_state_t& padState, unique_ptr<TPaveStats> st
   // named in messages as in show mode, with its pad
   const string boxName = fmt::format("statistics box of data {} of pad {}", string(stats->GetName()).substr(6), pad_ptr->GetNumber());
   const auto [upperLeftX, upperLeftY] = PlaceBox(statsBox, coordinates, pad_ptr, widthNDC, heightNDC, borderX, borderY, boxName);
-  if (!statsBox.IsAutoPlacement()) WarnIfBeyondPad(boxName, upperLeftX, upperLeftY, widthNDC, heightNDC);
+  if (!statsBox.IsAutoPlacement()) HintIfBeyondPad(boxName, upperLeftX, upperLeftY, widthNDC, heightNDC);
   stats->SetX1NDC(upperLeftX);
   stats->SetY1NDC(upperLeftY - heightNDC);
   stats->SetX2NDC(upperLeftX + widthNDC);
@@ -6375,7 +6375,7 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
         upperLeftY += 0.5 * (3 - std::clamp(*align % 10, 1, 3)) * totalHeightNDC;
       }
     }
-    if (!box->IsAutoPlacement()) WarnIfBeyondPad(boxName, upperLeftX, upperLeftY, totalWidthNDC, totalHeightNDC);
+    if (!box->IsAutoPlacement()) HintIfBeyondPad(boxName, upperLeftX, upperLeftY, totalWidthNDC, totalHeightNDC);
 
     if constexpr (isLegend) {
       TLegend* legend = new TLegend(upperLeftX, upperLeftY - totalHeightNDC, upperLeftX + totalWidthNDC, upperLeftY, "", "NDC NB");
@@ -6552,13 +6552,13 @@ std::pair<double_t, double_t> PlotPainter::PlaceBox(const BoxType& box, coordina
 
 //**************************************************************************************************
 /**
- * Warns about a box at a position set for it that reaches beyond its pad (it is drawn: the part outside is cut off).
+ * Hints at a box at a position set for it that reaches beyond its pad (it is drawn: the part outside is cut off).
  */
 //**************************************************************************************************
-void PlotPainter::WarnIfBeyondPad(const string& boxType, double_t upperLeftX, double_t upperLeftY, double_t widthNDC, double_t heightNDC)
+void PlotPainter::HintIfBeyondPad(const string& boxType, double_t upperLeftX, double_t upperLeftY, double_t widthNDC, double_t heightNDC)
 {
   if (BeyondPad(upperLeftX, upperLeftY, widthNDC, heightNDC)) {
-    logger::warning("The {} reaches beyond its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}, in units of the pad): the part outside of it is cut off.", boxType, upperLeftX, upperLeftY, widthNDC, heightNDC);
+    logger::hint("The {} reaches beyond its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}, in units of the pad): the part outside of it is cut off.", boxType, upperLeftX, upperLeftY, widthNDC, heightNDC);
   }
 }
 
@@ -6647,11 +6647,11 @@ void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, bo
   const bool found = fitsIntoFrame && FindFreeSpace(pad, freeArea, width, height, placement, lowerLeftX, lowerLeftY, coversData);
   if (found && !coversData) return;
   if (fitsIntoFrame) {
-    logger::warning("Could not find enough space to place the {} properly.", boxType);
+    logger::hint("Could not find enough space to place the {} properly.", boxType);
     if (found) return;
   } else {
-    logger::warning("The {} ({:.2f} x {:.2f}) is larger than the space inside the frame ({:.2f} x {:.2f}, in units of the pad size): use fewer lines, more columns or a smaller text size.",
-                    boxType, width, height, freeWidthNDC, freeHeightNDC);
+    logger::hint("The {} ({:.2f} x {:.2f}) is larger than the space inside the frame ({:.2f} x {:.2f}, in units of the pad size): use fewer lines, more columns or a smaller text size.",
+                 boxType, width, height, freeWidthNDC, freeHeightNDC);
   }
   // just place it in the top left corner of the frame
   lowerLeftX = freeArea[0];

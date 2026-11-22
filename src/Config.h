@@ -45,7 +45,8 @@ class Config
   using ColorMode = logger::detail::color_mode;
   static std::string ColorModeName(int mode);
 
-  int Verbosity() const { return mLogLevel; }
+  int Verbosity() const { return mLogLevelOverride.value_or(mLogLevel); }
+  int VerbositySetting() const { return mLogLevel; }  // srp verbosity, without SCIROOPLOT_VERBOSITY
   int Color() const { return mColorMode; }
   const std::string& PlotMode() const { return mPlotMode; }
   bool MatchCaseInsensitive() const { return mMatchCaseInsensitive; }
@@ -136,7 +137,8 @@ class Config
   std::map<std::string, std::set<std::string>> mTouchedProperties;  // set by SetProperty: only these properties are written
   bool mCurrentTouched{false};
   bool mProjectsUnreadable{false};  // projects.info exists but could not be read
-  int mLogLevel{LogLevel::debug};
+  int mLogLevel{LogLevel::log};
+  std::optional<int> mLogLevelOverride;  // SCIROOPLOT_VERBOSITY: for this process only, never saved
   int mColorMode{ColorMode::bright};
   std::string mPlotMode{"show"};
   bool mMatchCaseInsensitive{false};
