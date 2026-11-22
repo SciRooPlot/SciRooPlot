@@ -2453,6 +2453,8 @@ void PlotPainter::DataRanges(item_state_t& state, T& data_ptr, optional<draw_opt
     if (data->GetNpx()) data_ptr->SetNpx(*data->GetNpx());
     if constexpr (is_func_2d<data_type>() || is_func_3d<data_type>()) {
       if (data->GetNpy()) data_ptr->SetNpy(*data->GetNpy());
+    } else if (data->GetNpy()) {
+      Warn(state, "The number of points along y of SetNpx applies only to 2d and 3d functions, not to {}.", DataName(*data));
     }
   } else if (data->GetNpx()) {
     logger::warning("SetNpx applies only to functions, not to {}.", DataName(*data));
