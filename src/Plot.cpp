@@ -3088,38 +3088,42 @@ auto Plot::Pad::Data::ScaleZ(double_t scaleFactor) -> decltype(*this)
 auto Plot::Pad::Data::Project(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   if (dims.empty()) logger::throw_invalid_argument("Project needs at least one axis to project onto.");
-  mProjInfo = {dims, FiniteRanges(ranges), isUserCoord};
+  mProjInfo = {dims, FiniteRanges(ranges, isUserCoord), isUserCoord};
   return *this;
 }
 auto Plot::Pad::Data::ProjectX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfo = {{0}, FiniteRanges({{1, startY, endY}}), isUserCoord};
+  mProjInfo = {{0}, FiniteRanges({{1, startY, endY}}, isUserCoord), isUserCoord};
   return *this;
 }
 auto Plot::Pad::Data::ProjectY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfo = {{1}, FiniteRanges({{0, startX, endX}}), isUserCoord};
+  mProjInfo = {{1}, FiniteRanges({{0, startX, endX}}, isUserCoord), isUserCoord};
   return *this;
 }
 auto Plot::Pad::Data::Profile(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   if (dims.empty()) logger::throw_invalid_argument("Profile needs at least one axis to profile along.");
-  mProjInfo = {dims, FiniteRanges(ranges), isUserCoord, true};
+  mProjInfo = {dims, FiniteRanges(ranges, isUserCoord), isUserCoord, true};
   return *this;
 }
 auto Plot::Pad::Data::Profile(uint8_t averagedAxis, const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)
 {
   if (dims.empty()) logger::throw_invalid_argument("Profile needs at least one axis to profile along.");
   if (std::find(dims.begin(), dims.end(), averagedAxis) != dims.end()) logger::throw_invalid_argument("Profile cannot average axis {}, which it profiles along.", static_cast<int>(averagedAxis));
-  mProjInfo = {dims, FiniteRanges(ranges), isUserCoord, true, averagedAxis};
+  mProjInfo = {dims, FiniteRanges(ranges, isUserCoord), isUserCoord, true, averagedAxis};
   return *this;
 }
-vector<tuple<uint8_t, double_t, double_t>> Plot::Pad::Data::FiniteRanges(const vector<tuple<uint8_t, double_t, double_t>>& ranges)
+vector<tuple<uint8_t, double_t, double_t>> Plot::Pad::Data::FiniteRanges(const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord)
 {
   vector<tuple<uint8_t, double_t, double_t>> finite;
   for (const auto& [axis, min, max] : ranges) {
     if (std::isfinite(min) && std::isfinite(max)) {
       finite.emplace_back(axis, min, max);
+      // bin numbers are whole: ROOT cuts the fraction off (bins 0 to 0 are the whole axis)
+      if (!isUserCoord.value_or(false) && (min != std::trunc(min) || max != std::trunc(max))) {
+        logger::warning("The projection range [{}, {}] of axis {} is given in bin numbers, which are whole numbers: pass true for axis values.", min, max, static_cast<int>(axis));
+      }
     } else {
       logger::warning("The projection range [{}, {}] of axis {} is ignored: a limit is not a finite number.", min, max, static_cast<int>(axis));
     }
@@ -3128,12 +3132,12 @@ vector<tuple<uint8_t, double_t, double_t>> Plot::Pad::Data::FiniteRanges(const v
 }
 auto Plot::Pad::Data::ProfileX(double_t startY, double_t endY, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfo = {{0}, FiniteRanges({{1, startY, endY}}), isUserCoord, true};
+  mProjInfo = {{0}, FiniteRanges({{1, startY, endY}}, isUserCoord), isUserCoord, true};
   return *this;
 }
 auto Plot::Pad::Data::ProfileY(double_t startX, double_t endX, optional<bool> isUserCoord) -> decltype(*this)
 {
-  mProjInfo = {{1}, FiniteRanges({{0, startX, endX}}), isUserCoord, true};
+  mProjInfo = {{1}, FiniteRanges({{0, startX, endX}}, isUserCoord), isUserCoord, true};
   return *this;
 }
 auto Plot::Pad::Data::Project(std::initializer_list<uint8_t> dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)

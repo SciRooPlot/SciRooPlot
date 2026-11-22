@@ -1196,7 +1196,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   static void PutModify(boost::property_tree::ptree& tree, const modify_t& modify, const std::string& prefix = "");
 
   // the ranges of a projection without those whose limits are not finite numbers (reported): the projection covers the whole axis there
-  static std::vector<std::tuple<uint8_t, double_t, double_t>> FiniteRanges(const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges);
+  static std::vector<std::tuple<uint8_t, double_t, double_t>> FiniteRanges(const std::vector<std::tuple<uint8_t, double_t, double_t>>& ranges, std::optional<bool> isUserCoord);
   struct proj_info_t {
     std::vector<uint8_t> dims;                                    // dimensions to project on (can be one or two)
     std::vector<std::tuple<uint8_t, double_t, double_t>> ranges;  // range restrictions on other dimensions

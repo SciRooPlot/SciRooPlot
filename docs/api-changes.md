@@ -72,6 +72,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Python `PlotManager.Setting(name, default)` with an `int` default beyond the C++ `int` (e.g. `10_000_000_000`) declared an on/off switch and returned `True` | Refused with an error, the setting is not declared and the default is returned | input validation | Declare such a setting with a `float` default. |
 | A negative marker size (`SetMarker`, `SetMarkerSize` of data, ratios and legend rows, `Pad::SetDefaultMarkerSize`, `LegendBox::SetDefaultMarkerSize`) was stored and drew no markers | Refused with a warning where set, the earlier size stays (as `PanelLayout::SetMarkerSize` and the text sizes) | input validation | Nothing. |
 | Python `histo(name, values, bins, range)` with a range that is not two numbers raised pybind's `RuntimeError` ("Unable to cast …"), with bin edges not at all | `ValueError` saying the range must be `(min, max)`, as `histo2d` | input validation | Nothing. |
+| A projection range in bin numbers with a fraction (`ProjectX(-0.8, 0.8)`, `true` for axis values forgotten) was cut to whole bins without a word (bins 0 to 0: the whole axis) | Warned where set | input validation | Pass `true` for a range in axis values. |
 
 ### Files
 
