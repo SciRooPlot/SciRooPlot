@@ -664,7 +664,7 @@ Plot::Plot(const string& name, const string& group, const optional<string>& base
   if (auto error = NameError(group, true)) logger::throw_invalid_argument("{}", *error);
   mName = name;
   mGroup = NormalizeGroup(group);
-  mBasePlot = basePlot;
+  if (basePlot) SetBasePlot(*basePlot);
   UpdateUniqueName();
 }
 
@@ -968,6 +968,10 @@ auto Plot::AppendGroup(const string& subgroup) -> decltype(*this)
 
 auto Plot::SetBasePlot(const string& basePlot) -> decltype(*this)
 {
+  if (is_blank(basePlot)) {
+    logger::warning("The empty name of the base plot of {} is ignored.", mName);
+    return *this;
+  }
   mBasePlot = basePlot;
   return *this;
 }
