@@ -1,7 +1,8 @@
 """A tree or RNTuple found in several inputs of a data source is read as one chain, its rows in the documented order (skill, Data sources):
 the inputs in the order given, the files of a directory and of a wildcard alphabetically (also a wildcard in a directory of the path),
-the folders of a wildcard in a file (file.root:DF_*) in the order of the file; a whole file contributes its first match of the name (the
-search: its folder first, then its sub-folders), a data source restricted to a folder (src:DF_1, src:DF_[45]) that folder of every file
+the folders of a wildcard in a file (file.root:DF_*) in the order of the file, also in every file of a directory (dir/:DF_*, also of a
+wildcard in the directory); a whole file contributes its first match of the name (the search: its folder first, then its sub-folders), a
+data source restricted to a folder (src:DF_1, src:DF_[45]) that folder of every file
 holding it; inputs without the tree and trees without rows add nothing; in-memory trees join the chain where they were added. Entries(n)
 and Entries(a, b) count the rows of the whole chain, across the boundaries of its inputs. RNTuples are chained when they have the same
 path in every input (also given as a path in the name). Inputs that cannot be chained are reported, the plot is lost: a column of another
@@ -93,6 +94,8 @@ sources = {  # data source: (inputs, data name, the blocks of the chain in order
     "directory_wildcard": ([p.path("runs", "run*", "AO2D.root")], "t", [10, 9, 11], "3 files"),
     "folders": ([p.path("ao", "AO2D_*.root") + ":DF_*"], "O2track", [folderBlocks[k] for k in aoOrder], f"{len(aoOrder)} folders in 3 files"),
     "folders_some": ([p.path("ao", "AO2D_?.root") + ":DF_[13]"], "O2track", [folderBlocks[k] for k in aoOrder if k[0] == "AO2D_1.root" and k[1] in ("DF_1", "DF_3")], "2 folders in 1 file"),
+    "directory_folders": ([p.path("ao") + "/:DF_*"], "O2track", [folderBlocks[k] for k in aoOrder], f"{len(aoOrder)} folders in 3 files"),
+    "directory_pattern_folders": ([p.path("a?") + "/:DF_*"], "O2track", [folderBlocks[k] for k in aoOrder], f"{len(aoOrder)} folders in 3 files"),
     "whole_files": ([p.path("ao", "AO2D_*.root")], "O2track", [folderBlocks[k] for k in firstPerFile], "3 files"),
     "whole_files:DF_1": (None, "O2track", [13], ""),
     "whole_files:DF_[45]": (None, "O2track", [folderBlocks[k] for k in aoOrder if k[1] in ("DF_4", "DF_5")], "2 folders in 1 file"),

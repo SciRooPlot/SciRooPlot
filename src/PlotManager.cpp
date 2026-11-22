@@ -1010,6 +1010,15 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
       return;
     }
     auto fileAndFolder = split_input_path(entry);
+    // a local directory with a folder (dir/:folder, or dir:folder of an existing directory): that folder in each of its ROOT files
+    if (const size_t colon = entry.rfind(':'); fileAndFolder.size() == 1 && !is_remote(entry) && colon != string::npos && colon > 0) {
+      std::error_code dirError;
+      const string dirPart = entry.substr(0, colon);
+      if (!std::filesystem::exists(expand_path(entry).value_or(""), dirError) &&
+          (str_ends_with(dirPart, "/") || std::filesystem::is_directory(expand_path(dirPart).value_or(""), dirError))) {
+        fileAndFolder = {dirPart, entry.substr(colon + 1)};
+      }
+    }
     const string& filePart = fileAndFolder[0];
     const string folderPart = (fileAndFolder.size() > 1) ? fileAndFolder[1] : "";
 
@@ -1060,7 +1069,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
       addFile(filePart, folderPart);
       return;
     }
-    string path = expand_path(entry).value_or("");
+    string path = expand_path(filePart).value_or("");
     std::error_code dirError;
     if (!std::filesystem::is_directory(path, dirError)) {
       logger::warning("Data source entry {} (data source {}) is neither a recognized file type nor an existing directory. Skipping.", entry, dataSource);
@@ -1097,7 +1106,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
     if (dirFileNames.empty()) logger::warning("No ROOT or table files found in directory {} (data source {}).", entry, dataSource);
     std::sort(dirFileNames.begin(), dirFileNames.end());
     for (const auto& fileName : dirFileNames) {
-      addFile(fileName, "");
+      addFile(fileName, (is_root_input(fileName)) ? folderPart : "");
     }
   };
   for (const auto& entry : inputsIt->second) {
