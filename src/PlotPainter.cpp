@@ -4427,7 +4427,7 @@ bool PlotPainter::PrepareRatioNumerator(item_state_t& state, data_ptr_t& numerat
             } else {
               const int32_t npx = std::max((*func)->GetNpx(), 2);
               for (int32_t i = 0; i < npx; ++i) {
-                const double_t x = lo + (hi - lo) * i / (npx - 1);
+                const double_t x = (i == npx - 1) ? hi : lo + (hi - lo) * i / (npx - 1);  // the last exactly at the end of the range
                 sampled->AddPoint(x, (*func)->Eval(x));
               }
             }
