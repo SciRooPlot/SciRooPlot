@@ -3607,6 +3607,8 @@ Plot::Pad::Ratio::Ratio(const Data& numerator, const Data& denominator)
   SetType("ratio");
   mNumModify = numerator.mModify;
   mModify = {};
+  // showing the over- and underflow bins is part of the look the ratio takes from the numerator
+  std::swap(mModify.showOverflowBins, mNumModify.showOverflowBins);
   mDenomDataInfo = denominator.mDataInfo;
   mDenomProjInfo = denominator.mProjInfo;
   mDenomModify = denominator.mModify;
