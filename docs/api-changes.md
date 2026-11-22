@@ -56,6 +56,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | `keepUnmatched` with a joined tree without rows in any input lost the plot with an error | Every row is kept, without a match | behaviour | Nothing. |
 | Python: a modifier of a ratio reached again as `plot[n](i)` acted on the side selected last (`Numer()`, `Denom()`, `Both()`) | It acts on the ratio itself, as in C++ and as when the ratio was added (also in copies of plots and pads) | behaviour | Write `Numer()`, `Denom()` or `Both()` after `plot[n](i)` where the inputs are meant. |
 | `SetShowOverflowBins` of the numerator given to `Ratio(numerator, denominator)` was lost | The ratio keeps it, as the rest of the numerator's look | behaviour | Nothing. |
+| 1d data in a pad whose frame is drawn in 3d was not drawn, without a message (its legend row stayed) | Not drawn, with a warning; the data after it keeps its number | behaviour | Nothing. |
 
 ### Input validation
 

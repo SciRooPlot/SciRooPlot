@@ -1858,9 +1858,15 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     const bool isRefFunc = padState.hasRefFunc && dataIndex == 1;
     if (!isRefFunc && isPolarGraph != (padState.polargram != nullptr)) {
       if (isPolarGraph) {
-        return notDrawn("Data {} is a polar graph and needs a polar grid: the first data of its pad must be a polar graph. It is not drawn.", DataName(*data));
+        return notDrawn("Data {} is a polar graph and needs a polar grid: the data giving the frame of its pad must be a polar graph. It is not drawn.", DataName(*data));
       }
-      return notDrawn("Data {} cannot be drawn on the polar grid of its pad (the first data of the pad is a polar graph). It is not drawn.", DataName(*data));
+      return notDrawn("Data {} cannot be drawn on the polar grid of its pad (the data giving the frame of the pad is a polar graph). It is not drawn.", DataName(*data));
+    }
+    // 1d data in a 3d frame: ROOT paints nothing but a flat frame box around the view
+    if constexpr (!is_2d<data_type>() && !is_3d<data_type>()) {
+      if (!isRefFunc && pad_ptr->GetView() && !IsView3d(drawOption)) {
+        return notDrawn("Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the data giving the frame of the pad is drawn in 3d). It is not drawn.", DataName(*data), optionName());
+      }
     }
     // data drawn in 3d needs the 3d frame of a first data drawn in 3d, flat data a flat frame: ROOT paints a 3d view over a flat map
     // (its box over the frame) and a flat drawing in a 3d frame not at all or at the wrong place; likewise a map projection needs a
@@ -1874,9 +1880,9 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
       if (drawn3d != (pad_ptr->GetView() != nullptr)) {
         if (drawn3d) {
-          return notDrawn("Data {} is drawn in 3d ({}) and needs a 3d frame: the first data of the pad drawn in 3d (e.g. lego, surf, triangles or points). It is not drawn.", DataName(*data), optionName());
+          return notDrawn("Data {} is drawn in 3d ({}) and needs a 3d frame: the data giving the frame of the pad drawn in 3d (e.g. lego, surf, triangles or points). It is not drawn.", DataName(*data), optionName());
         }
-        return notDrawn("Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the first data of the pad is drawn in 3d). It is not drawn.", DataName(*data), optionName());
+        return notDrawn("Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the data giving the frame of the pad is drawn in 3d). It is not drawn.", DataName(*data), optionName());
       }
       if constexpr (is_graph_2d<data_type>()) {
         // ROOT interpolates a 2d graph (maps, surfaces, triangles) over the Delaunay triangles of its points: points on one line have none
@@ -1899,7 +1905,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
       if (projection != padProjection) {
         auto drawn = [](const string& keyword) { return (keyword.empty()) ? string("without a map projection") : "as a map (" + keyword + ")"; };
-        return notDrawn("Data {} is drawn {} and cannot be drawn in its pad, whose first data is drawn {}. It is not drawn.", DataName(*data), drawn(projection), drawn(padProjection));
+        return notDrawn("Data {} is drawn {} and cannot be drawn in its pad, whose frame is given by data drawn {}. It is not drawn.", DataName(*data), drawn(projection), drawn(padProjection));
       }
     }
     // do not draw the colour scale a second time (only types that have one: for graphs 'Z' means no end caps on the error bars)
