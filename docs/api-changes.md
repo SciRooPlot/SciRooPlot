@@ -20,6 +20,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | Old | New | Kind | Action |
 |---|---|---|---|
 | `PlotManager::GetProjectProperty(property)` read any project variable set with `srp set <project> <name> <value>` (an empty text if not set or misspelt) | Removed: `PlotManager::Setting(name, default, description = "", choices = {})` declares a setting of the project and returns the value set with `srp set`, otherwise the default, as `bool` (a switch, set `on`/`off`), `int`, `double` or text | removed | Replace `GetProjectProperty("x")` by `Setting("x", <default>)`; run the program once, then set the value again with `srp set`. |
+| `Data::Normalize(min, max)` without `isDensity` was taken as `Normalize(true, min)` | Does not compile in C++; `TypeError` in Python (`isDensity` only as a bool) | signature | Write `Normalize(false, min, max)`. |
 
 ### Plot definitions: changed defaults and behaviour
 

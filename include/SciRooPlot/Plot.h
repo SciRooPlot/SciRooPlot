@@ -1022,6 +1022,9 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   // data modifiers
   // the optional range in x restricts the integral or the maximum to the bins reaching into it (points within it for graphs)
   Data& Normalize(bool isDensity = false, std::optional<double_t> min = {}, std::optional<double_t> max = {});
+  // a range without isDensity would be taken as isDensity and min: Normalize(isDensity, min, max)
+  template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T> && !std::is_same_v<T, bool>>>
+  Data& Normalize(T min, double_t max) = delete;
   Data& NormalizeToMaximum(std::optional<double_t> min = {}, std::optional<double_t> max = {});
   Data& Scale(double_t scaleFactor);
   Data& DivideBinWidth(bool divideBinWidth = true);
