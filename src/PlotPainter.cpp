@@ -1737,6 +1737,10 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     }
   }
 
+  // the format of the values written by TEXT (Data::SetTextFormat) is used only when values are written
+  if (data->GetTextFormat() && alias != points_text && !TString(drawOption).Contains("TEXT", TString::kIgnoreCase)) {
+    Warn(state, "The text format of {} has no effect: it is drawn without values (drawing option text or points_text).", DataName(*data));
+  }
   // the angle of the values written by TEXT (Data::SetTextAngle) is part of ROOT's option: TEXTnn, whole degrees from 0 to 90
   // (an angle given in the option string itself is kept); points_text writes its values itself, in the same range
   if (const auto& textAngle = data->GetTextAngle()) {
