@@ -6144,7 +6144,6 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     optional<string> title;
     if constexpr (isLegend) {
       title = box->GetTitle();
-      if (title) DropEmptyGroups(*title);
     }
 
     // the data the placeholders of a legend row or a text refer to (a histogram drawn as graph: the histogram)
@@ -6155,6 +6154,11 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       }
       return dynamic_cast<TNamed*>(data_ptr);
     };
+    // a legend title and rows without data (AddEntry) name their data as texts do
+    if constexpr (isLegend) {
+      if (title && title->find('<') != string::npos) ReplacePlaceholders(*title, nullptr, findPlaceholderData);
+      if (title) DropEmptyGroups(*title);
+    }
 
     vector<string> lines;
     if constexpr (isLegend) {
@@ -6209,6 +6213,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
           } else {
             logger::warning("Legend row '{}': there is no data {} drawn in pad {}.", line, *entry.GetRefDataID(), entry.GetRefPadID().value_or(static_cast<uint8_t>(pad->GetNumber())));
           }
+        } else if (line.find('<') != string::npos) {
+          ReplacePlaceholders(line, nullptr, findPlaceholderData);
         }
       } else if (line.find('<') != string::npos) {
         ReplacePlaceholders(line, nullptr, findPlaceholderData);
@@ -9378,13 +9384,13 @@ void PlotPainter::ReplacePlaceholders(string& str, TNamed* rowData, const std::f
       const auto dataID = std::stoul(dataRef.str());
       const auto padNumber = (padRef.matched) ? std::stoul(padRef.str()) : 0ul;
       if (!findData) {
-        logger::warning("Placeholder {}: the data can be named in texts only, a legend label shows the data of its row.", matchStr);
+        logger::warning("Placeholder {}: the data can be named in texts, legend titles and legend rows without data only, a legend label shows the data of its row.", matchStr);
       } else if (dataID <= std::numeric_limits<uint16_t>::max() && padNumber <= std::numeric_limits<uint8_t>::max()) {
         data_ptr = findData(static_cast<uint16_t>(dataID), (padRef.matched) ? optional<uint8_t>(static_cast<uint8_t>(padNumber)) : nullopt);
       }
       if (findData && !data_ptr) logger::warning("Placeholder {}: there is no data {} drawn in {}.", matchStr, dataID, (padRef.matched) ? "pad " + padRef.str() : "this pad");
     } else if (!data_ptr) {
-      logger::warning("Placeholder {} in a text needs the number of its data, e.g. <mean:1> for data 1 of the pad or <mean:1@2> for data 1 of pad 2.", matchStr);
+      logger::warning("Placeholder {} in a text needs the number of its data (also in a legend title or a legend row without data), e.g. <mean:1> for data 1 of the pad or <mean:1@2> for data 1 of pad 2.", matchStr);
     }
     if (!data_ptr) {
       result += matchStr;  // left as it is

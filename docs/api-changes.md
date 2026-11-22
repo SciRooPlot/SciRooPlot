@@ -27,6 +27,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| Placeholders (`<entries:1>`, `<mean:2@1>` …) in a legend title or a legend row without data (`LegendBox::AddEntry`) were left as written | Replaced as in texts (data named by number) | behaviour | Nothing. |
 | A histogram with Poisson errors (`TH1::SetBinErrorOption(TH1::kPoisson)`) drawn as a graph (`points_line`, `points_arrows`, `brackets`) got symmetric errors, and its empty bins (an upper error of 1.84) were left out | Its asymmetric errors, as ROOT draws them for the histogram (`points`); empty bins with their upper error | behaviour | Nothing. |
 | The bent error bars of a `TGraphBentErrors` kept their displacements when the graph was scaled (`ScaleX`, `ScaleY`, `Scale`, `Normalize`) or divided in a ratio | The displacements follow the axis they are measured along: scaled with it, divided by the denominator | behaviour | Nothing. |
 | The statistics of a histogram with NaN or infinite bins (drawn as zero), in its statistics box and the placeholders `<mean>`, `<stddev>`, still held what had been filled into those bins (NaN) | They are those of the bins as drawn | behaviour | Nothing. |
