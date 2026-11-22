@@ -8,7 +8,8 @@ before; a plot whose data is missing is reported with its reasons and the run fa
 nothing is written (an earlier Data.root stays).
 Covers: a data source restricted to a folder (also given with a trailing slash, or empty), a path in a name, functions and points of the plot
 definition, the fixed key order, missing data, data read by earlier calls in the same process, a canvas of Plots.root drawn in the
-process that wrote it."""
+process that wrote it, names of Plots.root and Data.root outside of the output directory or the same for both (refused with a warning
+where set), a picture that cannot be written over an earlier one (reported, not logged as created)."""
 
 from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, captured, cases, check, data_objects, describe, finish, func_diff, graph_diff, has_variant, hist_diff, points_name, source_of
 from srptest import formula as formula_of
@@ -156,4 +157,39 @@ pm.GeneratePlots("file")
 print("DONE")
 """)
 check("a canvas of Plots.root drawn in the process that wrote it: the process ends cleanly, Plots.root written again", out.rc == 0 and "DONE" in out.stdout and out.text.count("Saved 1 plot") == 2, f"exit status {out.rc}: {out.text[-400:]}")
+
+# names of the two files outside of the output directory or the same for both: refused where set; a picture whose earlier file cannot be
+# written over (immutable for root, read-only otherwise) is reported, not logged as created
+out = python(f"""
+import os
+import subprocess
+import ROOT
+import SciRooPlot as S
+ROOT.gROOT.SetBatch(True)
+pm = S.PlotManager("")
+pm.AddBasePlot(S.PlotManager.MakeBasePlot("1d"))
+for name in ("", "sub/P.root"):
+    pm.SetPlotsRootFile(name)
+pm.SetPlotsRootFile("Data.root")
+pm.SetDataRootFile("Plots.root")
+plot = S.Plot("kept", "g", "1d")
+plot[1].AddData(S.Function("x"), S.kUserFunctions)
+pm.AddPlot(plot)
+pm.SetOutputDirectory({p.path("names")!r})
+pm.GeneratePlots("file")
+print("PLOTS", os.path.isfile({p.path("names", "Plots.root")!r}), flush=True)
+pm.GeneratePlots("png")
+png = {p.path("names", "g", "kept.png")!r}
+locked = os.geteuid() == 0 and subprocess.run(["chattr", "+i", png], capture_output=True).returncode == 0
+if not locked:
+    os.chmod(png, 0o444)
+print("LOCKED", flush=True)
+pm.GeneratePlots("png")
+if locked:
+    subprocess.run(["chattr", "-i", png])
+""")
+refused = [line for line in out.text.splitlines() if "is ignored: it must be a name within the output directory" in line]
+check("names of Plots.root and Data.root outside of the output directory or the same for both: refused where set, Plots.root written", len(refused) == 4 and "PLOTS True" in out.stdout, out.text[-600:])
+after = out.text.split("LOCKED")[-1]
+check("a picture that cannot be written over an earlier one: reported, not logged as created", "Could not write" in after and "Created plot" not in after, after[-400:])
 finish()
