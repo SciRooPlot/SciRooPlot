@@ -1676,9 +1676,30 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   auto remoteFilesGuard = make_scope_guard([this]() { mRemoteFiles.clear(); });  // closed when the data is read
   // remote inputs are read from local copies (srp cache on), copied when first read and again when the remote file changed: every remote
   // open, also those of RDataFrame; afterwards ROOT reads through the cache only when asked to again (its default)
-  const string cacheDir = (Config::Get().CacheOn()) ? Config::Get().CacheFolder() : "";
+  // (set up only if an input to read is remote)
+  auto isRemoteSource = [this](const string& dataSource) {
+    auto inputs = mInputs.find(dataSource.substr(0, dataSource.find(':')));
+    return inputs != mInputs.end() && std::any_of(inputs->second.begin(), inputs->second.end(), [](const string& input) { return is_remote(expand_path(input).value_or(input)); });
+  };
+  bool readsRemote = std::any_of(sourcesToRead.begin(), sourcesToRead.end(), isRemoteSource);
+  for (const auto& source : sourcesToRead) {  // and the data sources of joined trees
+    auto infos = mDataInfoBuffer.find(source);
+    if (infos == mDataInfoBuffer.end()) continue;
+    for (const auto& [name, dataInfos] : infos->second) {
+      for (const auto& dataInfo : dataInfos) {
+        if (!dataInfo.joins) continue;
+        for (const auto& join : *dataInfo.joins) {
+          readsRemote = readsRemote || (!join.dataSource.empty() && isRemoteSource(join.dataSource));
+        }
+      }
+    }
+  }
+  const string cacheDir = (readsRemote && Config::Get().CacheOn()) ? Config::Get().CacheFolder() : "";
   std::error_code cacheError;
-  const bool useCache = !cacheDir.empty() && util::make_cache_folder(cacheDir, cacheError) && TFile::SetCacheFileDir(cacheDir, false, true);
+  const bool useCache = !cacheDir.empty() && util::make_cache_folder(cacheDir, cacheError) && [&cacheDir]() {
+    auto quiet = ignore_root_messages_below(kFatal);  // said below
+    return TFile::SetCacheFileDir(cacheDir, false, true);
+  }();
   if (!cacheDir.empty() && !useCache) logger::warning("Cannot use the cache folder {} (srp cache): it cannot be created or written. Reading remote inputs directly.", cacheDir);
   auto cacheGuard = make_scope_guard([useCache]() {
     if (useCache) TFile::SetCacheFileDir(TFile::GetCacheFileDir(), true, false);
