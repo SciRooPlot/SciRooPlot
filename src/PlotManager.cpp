@@ -907,11 +907,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
     // with the cache off (a record is downloaded whole in any case)
     if (util::is_hepdata_input(entry)) {
       const auto [recordOrFile, folderPart] = util::split_hepdata_input(entry);
-      const string cacheFolder = Config::Get().CacheFolder();
-      std::error_code cacheError;
-      util::make_cache_folder(cacheFolder, cacheError);  // a folder that cannot be made is reported with the copy
-      const auto file = (util::is_hepdata_record_id(recordOrFile)) ? util::hepdata_file(recordOrFile, cacheFolder) : util::hepdata_local_file(recordOrFile, cacheFolder);
-      if (file) addFile(*file, util::hepdata_table_name(folderPart));
+      if (const auto file = util::hepdata_copy(recordOrFile, Config::Get().CacheFolder())) addFile(*file, util::hepdata_table_name(folderPart));
       return;
     }
     auto fileAndFolder = split_input_path(entry);

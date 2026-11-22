@@ -24,6 +24,8 @@
 #include <TAxis.h>
 #include <TDirectory.h>
 #include <TFile.h>
+#include <TGraph.h>
+#include <TGraph2D.h>
 #include <TGraph2DErrors.h>
 #include <TGraphAsymmErrors.h>
 #include <TH1.h>
@@ -542,5 +544,106 @@ std::optional<string> hepdata_local_file(const string& given, const std::filesys
     return std::nullopt;
   }
   return file;
+}
+
+std::optional<string> hepdata_copy(const string& recordOrFile, const std::filesystem::path& folder)
+{
+  std::error_code ec;
+  make_cache_folder(folder.string(), ec);  // a folder that cannot be made is reported with the copy
+  return (is_hepdata_record_id(recordOrFile)) ? hepdata_file(recordOrFile, folder) : hepdata_local_file(recordOrFile, folder);
+}
+
+bool print_hepdata(const string& input, const std::filesystem::path& folder)
+{
+  const auto [recordOrFile, tablePart] = split_hepdata_input(input);
+  const auto copy = hepdata_copy(recordOrFile, folder);
+  if (!copy) {
+    logger::error("Cannot list {}: no copy of it could be made.", input);
+    return false;
+  }
+  std::unique_ptr<TFile> in;
+  {
+    auto quiet = ignore_root_messages_below(kFatal);  // reported below
+    in.reset(TFile::Open(copy->data(), "READ"));
+  }
+  if (!in || in->IsZombie()) {
+    logger::error("Cannot read the copy {} of {}.", *copy, recordOrFile);
+    return false;
+  }
+  vector<TKey*> tables;
+  for (auto* key : TRangeDynCast<TKey>(in->GetListOfKeys())) {
+    if (key && key_inherits(key, TDirectory::Class())) tables.push_back(key);
+  }
+  const string wanted = hepdata_table_name(tablePart);
+  if (!wanted.empty()) {
+    tables.erase(std::remove_if(tables.begin(), tables.end(), [&wanted](TKey* key) { return key->GetName() != wanted; }), tables.end());
+    if (tables.empty()) {
+      vector<string> names;
+      for (auto* key : TRangeDynCast<TKey>(in->GetListOfKeys())) {
+        if (key && key_inherits(key, TDirectory::Class())) names.emplace_back(key->GetName());
+      }
+      logger::error("Table '{}' is not in {}; its tables: {}.", tablePart, recordOrFile, join_strings(names, ", "));
+      return false;
+    }
+  }
+
+  // the objects SciRooPlot made (y<i>, y<i>_<label>) per table, with what the ROOT file of the record does not hold
+  static const std::regex made(R"(y(\d+)(_.+)?)");
+  static const std::regex hepdataSource(R"(Hist[12]D_y(\d+)_e\d+(plus|minus)?)");
+  logger::print("HEPData {} {} (copy {}): data names <table>/<name>", (is_hepdata_record_id(recordOrFile)) ? "record" : "file", recordOrFile, *copy);
+  for (auto* tableKey : tables) {
+    auto* table = dynamic_cast<TDirectory*>(tableKey->ReadObj());
+    if (!table) continue;
+    vector<TKey*> objects;
+    std::set<string> withSources;    // y<i> with objects per error source
+    std::set<string> sourcesInFile;  // y<i> with error sources in HEPData's histograms
+    bool hasBins = false;
+    bool has3d = false;
+    for (auto* key : TRangeDynCast<TKey>(table->GetListOfKeys())) {
+      if (!key) continue;
+      const string name = key->GetName();
+      std::smatch match;
+      if (std::regex_match(name, match, made)) {
+        objects.push_back(key);
+        if (match[2].matched) withSources.insert("y" + string(match[1]));
+      } else if (std::regex_match(name, match, hepdataSource)) {
+        sourcesInFile.insert("y" + string(match[1]));
+      }
+      if (str_starts_with(name, "Hist1D_y") || str_starts_with(name, "Hist2D_y")) hasBins = true;
+      if (str_starts_with(name, "Hist3D_y")) has3d = true;
+    }
+    vector<string> lost;
+    for (const auto& variable : sourcesInFile) {
+      if (!withSources.count(variable)) lost.push_back(variable);
+    }
+    string note;
+    if (objects.empty() && has3d) {
+      note = "three independent variables: only HEPData's own Hist3D_y<i>";
+    } else if (!hasBins) {
+      note = "no bins: total errors only";
+    } else if (!lost.empty()) {
+      note = "the bins overlap: no error sources of " + join_strings(lost, ", ");
+    }
+    logger::print("{}/{}", table->GetName(), (note.empty()) ? "" : " (" + note + ")");
+    for (auto* key : objects) {
+      std::unique_ptr<TObject> object(key->ReadObj());
+      string title;
+      if (object && string(key->GetName()).find('_') == string::npos) {
+        // the values: the z axis of 2d data, the y axis otherwise
+        if (auto* hist = dynamic_cast<TH1*>(object.get())) {
+          hist->SetDirectory(nullptr);
+          title = ((hist->GetDimension() == 2) ? hist->GetZaxis() : hist->GetYaxis())->GetTitle();
+        } else if (auto* graph2d = dynamic_cast<TGraph2D*>(object.get())) {
+          graph2d->SetDirectory(nullptr);
+          title = graph2d->GetZaxis()->GetTitle();
+        } else if (auto* graph = dynamic_cast<TGraph*>(object.get())) {
+          title = graph->GetYaxis()->GetTitle();
+        }
+      }
+      logger::print("- [{}] {}{}", key->GetClassName(), key->GetName(), (title.empty()) ? "" : "  " + title);
+    }
+  }
+  logger::print("HEPData's own objects (Graph1D_y1, Hist1D_y1_e1, ...): srp print {}", *copy);
+  return true;
 }
 }  // namespace SciRooPlot::util

@@ -40,6 +40,11 @@ std::optional<std::string> hepdata_file(const std::string& record, const std::fi
 // the local copy of a downloaded HEPData file (a ROOT file of a table or record, or the record's .tar.gz) in <folder>/hepdata/files, made
 // again when the file is newer (nullopt with a warning if it cannot be made)
 std::optional<std::string> hepdata_local_file(const std::string& file, const std::filesystem::path& folder);
+// the local copy of a record (record id) or of a downloaded file, made when missing, in <folder>/hepdata
+std::optional<std::string> hepdata_copy(const std::string& recordOrFile, const std::filesystem::path& folder);
+// srp print hepdata:<record or file>[:<table>]: the data names of the copy per table, with what the record's ROOT file does not hold
+// (false with an error)
+bool print_hepdata(const std::string& input, const std::filesystem::path& folder);
 }  // namespace SciRooPlot::util
 
 #endif  // SRC_UTIL_HEPDATA_H_

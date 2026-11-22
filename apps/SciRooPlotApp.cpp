@@ -56,6 +56,7 @@
 
 #include "Config.h"
 #include "Validation.h"
+#include "util/HepData.h"
 #include "util/Paths.h"
 #include "util/RootContainers.h"
 #include "util/ScopeGuard.h"
@@ -233,6 +234,7 @@ int RunCommand(const string& command, const string& project, const string& prope
     row("srp help", "this overview");
     heading("Utilities");
     row("srp print <file>[:<path>]", "objects in a ROOT file (below a path)");
+    row("srp print hepdata:<record>[:<table>]", "data names of a HEPData record (or downloaded file)");
     row("srp open <file>", "open a ROOT file in a TBrowser");
     row("srp colorwheel [<file>]", "ROOT's colours with their names");
     heading("Environment");
@@ -324,6 +326,8 @@ int RunCommand(const string& command, const string& project, const string& prope
       imp->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
     }
     app->Run();
+  } else if (command == "print" && util::is_hepdata_input(project)) {
+    if (!util::print_hepdata(project, Config::Get().CacheFolder())) return 1;
   } else if (command == "print") {
     const auto fileName = util::expand_path(project);  // as in the inputs of data sources
     if (!fileName || !PrintRootFileContents(*fileName)) return 1;
