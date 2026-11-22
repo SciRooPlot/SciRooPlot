@@ -10,7 +10,8 @@ both (in UserData.root of the project once one of them saves it). The objects re
 (without an output directory, or with its parent missing, one error for every mode that writes files, before painting; print, which
 writes none, shows the definitions; list, a mode of the plot command, is refused naming ListPlots).
 Covers: lists, directories and files handed over; trees in lists copied; same-name folders merged; the replace warning also across
-calls; the caller's lists and files unchanged, two PlotManagers of one project keep both in-memory sources.
+calls; the caller's lists and files unchanged, two PlotManagers of one project keep both in-memory sources; an object whose name has a
+line break, drawn with settings ROOT gets through the interpreter (the contour levels of a 2d graph).
 """
 
 import gc
@@ -285,4 +286,23 @@ check("the replace warning names the path in the data source", "Data source list
 userData = os.path.join(os.environ["SCIROOPLOT_CONFIG_PATH"], "defining", "UserData.root")
 stored = ROOT.TFile.Open(userData) if os.path.exists(userData) else None
 check("two PlotManagers of one project: the objects of both are kept in the project", bool(stored and stored.Get("nameless/named") and stored.Get("other/o")), userData)
+# a name with a line break: the commands that reach the object by its name at paint time still compile
+out = python(f"""
+import ROOT
+import SciRooPlot as S
+ROOT.gROOT.SetBatch(True)
+g = ROOT.TGraph2D()
+g.SetName("a\\nb")
+for i, (x, y, z) in enumerate([(0, 0, 1), (1, 0, 2), (0, 1, 3), (1, 1, 4), (0.5, 0.5, 5)]):
+    g.SetPoint(i, x, y, z)
+pm = S.PlotManager("")
+pm.AddBasePlot(S.PlotManager.MakeBasePlot("2d"))
+pm.AddDataSource("s", g)
+plot = S.Plot("a", "g", "2d")
+plot[1].AddData("a\\nb", "s").SetDrawOption(S.colz).SetContours(5)
+pm.AddPlot(plot)
+pm.SetOutputDirectory({p.path("line_break")!r})
+pm.GeneratePlots("png")
+""")
+check("an object whose name has a line break: drawn with its contour levels, no interpreter error", out.rc == 0 and "error:" not in out.text and "Created plot" in out.text, out.text[-500:])
 finish()
