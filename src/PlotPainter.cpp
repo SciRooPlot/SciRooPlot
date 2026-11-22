@@ -8995,6 +8995,17 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
       scaleZ->SetLabelColor(textColor->ToIndex());
     }
     ApplyContentLook(scaleZ, member, defaults, get_first(member.GetDefaultTextAlpha(), defaults.GetDefaultTextAlpha()), false);
+    // with pixel fonts the sizes of the panel's scale (its text size, the layout's title size, then those of 'C'), as below for a 2d scale
+    const bool pixelLabels = scaleZ->GetLabelFont() % 10 == 3;
+    const bool pixelTitle = scaleZ->GetTitleFont() % 10 == 3;
+    const auto textSize = get_first(member.GetDefaultTextSize(), defaults.GetDefaultTextSize());
+    const auto titleSize = LayoutValue(member, defaults, &Plot::Pad::layout_values_t::titleSize);
+    if (textSize && pixelLabels) scaleZ->SetLabelSize(*textSize);
+    if (titleSize && pixelTitle) scaleZ->SetTitleSize(*titleSize);
+    for (const auto* content : AxisSettings(member, defaults, 'C')) {
+      if (content->GetLabelSize() && pixelLabels) scaleZ->SetLabelSize(*content->GetLabelSize());
+      if (content->GetTitleSize() && pixelTitle) scaleZ->SetTitleSize(*content->GetTitleSize());
+    }
     TString title = source->GetZaxis()->GetTitle();
     title.Remove(0, (title.Index(";") >= 0) ? title.Index(";") + 1 : title.Length());
     scale->GetZaxis()->SetTitle(title);
