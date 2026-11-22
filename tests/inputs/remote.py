@@ -14,11 +14,13 @@ import os
 import shutil
 import socket
 import subprocess
+import sys
 import tempfile
 import time
 
 import numpy as np
-from srptest import ROOT, Project, S, check, finish, missing, skip, write_tree
+import srptest
+from srptest import ROOT, SRP, Project, S, check, finish, missing, skip, write_tree
 
 if not shutil.which("xrootd"):
     skip("no xrootd server installed")
@@ -208,4 +210,11 @@ for content in (1, 2):
 check("srp cache on: a remote file changed on the server is read again", values == [1, 2], f"values read {values}")
 check("srp cache on: the cache folder holds the copy", os.path.isdir(cache) and any(files for _, _, files in os.walk(cache)), str(list(os.walk(cache))[:2]))
 p.srp("cache", "off")
+
+# srp open of a remote file: opened through ROOT as the inputs (without a graphical display it then ends saying that it needs one); a
+# remote file that cannot be opened is reported
+if sys.platform.startswith("linux"):  # X11: without DISPLAY there is no display
+    for target, reason in ((URL + "/a.root", "needs a graphical display"), (URL + "/nothing.root", "Cannot read")):
+        out = srptest.run(SRP, "open", target, env={"DISPLAY": None, "WAYLAND_DISPLAY": None, "HOME": home}, timeout=120)
+        check(f"srp open of a remote file ({os.path.basename(target)}): exit 1, one error ({reason})", out.rc == 1 and len(out.errors()) == 1 and reason in out.errors()[0], out.tail())
 finish()
