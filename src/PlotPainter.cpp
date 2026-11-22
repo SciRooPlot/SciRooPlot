@@ -3876,7 +3876,10 @@ void PlotPainter::ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad
           // ROOT rebins to new edges into a new histogram only: copied back into the data drawn
           std::unique_ptr<TH1> rebinned(ptr->Rebin(static_cast<int32_t>(edges->size()) - 1, ptr->GetName(), edges->data()));
           rebinned->SetDirectory(nullptr);
+          const bool canDelete = ptr->TestBit(kCanDelete);  // TObject::Copy resets it on the target
           rebinned->Copy(*ptr);
+          ptr->SetDirectory(nullptr);  // TH1::Copy appends the target to gDirectory
+          ptr->SetBit(kCanDelete, canDelete);
         }
       } else if constexpr (is_one_of_v<ptr_type, TProfile2D*>()) {
         // ROOT has no rebinning of a 2d profile to new edges
@@ -8692,6 +8695,7 @@ bool PlotPainter::ProfileMeans(data_ptr_t& data)
 {
   auto replace = [&](auto* profile, auto* means) {
     means->SetDirectory(nullptr);
+    means->SetBit(kCanDelete, profile->TestBit(kCanDelete));  // owned by the pad as the profile it replaces
     means->SetName(profile->GetName());
     CopyStyle(*profile, *means);  // the projections take labels and titles, not the style
     MoveRecords(profile, means);
