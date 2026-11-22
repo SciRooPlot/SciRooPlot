@@ -1147,13 +1147,7 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   const auto& GetStatsFormat() const { return mStats.format; }
   const auto& GetStatsTitle() const { return mStats.title; }
   const auto& GetStatsBox() const { return mStats.box; }
-  const auto& GetScaleFactor() const { return mModify.scaleFactor; }
   const auto& GetScaleBinWidthNorm() const { return mModify.scaleBinWidthNorm; }
-  const auto& GetNormMaximum() const { return mModify.normMaximum; }
-  const auto& GetNormMin() const { return mModify.normMin; }
-  const auto& GetNormMax() const { return mModify.normMax; }
-  const auto& GetNormMaximumMin() const { return mModify.normMaximumMin; }
-  const auto& GetNormMaximumMax() const { return mModify.normMaximumMax; }
   const auto& GetMinRangeX() const { return mRangeX.min; }
   const auto& GetMaxRangeX() const { return mRangeX.max; }
   const auto& GetMinRangeY() const { return mRangeY.min; }
@@ -1166,13 +1160,9 @@ class Plot::Pad::Data : public MarkerSetters<Data>, public LineSetters<Data>, pu
   const auto& GetNpy() const { return mNpy; }
   const auto& GetDataInfo() const { return mDataInfo; }
   const auto& GetProjInfo() const { return mProjInfo; }
-  const auto& GetNiterSmooth() const { return mModify.nIterSmooth; }
   const auto& GetRebinGroupX() const { return mModify.rebinGroupX; }
   const auto& GetRebinGroupY() const { return mModify.rebinGroupY; }
   const auto& GetRebinGroupZ() const { return mModify.rebinGroupZ; }
-  const auto& GetScaleAxisX() const { return mModify.scaleAxisX; }
-  const auto& GetScaleAxisY() const { return mModify.scaleAxisY; }
-  const auto& GetScaleAxisZ() const { return mModify.scaleAxisZ; }
   const auto& GetDivideBinWidth() const { return mModify.divideBinWidth; }
   const auto& GetShowOverflowBins() const { return mModify.showOverflowBins; }
   const auto& GetCumulative() const { return mModify.cumulative; }
