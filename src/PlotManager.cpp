@@ -1930,7 +1930,7 @@ void PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
   // consecutive inputs in the same file (e.g. its expanded folders) share one open file: the cache of the lists and folders
   // read from it is cleared before the file is closed
   struct open_file_t {
-    std::unique_ptr<TFile> file;
+    shared_ptr<TFile> file;  // a remote one is shared with the expansion of the inputs (opened once per reading)
     string name;
     read_cache_t readCache;
     void Close()
@@ -1972,7 +1972,7 @@ void PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
       }
       {
         auto quiet = ignore_root_messages_below(kFatal);  // reported below, ROOT's own messages left out
-        openFile.file = open_input_file(fileName);
+        openFile.file = OpenInput(fileName);
       }
       if (!openFile.file || openFile.file->IsZombie()) {
         logger::warning("Cannot open input file {} (data source {}){}.", fileName, baseSource, util::open_failure_reason(fileName));
