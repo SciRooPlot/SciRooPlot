@@ -27,7 +27,16 @@
 #include <TClass.h>
 #include <TColorWheel.h>
 #include <TDataType.h>
+#include <TEfficiency.h>
+#include <TF2.h>
+#include <TF3.h>
 #include <TFile.h>
+#include <TGraph.h>
+#include <TGraph2D.h>
+#include <TH1.h>
+#include <TH2Poly.h>
+#include <THashList.h>
+#include <THnBase.h>
 #include <TKey.h>
 #include <TROOT.h>
 #include <TRootBrowser.h>
@@ -42,6 +51,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <cstring>
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -240,7 +250,7 @@ int RunCommand(const string& command, const string& project, const string& prope
     row("srp reset", "remove all projects (their code is kept)");
     row("srp help", "this overview");
     heading("Utilities");
-    row("srp print <file>[:<path>]", "objects in a ROOT file (below a path)");
+    row("srp print <file>[:<path>]", "objects in a ROOT file (below a path), one object with details");
     row("srp print hepdata:<record>[:<table>]", "data names of a HEPData record (or downloaded file)");
     row("srp open <file>", "open a ROOT file in a TBrowser");
     row("srp colorwheel [<file>]", "ROOT's colours with their names");
@@ -634,6 +644,97 @@ bool PrintRootFileContents(const string& inputPath)
     }
   };
 
+  // one object named by its path: besides its class, what choosing ranges, binning and axes needs (no ROOT warnings about the data)
+  auto printDetails = [&](TObject* object, const string& path) {
+    logger::print("- [{}] {}", object->ClassName(), path);
+    if (std::strlen(object->GetTitle())) logger::print("  title \"{}\"", object->GetTitle());
+    auto number = [](double_t value) { return fmt::format("{:.4g}", value); };
+    auto printAxis = [&](const string& name, const TAxis* axis) {
+      string line = fmt::format("  {}: {} {} from {} to {}", name, axis->GetNbins(), (axis->IsVariableBinSize()) ? "variable bins" : "bins", number(axis->GetXmin()), number(axis->GetXmax()));
+      if (axis->GetLabels()) line += fmt::format(", {} bin labels", axis->GetLabels()->GetSize());
+      if (std::strlen(axis->GetTitle())) line += fmt::format(", title \"{}\"", axis->GetTitle());
+      logger::print("{}", line);
+    };
+    auto printRange = [&](const string& name, double_t low, double_t high) { logger::print("  {}: {} to {}", name, number(low), number(high)); };
+    // the binned axes of a histogram: x, y and z as far as it has them
+    auto printHistAxes = [&](const TH1* hist) {
+      const vector<string> names{"x", "y", "z"};
+      const vector<const TAxis*> axes{hist->GetXaxis(), hist->GetYaxis(), hist->GetZaxis()};
+      for (int32_t dim = 0; dim < hist->GetDimension(); ++dim)
+        printAxis(names[dim], axes[dim]);
+    };
+
+    if (auto* hist = dynamic_cast<TH1*>(object)) {
+      // the bins inside the axes (a TH2Poly: its polygons); apart from them the under- and overflow, and the smallest content above 0
+      // (where a log axis starts)
+      double_t integral{}, flows{}, minimum{}, maximum{}, minimumAboveZero{};
+      int32_t nBins{}, nFilled{};
+      auto count = [&](double_t content) {
+        if (nBins++ == 0 || content < minimum) minimum = content;
+        if (nBins == 1 || content > maximum) maximum = content;
+        if (content > 0. && (minimumAboveZero == 0. || content < minimumAboveZero)) minimumAboveZero = content;
+        integral += content;
+        if (content != 0.) ++nFilled;
+      };
+      if (auto* poly = dynamic_cast<TH2Poly*>(hist)) {
+        printRange("x", poly->GetXaxis()->GetXmin(), poly->GetXaxis()->GetXmax());
+        printRange("y", poly->GetYaxis()->GetXmin(), poly->GetYaxis()->GetXmax());
+        for (int32_t bin = 1; bin <= poly->GetNumberOfBins(); ++bin)
+          count(poly->GetBinContent(bin));
+      } else {
+        printHistAxes(hist);
+        for (int32_t bin = 0; bin < hist->GetNcells(); ++bin) {
+          if (hist->IsBinUnderflow(bin) || hist->IsBinOverflow(bin)) {
+            flows += hist->GetBinContent(bin);
+          } else {
+            count(hist->GetBinContent(bin));
+          }
+        }
+      }
+      // a profile holds means: their sum is no integral
+      const bool isProfile = TString(hist->ClassName()).BeginsWith("TProfile");
+      string statistics = fmt::format("  entries {}", number(hist->GetEntries()));
+      if (!isProfile) statistics += fmt::format(", integral {}, under- and overflow {}", number(integral), number(flows));
+      logger::print("{}", statistics);
+      if (nBins) {
+        const string aboveZero = (minimum <= 0. && minimumAboveZero > 0.) ? fmt::format(" (smallest above 0: {})", number(minimumAboveZero)) : "";
+        logger::print("  {} {} to {}{}, {} of {} bins not 0", (isProfile) ? "means" : "contents", number(minimum), number(maximum), aboveZero, nFilled, nBins);
+      }
+    } else if (auto* graph = dynamic_cast<TGraph*>(object)) {
+      logger::print("  {} points", graph->GetN());
+      if (graph->GetN()) {
+        const auto [xMin, xMax] = std::minmax_element(graph->GetX(), graph->GetX() + graph->GetN());
+        const auto [yMin, yMax] = std::minmax_element(graph->GetY(), graph->GetY() + graph->GetN());
+        printRange("x", *xMin, *xMax);
+        printRange("y", *yMin, *yMax);
+      }
+    } else if (auto* graph2d = dynamic_cast<TGraph2D*>(object)) {
+      logger::print("  {} points", graph2d->GetN());
+      if (graph2d->GetN()) {
+        printRange("x", graph2d->GetXmin(), graph2d->GetXmax());
+        printRange("y", graph2d->GetYmin(), graph2d->GetYmax());
+        printRange("z", graph2d->GetZmin(), graph2d->GetZmax());
+      }
+    } else if (auto* function = dynamic_cast<TF1*>(object)) {
+      const TString formula = function->GetExpFormula();
+      logger::print("  {}, {} parameters", (formula.IsNull()) ? "C++ function" : fmt::format("formula {}", formula.Data()), function->GetNpar());
+      printRange("x", function->GetXmin(), function->GetXmax());
+      if (auto* function2d = dynamic_cast<TF2*>(function)) printRange("y", function2d->GetYmin(), function2d->GetYmax());
+      if (auto* function3d = dynamic_cast<TF3*>(function)) printRange("z", function3d->GetZmin(), function3d->GetZmax());
+    } else if (auto* histN = dynamic_cast<THnBase*>(object)) {
+      for (int32_t dim = 0; dim < histN->GetNdimensions(); ++dim)
+        printAxis(fmt::format("axis {}", dim), histN->GetAxis(dim));
+      logger::print("  entries {}, {} bins filled", number(histN->GetEntries()), histN->GetNbins());
+    } else if (auto* efficiency = dynamic_cast<TEfficiency*>(object)) {
+      const TH1* total = efficiency->GetTotalHistogram();
+      printHistAxes(total);
+      logger::print("  passed {} of {} entries", number(efficiency->GetPassedHistogram()->GetEntries()), number(total->GetEntries()));
+    } else if (auto* tree = dynamic_cast<TTree*>(object)) {
+      logger::print("  entries {}", tree->GetEntries());
+      printBranches(tree);
+    }
+  };
+
   std::function<void(TObject*, const string&)> loopData =
     [&](TObject* object, const string& path) {
       if (!util::is_container(object->IsA())) {
@@ -693,7 +794,11 @@ bool PrintRootFileContents(const string& inputPath)
         if (ownsContainer) delete container;
       }
     };
-  loopData(root, startPath);
+  if (!util::is_container(root->IsA())) {
+    printDetails(root, startPath);
+  } else {
+    loopData(root, startPath);
+  }
   return true;
 }
 

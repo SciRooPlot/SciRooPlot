@@ -1,12 +1,14 @@
 """srp print <file>[:<path>] lists every object of a ROOT file with its class and the path SciRooPlot reads it by: objects of every data
 kind at the top, in directories, lists, stacks (their histograms) and multigraphs (their graphs), trees with their branches; below a path
 only what is there; also for files below a folder with ':' in its name, and for a directory hidden by a newer key of data of its name
-(as the reader finds it); a name written in several cycles once, the value of a map under its key. A missing file, a file that is no
+(as the reader finds it); a name written in several cycles once, the value of a map under its key. One object named by its path is
+given with its details (axes and binning, entries, integral, under- and overflow, contents and the smallest above 0, means of profiles,
+points and ranges of graphs, formula and range of functions, entries of trees), as ROOT gives them for the object. A missing file, a file that is no
 ROOT file and a path not in the file fail with exit status 1 and one error. srp open without a file, with a missing file or one that is
 no ROOT file, and srp open and srp colorwheel without a graphical display (X11 only) end with exit status 1 and one error. srp
 colorwheel <file> writes an image file without ROOT's messages, and refuses a name that is no image file. File names may hold ~ and
 environment variables, as the inputs of data sources.
-Covers: stack and multigraph members, file below a folder with ':', several cycles of a name, map values, srp open and colorwheel
+Covers: details of every data kind alone, stack and multigraph members, file below a folder with ':', several cycles of a name, map values, srp open and colorwheel
 without a file or display, colorwheel into a file."""
 
 import os
@@ -83,6 +85,65 @@ for start in ("dir", "dir/sub", "stack", "mg", "list"):
     found, _ = listing(out.stdout)
     want = {k: v for k, v in expected.items() if k.startswith(start + "/")}
     check(f"srp print below {start} lists only what is there", out.rc == 0 and found == want, f"{found}")
+
+
+# one object named by its path: its details (binning, ranges, statistics) from the object as ROOT gives them
+def g(value):
+    return f"{value:.4g}"
+
+
+def axis_text(axis):
+    return f"{axis.GetNbins()} {'variable bins' if axis.IsVariableBinSize() else 'bins'} from {g(axis.GetXmin())} to {g(axis.GetXmax())}"
+
+
+def details(obj):
+    """the detail lines expected for an object (a part of each line where the line holds more)"""
+    if isinstance(obj, ROOT.TH2Poly):
+        contents = [obj.GetBinContent(b) for b in range(1, obj.GetNumberOfBins() + 1)]
+        return [f"x: {g(obj.GetXaxis().GetXmin())} to", f"integral {g(sum(contents))}", f"of {len(contents)} bins not 0"]
+    if isinstance(obj, ROOT.TH1):
+        axes = [obj.GetXaxis(), obj.GetYaxis(), obj.GetZaxis()][: obj.GetDimension()]
+        inside = [b for b in range(obj.GetNcells()) if not obj.IsBinUnderflow(b) and not obj.IsBinOverflow(b)]
+        contents = [obj.GetBinContent(b) for b in inside]
+        flows = sum(obj.GetBinContent(b) for b in range(obj.GetNcells()) if b not in set(inside))
+        profile = obj.ClassName().startswith("TProfile")
+        stats = f"entries {g(obj.GetEntries())}" + ("" if profile else f", integral {g(sum(contents))}, under- and overflow {g(flows)}")
+        kind = "means" if profile else "contents"
+        filled = f"{sum(c != 0 for c in contents)} of {len(contents)} bins not 0"
+        return [f"{name}: {axis_text(axis)}" for name, axis in zip("xyz", axes)] + [stats, f"{kind} {g(min(contents))} to {g(max(contents))}", filled]
+    if isinstance(obj, ROOT.TGraph):
+        xs, ys = [obj.GetPointX(i) for i in range(obj.GetN())], [obj.GetPointY(i) for i in range(obj.GetN())]
+        return [f"{obj.GetN()} points", f"x: {g(min(xs))} to {g(max(xs))}", f"y: {g(min(ys))} to {g(max(ys))}"]
+    if isinstance(obj, ROOT.TGraph2D):
+        return [f"{obj.GetN()} points", f"x: {g(obj.GetXmin())} to {g(obj.GetXmax())}", f"z: {g(obj.GetZmin())} to {g(obj.GetZmax())}"]
+    if isinstance(obj, ROOT.THnBase):
+        return [f"axis {d}: {axis_text(obj.GetAxis(d))}" for d in range(obj.GetNdimensions())] + [f"entries {g(obj.GetEntries())}, {obj.GetNbins()} bins filled"]
+    if isinstance(obj, ROOT.TEfficiency):
+        total = obj.GetTotalHistogram()
+        return [f"x: {axis_text(total.GetXaxis())}", f"passed {g(obj.GetPassedHistogram().GetEntries())} of {g(total.GetEntries())} entries"]
+    if isinstance(obj, ROOT.TF1):
+        return [f"{obj.GetNpar()} parameters", f"x: {g(obj.GetXmin())} to {g(obj.GetXmax())}"]
+    return []
+
+
+for name in [*objects, "tree"]:
+    out = run(SRP, "print", f"{path}:{name}")
+    lines = out.stdout.splitlines()
+    want = ["entries 3", "-> x (Double_t)"] if name == "tree" else details(objects[name])
+    good = out.rc == 0 and lines and lines[0] == f"- [{expected[name]}] {name}" and want and all(any(w in line for line in lines[1:]) for w in want)
+    check(f"srp print of the {name} alone gives its details", good, f"want {want} | {out.tail()}")
+hist = objects["hist"]
+out = run(SRP, "print", f"{path}:dir/sub/inner")
+check("srp print of an object in a directory names it by its path, with its details", out.stdout.startswith("- [TH1D] dir/sub/inner\n") and f"x: {axis_text(hist.GetXaxis())}" in out.stdout, out.tail())
+log = ROOT.TH1D("log", "counts", 4, 0.0, 4.0)
+for b, c in ((1, 0.0), (2, 0.25), (3, 4.0), (4, 0.0)):
+    log.SetBinContent(b, c)
+f = ROOT.TFile(os.path.join(folder, "log.root"), "RECREATE")
+log.Write()
+f.Close()
+out = run(SRP, "print", os.path.join(folder, "log.root") + ":log")
+good = 'title "counts"' in out.stdout and "contents 0 to 4 (smallest above 0: 0.25), 2 of 4 bins not 0" in out.stdout
+check("srp print of a histogram with empty bins gives its title and the smallest content above 0", good, out.tail())
 
 # a file below a folder with ':' in its name
 inner = os.path.join(special, "f.root")
