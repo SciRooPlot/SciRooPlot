@@ -724,7 +724,12 @@ bool PrintRootFileContents(const string& inputPath)
     } else if (auto* histN = dynamic_cast<THnBase*>(object)) {
       for (int32_t dim = 0; dim < histN->GetNdimensions(); ++dim)
         printAxis(fmt::format("axis {}", dim), histN->GetAxis(dim));
-      logger::print("  entries {}, {} bins filled", number(histN->GetEntries()), histN->GetNbins());
+      // a THnSparse holds only the bins filled, a THn every bin (with under- and overflow)
+      Long64_t nFilled{};
+      for (Long64_t bin = 0; bin < histN->GetNbins(); ++bin) {
+        if (histN->GetBinContent(bin) != 0.) ++nFilled;
+      }
+      logger::print("  entries {}, {} bins filled", number(histN->GetEntries()), nFilled);
     } else if (auto* efficiency = dynamic_cast<TEfficiency*>(object)) {
       const TH1* total = efficiency->GetTotalHistogram();
       printHistAxes(total);

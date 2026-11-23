@@ -117,7 +117,7 @@ def details(obj):
     if isinstance(obj, ROOT.TGraph2D):
         return [f"{obj.GetN()} points", f"x: {g(obj.GetXmin())} to {g(obj.GetXmax())}", f"z: {g(obj.GetZmin())} to {g(obj.GetZmax())}"]
     if isinstance(obj, ROOT.THnBase):
-        return [f"axis {d}: {axis_text(obj.GetAxis(d))}" for d in range(obj.GetNdimensions())] + [f"entries {g(obj.GetEntries())}, {obj.GetNbins()} bins filled"]
+        return [f"axis {d}: {axis_text(obj.GetAxis(d))}" for d in range(obj.GetNdimensions())] + [f"entries {g(obj.GetEntries())}, {sum(obj.GetBinContent(b, ROOT.nullptr) != 0 for b in range(obj.GetNbins()))} bins filled"]
     if isinstance(obj, ROOT.TEfficiency):
         total = obj.GetTotalHistogram()
         return [f"x: {axis_text(total.GetXaxis())}", f"passed {g(obj.GetPassedHistogram().GetEntries())} of {g(total.GetEntries())} entries"]
