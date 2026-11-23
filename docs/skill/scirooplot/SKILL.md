@@ -22,7 +22,7 @@ Describes SciRooPlot 4.1.0 (ROOT >= 6.36.04). Repository: https://github.com/Sci
 ## Install and project setup
 
 ```bash
-brew tap SciRooPlot/scirooplot && brew install SciRooPlot && source "$(brew --prefix scirooplot)/share/scirooplot/env.sh"   # macOS/Linux
+brew tap SciRooPlot/scirooplot && brew install scirooplot && source "$(brew --prefix scirooplot)/share/scirooplot/env.sh"   # macOS/Linux
 conda install conda-forge::scirooplot && source "${CONDA_PREFIX}/share/scirooplot/env.sh"
 git clone https://github.com/SciRooPlot/SciRooPlot.git && cd SciRooPlot && ./scripts/install.sh   # from source (needs ROOT + Boost)
 ```

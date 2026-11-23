@@ -492,7 +492,7 @@
   #stack(spacing: 14pt,
   route("A", "Homebrew", [The prebuilt package \ from the SciRooPlot tap.])[
     #prompt brew tap SciRooPlot/scirooplot \
-    #prompt brew install SciRooPlot \
+    #prompt brew install scirooplot \
     #prompt source "\$(brew -\-prefix scirooplot)/share/scirooplot/env.sh"
   ],
   route("B", "Conda", [The conda-forge package, \ into the active environment.])[
