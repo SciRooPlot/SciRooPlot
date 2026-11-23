@@ -1671,6 +1671,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   // would no longer go into the file it had open
   TDirectory::TContext keepCurrentDirectory;
   mWrittenFiles.clear();
+  mWroteFile = false;
 
   // a caller that set ROOT's batch mode (gROOT->SetBatch) gets no windows; a canvas made then would still paint through gVirtualX,
   // which is the display interface once ROOT's graphics were initialised, and crash
@@ -1949,7 +1950,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       mGifPendingFrame->SaveAs((mGifName + mGifLastFrameSuffix).data());
       mGifPendingFrame.reset();
       logger::log("Saved gif {}.", mGifName);
-    } else if (!mWrittenFiles.empty()) {
+    } else if (mWroteFile) {
       logger::log("The files are in {} (a folder per group).", mOutputDirectory);
     }
     bool saved = true;
@@ -2887,6 +2888,7 @@ bool PlotManager::WriteOutput(Plot& fullPlot, const string& mode, const shared_p
     logger::error("Could not write {}.", fullName);
     return false;
   }
+  mWroteFile = true;
   if (isMacroMode) RepairMacro(fullName);
   LogCreated(fullPlot);
   return true;

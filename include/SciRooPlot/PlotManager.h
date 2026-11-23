@@ -210,6 +210,8 @@ class PlotManager
   std::optional<std::pair<uint32_t, uint32_t>> mGifSize;
   bool mGifSizeReported{};
   std::map<std::string, std::string> mWrittenFiles;  // output file (lower case) -> group:name of the plot written to it, in the current GeneratePlots call
+  // a file was written in the current GeneratePlots call
+  bool mWroteFile{};
   bool mExitInteractiveBrowsing{false};
   std::optional<std::pair<std::shared_ptr<TCanvas>, std::pair<int32_t, int32_t>>> mDetached;  // in mode "show": plot detached, shown once the browsing window shows another one (with the browsing window's top)
   // mode "show": the selected plots, made when browsing reaches them

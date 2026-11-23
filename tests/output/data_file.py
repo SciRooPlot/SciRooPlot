@@ -218,6 +218,7 @@ refused = [line for line in out.text.splitlines() if "is ignored: it must be a n
 check("names of Plots.root and Data.root outside of the output directory or the same for both: refused where set, Plots.root written", len(refused) == 4 and "PLOTS True" in out.stdout, out.text[-600:])
 after = out.text.split("LOCKED")[-1]
 check("a picture that cannot be written over an earlier one: reported, not logged as created", "Could not write" in after and "Created plot" not in after, after[-400:])
+check("no picture written: the output folder is not named as holding the files", "Could not write" in after and "The files are in" not in after, after[-400:])
 
 # a picture written again within the same second on a file system with timestamps in seconds (ext2 with 128-byte inodes, like AFS or HFS+):
 # its time does not change, but it was written
