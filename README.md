@@ -74,7 +74,7 @@ The file describes the workflow, the API and common pitfalls; the same content i
 ## 🚀 Quick start
 ```bash
 srp example-py examples    # a project with many commented example plots and their data (or example-cpp)
-plot higgs .+              # every plot of the group higgs, browsed with s (next) and a (back)
+plot higgs .+              # every plot of the group higgs, browsed with s (next) and a (back), h lists the keys
 plot higgs .+ pdf          # the same plots as pdf files
 ```
 `srp init-py <project>` (or `init-cpp`) starts your own project from a minimal program, `DefinePlots.py`.

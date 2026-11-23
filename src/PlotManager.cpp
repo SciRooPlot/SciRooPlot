@@ -2564,10 +2564,12 @@ bool PlotManager::BrowseInteractively(const Plot& fullPlot, const string& mode, 
   if (mode == "spread") {
     OpenWindow(canvas);
     gSystem->ProcessEvents();  // draws the window, and the windows already open react while the next plot is made
-    if (const char terminalKey = TerminalKey(); terminalKey == 'q' || terminalKey == 'x') {
+    const char terminalKey = TerminalKey();
+    if (terminalKey == 'q' || terminalKey == 'x') {
       CloseOpenWindows();
       mExitInteractiveBrowsing = true;  // no further plots
     }
+    if (terminalKey == 'h') LogWindowKeys();
     return true;
   }
   KeepOnClose(canvas.get());
@@ -2626,6 +2628,13 @@ bool PlotManager::BrowseInteractively(const Plot& fullPlot, const string& mode, 
     if (IsClosed(canvas.get()) || windowKey == 'q') {
       mExitInteractiveBrowsing = true;
       break;
+    }
+    if (key == 'h') {
+      logger::log("Keys in the window or the terminal: s next plot, a previous plot, d moves the plot into a window of its own, q quits, x closes all windows.");
+      logger::log("A double-click on the right or left half browses as well, one on a legend, text or shape reports its position.");
+      oldEvent = CanvasEvent(canvas.get());
+      gSystem->Sleep(20);
+      continue;
     }
     bool isClick = newEvent && canvas->GetEvent() == kButton1Double;
     bool isValidKey = (key == 'a' || key == 's');
@@ -3498,6 +3507,7 @@ bool PlotManager::HandleOpenWindows(bool& closeAll)
           continue;
         }
         if (key == 'x') closeAll = true;
+        if (key == 'h') LogWindowKeys();
       } else if (auto report = (canvas->GetEvent() == kButton1Double) ? PositionReport(canvas->GetSelected(), canvas->GetSelectedPad()) : nullopt) {
         logger::info("{}", *report);
       }
@@ -3505,6 +3515,16 @@ bool PlotManager::HandleOpenWindows(bool& closeAll)
     anyOpen = true;
   }
   return anyOpen;
+}
+
+//**************************************************************************************************
+/**
+ * Lists the keys of the windows kept open (key h in such a window, or in the terminal while they are open).
+ */
+//**************************************************************************************************
+void PlotManager::LogWindowKeys()
+{
+  logger::log("Keys: q closes the window, x closes all windows (q or x in the terminal: all); a double-click on a legend, text or shape reports its position.");
 }
 
 //**************************************************************************************************
@@ -3524,6 +3544,7 @@ void PlotManager::WaitForOpenWindows()
     bool closeAll = false;
     const char terminalKey = TerminalKey();
     if (!HandleOpenWindows(closeAll) || closeAll || terminalKey == 'q' || terminalKey == 'x') break;
+    if (terminalKey == 'h') LogWindowKeys();
     gSystem->Sleep(20);
   }
   mOpenWindows.clear();

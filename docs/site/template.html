@@ -1014,7 +1014,7 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
       <tr><td><code>pdf png svg eps macro file</code></td><td>files in the output folder</td></tr>
       <tr><td><code>gif</code> <code>gif+8++</code></td><td>all plots as one animation (looped)</td></tr>
       <tr><td><code>list</code> <code>print</code></td><td>names / definitions</td></tr>
-      <tr><td><kbd>s</kbd> <kbd>a</kbd> <kbd>d</kbd> <kbd>q</kbd> <kbd>x</kbd></td><td>next, previous, detach, close, close all</td></tr>
+      <tr><td><kbd>s</kbd> <kbd>a</kbd> <kbd>d</kbd> <kbd>q</kbd> <kbd>x</kbd> <kbd>h</kbd></td><td>next, previous, detach, close, close all, list the keys</td></tr>
       <tr><td><code>srp projects</code> <code>select</code></td><td>projects and their plots, switch</td></tr>
       <tr><td><code>srp init-py</code> <code>example-py</code> <code>add</code></td><td>start a project</td></tr>
       <tr><td><code>srp set &lt;p&gt; outdir|&lt;setting&gt; &lt;value&gt;</code></td><td>output folder, project settings</td></tr>
@@ -1516,7 +1516,7 @@ pm.AddPlot(plot);` },
     text: `<p>All plots of the tour are now part of your project. Make them all at once, in any format. Files go into the project's output folder, one subfolder per group.</p>
 <div class="term-line"><span class="p">$ </span>srp set tour outdir ~/thesis/figures<br><span class="p">$ </span>plot tour .+ pdf<br><span class="p">$ </span>plot tour '(axes|ratio)' png</div>
 <p class="basics"><b>The patterns</b><code>.+</code> and <code>(axes|ratio)</code> are <button class="term" data-term="regex">regular expressions</button>. In bash, quote patterns that contain brackets or <code>|</code>, and write <code>plot</code> after <code>||</code>, <code>!</code> or <code>time</code> in braces (<code>make || { plot g .+; }</code>): only then does it keep its patterns from being expanded as file names.</p>
-<p>Without a mode, <code>plot</code> opens a window. Browse with <kbd>s</kbd> and <kbd>a</kbd>, press <kbd>d</kbd> to keep the current plot in its own window for comparison, <kbd>q</kbd> to close one window, <kbd>x</kbd> to close all.</p>
+<p>Without a mode, <code>plot</code> opens a window. Browse with <kbd>s</kbd> and <kbd>a</kbd>, press <kbd>d</kbd> to keep the current plot in its own window for comparison, <kbd>q</kbd> to close one window, <kbd>x</kbd> to close all, <kbd>h</kbd> to list the keys.</p>
 `,
     py: null, cpp: null },
   { title: "Projects and settings", img: null,
@@ -1809,7 +1809,7 @@ const REF = [
 </tbody></table></div>
 <h3>Output modes</h3>
 <div class="tablewrap"><table class="cmd"><thead><tr><th>Mode</th><th>Result</th></tr></thead><tbody>
-<tr><td><code>show</code> (default)</td><td>One window to browse all matching plots: <kbd>s</kbd> next, <kbd>a</kbd> previous, <kbd>d</kbd> keeps the current plot in a window of its own, <kbd>q</kbd> closes a window, <kbd>x</kbd> all. The keys also work in the terminal (there <kbd>q</kbd> closes all). Double-click a legend, text, image or shape to print its name and coordinates.</td></tr>
+<tr><td><code>show</code> (default)</td><td>One window to browse all matching plots: <kbd>s</kbd> next, <kbd>a</kbd> previous, <kbd>d</kbd> keeps the current plot in a window of its own, <kbd>q</kbd> closes a window, <kbd>x</kbd> all, <kbd>h</kbd> lists the keys. The keys also work in the terminal (there <kbd>q</kbd> closes all). Double-click a legend, text, image or shape to print its name and coordinates.</td></tr>
 <tr><td><code>spread</code></td><td>All matching plots at once, one window each</td></tr>
 <tr><td><code>pdf</code> <code>png</code> <code>svg</code> <code>eps</code> <code>ps</code> <code>jpg</code></td><td>Files in the project's output folder, one subfolder per group</td></tr>
 <tr><td><code>gif</code>, <code>gif+8++</code></td><td>All matching plots as one animation (see above)</td></tr>
