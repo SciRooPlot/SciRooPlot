@@ -1875,7 +1875,7 @@
   #tip-grid(
     ([Browse through plots], [
       - In `show` mode, browse through the matching plots with `s` (next) and `a` (previous), in the window or in the terminal.
-      - Double-clicking the right or left half of the window works too; `q` closes a window, `x` all.
+      - Double-clicking the right or left half of the window works too; `q` closes a window, `x` all, `h` lists the keys.
     ]),
     ([Place text and legends by hand], [
       - Double-click a text, legend or shape: its name and position are printed to the terminal.

@@ -2779,8 +2779,9 @@ bool PlotManager::BrowseInteractively(const Plot& fullPlot, const string& mode, 
       break;
     }
     if (key == 'h') {
-      logger::log("Keys in the window or the terminal: s next plot, a previous plot, d moves the plot into a window of its own, q quits, x closes all windows.");
-      logger::log("A double-click on the right or left half browses as well, one on a legend, text or shape reports its position.");
+      // asked for: shown at any verbosity
+      logger::print("Keys in the window or the terminal: s next plot, a previous plot, d moves the plot into a window of its own, q quits, x closes all windows.");
+      logger::print("A double-click on the right or left half browses as well, one on a legend, text or shape reports its position.");
       oldEvent = CanvasEvent(canvas.get());
       gSystem->Sleep(20);
       continue;
@@ -3739,7 +3740,8 @@ bool PlotManager::HandleOpenWindows(bool& closeAll)
 //**************************************************************************************************
 void PlotManager::LogWindowKeys()
 {
-  logger::log("Keys: q closes the window, x closes all windows (q or x in the terminal: all); a double-click on a legend, text or shape reports its position.");
+  // asked for: shown at any verbosity
+  logger::print("Keys: q closes the window, x closes all windows (q or x in the terminal: all); a double-click on a legend, text or shape reports its position.");
 }
 
 //**************************************************************************************************
