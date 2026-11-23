@@ -1538,9 +1538,10 @@ class Plot::Pad::Axis
   Axis& SetGrid(bool isGrid = true);
   Axis& SetOppositeTicks(bool isOppositeTicks = true);
   Axis& SetNoExponent(bool isNoExponent = true);
-  Axis& SetHideClippedLabels(bool hide = true);  // drop a label whose text would reach beyond the pad (e.g. at the edge shared with a touching pad); on by default in the base plots, false keeps the labels
-  Axis& SetColorScaleOffset(float_t offset);     // Z axis (C for a 3d histogram): distance of the colour scale from the frame, fraction of the pad width (ROOT: 0.005)
-  Axis& SetColorScaleWidth(float_t width);       // Z axis (C for a 3d histogram): width of the colour scale, fraction of the pad width (ROOT: 0.045)
+  Axis& SetMoreLogLabels(bool isMoreLogLabels = true);  // log axis: also label 2 to 9 times the powers of ten (ROOT leaves out those that would overlap)
+  Axis& SetHideClippedLabels(bool hide = true);         // drop a label whose text would reach beyond the pad (e.g. at the edge shared with a touching pad); on by default in the base plots, false keeps the labels
+  Axis& SetColorScaleOffset(float_t offset);            // Z axis (C for a 3d histogram): distance of the colour scale from the frame, fraction of the pad width (ROOT: 0.005)
+  Axis& SetColorScaleWidth(float_t width);              // Z axis (C for a 3d histogram): width of the colour scale, fraction of the pad width (ROOT: 0.045)
   Axis& SetTimeFormat(const std::string& timeFormat);
   Axis& SetTickOrientation(const std::string& tickOrientation);
 
@@ -1582,6 +1583,7 @@ class Plot::Pad::Axis
   const auto& GetGrid() const { return mAxisFrame.isGrid; }
   const auto& GetOppositeTicks() const { return mAxisFrame.isOppositeTicks; }
   const auto& GetNoExponent() const { return mAxisFrame.isNoExponent; }
+  const auto& GetMoreLogLabels() const { return mAxisFrame.isMoreLogLabels; }
   const auto& GetHideClippedLabels() const { return mAxisFrame.hideClippedLabels; }
   const auto& GetColorScaleOffset() const { return mAxisFrame.colorScaleOffset; }
   const auto& GetColorScaleWidth() const { return mAxisFrame.colorScaleWidth; }
@@ -1609,6 +1611,7 @@ class Plot::Pad::Axis
     std::optional<bool> isGrid;
     std::optional<bool> isOppositeTicks;
     std::optional<bool> isNoExponent;
+    std::optional<bool> isMoreLogLabels;
     std::optional<bool> hideClippedLabels;
     std::optional<float_t> colorScaleOffset;
     std::optional<float_t> colorScaleWidth;

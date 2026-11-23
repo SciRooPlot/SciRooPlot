@@ -3922,6 +3922,7 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
   read_from_tree(axisTree, mAxisFrame.isGrid, "is_grid");
   read_from_tree(axisTree, mAxisFrame.isOppositeTicks, "is_opposite_ticks");
   read_from_tree(axisTree, mAxisFrame.isNoExponent, "is_no_exponent");
+  read_from_tree(axisTree, mAxisFrame.isMoreLogLabels, "is_more_log_labels");
   read_from_tree(axisTree, mAxisFrame.hideClippedLabels, "hide_clipped_labels");
   read_from_tree(axisTree, mAxisFrame.colorScaleOffset, "color_scale_offset");
   read_from_tree(axisTree, mAxisFrame.colorScaleWidth, "color_scale_width");
@@ -3959,6 +3960,7 @@ ptree Plot::Pad::Axis::GetPropertyTree() const
   put_in_tree(axisTree, mAxisFrame.isGrid, "is_grid");
   put_in_tree(axisTree, mAxisFrame.isOppositeTicks, "is_opposite_ticks");
   put_in_tree(axisTree, mAxisFrame.isNoExponent, "is_no_exponent");
+  put_in_tree(axisTree, mAxisFrame.isMoreLogLabels, "is_more_log_labels");
   put_in_tree(axisTree, mAxisFrame.hideClippedLabels, "hide_clipped_labels");
   put_in_tree(axisTree, mAxisFrame.colorScaleOffset, "color_scale_offset");
   put_in_tree(axisTree, mAxisFrame.colorScaleWidth, "color_scale_width");
@@ -3990,6 +3992,7 @@ void Plot::Pad::Axis::operator+=(const Axis& axis)
   if (axis.mAxisFrame.isGrid) mAxisFrame.isGrid = axis.mAxisFrame.isGrid;
   if (axis.mAxisFrame.isOppositeTicks) mAxisFrame.isOppositeTicks = axis.mAxisFrame.isOppositeTicks;
   if (axis.mAxisFrame.isNoExponent) mAxisFrame.isNoExponent = axis.mAxisFrame.isNoExponent;
+  if (axis.mAxisFrame.isMoreLogLabels) mAxisFrame.isMoreLogLabels = axis.mAxisFrame.isMoreLogLabels;
   if (axis.mAxisFrame.hideClippedLabels) mAxisFrame.hideClippedLabels = axis.mAxisFrame.hideClippedLabels;
   if (axis.mAxisFrame.colorScaleOffset) mAxisFrame.colorScaleOffset = axis.mAxisFrame.colorScaleOffset;
   if (axis.mAxisFrame.colorScaleWidth) mAxisFrame.colorScaleWidth = axis.mAxisFrame.colorScaleWidth;
@@ -4172,6 +4175,11 @@ auto Plot::Pad::Axis::SetOppositeTicks(bool isOppositeTicks) -> decltype(*this)
 auto Plot::Pad::Axis::SetNoExponent(bool isNoExponent) -> decltype(*this)
 {
   mAxisFrame.isNoExponent = isNoExponent;
+  return *this;
+}
+auto Plot::Pad::Axis::SetMoreLogLabels(bool isMoreLogLabels) -> decltype(*this)
+{
+  mAxisFrame.isMoreLogLabels = isMoreLogLabels;
   return *this;
 }
 auto Plot::Pad::Axis::SetHideClippedLabels(bool hide) -> decltype(*this)

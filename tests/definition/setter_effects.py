@@ -71,6 +71,7 @@ NO_EFFECT = {
     ("PanelLayout", "SetColorScaleWidth", None): "no colour scale in the plot using the layout (layouts/pad_look.py)",
     ("PanelLayout", "SetCommonTitles", None): "the panels have no titles (layouts/shared_axes.py)",
     **{("Axis", "SetNoExponent", host): "the labels of that axis need no exponent" for host in ("x", "pad0_x", "c")},
+    ("Axis", "SetMoreLogLabels", "c"): "the colour scale of the 3d histogram is linear (ROOT paints a log one without colours)",
 }
 
 # hosts of their own: the order and spacing of columns need a legend of two columns and three rows

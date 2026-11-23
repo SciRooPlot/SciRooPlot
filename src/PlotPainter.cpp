@@ -1467,7 +1467,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
       const double_t low = (isX) ? pad_ptr->GetUxmin() : pad_ptr->GetUymin();  // the exponents of the ends
       const double_t high = (isX) ? pad_ptr->GetUxmax() : pad_ptr->GetUymax();
       if (axis->GetLabelSize() > 0.f && !axis->GetMoreLogLabels() && std::floor(high + 1e-9) < std::ceil(low - 1e-9)) {
-        logger::hint("Plot {}: the log {} axis of pad {} ({:.3g} to {:.3g}) holds no power of ten, so ROOT draws no labels on it: widen its range to one, or use a linear axis.", mPlotLabel, axisLabel, padID, std::pow(10., low), std::pow(10., high));
+        logger::hint("Plot {}: the log {} axis of pad {} ({:.3g} to {:.3g}) holds no power of ten, so ROOT draws no labels on it: widen its range to one, label 2 to 9 times the powers of ten (SetMoreLogLabels), or use a linear axis.", mPlotLabel, axisLabel, padID, std::pow(10., low), std::pow(10., high));
       }
     }
   }
@@ -1499,6 +1499,7 @@ bool PlotPainter::ApplyContentLook(TAxis* zAxis, const Plot::Pad& pad, const Plo
     if (content.GetNumDivisions()) zAxis->SetNdivisions(*content.GetNumDivisions());
     if (content.GetMaxDigits()) zAxis->SetMaxDigits(*content.GetMaxDigits());
     if (content.GetNoExponent()) zAxis->SetNoExponent(*content.GetNoExponent());
+    if (content.GetMoreLogLabels()) zAxis->SetMoreLogLabels(*content.GetMoreLogLabels());
     if (content.GetTitleAlpha()) titleAlpha = content.GetTitleAlpha();
     if (content.GetLabelAlpha()) labelAlpha = content.GetLabelAlpha();
     if (content.GetAxisAlpha()) axisAlpha = content.GetAxisAlpha();
@@ -1543,7 +1544,7 @@ void PlotPainter::StyleContentScale(pad_state_t& padState)
     TAttAxis zLook;
     zAxis->TAttAxis::Copy(zLook);
     // the bits of the look are kept apart from TAttAxis: they are given back with it
-    constexpr std::array lookBits{TAxis::kCenterTitle, TAxis::kCenterLabels, TAxis::kNoExponent, TAxis::kTickPlus, TAxis::kTickMinus};
+    constexpr std::array lookBits{TAxis::kCenterTitle, TAxis::kCenterLabels, TAxis::kNoExponent, TAxis::kMoreLogLabels, TAxis::kTickPlus, TAxis::kTickMinus};
     std::array<bool, lookBits.size()> zBits{};
     for (size_t i = 0; i < lookBits.size(); ++i)
       zBits[i] = zAxis->TestBit(lookBits[i]);
@@ -3254,6 +3255,9 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
     }
     if (axisLayout.GetNoExponent()) {
       axis_ptr->SetNoExponent(*axisLayout.GetNoExponent());
+    }
+    if (axisLayout.GetMoreLogLabels()) {
+      axis_ptr->SetMoreLogLabels(*axisLayout.GetMoreLogLabels());
     }
     if (axisLayout.GetTimeFormat()) {
       axis_ptr->SetTimeDisplay(1);
@@ -8655,7 +8659,8 @@ std::pair<double_t, double_t> PlotPainter::GetTextExtentPixel(TLatex& text, TPad
 /**
  * Hides the labels of an axis whose text would reach beyond the pad (Axis::SetHideClippedLabels), e.g. the top label of a
  * ratio pad at the edge shared with the pad above. The label positions are those TGaxis will draw (THLimitsFinder::Optimize
- * for a linear axis with optimized divisions, the decades of a log axis, equidistant for a negative number of divisions).
+ * for a linear axis with optimized divisions, the decades of a log axis and with MoreLogLabels the labels between them, equidistant
+ * for a negative number of divisions).
  * Called once the pad is updated, so that its ranges are final.
  */
 //**************************************************************************************************
@@ -8721,15 +8726,28 @@ vector<double_t> PlotPainter::LabelValues(const TAxis* axis, double_t padMin, do
   const double_t wmax = FromPad(padMax, isLog);
   vector<double_t> labelValues;
   if (!(wmax > wmin)) return labelValues;
-  if (isLog) {
-    for (int32_t decade = static_cast<int32_t>(std::ceil(padMin - 1e-9)); decade <= static_cast<int32_t>(std::floor(padMax + 1e-9)); ++decade) {
-      labelValues.push_back(TMath::Power(10., decade));
-    }
-    return labelValues;
-  }
   const int32_t nDiv = axis->GetNdivisions();
   int32_t nPrimary = std::abs(nDiv) % 100;
   if (divisionScale != 1.) nPrimary = static_cast<int32_t>(static_cast<float>(std::max(1, nPrimary)) * divisionScale);
+  if (isLog) {
+    // with MoreLogLabels TGaxis also labels k times the powers of ten (k = 2 to 9; only 5 for more decades than twice the primary
+    // divisions); it leaves out those that would overlap the one before, which needs the pad: all candidates are listed
+    const auto firstDecade = static_cast<int32_t>(std::floor(padMin + 1e-9));
+    const auto lastDecade = static_cast<int32_t>(std::floor(padMax + 1e-9));
+    const bool more = axis->GetMoreLogLabels();
+    // the number of decades as TGaxis counts them (truncated towards zero)
+    const auto decades = 2 + static_cast<int32_t>(padMax + ((padMax > 0.) ? 1e-6 : -1e-6)) - static_cast<int32_t>(padMin + ((padMin > 0.) ? 1e-6 : -1e-6));
+    const bool onlyFive = decades > 2 * nPrimary;
+    for (int32_t decade = firstDecade; decade <= lastDecade; ++decade) {
+      for (int32_t k = 1; k < 10; ++k) {
+        if (k > 1 && !more) break;
+        if (k > 1 && onlyFive && k != 5) continue;
+        const double_t value = k * TMath::Power(10., decade);
+        if (value >= wmin * (1. - 1e-9) && value <= wmax * (1. + 1e-9)) labelValues.push_back(value);
+      }
+    }
+    return labelValues;
+  }
   if (nPrimary == 0) return labelValues;
   double_t binLow{wmin}, binHigh{wmax}, binWidth{(wmax - wmin) / nPrimary};
   int32_t nBins{nPrimary};
@@ -8762,9 +8780,8 @@ vector<double_t> PlotPainter::LabelValues(const TAxis* axis, double_t padMin, do
 //**************************************************************************************************
 /**
  * Width in pixels of the widest label of the y axis of a pad, as needed for the automatic placement of its title (TGaxis puts a
- * title with offset 0 next to the widest label): the labels as TGaxis writes them in the usual cases, decades of a log axis as
- * 1, 10 and 10^{n}, values beyond the maximum number of digits with the common power of ten taken out. Labels of the pad that
- * HideClippedLabels dropped still count, as they do for TGaxis.
+ * title with offset 0 next to the widest label): the labels as TGaxis writes them in the usual cases (see LabelTexts). Labels of the
+ * pad that HideClippedLabels dropped still count, as they do for TGaxis.
  */
 //**************************************************************************************************
 double_t PlotPainter::MaxLabelWidth(TPad* pad, const TAxis* axis, char axisLabel)
@@ -8804,7 +8821,8 @@ double_t PlotPainter::LabelWidth(TPad* pad, const TAxis* axis, const string& tex
 //**************************************************************************************************
 /**
  * The texts of the labels at the given values as TGaxis writes them in the usual cases: decades of a log axis as 1, 10 and
- * 10^{n}, values beyond the maximum number of digits with the common power of ten taken out, a minus sign as #minus.
+ * 10^{n} (without exponent as numbers), the labels between them (MoreLogLabels) as 2, 20 and 2#times10^{n}, values beyond the maximum
+ * number of digits with the common power of ten taken out, a minus sign as #minus.
  */
 //**************************************************************************************************
 vector<string> PlotPainter::LabelTexts(const TAxis* axis, const vector<double_t>& values, bool isLog)
@@ -8851,8 +8869,22 @@ vector<string> PlotPainter::LabelTexts(const TAxis* axis, const vector<double_t>
   for (double_t value : values) {
     string text;
     if (isLog) {
-      const auto decade = static_cast<int32_t>(std::lround(std::log10(value)));
-      text = (decade == 0) ? "1" : ((decade == 1) ? "10" : fmt::format("10^{{{}}}", decade));
+      // a power of ten, or k times one with MoreLogLabels (TGaxis::PaintAxis: %f and %g without exponent)
+      const auto decade = static_cast<int32_t>(std::floor(std::log10(value) + 1e-9));
+      const auto k = static_cast<int32_t>(std::lround(value / TMath::Power(10., decade)));
+      if (k == 1 && (decade == 0 || decade == 1)) {
+        text = (decade == 0) ? "1" : "10";
+      } else if (k == 1 && axis->GetNoExponent()) {
+        text = TString::Format("%f", value).Data();
+        if (text.find('.') != string::npos) text.erase(text.find_last_not_of('0') + 1);
+        if (text.back() == '.') text.pop_back();
+      } else if (k == 1) {
+        text = fmt::format("10^{{{}}}", decade);
+      } else if (axis->GetNoExponent()) {
+        text = TString::Format("%g", value).Data();
+      } else {
+        text = (decade == 0) ? std::to_string(k) : ((decade == 1) ? std::to_string(10 * k) : fmt::format("{}#times10^{{{}}}", k, decade));
+      }
     } else {
       text = fmt::format("{:g}", value / factor);  // (the values of LabelValues, 0 where the steps miss it by rounding)
     }

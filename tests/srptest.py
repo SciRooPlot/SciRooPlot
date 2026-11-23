@@ -2969,6 +2969,7 @@ SETTER_VALUES = {
     "isDensity": FLAG,
     "isGrid": FLAG,
     "isLog": FLAG,
+    "isMoreLogLabels": FLAG,
     "isNoExponent": FLAG,
     "isOppositeTicks": FLAG,
     "isUserCoord": FLAG,

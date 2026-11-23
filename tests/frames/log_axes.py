@@ -13,7 +13,7 @@ value and coordinates at and below zero (variant crossing), without a range and 
 - a positive lower range below the data widens the frame to exactly that value, also below bins that end at or cross zero; a lower range
   at or below zero is reported and ignored: the frame is the one with only the upper end of the range set
 - a log x or y axis of a flat frame whose range holds no power of ten, on which ROOT draws no labels, is named in a hint; one that holds a
-  power of ten is not
+  power of ten is not, nor one with the labels between the powers of ten (Axis::SetMoreLogLabels), which reaches the drawn x, y and z axis
 Covers: lowest bins of log z not drawn, log y minimum from bins and points outside the frame, graph on log x
 lost its small-x points, widening below the first positive bin edge, log x frame below zero ends at the last bin,
 lower range at or below zero warns, the y range of a graph from the points shown, the z range of a 2d graph read before it is
@@ -64,6 +64,14 @@ p.source("ones", {"ones": ones})
 plot = S.Plot("ones", "log", "2d")
 plot[1].AddData("ones", "ones")
 plot[1]["Z"].SetLog()
+p.pm.AddPlot(plot)
+# log axes without a power of ten, labelled between the powers of ten
+plot = S.Plot("more_labels", "log", "2d")
+plot[1].AddData("ones", "ones")
+for axis in "XYZ":
+    plot[1][axis].SetLog().SetMoreLogLabels()
+plot[1]["X"].SetRange(0.2, 0.8)
+plot[1]["Y"].SetRange(0.2, 0.8)
 p.pm.AddPlot(plot)
 
 todo = cases(
@@ -333,6 +341,11 @@ for i, case in enumerate(todo):
         said = [m for m in run.messages(f"c{i}", "log") if f"the log {axis} axis of pad 1 (" in m and "holds no power of ten" in m]
         check(f"log {axis} axis {'with' if decade else 'without'} a power of ten: {'no hint' if decade else 'a hint'}: {describe(case)}", len(said) == (0 if decade else 1), f"{lo:.6g} to {hi:.6g}; " + " | ".join(said))
 
+fh = run.frame_hist("more_labels", "log")
+bits = {axis: bool(fh) and getattr(fh, f"Get{axis}axis")().GetMoreLogLabels() for axis in "XYZ"}
+check("SetMoreLogLabels reaches the drawn x, y and z axis", all(bits.values()), f"{bits}")
+said = [m for m in run.messages("more_labels", "log") if "holds no power of ten" in m]
+check("log axes without a power of ten, labelled between the powers of ten: no hint", not said, " | ".join(said))
 fh = run.frame_hist("ones", "log")
 check("log z colours the ones next to a maximum of 2e4", bool(fh) and 0 < fh.GetMinimum() <= 1.0, f"z from {fh.GetMinimum()}" if fh else "plot not made")
 warned = run.warnings("is ignored: a log scale shows only positive values")

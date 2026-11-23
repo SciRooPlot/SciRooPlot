@@ -1,7 +1,8 @@
 """Axis labels as painted:
 - with Axis::SetHideClippedLabels (on in the base plots) no label is drawn cut at the edge of its pad: the labels at the edge shared by
-  touching panels (the y labels of a ratio pad and its main pad, the x labels of panels side by side, a log decade) are left out, a label
-  that fits into the margin of its pad stays; with the flag off ROOT draws them cut
+  touching panels (the y labels of a ratio pad and its main pad, the x labels of panels side by side, a log decade, a label between the
+  decades of a log axis with Axis::SetMoreLogLabels) are left out, a label that fits into the margin of its pad stays; with the flag off
+  ROOT draws them cut
 - the primary divisions ROOT paints on an x axis are the ones set, also in narrow panels (THistPainter scales them with the pad width
   where the setting has a max digits part; SciRooPlot raises them to give back the setting), in a side panel drawn with hbars and with
   divisions set by the user; single pads and 3d views keep the setting
@@ -11,11 +12,11 @@
   axes, y axes and the labels of hbars warn and are left as they are; Data::SetTextAngle turns the values written by TEXT (0 to 90, with
   a warning beyond) and the labels of points_text, and warns for data that writes no values (Data::SetTextFormat likewise); x labels
   running into each other are said once for each pad
-Cases: a ratio layout (linear and log main pad) and panels side by side with labels at the shared edges × the flag on or off; layouts of
+Cases: a ratio layout (linear and log main pad, log axes with the labels between the decades) and panels side by side with labels at the shared edges × the flag on or off; layouts of
 one, two and three panels, an hbars side panel, 3d views × the divisions set or not; every angle of ROOT's orientations and others.
 Reference: the pixels of each pad painted alone at its edges; ROOT's scaling of the divisions; ROOT's angles of its label orientations.
 Covers: labels cut at the edge, divisions of narrow panels, label and text angles, the size of bin labels as painted, labels measured as written (the exponent taken out, log
-decades as 10^{n}).
+decades as 10^{n} or as numbers without exponent).
 """
 
 import numpy as np
@@ -49,7 +50,7 @@ WIDE = {
 }
 # labels measured as TGaxis writes them (the exponent taken out, log decades as 10^{n}), not as the numbers they stand for: none of them
 # is hidden as clipped or said to run into others: (low, high, exponent wanted, log x)
-WRITTEN = {"exponent_2e6": (0.0, 2e6, True, False), "log_decades": (1.0, 1e6, False, True)}
+WRITTEN = {"exponent_2e6": (0.0, 2e6, True, False), "log_decades": (1.0, 1e6, True, True)}
 wide = {}
 for name, (low, high, _, _) in WIDE.items():
     wide[name] = ROOT.TH1D(name, "", 20, low, high)
@@ -83,6 +84,7 @@ for name in ("digits", "numbers"):
 CLIP = {  # layout: (base plot, the edges checked: (pad, side, whether ROOT draws a label there))
     "ratio": ("1d_ratio", [(1, "bottom", True), (2, "top", True)]),
     "ratio_log": ("1d_ratio", [(1, "bottom", False), (2, "top", True)]),  # ROOT writes no decade at the lower end of this log axis
+    "ratio_more_log": ("1d_ratio", [(1, "bottom", True), (2, "top", True)]),  # log axes with the labels between the decades (20, 2)
     "side_by_side": ("1d_2x1", [(1, "right", True), (2, "left", True)]),
 }
 clipCases = cases({"layout": list(CLIP), "flag": ["on", "off"]}, always=lambda c: True)
@@ -92,11 +94,15 @@ for i, case in enumerate(clipCases):
     if base == "1d_ratio":
         plot[1].AddData("h", "s")
         plot[2].AddRatio(["h", "s"], ["h", "s"]).Numer().Scale(1.05)
-        plot[1]["Y"].SetRange(*((10.0, 10000.0) if case["layout"] == "ratio_log" else (500.0, 4500.0)))  # a label at the bottom edge, one in the top margin
-        plot[2]["Y"].SetRange(0.9, 1.15)  # labels at both edges
+        plot[1]["Y"].SetRange(*{"ratio_log": (10.0, 10000.0), "ratio_more_log": (19.9, 6000.0)}.get(case["layout"], (500.0, 4500.0)))  # a label at the bottom edge, one in the top margin
+        plot[2]["Y"].SetRange(*((0.9, 2.0) if case["layout"] == "ratio_more_log" else (0.9, 1.15)))  # labels at both edges
         plot[2]["Y"].SetTitle("")
-        if case["layout"] == "ratio_log":
+        if case["layout"] in ("ratio_log", "ratio_more_log"):
             plot[1]["Y"].SetLog()
+        if case["layout"] == "ratio_more_log":
+            plot[2]["Y"].SetLog()
+            for pad in (1, 2):
+                plot[pad]["Y"].SetMoreLogLabels()
         axes = [(1, "Y"), (2, "Y")]
     else:
         for pad in (1, 2):
@@ -179,6 +185,10 @@ for name, (_, _, exponent, log) in WRITTEN.items():
     plot[1]["X"].SetNoExponent(not exponent)
     plot[1]["X"].SetLog(log)
     p.pm.AddPlot(plot)
+plot = S.Plot("log_numbers", "written", "1d")  # log decades without exponent are written as numbers: 1000000 reaches beyond the pad
+plot[1].AddData("log_decades", "s")
+plot[1]["X"].SetLog()
+p.pm.AddPlot(plot)
 
 run = p.plot()
 check("the plots are made without errors", not run.errors(), " | ".join(run.errors()[:3]))
@@ -212,6 +222,10 @@ for name, (low, high, exponent, log) in WRITTEN.items():
     said = [m for m in run.messages(name, "written") if "run into each other" in m]
     what = f"x labels from {low:g} to {high:g}{' with exponent' if exponent else ''}{' on a log axis' if log else ''}"
     check(f"{what}: measured as written, none hidden as clipped, no warning", axis is not None and not hidden and not said, f"hidden {hidden}; {' | '.join(said)}")
+padObj = run.pad("log_numbers", "written")
+axis = padObj.GetPrimitive("axis_hist_pad_1").GetXaxis() if padObj else None
+hidden = [(m.GetLabNum(), m.GetLabValue()) for m in axis.GetModifiedLabels()] if axis and axis.GetModifiedLabels() else []
+check("x labels from 1 to 1e+06 on a log axis without exponent: written as numbers, 1000000 at the right edge hidden as clipped", hidden == [(0, 1e6)], f"hidden {hidden}")
 
 
 def edge_pixels(name, group, padID, side):

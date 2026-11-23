@@ -183,6 +183,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Axis& SetGrid(bool isGrid = true)`
 - `Axis& SetOppositeTicks(bool isOppositeTicks = true)`
 - `Axis& SetNoExponent(bool isNoExponent = true)`
+- `Axis& SetMoreLogLabels(bool isMoreLogLabels = true)` — log axis: also label 2 to 9 times the powers of ten (ROOT leaves out those that would overlap)
 - `Axis& SetHideClippedLabels(bool hide = true)` — drop a label whose text would reach beyond the pad (e.g. at the edge shared with a touching pad); on by default in the base plots, false keeps the labels
 - `Axis& SetColorScaleOffset(float_t offset)` — Z axis (C for a 3d histogram): distance of the colour scale from the frame, fraction of the pad width (ROOT: 0.005)
 - `Axis& SetColorScaleWidth(float_t width)` — Z axis (C for a 3d histogram): width of the colour scale, fraction of the pad width (ROOT: 0.045)
