@@ -300,12 +300,10 @@ int RunCommand(const string& command, const string& project, const string& prope
     if (!expanded) return 1;  // reported
     const string fileName = *expanded;
     if (!fileName.empty()) {
-      // ROOT writes PostScript for any other ending
+      // ROOT writes PostScript for any other ending (it compares them case-sensitively: .PNG too)
       static const std::set<string> imageEndings = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tif", ".tiff", ".xpm", ".svg", ".pdf", ".eps", ".ps"};
-      string ending = std::filesystem::path(fileName).extension().string();
-      std::transform(ending.begin(), ending.end(), ending.begin(), [](unsigned char c) { return std::tolower(c); });
-      if (!imageEndings.count(ending)) {
-        logger::error("Cannot write the colour wheel to {}: give a file name ending in .png, .pdf, .svg, .eps, .jpg or .gif.", fileName);
+      if (!imageEndings.count(std::filesystem::path(fileName).extension().string())) {
+        logger::error("Cannot write the colour wheel to {}: give a file name ending in .png, .pdf, .svg, .eps, .jpg or .gif (in lower case).", fileName);
         return 1;
       }
     }

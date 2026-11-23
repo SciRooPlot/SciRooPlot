@@ -118,6 +118,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| `srp colorwheel <file>` with an ending in capitals (`wheel.PNG`) wrote PostScript under that name | Refused with an error, as other endings ROOT cannot write | CLI | Write the ending in lower case. |
 | `srp` ignored words beyond those of a command below five words (`srp remove a junk` removed `a`) | Refused with an error (`srp help` shows the words of each command) | CLI | Quote a value containing spaces. |
 | `srp init-*` and `srp example-*` started with the warning that the program does not exist (yet) | The project is registered after its template is copied (and built): no warning; a name `srp add` refuses removes the new folder again | CLI | Nothing. |
 | `srp set <project> <name> <value>` stored any name and value besides `program` and `outdir`; `plot` did not run the program again after a change | Only settings the program declares (`PlotManager::Setting`), with a value they allow (`on`/`off`, an integer, a finite number, one of the choices); `srp get` prints the value or the default, `srp unset` goes back to the default (and removes a value of a setting no longer declared); `plot` runs the program again after a value changed; tab completion offers the settings (in zsh with their descriptions) and the values of switches and choices; `srp projects` lists them with value, default and description | CLI | Declare the names in the program (`Setting`) and run it once before setting them. |

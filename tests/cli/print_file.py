@@ -205,9 +205,9 @@ check("srp print expands environment variables in the file name", out.rc == 0 an
 out = run(SRP, "colorwheel", "${SRP_TESTS_PRINT_DIR}/wheel_var.png", env={"SRP_TESTS_PRINT_DIR": folder}, timeout=120)
 check("srp colorwheel expands environment variables in the file name: written, no error", out.rc == 0 and os.path.isfile(os.path.join(folder, "wheel_var.png")) and not out.errors(), out.tail())
 
-# srp colorwheel <file> writes the wheel as an image without ROOT's messages; a name that is no image file (ROOT would write PostScript)
+# srp colorwheel <file> writes the wheel as an image without ROOT's messages; a name that is no image file (ROOT would write PostScript, also for .PNG)
 # ends with exit status 1 and one error, nothing written
-for name, ok in (("wheel.png", True), ("wheel.pdf", True), ("wheel", False), ("wheel.txt", False)):
+for name, ok in (("wheel.png", True), ("wheel.pdf", True), ("wheel", False), ("wheel.txt", False), ("wheel.PNG", False)):  # ROOT compares endings case-sensitively
     target = os.path.join(folder, name)
     out = run(SRP, "colorwheel", target, timeout=120)
     if ok:
