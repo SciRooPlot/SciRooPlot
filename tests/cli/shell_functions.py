@@ -1,6 +1,7 @@
 """The shell functions of env.sh, in bash and zsh: the script must be sourced; sourced, plot and srp work also in scripts. At the prompt,
 plot gets its patterns unexpanded (.* is not a list of dot files), also after && and inside braces after ||, keeps its exit status, and
-file globbing works again afterwards, also after plot in a pipeline. srp makes relative program and output paths absolute (add, set),
+file globbing works again afterwards, also after plot in a pipeline; a variable set in front of plot (SCIROOPLOT_PROJECT=p plot ...) is
+used for that plot only. srp makes relative program and output paths absolute (add, set),
 keeps other values and paths starting with ~ or a variable as written; srp cd goes to the program folder; srp edit opens the sources of
 the program (a C++ program: of its CMake source folder, else of its own folder), and fails with a message without any; srp cd and srp out of an
 unknown project, srp out without an output folder or before it exists fail with a message; srp update of a build configured for
@@ -34,6 +35,19 @@ for name in ("p", "q"):
 pm.SaveProject()
 """)
 run(SRP, "add", "proj", program, config=config)
+other = os.path.join(folder, "other", "def.py")
+os.makedirs(os.path.dirname(other))
+with open(other, "w") as f:
+    f.write("""from SciRooPlot import *
+pm = PlotManager("other")
+pm.AddBasePlot(PlotManager.MakeBasePlot("1d"))
+plot = Plot("r", "h", "1d")
+plot[1].AddFunction("x")
+pm.AddPlot(plot)
+pm.SaveProject()
+""")
+run(SRP, "add", "other", other, config=config)
+run(SRP, "select", "proj", config=config)
 
 for sh in SHELLS:
     out = run(sh, ENV_SCRIPT)
@@ -50,6 +64,8 @@ false || {{ plot .* q list; }}
 plot nosuch .* list; echo status $?
 plot g p list | cat
 echo glob *.txt
+SCIROOPLOT_PROJECT=other plot .* .* list
+plot g p list
 """.format(folder=folder)
     out = shell(typed, sh, config=config, typed=True)
     lines = out.stdout.splitlines()
@@ -58,6 +74,7 @@ echo glob *.txt
     check(f"{sh}: plot .* .* at the prompt gets the patterns unexpanded", plotted[:2] == [" - p from group g", " - q from group g"], out.tail())
     check(f"{sh}: plot after && and in braces after || gets the patterns unexpanded", plotted[2:5] == [" - p from group g", " - q from group g", " - q from group g"], f"{plotted}")
     check(f"{sh}: plot keeps its exit status", "status 1" in lines, out.tail())
+    check(f"{sh}: a variable set in front of plot is used for that plot only", plotted[6:] == [" - r from group h", " - p from group g"], f"{plotted}")
     check(f"{sh}: globbing works after plot, also after plot in a pipeline", globs == ["glob a.txt b.txt"] * 2, f"{globs}")
     check(f"{sh}: no errors at the prompt", not [line for line in out.stderr.splitlines() if "rror" in line or "not found" in line or "read-only" in line], out.stderr[-300:])
 
