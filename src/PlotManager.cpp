@@ -197,7 +197,7 @@ string PlotManager::UserDataFile(const string& projectName, const PlotManager* m
   const auto& configPath = Config::Get().Path();
   if (configPath.empty()) return "";
   if (!projectName.empty()) return (Config::Get().ProjectPath(projectName) / "UserData.root").string();
-  return (configPath / fmt::format("UserData_{}_{}.root", gSystem->GetPid(), reinterpret_cast<std::uintptr_t>(manager))).string();
+  return (configPath / fmt::format("UserData_{}_{}_{}.root", gSystem->HostName(), gSystem->GetPid(), reinterpret_cast<std::uintptr_t>(manager))).string();
 }
 
 //**************************************************************************************************
@@ -246,7 +246,7 @@ struct PlotManager::canvas_deleter_t {
 string PlotManager::UserDataProcessFile() const
 {
   if (mProjectName.empty() || mUserDataFile.empty()) return mUserDataFile;
-  return (Config::Get().Path() / fmt::format("UserData_{}_{}.root", gSystem->GetPid(), mProjectName)).string();
+  return (Config::Get().Path() / fmt::format("UserData_{}_{}_{}.root", gSystem->HostName(), gSystem->GetPid(), mProjectName)).string();
 }
 
 //**************************************************************************************************
@@ -589,13 +589,17 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
   std::error_code dirError;
   std::filesystem::create_directories(std::filesystem::path(userDataFile).parent_path(), dirError);
   if (!startedFiles.count(userDataFile)) {
-    // the files of processes that ended without removing theirs (ended by a signal, e.g. a batch time limit)
-    static const std::regex processFile(R"(UserData_(\d{1,9})_.+\.root)");
+    // the files of processes of this host that ended without removing theirs (ended by a signal, e.g. a batch time limit); the config
+    // path may be shared with other hosts (a home on a network file system), whose processes this host cannot see
+    const string ownHost = fmt::format("UserData_{}_", gSystem->HostName());
+    static const std::regex processFile(R"((\d{1,9})_.+\.root)");
     std::error_code listError;
     for (const auto& entry : std::filesystem::directory_iterator(Config::Get().Path(), listError)) {
       const string fileName = entry.path().filename().string();
+      if (fileName.compare(0, ownHost.size(), ownHost) != 0) continue;
+      const string rest = fileName.substr(ownHost.size());
       std::smatch match;
-      if (std::regex_match(fileName, match, processFile) && kill(static_cast<pid_t>(std::stol(match[1])), 0) != 0 && errno == ESRCH) {
+      if (std::regex_match(rest, match, processFile) && kill(static_cast<pid_t>(std::stol(match[1])), 0) != 0 && errno == ESRCH) {
         std::filesystem::remove(entry.path(), listError);
       }
     }

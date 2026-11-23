@@ -12,6 +12,7 @@ import os
 import pty
 import select
 import signal
+import socket
 import subprocess
 import time
 
@@ -133,9 +134,11 @@ check(
 
 # the in-memory inputs of a program: its project's UserData.root replaced only once the program saves the project (a second run of the
 # program at the same time reads the stored data meanwhile), the files of the process gone when it ends, also those of an ended process
+# of this host, but not those of another host sharing the config path (its processes cannot be seen from here)
 config = config_folder("userdata_config")
 deadPid = 4194304 + 1  # beyond the largest process id of Linux
-leftover = os.path.join(config, f"UserData_{deadPid}_123.root")
+leftover = os.path.join(config, f"UserData_{socket.gethostname()}_{deadPid}_123.root")
+otherHost = os.path.join(config, f"UserData_other-host.example.org_{deadPid}_123.root")
 program = f"""
 import ROOT, sys
 import SciRooPlot as S
@@ -159,9 +162,10 @@ print("AFTER", stored())
 """
 first = python(program.replace("sys.argv[1]", "'1'"), config=config)
 open(leftover, "w").close()
+open(otherHost, "w").close()
 second = python(program.replace("sys.argv[1]", "'2'"), config=config)
 check("in-memory inputs: UserData.root of the project is written by SaveProject", "AFTER 1.0" in first.stdout, first.tail())
 check("in-memory inputs: a second run leaves UserData.root as it was until it saves the project", "BEFORE 1.0" in second.stdout and "AFTER 2.0" in second.stdout, second.tail())
 processFiles = [f for f in os.listdir(config) if f.startswith("UserData_")]
-check("in-memory inputs: no file of a process left when it ended, also of an ended process", not processFiles, str(processFiles))
+check("in-memory inputs: no file of a process left when it ended, also of an ended process of this host", processFiles == [os.path.basename(otherHost)], str(processFiles))
 finish()
