@@ -13,7 +13,8 @@ The long tests of `extended/` are registered with `-DSCIROOPLOT_EXTENDED_TESTS=O
 (the weekly CI runs them with the full lists, and with the sanitizer build).
 
 A failing test prints its failed checks with `--output-on-failure`. A test file can also run on its own:
-`SRP_PREFIX=build PYTHONPATH=tests python3 tests/frames/user_ranges.py`.
+`SRP_PREFIX=build PYTHONPATH=tests python3 tests/frames/user_ranges.py` (its data in `build/tests/work/frames.user_ranges`, as under CTest;
+`SRP_TESTS_WORK` names another folder, which is emptied).
 
 ## Layout
 

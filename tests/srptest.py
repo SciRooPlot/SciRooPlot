@@ -31,7 +31,10 @@ import numpy as np
 PREFIX = os.environ.get("SRP_PREFIX", "")
 if not os.path.isfile(os.path.join(PREFIX, "bin", "plot")):
     sys.exit("SRP_PREFIX must name a build or install directory of SciRooPlot: run the tests with ctest")
-WORK = os.path.abspath(os.environ.get("SRP_TESTS_WORK", "work"))
+# the scratch folder of the test (emptied here): CTest gives one per test, a test run on its own gets the same place under SRP_PREFIX
+_script = os.path.abspath(sys.argv[0])
+_ownWork = os.path.join(PREFIX, "tests", "work", f"{os.path.basename(os.path.dirname(_script))}.{os.path.splitext(os.path.basename(_script))[0]}")
+WORK = os.path.abspath(os.environ.get("SRP_TESTS_WORK", _ownWork))
 FULL = os.environ.get("SRP_TESTS_FULL") == "1"
 shutil.rmtree(WORK, ignore_errors=True)
 os.makedirs(WORK)
