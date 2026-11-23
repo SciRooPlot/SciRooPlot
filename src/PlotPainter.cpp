@@ -2966,10 +2966,16 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
       if (axisLabel == 'Y' && frameDim == 1) continue;
       const char padLabel = HBarAxis(axisLabel, hbarFrame);  // where it is drawn
       const char valueLabel = (hbarFrame) ? 'X' : 'Y';       // the pad axis of the contents of a 1d frame
+      const TAxis* axis = (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis();
       optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
+      // an axis without positive range loses its log scale (ApplyAxisSettings): a lower range at or below zero applies to it again
+      if (!userMin && axis->GetXmax() <= 0.) {
+        for (const auto* axisSettings : AxisSettings(pad, padDefaults, padLabel)) {
+          if (axisSettings->GetMinRange()) userMin = axisSettings->GetMinRange();
+        }
+      }
       optional<double_t> userMax = MaxRange(pad, padDefaults, padLabel);
       const optional<bool> logY = IsLog(pad, padDefaults, valueLabel);
-      const TAxis* axis = (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis();
       const optional<double_t> rangeMin = userMin, rangeMax = userMax;  // the user's range, before the reset below
       constexpr double_t relTol = 1e-12;
       // a log axis shows the bins from the first positive edge on: a positive minimum below it is beyond the shown axis as well
@@ -3358,7 +3364,19 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
 
   // ranges are only touched if the user set one: ROOT's bin edges are not exactly reproducible (e.g. 4.000000000000001 instead of 4),
   // so feeding the drawn range back in through SetRangeUser would add the overflow bin
-  auto applyUserRange = [&](optional<double_t> rangeMin, optional<double_t> rangeMax) {
+  // one side of the dependent axis set beyond the other end of the data (SetMinRange(50) for contents up to 10): ROOT would draw an
+  // inverted range
+  auto checkEmptyRange = [&](optional<double_t> rangeMin, optional<double_t> rangeMax) {
+    if (rangeMin.has_value() == rangeMax.has_value()) return;
+    const double_t min = rangeMin.value_or(axisHist_ptr->GetMinimum());
+    const double_t max = rangeMax.value_or(axisHist_ptr->GetMaximum());
+    if (min >= max) {
+      logger::warning("The range {} to {} of the {} axis in pad {} is empty: the automatic range is used.", min, max, axisLabel, padID);
+      (rangeMin) ? axisHist_ptr->SetMinimum() : axisHist_ptr->SetMaximum();
+    }
+  };
+  // a lower end set aside for a log scale may apply again once the scale is dropped (below): only then is an upper end alone checked
+  auto applyUserRange = [&](optional<double_t> rangeMin, optional<double_t> rangeMax, bool checkEmpty) {
     if (!rangeMin && !rangeMax) return;
     const bool isBinnedAxis = (histLabel == 'X') || (frameDim > 1 && histLabel == 'Y') || (frameDim == 3 && histLabel == 'Z');
     const bool isPolygonAxis = histLabel != 'Z' && axisHist_ptr->InheritsFrom(TH2Poly::Class());
@@ -3390,18 +3408,10 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
       // the dependent axis (y of 1d, z of 2d) has no bins: its range is the minimum and maximum of the histogram
       if (rangeMin) axisHist_ptr->SetMinimum(*rangeMin);
       if (rangeMax) axisHist_ptr->SetMaximum(*rangeMax);
-      // one side set beyond the other end of the data (SetMinRange(50) for contents up to 10): ROOT would draw an inverted range
-      if (rangeMin.has_value() != rangeMax.has_value()) {
-        const double_t min = rangeMin.value_or(axisHist_ptr->GetMinimum());
-        const double_t max = rangeMax.value_or(axisHist_ptr->GetMaximum());
-        if (min >= max) {
-          logger::warning("The range {} to {} of the {} axis in pad {} is empty: the automatic range is used.", min, max, axisLabel, padID);
-          (rangeMin) ? axisHist_ptr->SetMinimum() : axisHist_ptr->SetMaximum();
-        }
-      }
+      if (checkEmpty) checkEmptyRange(rangeMin, rangeMax);
     }
   };
-  applyUserRange(userRangeMin, userRangeMax);
+  applyUserRange(userRangeMin, userRangeMax, !ignoredRangeMin);
 
   // a log scale needs a positive range: ROOT otherwise complains and draws nothing (or the data outside of the frame);
   // in a 3D view only the binned axes (the height of a lego or surface is ROOT's)
@@ -3416,7 +3426,7 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
       else
         pad_ptr->SetLogz(false);
       // a lower range left out for the log scale applies again on the linear axis
-      if (ignoredRangeMin) applyUserRange(std::exchange(ignoredRangeMin, nullopt), userRangeMax);
+      if (ignoredRangeMin) applyUserRange(std::exchange(ignoredRangeMin, nullopt), userRangeMax, true);
     };
     if (isLog && isDependentAxis) {
       // the smallest positive value is taken from the data drawn inside the frame's ranges (the binned axes are set before):
@@ -3503,6 +3513,7 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
     }
   }
   const bool stillLog = (axisLabel == 'X') ? pad_ptr->GetLogx() : ((axisLabel == 'Y') ? pad_ptr->GetLogy() : pad_ptr->GetLogz());
+  if (ignoredRangeMin && !((histLabel == 'X') || (frameDim > 1 && histLabel == 'Y') || (frameDim == 3 && histLabel == 'Z'))) checkEmptyRange(nullopt, userRangeMax);
   if (stillLog && ignoredRangeMin && !(axisLabel == 'Z' && frameDim == 1)) {
     ReportIgnored(fmt::format("The lower range ({:g}) of the {} axis of pad {}", *ignoredRangeMin, axisLabel, padID), "a log scale shows only positive values, the axis starts at its automatic minimum");
   }

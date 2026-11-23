@@ -12,7 +12,8 @@ value and coordinates at and below zero (variant crossing), without a range and 
   zero (2d functions as drawn, sampled as the frame), and is off with a warning where 2d data shows no positive value
 - a positive lower range below the data widens the frame to exactly that value, also below bins that end at or cross zero; a lower range
   at or below zero is reported and ignored: the frame is the one with only the upper end of the range set (where the log scale is off for
-  data without positive values, the whole range applies to the linear axis)
+  data or bins without positive values, the whole range applies to the linear axis, as without log: the frame widened to it, a range
+  then empty warned about as without log, and only then)
 - a log x or y axis of a flat frame whose range holds no power of ten, on which ROOT draws no labels, is named in a hint; one that holds a
   power of ten is not, nor one with the labels between the powers of ten (Axis::SetMoreLogLabels), which reaches the drawn x, y and z axis
 Covers: lowest bins of log z not drawn, log y minimum from bins and points outside the frame, graph on log x
@@ -75,17 +76,26 @@ plot[1]["X"].SetRange(0.2, 0.8)
 plot[1]["Y"].SetRange(0.2, 0.8)
 p.pm.AddPlot(plot)
 # negative data with a range whose lower end is at or below zero: the log scale is off, the axis shows the whole range as without log
+# (also a range below the data, an upper end alone below it (empty, warned about with and without log), and bins at or below zero with
+# a lower range beyond them)
 negatives = {"neg1": ROOT.TH1D("neg1", "", 10, 0.0, 10.0), "neg2": ROOT.TH2D("neg2", "", 10, 0.0, 10.0, 10, 0.0, 10.0)}
 for h in negatives.values():
     for c in range(h.GetNcells()):
         if not (h.IsBinUnderflow(c) or h.IsBinOverflow(c)):
             h.SetBinContent(c, -1.0 - c % 10)
+negatives["negx"] = ROOT.TH1D("negx", "", 10, -10.0, 0.0)
+for b in range(1, 11):
+    negatives["negx"].SetBinContent(b, b)
 p.source("negatives", negatives)
-for name, axis in (("neg1", "Y"), ("neg2", "Z")):
+NEGATIVE_RANGES = [("neg1", "Y", (-30.0, 5.0)), ("neg2", "Z", (-30.0, 5.0)), ("neg1", "Y", (-20.0, -12.0)), ("neg1", "Y", (None, -12.0)), ("negx", "X", (-20.0, -2.0))]
+for k, (name, axis, (low, high)) in enumerate(NEGATIVE_RANGES):
     for log in (True, False):
-        plot = S.Plot(f"{name}_{'log' if log else 'linear'}", "log", "1d" if name == "neg1" else "2d")
+        plot = S.Plot(f"neg{k}_{'log' if log else 'linear'}", "log", "2d" if name == "neg2" else "1d")
         plot[1].AddData(name, "negatives")
-        plot[1][axis].SetRange(-30.0, 5.0)
+        if low is None:
+            plot[1][axis].SetMaxRange(high)
+        else:
+            plot[1][axis].SetRange(low, high)
         if log:
             plot[1][axis].SetLog()
         p.pm.AddPlot(plot)
@@ -364,12 +374,16 @@ said = [m for m in run.messages("more_labels", "log") if "holds no power of ten"
 check("log axes without a power of ten, labelled between the powers of ten: no hint", not said, " | ".join(said))
 fh = run.frame_hist("ones", "log")
 check("log z colours the ones next to a maximum of 2e4", bool(fh) and 0 < fh.GetMinimum() <= 1.0, f"z from {fh.GetMinimum()}" if fh else "plot not made")
-for name, axis in (("neg1", "Y"), ("neg2", "Z")):
-    ranges = [run.frame(name + suffix, "log") for suffix in ("_log", "_linear")]
+for k, (name, axis, rangeSet) in enumerate(NEGATIVE_RANGES):
+    plots = [f"neg{k}_log", f"neg{k}_linear"]
+    ranges = [run.frame(plot, "log") for plot in plots]
     if axis == "Z":
-        ranges = [{"Z": (h.GetMinimum(), h.GetMaximum())} if h else None for h in (run.frame_hist(name + suffix, "log") for suffix in ("_log", "_linear"))]
+        ranges = [{"Z": (h.GetMinimum(), h.GetMaximum())} if h else None for h in (run.frame_hist(plot, "log") for plot in plots)]
     same = None not in ranges and all(close(ranges[0][axis][e], ranges[1][axis][e]) for e in (0, 1))
-    check(f"a log {axis} axis off for data without positive values keeps the range set: {name}", same, f"{ranges[0] and ranges[0][axis]}, without log {ranges[1] and ranges[1][axis]}")
+    what = f"{name}, range {rangeSet[0]} to {rangeSet[1]} on {axis}"
+    check(f"a log {axis} axis off for data without positive values keeps the range set: {what}", same, f"{ranges[0] and ranges[0][axis]}, without log {ranges[1] and ranges[1][axis]}")
+    empty = [[m for m in run.messages(plot, "log") if "is empty" in m or "contains no bins" in m] for plot in plots]
+    check(f"a range empty on the linear axis is warned about as without log, and only then: {what}", len(empty[0]) == len(empty[1]), f"with log {empty[0]}, without {empty[1]}")
 warned = run.warnings("is ignored: a log scale shows only positive values")
 check("each lower range at or below zero on log x is reported", len(warned) == nIgnored, f"{len(warned)} warnings for {nIgnored} cases")
 errors = run.errors()
