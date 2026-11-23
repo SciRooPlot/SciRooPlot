@@ -2847,7 +2847,7 @@ bool PlotManager::BrowseInteractively(const Plot& fullPlot, const string& mode, 
       mBrowseForward = true;
       if (browseTo((mBrowseHistory.empty()) ? *NextBrowseIndex(current, true) : mBrowseHistory.back())) break;
     } else if (auto report = (isClick) ? PositionReport(canvas->GetSelected(), canvas->GetSelectedPad()) : nullopt) {
-      if (!boxClicked) logger::info("{}", *report);
+      if (!boxClicked) logger::print("{}", *report);  // asked for: shown at any verbosity
       boxClicked = true;
     } else if (isClick || isValidKey) {
       // browsing goes round: after the last plot comes the first one, before the first one the last one (plots in between are not made)
@@ -3782,7 +3782,7 @@ bool PlotManager::HandleOpenWindows(bool& closeAll)
         if (key == 'x') closeAll = true;
         if (key == 'h') LogWindowKeys();
       } else if (auto report = (canvas->GetEvent() == kButton1Double) ? PositionReport(canvas->GetSelected(), canvas->GetSelectedPad()) : nullopt) {
-        logger::info("{}", *report);
+        logger::print("{}", *report);  // asked for: shown at any verbosity
       }
     }
     anyOpen = true;
