@@ -401,6 +401,11 @@ case(
     H(2, -0.5, 1.5, np.zeros(10)),
     lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions", "col", True).JoinByIndex("O2bc", "col.fIndexBCs", "b", True).Project1D(("b.matched", 2, [-0.5, 1.5])),
 )
+case(
+    "keeping rows without a match by the index column of a joined tree without rows, named without its alias: every row without a match there too",
+    H(2, -0.5, 1.5, np.zeros(10)),
+    lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions", "col", True).JoinByIndex("O2bc", "fIndexBCs", "b", True).Project1D(("b.matched", 2, [-0.5, 1.5])),
+)
 withBC = ~np.isnan(AO["bcTime"])
 case(
     "by an index column of a tree joined before into a tree whose first column is an array with a size column (FT0-like)",
@@ -434,6 +439,10 @@ FAILING = {  # what: (setup, the reason)
     "a tree joined by an index column of a joined tree without rows in any input": (
         lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions", "col", True).JoinByIndex("O2bc", "col.fIndexBCs", "b"),
         "index column col.fIndexBCs: col has no rows in any input of O2track, so no row has a match",
+    ),
+    "a tree joined by an index column of a joined tree without rows in any input, named without its alias": (
+        lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions", "col", True).JoinByIndex("O2bc", "fIndexBCs", "b"),
+        "index column fIndexBCs: col has no rows in any input of O2track, so no row has a match",
     ),
     "a joined tree missing beside a tree joined by an index column": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2nobc", "fIndexCollisions"), f"{ao2d[0]}:DF_0/O2nobc does not exist"),
     "a tree joined by keys from another data source without rows": (lambda pad: pad.AddData("tracks", "trk").Join(["events", "emptyKeys"], ["run", "event"], "ev"), "it has no rows in data source emptyKeys"),

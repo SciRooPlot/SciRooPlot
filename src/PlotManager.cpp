@@ -4733,11 +4733,16 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
         if ((qualifier.empty() || qualifier == other->GetName()) && columnLeaf(other.get(), column)) holders.push_back(other->GetName());
       }
       const bool isJoinedAlias = std::any_of(joinedChains.begin(), joinedChains.end(), [&](const auto& other) { return qualifier == other->GetName(); });
-      // a tree joined before without rows in any input, keeping every row without a match: no row has a match here either
-      const bool holderHasNoRows = !qualifier.empty() && std::any_of(joinMatches.begin(), joinMatches.end(), [&](const auto& match) { return match->alias == qualifier && !match->renames.empty(); });
-      if (holderHasNoRows && !isJoinedAlias) {
+      // a tree joined before without rows in any input, keeping every row without a match (its columns are defined, alias.column and
+      // column): no row has a match here either
+      const auto noRows = std::find_if(joinMatches.begin(), joinMatches.end(), [&](const auto& match) {
+        if (match->renames.empty()) return false;
+        if (!qualifier.empty()) return match->alias == qualifier;
+        return holders.empty() && std::any_of(match->renames.begin(), match->renames.end(), [&](const auto& rename) { return rename.first == column; });
+      });
+      if (noRows != joinMatches.end() && !isJoinedAlias) {
         if (join.keepUnmatched && firstJoinedTree) return keepAllUnmatched();
-        return fmt::format("index column {}: {} has no rows in any input of {}, so no row has a match", join.indexColumn, qualifier, treeName);
+        return fmt::format("index column {}: {} has no rows in any input of {}, so no row has a match", join.indexColumn, (*noRows)->alias, treeName);
       }
       if (!qualifier.empty() && qualifier != treeAlias && !isJoinedAlias) {
         return fmt::format("index column {}: {} is neither {} nor a tree joined before", join.indexColumn, qualifier, treeAlias);
