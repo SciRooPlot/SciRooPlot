@@ -3140,17 +3140,25 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
     // contents of one value (a flat map, a ratio of a map by itself): ROOT widens the range by 10 % of the value for the colour scale,
     // but data drawn on a frame with equal ends gets the lowest colour; the ends not set by the user are widened the same way here
     // (contents of zero only stay as they are: COL leaves such cells empty)
+    bool widened = false;
     if (min == max && min != 0.) {
       const double_t widening = 0.1 * std::abs(min);
       const char valueLabel = (frameDim == 3) ? 'C' : 'Z';
-      if (!MinRange(pad, padDefaults, valueLabel) && !storedRangeZ.first) min -= widening;
-      if (!MaxRange(pad, padDefaults, valueLabel) && !storedRangeZ.second) max += widening;
+      if (!MinRange(pad, padDefaults, valueLabel) && !storedRangeZ.first) {
+        min -= widening;
+        widened = true;
+      }
+      if (!MaxRange(pad, padDefaults, valueLabel) && !storedRangeZ.second) {
+        max += widening;
+        widened = true;
+      }
     }
     axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
     axisHist_ptr->SetMinimum(min);
     axisHist_ptr->SetMaximum(max);
-    // the colour levels of the scale were computed for the range of the contents when the frame was drawn
-    if (contentRange && !axisHist_ptr->TestBit(TH1::kUserContour)) axisHist_ptr->SetContour(axisHist_ptr->GetContour());
+    // the colour levels of the scale were computed for the range of the contents when the frame was drawn (ROOT does not compute
+    // them again for the boxes of a 3d histogram)
+    if ((contentRange || widened) && !axisHist_ptr->TestBit(TH1::kUserContour)) axisHist_ptr->SetContour(axisHist_ptr->GetContour());
     axisHist_ptr->SetMarkerSize(0);
     axisHist_ptr->SetLineWidth(0);
     axisHist_ptr->SetFillStyle(0);
