@@ -4,7 +4,7 @@ the search), inside a nameless list or an open file (their contents added direct
 when they are added: deleting them afterwards (also by Python's garbage collection), changing them or filling the list they came in
 leaves the data source as it was, and the caller's lists and files are left unchanged. The same object can be added to two data sources.
 A second AddDataSource with the same name adds to the data source (an object of a name already there replaces it with a warning), with
-replace only the new inputs are left; objects and files can be mixed in one data source. A nameless object is skipped with a warning; an object whose name holds slashes is stored in those folders
+replace only the new inputs are left; objects and files can be mixed in one data source. A nameless object is skipped with a warning; an object whose name holds slashes is stored in those folders (an object named like such a folder is not stored, with a warning)
 (found by its name as a path, as objects in files).
 Trees in lists, from memory or read from a file, are copied with all their entries. Two PlotManagers of one project keep the objects of
 both (in UserData.root of the project once one of them saves it). The objects reach the plot program through the project (UserData.root); GeneratePlots in the defining process draws the same
@@ -252,7 +252,7 @@ inner = ROOT.TList(); inner.SetName("x"); inner.Add(hist("y", 8)); clash.Add(inn
 ROOT.SetOwnership(clash, False)
 ROOT.SetOwnership(inner, False)
 pm.AddDataSource("clashing", clash)
-pm.AddDataSource("slashed", hist("pt/central", 9))
+pm.AddDataSource("slashed", [hist("pt/central", 9), hist("pt", 10)])  # then an object named like the folder
 second = S.PlotManager("defining")
 second.AddDataSource("other", hist("o", 6))
 pm.AddBasePlot(S.PlotManager.MakeBasePlot("1d"))
@@ -279,6 +279,7 @@ drawnHere = dict(re.findall(r"^DRAWN (\w) (\S+)$", out.stdout, re.M))
 check("a nameless object is skipped with a warning", "Cannot add nameless object of type TH1D to data source nameless" in out.text, out.tail())
 check("an object beside a nameless one is added", drawnHere.get("a") == "2.0", out.tail())
 check("an object whose name is a path (pt/central) is found by it", drawnHere.get("c") == "9.0", out.tail())
+check("an object named like a folder of slashed names (pt beside pt/central): not stored, with a warning, the folder kept", "Data source slashed: pt cannot be stored, a folder of that name is stored there already" in out.text and "receives a second object named pt" not in out.text, out.tail())
 check("a second object of the same name replaces the first, with a warning", drawnHere.get("b") == "4.0" and "Data source twice receives a second object named h" in out.text, out.tail())
 check("GeneratePlots without an output directory: one error for all plots, naming SetOutputDirectory", out.text.count("No output directory was specified") == 1 and "SetOutputDirectory" in out.text, out.tail())
 check("GeneratePlots with the parent of the output directory missing: one error for all plots, before painting", out.text.count("of output directory does not exist") == 1 and "could not be created" not in out.text, out.tail())

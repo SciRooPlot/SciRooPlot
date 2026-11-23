@@ -736,7 +736,12 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
         objectDir = subDir;
       }
     }
-    if (objectDir->FindKey(storedName.data())) {
+    TKey* storedKey = objectDir->FindKey(storedName.data());
+    if (storedKey && key_inherits(storedKey, TDirectory::Class())) {
+      logger::warning("Data source {}: {}{} cannot be stored, a folder of that name is stored there already.", dataSource, folder, name);
+      return;
+    }
+    if (storedKey) {
       logger::warning("Data source {} receives a second object named {}{}: it replaces the first one.", dataSource, folder, name);
     }
     objectDir->cd();
