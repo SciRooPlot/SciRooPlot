@@ -54,7 +54,6 @@
 #include <TH3.h>
 #include <TH3D.h>
 #include <THLimitsFinder.h>
-#include <THStack.h>
 #include <THashList.h>
 #include <THn.h>
 #include <THnSparse.h>
@@ -65,7 +64,6 @@
 #include <TLegendEntry.h>
 #include <TLine.h>
 #include <TList.h>
-#include <TMultiGraph.h>
 #include <TObjArray.h>
 #include <TObject.h>
 #include <TObjectTable.h>
@@ -5221,8 +5219,8 @@ void PlotPainter::CollectCustomColors(TObject* obj, std::set<int32_t>& colors)
 
 //**************************************************************************************************
 /**
- * Calls visit with each object an object holds and its option: the primitives of a pad, the functions of histograms and graphs, the graphs
- * of a TMultiGraph, the histograms of a THStack, the rows of a legend and the lines of a TPaveText.
+ * Calls visit with each object an object holds and its option: the primitives of a pad, the functions of histograms and graphs, the rows
+ * of a legend and the lines of a TPaveText.
  */
 //**************************************************************************************************
 void PlotPainter::ForEachContained(TObject* obj, const std::function<void(TObject*, const char*)>& visit)
@@ -5236,8 +5234,6 @@ void PlotPainter::ForEachContained(TObject* obj, const std::function<void(TObjec
   if (auto pad = dynamic_cast<TPad*>(obj)) walk(pad->GetListOfPrimitives());
   if (auto hist = dynamic_cast<TH1*>(obj)) walk(hist->GetListOfFunctions());
   if (auto graph = dynamic_cast<TGraph*>(obj)) walk(graph->GetListOfFunctions());
-  if (auto multiGraph = dynamic_cast<TMultiGraph*>(obj)) walk(multiGraph->GetListOfGraphs());
-  if (auto stack = dynamic_cast<THStack*>(obj)) walk(stack->GetHists());
   if (auto legend = dynamic_cast<TLegend*>(obj)) walk(legend->GetListOfPrimitives());
   if (auto paveText = dynamic_cast<TPaveText*>(obj)) walk(paveText->GetListOfLines());
 }
@@ -7301,14 +7297,6 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
     } else if (auto* graph2d = dynamic_cast<TGraph2D*>(obj); graph2d && !pad->GetView() && graph2d->GetN() > 0) {
       // a 2d graph drawn into the frame (colours, contours): a map over the range of its points
       setRect(cellX(padX(graph2d->GetXmin())), cellY(padY(graph2d->GetYmin())), cellX(padX(graph2d->GetXmax())), cellY(padY(graph2d->GetYmax())), kMap);
-    } else if (auto* multiGraph = dynamic_cast<TMultiGraph*>(obj)) {
-      for (auto* subGraph : *multiGraph->GetListOfGraphs()) {
-        markGraph(static_cast<TGraph*>(subGraph));
-      }
-    } else if (auto* stack = dynamic_cast<THStack*>(obj)) {
-      for (auto* subHist : *stack->GetHists()) {
-        markHist(static_cast<TH1*>(subHist));
-      }
     } else if (auto* func = dynamic_cast<TF1*>(obj)) {
       markFunc(func);
     }
