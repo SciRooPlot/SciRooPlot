@@ -710,19 +710,45 @@ void PlotManager::AddDataSource(const string& dataSource, const vector<TObject*>
       }
       return;
     }
-    if (target->FindKey(name.data())) {
+    // a name with slashes is a path, as the names of objects in files: the object goes into those folders, where AddData finds it by it
+    TDirectory* objectDir = target;
+    string storedName = name;
+    if (name.find('/') != string::npos) {
+      auto parts = split_string(name, '/');
+      parts.erase(std::remove(parts.begin(), parts.end(), ""), parts.end());
+      if (parts.empty()) {
+        logger::warning("Cannot add object {} of type {} to data source {}: its name holds no more than slashes.", name, object->ClassName(), dataSource);
+        return;
+      }
+      storedName = parts.back();
+      parts.pop_back();
+      for (const auto& part : parts) {
+        TDirectory* subDir = objectDir->GetDirectory(part.data());
+        if (!subDir && objectDir->FindKey(part.data())) {
+          logger::warning("Data source {}: {}{} cannot be stored in folder {}, an object of that name is stored there already.", dataSource, folder, name, part);
+          return;
+        }
+        if (!subDir) subDir = objectDir->mkdir(part.data());
+        if (!subDir) {
+          logger::error("Could not create folder {} in data source {}.", part, dataSource);
+          return;
+        }
+        objectDir = subDir;
+      }
+    }
+    if (objectDir->FindKey(storedName.data())) {
       logger::warning("Data source {} receives a second object named {}{}: it replaces the first one.", dataSource, folder, name);
     }
-    target->cd();
+    objectDir->cd();
     // a tree read from a file keeps its entries in that file, writing it would only store the header: store a copy of all entries
     // (GetDirectory()->GetFile() of a tree in memory is the file opened last, here the one written to)
     if (auto* tree = dynamic_cast<TTree*>(object); tree && tree->GetCurrentFile()) {
       TTree* copy = tree->CloneTree(-1, "fast");  // created in the current directory, i.e. in the target folder
-      copy->Write(name.data(), TObject::kWriteDelete);
+      copy->Write(storedName.data(), TObject::kWriteDelete);
       delete copy;
       return;
     }
-    object->Write(name.data(), TObject::kSingleKey | TObject::kWriteDelete);  // single key: a map stays one object
+    object->Write(storedName.data(), TObject::kSingleKey | TObject::kWriteDelete);  // single key: a map stays one object
   };
   for (auto object : inputs) {
     if (object) add(object, dir, "");

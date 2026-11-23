@@ -4,7 +4,8 @@ the search), inside a nameless list or an open file (their contents added direct
 when they are added: deleting them afterwards (also by Python's garbage collection), changing them or filling the list they came in
 leaves the data source as it was, and the caller's lists and files are left unchanged. The same object can be added to two data sources.
 A second AddDataSource with the same name adds to the data source (an object of a name already there replaces it with a warning), with
-replace only the new inputs are left; objects and files can be mixed in one data source. A nameless object is skipped with a warning.
+replace only the new inputs are left; objects and files can be mixed in one data source. A nameless object is skipped with a warning; an object whose name holds slashes is stored in those folders
+(found by its name as a path, as objects in files).
 Trees in lists, from memory or read from a file, are copied with all their entries. Two PlotManagers of one project keep the objects of
 both (in UserData.root of the project once one of them saves it). The objects reach the plot program through the project (UserData.root); GeneratePlots in the defining process draws the same
 (without an output directory, or with its parent missing, one error for every mode that writes files, before painting; print, which
@@ -251,10 +252,11 @@ inner = ROOT.TList(); inner.SetName("x"); inner.Add(hist("y", 8)); clash.Add(inn
 ROOT.SetOwnership(clash, False)
 ROOT.SetOwnership(inner, False)
 pm.AddDataSource("clashing", clash)
+pm.AddDataSource("slashed", hist("pt/central", 9))
 second = S.PlotManager("defining")
 second.AddDataSource("other", hist("o", 6))
 pm.AddBasePlot(S.PlotManager.MakeBasePlot("1d"))
-for name, data, source in (("a", "named", "nameless"), ("b", "h", "twice")):
+for name, data, source in (("a", "named", "nameless"), ("b", "h", "twice"), ("c", "pt/central", "slashed")):
     plot = S.Plot(name, "g", "1d")
     plot[1].AddData(data, source)
     pm.AddPlot(plot)
@@ -266,7 +268,7 @@ print("LIST", pm.GeneratePlots("list"))  # a mode of the plot command
 pm.SetOutputDirectory({p.path("defining")!r})
 pm.GeneratePlots("file")
 f = ROOT.TFile.Open({p.path("defining", "Plots.root")!r})
-for name in ("a", "b"):
+for name in ("a", "b", "c"):
     key = next((k for k in f.Get("g").GetListOfKeys() if k.GetName().split(":")[0] == name), None)
     pad = key.ReadObj().GetPrimitive("Pad_1") if key else None
     data = [o for o in pad.GetListOfPrimitives() if o.GetName().startswith("1:")] if pad else []
@@ -276,6 +278,7 @@ second.SaveProject()
 drawnHere = dict(re.findall(r"^DRAWN (\w) (\S+)$", out.stdout, re.M))
 check("a nameless object is skipped with a warning", "Cannot add nameless object of type TH1D to data source nameless" in out.text, out.tail())
 check("an object beside a nameless one is added", drawnHere.get("a") == "2.0", out.tail())
+check("an object whose name is a path (pt/central) is found by it", drawnHere.get("c") == "9.0", out.tail())
 check("a second object of the same name replaces the first, with a warning", drawnHere.get("b") == "4.0" and "Data source twice receives a second object named h" in out.text, out.tail())
 check("GeneratePlots without an output directory: one error for all plots, naming SetOutputDirectory", out.text.count("No output directory was specified") == 1 and "SetOutputDirectory" in out.text, out.tail())
 check("GeneratePlots with the parent of the output directory missing: one error for all plots, before painting", out.text.count("of output directory does not exist") == 1 and "could not be created" not in out.text, out.tail())
