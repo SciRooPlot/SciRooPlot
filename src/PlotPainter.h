@@ -481,6 +481,7 @@ class PlotPainter
 
   double_t mScale{1.};
   bool mOnScreen{};
+  std::string mPlotLabel;  // the plot in hints (Plot::Label)
   std::map<char, std::vector<std::vector<uint8_t>>> mSharedAxes;
   std::set<std::pair<uint8_t, char>> mCommonRanges;
   std::map<std::pair<uint8_t, char>, std::pair<double_t, double_t>> mFrameRanges;

@@ -537,6 +537,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
 
   // ROOT reads some absolute sizes from gStyle only at paint time (see end of this function): undo the scale of a previous plot before drawing
   RestoreStyle();
+  mPlotLabel = Plot::Label(plot);
 
   double_t canvasWidth = std::round(mScale * plot.GetWidth().value_or(gStyle->GetCanvasDefW()));
   double_t canvasHeight = std::round(mScale * plot.GetHeight().value_or(gStyle->GetCanvasDefH()));
@@ -1452,7 +1453,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
       }
       if (overlap) {
         if (mReportedIgnored.insert("overlapping x labels " + std::to_string(padID)).second) {
-          logger::hint("The labels of the X axis in pad {} run into each other: fewer divisions (SetNumDivisions), or SetNoExponent(false) for ROOT's power of ten (with room for it at the end of the axis, e.g. a right margin).", padID);
+          logger::hint("Plot {}: the labels of the X axis in pad {} run into each other: fewer divisions (SetNumDivisions), or SetNoExponent(false) for ROOT's power of ten (with room for it at the end of the axis, e.g. a right margin).", mPlotLabel, padID);
         }
       }
     }
@@ -6570,10 +6571,10 @@ void PlotPainter::HintAtPlacedBox(TPad* pad, const string& boxType, double_t upp
 {
   if (logger::muted() || logger::detail::verbosity() < logger::detail::level::hint) return;
   if (BeyondPad(upperLeftX, upperLeftY, widthNDC, heightNDC)) {
-    logger::hint("The {} reaches beyond its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}, in units of the pad): the part outside of it is cut off.", boxType, upperLeftX, upperLeftY, widthNDC, heightNDC);
+    logger::hint("Plot {}: the {} reaches beyond its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}, in units of the pad): the part outside of it is cut off.", mPlotLabel, boxType, upperLeftX, upperLeftY, widthNDC, heightNDC);
   }
   if (CoversData(pad, upperLeftX, upperLeftY - heightNDC, widthNDC, heightNDC)) {
-    logger::hint("The {} at the position set for it lies on drawn data (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}, in units of the pad).", boxType, upperLeftX, upperLeftY, widthNDC, heightNDC);
+    logger::hint("Plot {}: the {} at the position set for it lies on drawn data (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}, in units of the pad).", mPlotLabel, boxType, upperLeftX, upperLeftY, widthNDC, heightNDC);
   }
 }
 
@@ -6662,7 +6663,7 @@ void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, bo
   const bool found = fitsIntoFrame && FindFreeSpace(pad, freeArea, width, height, placement, lowerLeftX, lowerLeftY, coversData);
   if (found && !coversData) return;
   if (found) {
-    logger::hint("There is no free space for the {} inside the frame: it lies on the data, beside the other boxes (lower left corner ({:.3g}, {:.3g}), in units of the pad).",
+    logger::hint("Plot {}: there is no free space for the {} inside the frame: it lies on the data, beside the other boxes (lower left corner ({:.3g}, {:.3g}), in units of the pad).", mPlotLabel,
                  boxType, lowerLeftX, lowerLeftY);
     return;
   }
@@ -6670,9 +6671,9 @@ void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, bo
   lowerLeftX = freeArea[0];
   lowerLeftY = freeArea[3] - height;
   if (fitsIntoFrame) {
-    logger::hint("There is no free space for the {} inside the frame, not even beside the other boxes: it lies on the data and the other boxes in the top left corner of the frame.", boxType);
+    logger::hint("Plot {}: there is no free space for the {} inside the frame, not even beside the other boxes: it lies on the data and the other boxes in the top left corner of the frame.", mPlotLabel, boxType);
   } else {
-    logger::hint("The {} ({:.2f} x {:.2f}) is larger than the space inside the frame ({:.2f} x {:.2f}, in units of the pad size): it lies in the top left corner of the frame, on the data; use fewer lines, more columns or a smaller text size.",
+    logger::hint("Plot {}: the {} ({:.2f} x {:.2f}) is larger than the space inside the frame ({:.2f} x {:.2f}, in units of the pad size): it lies in the top left corner of the frame, on the data; use fewer lines, more columns or a smaller text size.", mPlotLabel,
                  boxType, width, height, freeWidthNDC, freeHeightNDC);
   }
 }

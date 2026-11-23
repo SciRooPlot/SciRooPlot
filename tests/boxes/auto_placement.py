@@ -41,7 +41,7 @@ BOXES = {  # the number of boxes; legend_columns: a legend of two columns with t
 }
 EXTRAS = ("none", "stats", "region", "image", "full", "view", "ratio")  # full: a region over the whole frame, no room beside the data; view: other viewing angles; ratio: the boxes in the ratio pad below
 PLACEMENTS = ("best_corner", "top_left", "top_right", "bottom_right", "bottom_left")
-NO_SPACE = ("There is no free space for the", "is larger than the space inside the frame")
+NO_SPACE = ("no free space for the", "is larger than the space inside the frame")
 
 
 VARIANTS = ("normal", "negative", "unsorted")
