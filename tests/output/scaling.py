@@ -1,5 +1,5 @@
 """The personal scale settings: bitmapscale s makes the bitmaps (png, jpg, gif) s times the canvas in each direction, with everything drawn
-scaled alike: the dashes and gaps of line styles 2 to 4 s times as long, the outline of open markers s pixels wide, filled markers still
+scaled alike: the dashes and gaps of line styles 2 to 4 s times as long, the outline of open markers s pixels wide (also of kCircle, which ROOT has no thick variant of), filled markers still
 filled; vector files (svg, pdf, eps) do not depend on it. screenscale s does the same for the plots shown on screen (mode show): the window
 shows the dashes and markers as the png at bitmapscale s (X11 has fixed patterns for styles 2 to 4, which SciRooPlot replaces by styles of
 its own). The screen part needs Xvfb and ImageMagick's import for the screenshot; it is left out without them. A program drawing on
@@ -22,6 +22,7 @@ STYLES = (2, 3, 4)
 for i, style in enumerate(STYLES):
     plot[1].AddLine((0.0, 0.2 + 0.15 * i), (1.0, 0.2 + 0.15 * i)).SetLine(style, 4.0, ROOT.kRed + i)
 plot[1].AddPoints([0.3], [0.8], "open").SetMarker(ROOT.kOpenCircle, 6.0, ROOT.kBlue)
+plot[1].AddPoints([0.15], [0.8], "circle").SetMarker(ROOT.kCircle, 6.0, ROOT.kGreen + 2)
 plot[1].AddPoints([0.7], [0.8], "full").SetMarker(ROOT.kFullCircle, 6.0, ROOT.kBlue)
 plot[1]["X"].SetRange(0, 1)
 plot[1]["Y"].SetRange(0, 1)
@@ -57,9 +58,9 @@ def blue(pixels):
     return matches(pixels, rgb(ROOT.kBlue), 70)
 
 
-def ring(pixels):
-    """widths of the blue runs on the centre row of the open marker (left half)"""
-    mask = blue(pixels)[:, : pixels.shape[1] // 2]
+def ring(pixels, colour=ROOT.kBlue):
+    """widths of the runs of a colour on the centre row of the open marker of that colour (left half)"""
+    mask = matches(pixels, rgb(colour), 70)[:, : pixels.shape[1] // 2]
     ys = np.flatnonzero(mask.any(axis=1))
     if not len(ys):
         return []
@@ -74,7 +75,7 @@ def filled(pixels):
 
 
 def measure(pixels):
-    return {"dashes": [dashes(pixels, rgb(ROOT.kRed + i)) for i in range(len(STYLES))], "ring": ring(pixels)[:2], "filled": filled(pixels)}
+    return {"dashes": [dashes(pixels, rgb(ROOT.kRed + i)) for i in range(len(STYLES))], "ring": ring(pixels)[:2], "circle": ring(pixels, ROOT.kGreen + 2)[:2], "filled": filled(pixels)}
 
 
 def contents(path):
@@ -108,6 +109,7 @@ for scale, found in files.items():
         dash, gap = found["dashes"][i]
         check(f"bitmapscale {scale}: dashes and gaps of line style {style} {scale} times as long", one and dash > 0 and (dash, gap) == (scale * one["dashes"][i][0], scale * one["dashes"][i][1]), f"{(dash, gap)}, at scale 1 {one['dashes'][i] if one else None}")
     check(f"bitmapscale {scale}: open marker outline {scale} pixels wide", found["ring"] == [scale, scale], f"{found['ring']}")
+    check(f"bitmapscale {scale}: kCircle outline {scale} pixels wide", found["circle"] == [scale, scale], f"{found['circle']}")
     check(f"bitmapscale {scale}: filled marker filled", found["filled"])
 
 # the plot on screen: a screenshot of the window of mode show (a virtual screen without window manager: the window has no decoration)

@@ -5285,7 +5285,8 @@ Width_t PlotPainter::ScaleLineWidth(Width_t width) const
 /**
  * Scales the outline width of a marker by the scale factor. ROOT has no line width for markers: the markers with an outline
  * (open markers, +, x, * and alike) encode it in the style number, as 50 + i + 18 x (width - 2) for the i-th of the 18 styles
- * with an outline (see TAttMarker::GetMarkerLineWidth); filled markers are returned unchanged.
+ * with an outline (see TAttMarker::GetMarkerLineWidth); filled markers are returned unchanged. kCircle, drawn as kOpenCircle, has no encoded
+ * variants: it is scaled as kOpenCircle.
  */
 //**************************************************************************************************
 Style_t PlotPainter::ScaleMarkerStyle(Style_t style) const
@@ -5293,7 +5294,7 @@ Style_t PlotPainter::ScaleMarkerStyle(Style_t style) const
   if (mScale == 1.) return style;
   constexpr int32_t firstEncoded = 50;
   constexpr int32_t nOutlineStyles = 18;
-  const Style_t base = TAttMarker::GetMarkerStyleBase(style);
+  const Style_t base = (style == kCircle) ? static_cast<Style_t>(kOpenCircle) : TAttMarker::GetMarkerStyleBase(style);
   for (int32_t i = 0; i < nOutlineStyles; ++i) {
     if (TAttMarker::GetMarkerStyleBase(static_cast<Style_t>(firstEncoded + i)) != base) continue;
     const int32_t width = std::max(1, static_cast<int32_t>(std::lround(TAttMarker::GetMarkerLineWidth(style) * mScale)));
