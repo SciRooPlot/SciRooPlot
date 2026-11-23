@@ -654,10 +654,12 @@ std::optional<string> hepdata_local_file(const string& given, const std::filesys
     }
     return std::nullopt;
   }
-  // the copy is named after the file and its path, and made again when the file is newer than it
+  // the copy is named after the file and its path, has the time of the file, and is made again when the file has another time (also an
+  // older one: a file replaced by a copy keeping its time, e.g. cp -p or unpacked from an archive)
   const string file = (folder / "hepdata" / "files" / (source.stem().string() + "-" + std::to_string(std::hash<string>{}(source.string())) + ".root")).string();
   std::error_code timeError;
-  if (std::filesystem::exists(file, ec) && std::filesystem::last_write_time(file, timeError) >= std::filesystem::last_write_time(source, timeError) && !timeError) return file;
+  const auto sourceTime = std::filesystem::last_write_time(source, timeError);
+  if (std::filesystem::exists(file, ec) && !timeError && std::filesystem::last_write_time(file, timeError) == sourceTime && !timeError) return file;
   if (failed_before(file)) return std::nullopt;
   std::filesystem::create_directories(std::filesystem::path(file).parent_path(), ec);
   if (ec) {
@@ -669,6 +671,7 @@ std::optional<string> hepdata_local_file(const string& given, const std::filesys
     remember_failure(file);
     return std::nullopt;
   }
+  std::filesystem::last_write_time(file, sourceTime, timeError);
   return file;
 }
 

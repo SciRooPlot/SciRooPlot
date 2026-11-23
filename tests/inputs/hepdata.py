@@ -8,7 +8,7 @@ cannot be found out the newest copy, with a warning), also with srp cache off: t
 inside the folder of srp cache on <folder>, marked as cache
 (CACHEDIR.TAG); a record that does not exist and a malformed record id are reported once and the other inputs are still read.
 A downloaded table or record (hepdata:<file>: a ROOT file of one table or of the record, or the record's .tar.gz; relative to the current
-directory) gives the same objects, from a copy in the cache folder that is made again when the file changes; the file itself is left as it
+directory) gives the same objects, from a copy in the cache folder that is made again when the file changes (also to one with an older time); the file itself is left as it
 is, a file that does not exist is reported once.
 srp print hepdata:<record or file>[:<table>] lists every data name of the copy per table (object with its class and the title of its
 values): the objects SciRooPlot made, each with what it holds (the total errors, or the HEPData objects of its error source), apart from
@@ -421,6 +421,13 @@ run = p.plot("hepdata")
 index = next(i for i, case in enumerate(expected) if case[2] == "own")
 drawn = run.objects(f"h{index}", "hepdata")
 got = values_of(drawn[0]) if len(drawn) == 1 else None
+# replaced by a file with an older time (cp -p, unpacked from an archive): made again too
+write_single([60.0, 30.0, 12.0], [6.0, 3.0, 1.5])
+earlier = later - 3600
+os.utime(p.path("table1.root"), (earlier, earlier))
+run = p.plot("hepdata")
+drawn = run.objects(f"h{index}", "hepdata")
+gotOlder = values_of(drawn[0]) if len(drawn) == 1 else None
 
 
 # srp print hepdata:...: the data names, per table what is missing
@@ -477,6 +484,7 @@ check("srp print hepdata:<file> lists a downloaded file", own.returncode == 0 an
 none = p.srp("print", "hepdata:ins99999")
 check("srp print hepdata:<record that does not exist> fails", none.returncode == 1, none.stdout + none.stderr)
 check("a downloaded file that changed is converted again", got is not None and all(close(a, b, 1e-6) for a, b in zip(got[0] + got[1], [40, 20, 8, 4, 2, 1], strict=True)), f"{got}")
+check("a downloaded file replaced by one with an older time is converted again", gotOlder is not None and all(close(a, b, 1e-6) for a, b in zip(gotOlder[0] + gotOlder[1], [60, 30, 12, 6, 3, 1.5], strict=True)), f"{gotOlder}")
 
 
 # versions: hepdata:<record>v<n> reads version n; without a version the latest the server tells, a newer one downloaded when there is one;
