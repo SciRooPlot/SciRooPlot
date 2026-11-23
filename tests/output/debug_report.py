@@ -2,7 +2,7 @@
 log, or that it is a 3d view or polar), each data item as drawn (class, drawing option, marker, line and fill with their colours, the z
 range of 2d data in a flat pad, and for 1d histograms and graphs in a flat pad how many values lie within the x range of the frame and
 how many of them above or below it) and the rows of each legend. Below verbosity debug nothing of it is logged.
-Covers: the report of every data kind alone (default and set colours, with a log y axis, cut by a y range, a log y range ending at values), and in multi-panel layouts (ratio panels, shared axes, a legend strip,
+Covers: the report of every data kind alone (default and set colours, with a log y axis, cut by a y range, a log y range ending at values; 2d histograms with a z range and on log z), and in multi-panel layouts (ratio panels, shared axes, a legend strip,
 a 3d view beside a map), checked against the canvas read back from Plots.root (the positions of boxes and shapes: boxes/coordinate_systems.py).
 """
 
@@ -24,10 +24,15 @@ def values_of(kind):
 
 # ycut: a y range over the second quarter of the values, so that some lie below and more above the frame
 CUTTABLE = [k for k, (dim, cls, props) in DATA_KINDS.items() if dim == 1 and cls.startswith(("TH1", "TProfile", "TGraph")) and not props & {"polar", "given"}]
+# z: a z range over the second quarter of the contents, or a log z axis, for 2d histograms drawn flat
+MAPS = [k for k, (dim, cls, props) in DATA_KINDS.items() if dim == 2 and cls.startswith(("TH2", "TProfile2D")) and not props & {"polar", "given"}]
 todo = cases(
-    {"kind": list(DATA_KINDS), "layout": ["single", *LAYOUTS], "logy": [False, True], "look": ["default", "set"], "ycut": [False, True]},
-    valid=lambda c: (c["layout"] == "single" or (has_layout(c["kind"], c["layout"]) and c["look"] == "default")) and (not c["logy"] or (c["layout"] == "single" and DATA_KINDS[c["kind"]][0] == 1)) and (not c["ycut"] or (c["layout"] == "single" and c["kind"] in CUTTABLE)),
-    always=lambda c: c["kind"] in ("hist", "graph_errors", "hist2d") or c["layout"] == "ratio" or c["ycut"],
+    {"kind": list(DATA_KINDS), "layout": ["single", *LAYOUTS], "logy": [False, True], "look": ["default", "set"], "ycut": [False, True], "z": ["auto", "range", "log"]},
+    valid=lambda c: (c["layout"] == "single" or (has_layout(c["kind"], c["layout"]) and c["look"] == "default"))
+    and (not c["logy"] or (c["layout"] == "single" and DATA_KINDS[c["kind"]][0] == 1))
+    and (not c["ycut"] or (c["layout"] == "single" and c["kind"] in CUTTABLE))
+    and (c["z"] == "auto" or (c["layout"] == "single" and c["look"] == "default" and c["kind"] in MAPS)),
+    always=lambda c: c["kind"] in ("hist", "graph_errors", "hist2d") or c["layout"] == "ratio" or c["ycut"] or c["z"] != "auto",
 )
 for i, case in enumerate(todo):
     if case["layout"] == "single":
@@ -41,6 +46,12 @@ for i, case in enumerate(todo):
         if case["ycut"]:
             values = sorted(v for v in values_of(case["kind"]) if v == v and abs(v) != float("inf") and (v > 0 or not case["logy"]))
             plot[1]["Y"].SetRange(values[len(values) // 4], values[len(values) // 2])  # more above than below
+        if case["z"] == "range":
+            obj = data_objects()[case["kind"]]
+            values = sorted(c for c in (obj.GetBinContent(b) for b in range(obj.GetNcells())) if c > 0)
+            plot[1]["Z"].SetRange(values[len(values) // 4], values[len(values) // 2])
+        elif case["z"] == "log":
+            plot[1]["Z"].SetLog()
     else:
         plot = layout_plot(f"r{i}", "report", case["kind"], case["layout"])
     p.pm.AddPlot(plot)
@@ -52,6 +63,15 @@ p.pm.AddDataSource("steps", steps)
 plot = S.Plot("edge", "report", "1d")
 plot[1].AddData("steps", "steps")
 plot[1]["Y"].SetLog().SetRange(1, 8)
+p.pm.AddPlot(plot)
+# a map with empty cells on log z: the colour range starts above zero
+cells = own(ROOT.TH2D("cells", "", 4, 0, 4, 4, 0, 4))
+for c in range(16):
+    cells.SetBinContent(c % 4 + 1, c // 4 + 1, c)
+p.pm.AddDataSource("cells", cells)
+plot = S.Plot("zeros", "report", "2d")
+plot[1].AddData("cells", "cells")
+plot[1]["Z"].SetLog()
 p.pm.AddPlot(plot)
 run = p.plot(env={"SCIROOPLOT_VERBOSITY": "debug"})
 
@@ -114,6 +134,13 @@ for i, case in enumerate(todo):
                 n = re.search(r"(no fill|fill (\d+) (#[0-9a-f]{6}(?: alpha [0-9.e-]+)?))", look)
                 ok = bool(n) and ((obj.GetFillStyle() == 0) == (n.group(1) == "no fill")) and (obj.GetFillStyle() == 0 or (int(n.group(2)) == obj.GetFillStyle() and colour(n.group(3)) == rgba(obj.GetFillColor())))
                 check(f"pad {k}, {who.rstrip(' (')}: fill as drawn: {what}", ok, f"{look}; drawn {obj.GetFillStyle()} {rgba(obj.GetFillColor())}")
+            # the colour range of 2d data is the one of the frame it is drawn on
+            if flat and obj.InheritsFrom("TH1") and obj.GetDimension() == 2:
+                frameHist = pad.GetPrimitive(f"axis_hist_pad_{k}")
+                zHist = frameHist if frameHist and frameHist.GetDimension() == 2 else obj
+                want = f"z {zHist.GetMinimum():.4g} to {zHist.GetMaximum():.4g}{' (log)' if pad.GetLogz() else ''}"
+                n = re.search(r", (z \S+ to \S+(?: \(log\))?)", look)
+                check(f"pad {k}, {who.rstrip(' (')}: z range as drawn: {what}", bool(n) and n.group(1) == want, f"{look}; expected {want}")
             # the values within the x range of the frame and those beyond its top or bottom, counted here from the drawn object
             counted = None
             if flat and ((obj.InheritsFrom("TH1") and obj.GetDimension() == 1) or obj.InheritsFrom("TGraph")):
@@ -141,6 +168,10 @@ for i, case in enumerate(todo):
             check(f"pad {k}, the rows of {prefix[:-6]} as drawn: {what}", reported == want, f"{reported}, expected {want}")
 edge = [line for line in run.messages("edge", "report") if "Pad 1, data 1 (" in line]
 check("values at the ends of a y range on a log axis are on the frame", len(edge) == 1 and edge[0].endswith("; 10 bins within the x range of the frame, 2 above it"), " | ".join(edge))
+zeros = [line for line in run.messages("zeros", "report") if "Pad 1, data 1 (" in line]
+frameHist = next(pad for pad in run.canvas("zeros", "report").GetListOfPrimitives() if pad.GetName().startswith("Pad_")).GetPrimitive("axis_hist_pad_1")
+want = f"z {frameHist.GetMinimum():.4g} to {frameHist.GetMaximum():.4g} (log)"
+check("a map with empty cells on log z: the colour range of the frame, above zero", len(zeros) == 1 and want in zeros[0] and frameHist.GetMinimum() > 0, f"{' | '.join(zeros)}; expected {want}")
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
 
 # below verbosity debug: no report

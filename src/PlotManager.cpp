@@ -3454,6 +3454,8 @@ void PlotManager::LogReport(const Plot& plot, TCanvas* canvas, const PlotPainter
     for (auto* obj : *pad->GetListOfPrimitives())
       polar = polar || obj->InheritsFrom("TGraphPolargram");
     const bool flat = !pad->GetView() && !polar;
+    // the colour range of 2d data is the one of the frame the data is drawn on (the data keeps its own minimum and maximum)
+    const TH1* frameHist = dynamic_cast<TH1*>(pad->GetListOfPrimitives()->FindObject(fmt::format("axis_hist_pad_{}", pad->GetNumber()).data()));
     if (pad->GetView()) {
       add("frame", "a 3d view");
     } else if (polar) {
@@ -3482,7 +3484,10 @@ void PlotManager::LogReport(const Plot& plot, TCanvas* canvas, const PlotPainter
       if (const auto* marker = dynamic_cast<TAttMarker*>(obj)) look += fmt::format(", marker {} {} size {:.3g}", marker->GetMarkerStyle(), colorText(marker->GetMarkerColor()), marker->GetMarkerSize());
       if (const auto* line = dynamic_cast<TAttLine*>(obj)) look += fmt::format(", line {} {} width {}", line->GetLineStyle(), colorText(line->GetLineColor()), line->GetLineWidth());
       if (const auto* fill = dynamic_cast<TAttFill*>(obj)) look += (fill->GetFillStyle() == 0) ? ", no fill" : fmt::format(", fill {} {}", fill->GetFillStyle(), colorText(fill->GetFillColor()));
-      if (hist && hist->GetDimension() == 2 && !pad->GetView()) look += fmt::format(", z {:.4g} to {:.4g}{}", hist->GetMinimum(), hist->GetMaximum(), (pad->GetLogz()) ? " (log)" : "");
+      if (hist && hist->GetDimension() == 2 && !pad->GetView()) {
+        const TH1* zHist = (frameHist && frameHist->GetDimension() == 2) ? frameHist : hist;
+        look += fmt::format(", z {:.4g} to {:.4g}{}", zHist->GetMinimum(), zHist->GetMaximum(), (pad->GetLogz()) ? " (log)" : "");
+      }
       if (auto counted = (flat) ? PlotPainter::CountInFrame(obj, pad) : nullopt) {
         look += fmt::format("; {} {} within the x range of the frame", counted->values, (hist) ? "bins" : "points");
         if (counted->above) look += fmt::format(", {} above it", counted->above);
