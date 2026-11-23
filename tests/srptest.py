@@ -3326,6 +3326,14 @@ SETTER_STATEMENTS = {
         '{\n  Plot p("{name}", "g", "1d");\n  p[1].AddRatio(Ratio("h", "s", "h2", "s2", "lab"));\n  pm.AddPlot(p);\n}',
     ),
     ("Data", "__init__", ("name", "dataSource", "label")): ('p = Plot("{name}", "g", "1d")\np[1].AddData(Data("h2", "s2", "lab"))\npm.AddPlot(p)', '{\n  Plot p("{name}", "g", "1d");\n  p[1].AddData(Data("h2", "s2", "lab"));\n  pm.AddPlot(p);\n}'),
+    ("Data", "__init__", ("other",)): (
+        'p = Plot("{name}", "g", "1d")\nd = Data("h2", "s2").SetColor(633)\np[1].AddData(Data(d).Scale(2.))\np[1].AddData(d)\npm.AddPlot(p)',
+        '{\n  Plot p("{name}", "g", "1d");\n  Data d = Data("h2", "s2").SetColor(633);\n  p[1].AddData(Data(d).Scale(2.));\n  p[1].AddData(d);\n  pm.AddPlot(p);\n}',
+    ),
+    ("Ratio", "__init__", ("other",)): (
+        'p = Plot("{name}", "g", "1d")\nr = Ratio(Data("h", "s"), Data("h2", "s2"))\np[1].AddRatio(Ratio(r).SetColor(633))\np[1].AddRatio(r)\npm.AddPlot(p)',
+        '{\n  Plot p("{name}", "g", "1d");\n  Ratio r(Data("h", "s"), Data("h2", "s2"));\n  p[1].AddRatio(Ratio(r).SetColor(633));\n  p[1].AddRatio(r);\n  pm.AddPlot(p);\n}',
+    ),
     ("Data", "__init__", ("nameAndSource",)): ('p = Plot("{name}", "g", "1d")\np[1].AddData(["h2", "s2"])\npm.AddPlot(p)', None),
     ("Data", "__call__", ("name", "dataSource")): ('p = Plot("{name}", "g", "1d")\np[1].AddData(Data().SetColor(633)("h2", "s2"))\npm.AddPlot(p)', '{\n  Plot p("{name}", "g", "1d");\n  p[1].AddData(Data().SetColor(633)("h2", "s2"));\n  pm.AddPlot(p);\n}'),
     ("Panel", "__init__", ("width", "height")): ('pm.AddBasePlot(Plot("{name}", PanelLayout([[Panel(1.5, 1.), Panel()]])))', '{\n  pm.AddBasePlot(Plot("{name}", PanelLayout({{Panel(1.5, 1.), Panel()}})));\n}'),

@@ -905,6 +905,9 @@ class Data:
     def __init__(self, name: str, dataSource: str = '', label: str | None = None) -> None:
         ...
     @typing.overload
+    def __init__(self, other: Data | list[str] | tuple[str, ...]) -> None:
+        ...
+    @typing.overload
     def __init__(self, nameAndSource: list) -> None:
         ...
     @typing.overload
@@ -1126,6 +1129,9 @@ class Ratio(Data):
         ...
     @typing.overload
     def __init__(self, numerator: Data | list[str] | tuple[str, ...], denominator: Data | list[str] | tuple[str, ...]) -> None:
+        ...
+    @typing.overload
+    def __init__(self, other: Ratio) -> None:
         ...
     @typing.overload
     def __init__(self, numeratorName: str, numeratorDataSource: str, denominatorName: str, denominatorDataSource: str, label: str | None = None) -> None:

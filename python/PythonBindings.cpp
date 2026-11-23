@@ -734,6 +734,7 @@ void exportData(py::module_& m)
   data
     .def(py::init<>())
     .def(py::init<const string&, const string&, const optional<string>&>(), arg("name"), arg("dataSource") = "", arg("label") = nullopt)
+    .def(py::init<const Data&>(), arg("other"))  // a copy, as in C++
     .def(py::init([](const py::list& nameAndSource) { return dataFromSequence(nameAndSource); }), arg("nameAndSource"))
     .def(py::init([](const py::tuple& nameAndSource) { return dataFromSequence(nameAndSource); }), arg("nameAndSource"))
     .def("__call__", [](const Data& self, const string& name, const optional<string>& dataSource) { return self(name, dataSource); }, arg("name"), arg("dataSource") = nullopt)
@@ -751,6 +752,7 @@ void exportRatio(py::module_& m)
   py::class_<Ratio, Data> ratio(m, "Ratio");
   ratio
     .def(py::init<const Data&, const Data&>(), arg("numerator"), arg("denominator"))
+    .def(py::init<const Ratio&>(), arg("other"))  // a copy, as in C++
     .def(py::init<const string&, const string&, const string&, const string&, const optional<string>&>(), arg("numeratorName"), arg("numeratorDataSource"), arg("denominatorName"), arg("denominatorDataSource"), arg("label") = nullopt)
     .def("Print", &Ratio::Print)
     .def("SetCorrelated", &Ratio::SetCorrelated, arg("correlated") = true, ref_int)

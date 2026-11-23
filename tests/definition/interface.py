@@ -20,6 +20,8 @@ PYTHON_ONLY = {
     ("Data", "GetDataSource", ()): "the reference lists only the getters giving access to parts of the definition",
     ("Data", "__init__", ("nameAndSource",)): "a list [name, data source] wherever a Data is taken",
     ("BasePlotShape", "__init__", ()): "the implicit constructor of C++",
+    ("Data", "__init__", ("other",)): "the copy constructor of C++",
+    ("Ratio", "__init__", ("other",)): "the copy constructor of C++",
     ("Plot", "operator[]", 1): "described in the remark of the class",
     ("Pad", "operator[]", 1): "described in the remark of the class",
     ("Plot", "operator+=", 1): "described in the remark of the class",
