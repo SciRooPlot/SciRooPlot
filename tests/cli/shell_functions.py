@@ -7,7 +7,8 @@ unknown project, srp out without an output folder or before it exists fail with 
 another prefix fails naming srp reinstall; plot shows why srp cannot give the program of the current project. The srp program alone refuses the
 commands that need env.sh, unknown commands, a missing command and too many arguments, with exit status 1. In zsh without a terminal, env.sh registers the
 completion silently also with an insecure directory in fpath. srp info names the version, the installation of the env.sh sourced, the
-configuration folder, the current project and the ROOT version.
+configuration folder, the current project and the ROOT version. The messages of the shell functions take the colours of srp color, also
+with a configuration folder given as ~/... (not expanded by the shell).
 Covers: the bash plot alias in compound commands (pre-release braces rule), 2026-11-03 (zsh read-only names in env.sh)."""
 
 import os
@@ -89,6 +90,10 @@ grep note "$SCIROOPLOT_CONFIG_PATH/projects.info" """,
     said = [line for line in out.stderr.splitlines() if line.strip()]
     check(f"{sh}: srp update with an unknown argument is refused, nothing run", out.stdout.splitlines()[:1] == ["status 1"] and "takes no arguments" in out.stderr and "install.sh" not in out.stderr, out.tail())
     check(f"{sh}: srp cd without a selected project: one message saying so", out.stdout.splitlines()[1:2] == ["status 1"] and len(said) == 2 and "No project selected" in said[1], out.tail())
+    # the messages of the shell functions take the colours of srp color, also from a config folder given with a ~ the shell did not expand
+    # (the output of the tests is read without colour codes: cat -v shows them as ^[)
+    out = shell("srp color off; srp update junk 2>&1 | cat -v", sh, env={"SCIROOPLOT_CONFIG_PATH": f"~/tilde_{sh}"}, cwd=folder)
+    check(f"{sh}: a message of the shell functions without colours after srp color off (config folder ~/...)", "[ ERR  ] The command srp update takes no arguments." in out.stdout and "^[" not in out.stdout, out.tail())
     # srp update of a source installation whose build directory is configured for another prefix: the installer's advice works from srp
     fake = config_folder(f"fake_source_{sh}")
     os.makedirs(os.path.join(fake, "scripts"))
