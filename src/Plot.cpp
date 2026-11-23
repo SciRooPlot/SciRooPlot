@@ -4082,6 +4082,11 @@ auto Plot::Pad::Axis::SetNumDivisions(int16_t numDivisions) -> decltype(*this)
 }
 auto Plot::Pad::Axis::SetMaxDigits(int32_t maxDigits) -> decltype(*this)
 {
+  // ROOT keeps them as the millions of the divisions (an Int_t); 0 is its default
+  if (maxDigits < 0 || maxDigits > 2147) {
+    logger::warning("The max digits of axis {} ({}) are ignored: they are outside of 0 (ROOT's default) to 2147.", mName, maxDigits);
+    return *this;
+  }
   mAxisFrame.maxDigits = maxDigits;
   return *this;
 }

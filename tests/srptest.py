@@ -3147,6 +3147,7 @@ SETTER_INVALID = {
     "phiMax": [math.nan],
     "offset": [math.nan],
     "tickLength": [math.nan],
+    "maxDigits": [-1, 3000],
     "palette": [9999],
     "gradient": [[(633, 0.0)], [(633, 0.0), (600, math.nan)]],
     "rgbEndpoints": [[(0.0, 1.0, 0.0, 0.0)]],
