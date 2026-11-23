@@ -140,7 +140,7 @@ for sh in SHELLS:
         check(f"{sh}: srp edit of {program} opens the sources of the program", opened == sorted(wanted), f"{opened} {out.tail()}")
     # a program without source files next to it: an error saying so, nothing opened
     out = shell(f"srp edit e{len(edits)}; echo status $?", sh, config=editConfig, env={"PATH": f"{stub}:{os.environ['PATH']}"})
-    check(f"{sh}: srp edit of a program without sources says so", "OPENED" not in out.stdout and "status 0" not in out.stdout and "no source files found" in out.stderr, out.tail())
+    check(f"{sh}: srp edit of a program without sources says so", "OPENED" not in out.stdout and "status 0" not in out.stdout and "No source files found" in out.stderr, out.tail())
 
 # an insecure directory in fpath (group or world writable, as Homebrew's on macOS): compinit cannot ask without a terminal
 if "zsh" in SHELLS:
