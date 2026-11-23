@@ -42,8 +42,9 @@ int main(int argc, char* argv[])
     logger::error("No project selected (srp select <project> selects one).");
     return 1;
   }
-  // the plot command of env.sh runs a changed program before this one; called directly (a script, xvfb-run) the stored definitions are used
-  {
+  // the plot command of env.sh runs a changed program before this one (and says so when that did not save the definitions); called
+  // directly (a script, xvfb-run) the stored definitions are used
+  if (!std::getenv("SCIROOPLOT_RUN_BY_PLOT")) {
     std::error_code programError, plotsError;
     const auto programTime = std::filesystem::last_write_time(Config::Get().Program(project), programError);
     const auto plotsTime = std::filesystem::last_write_time(Config::Get().PlotsFile(project), plotsError);

@@ -3,8 +3,9 @@ older than the program, than a Python file next to it or one folder below (a mod
 folder, than the program rebuilt from changed sources, or when srp set gave a setting the program declares another value; never when
 nothing changed, only other files did or a setting was set to the value it had. It then plots what the program
 saved. A failing program stops plot with a non-zero exit status before anything is plotted; a program that saved another project's
-definitions is named in a warning; a missing program is named in a warning and the stored definitions are used; a program run by hand
-(not by plot) says what it saved, and plot names the folder of the files it wrote. In bash and zsh.
+definitions is named in a warning (once: the plot program run by plot does not warn again); a missing program is named in a warning
+and the stored definitions are used; a program run by hand (not by plot) says what it saved, and plot names the folder of the files it
+wrote. In bash and zsh.
 The program plot called directly (a script, xvfb-run) runs nothing and warns that the definitions may be outdated exactly when the
 program is newer than them (a changed program or setting); never when nothing changed or only other files did.
 Covers: a changed imported module, a changed setting, C++ program in a build folder other than build/, program of another
@@ -89,7 +90,8 @@ for i, case in enumerate(todo):
     direct = run(PLOT, "g", "p", "list", config=config)
     warns = case["change"] in ("program", "setting")  # the program itself newer than the definitions (a setting dates them back)
     said = any("may be outdated: its program changed after they were saved" in w for w in direct.warnings())
-    check(f"plot called directly {'warns' if warns else 'does not warn'} of outdated definitions, runs nothing: {what}", said == warns and direct.rc == 0 and os.stat(os.path.join(config, "proj", "plots.info")).st_mtime == stamp, direct.tail())
+    # (it compares the program file only: a changed module the program imports is not looked for)
+    check(f"plot called directly warns of outdated definitions only when the program file is newer, runs nothing: {what}", said == warns and direct.rc == 0 and os.stat(os.path.join(config, "proj", "plots.info")).st_mtime == stamp, direct.tail())
     out = shell("plot g p list", case["shell"], config=config)
     stamp2, text = plots_info(config, "proj")
     check(f"first plot runs the program: {what}", first.rc == 0 and stamp is not None and " - p from group g" in first.stdout, first.tail())
@@ -127,6 +129,7 @@ for sh in SHELLS:
     touch(os.path.join(config, "..", f"own_{sh}"), os.path.join(config, "own", "plots.info"), os.path.join(config, "..", f"own_{sh}", "def.py"))
     out = shell("plot g p list", sh, config=config)
     check(f"{sh}: a program saving another project is named in a warning", out.rc == 0 and any("did not save the plot definitions of the current project" in w for w in out.warnings()), out.tail())
+    check(f"{sh}: then the plot binary run by plot does not warn a second time", not any("may be outdated: its program changed" in w for w in out.warnings()), out.tail())
     # a missing program
     os.remove(os.path.join(config, "..", f"own_{sh}", "def.py"))
     out = shell("plot g p list", sh, config=config)
