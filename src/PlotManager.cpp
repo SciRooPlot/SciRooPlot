@@ -4260,7 +4260,21 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
     std::strtod(value.data(), &end);
     return end == value.data() + value.size();
   };
-  auto checkTypes = [&](const vector<string>& fields) {
+  // a number followed by a comment ("2 # first") where ROOT takes the column type from it (the first value) or where it ends a column of
+  // text-like numbers makes the column text: '#' starts a comment only on a line of its own (it is kept within values)
+  struct comment_after_value_t {
+    size_t line = 0;
+    size_t column = 0;
+    string value;
+  } commentAfterValue;
+  auto noteCommentAfterValue = [&](const string& value, size_t column, size_t number) {
+    if (commentAfterValue.line) return;
+    const size_t hash = value.find('#');
+    if (hash == string::npos || hash == 0 || !std::isspace(static_cast<unsigned char>(value[hash - 1]))) return;
+    const string before = trim(value.substr(0, hash));
+    if (!before.empty() && isNumber(before)) commentAfterValue = {number, column, value};
+  };
+  auto checkTypes = [&](const vector<string>& fields, size_t number) {
     for (size_t column = 0; column < std::min(fields.size(), columnKinds.size()); ++column) {
       column_kind_t& kind = columnKinds[column];
       if (kind == column_kind_t::done) continue;
@@ -4275,6 +4289,7 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
         if (isInteger(value)) {
           kind = column_kind_t::integer;
         } else if (std::regex_match(value, decimal) || !isNumber(value)) {
+          if (!isNumber(value)) noteCommentAfterValue(value, column, number);
           kind = column_kind_t::done;
         } else {
           kind = column_kind_t::text_like;
@@ -4286,13 +4301,14 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
           kind = column_kind_t::done;
         }
       } else if (!isNumber(value)) {  // text-like numbers: a column with real text stays text
+        noteCommentAfterValue(value, column, number);
         forceDouble[column] = false;
         kind = column_kind_t::done;
       }
     }
   };
   for (size_t i = 1; i < lines.size(); ++i) {
-    checkTypes(split(lines[i].second, delimiter));
+    checkTypes(split(lines[i].second, delimiter), lines[i].first);
   }
   // check the remaining lines as well, ROOT's csv reader does not tolerate a varying number of fields
   while (std::getline(file, line)) {
@@ -4309,7 +4325,11 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
       logger::error("Cannot read table {}: {}.", inputFileName, describeMismatch(delimiter, nFields, lineNumber, fields.size()));
       return;
     }
-    checkTypes(fields);
+    checkTypes(fields, lineNumber);
+  }
+  if (commentAfterValue.line && columnKinds[commentAfterValue.column] == column_kind_t::done && !forceDouble[commentAfterValue.column]) {
+    logger::warning("Table {}: line {} has a comment after a number ('{}'): column {} is read as text, since '#' starts a comment only on a line of its own.",
+                    inputFileName, commentAfterValue.line, commentAfterValue.value, trim(columnNames[commentAfterValue.column]));
   }
   for (size_t column = 0; column < columnKinds.size(); ++column) {
     if (columnKinds[column] == column_kind_t::integer && hasEmptyCell[column]) forceDouble[column] = true;  // the empty cells become NaN

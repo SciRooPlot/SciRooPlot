@@ -7,7 +7,7 @@ line and a missing last line end are read as intended. A column is numeric when 
 it floating point, an empty cell of a numeric column is nan; a column with text is text (usable in filters). Column names that are no C++
 identifiers can be requested as they are. A table that cannot be read is reported with the reason, and only its plots are lost: lines
 with another number of fields (with a hint for columns aligned by several spaces, also in the header), no data, a value not matching its column (for each
-request); spaces around the delimiters and decimal commas are warned about. A program that set a locale with a decimal comma reads
+request); spaces around the delimiters, decimal commas and a comment after a number in the first row (the column is text, since # starts a comment only on a line of its own) are warned about. A program that set a locale with a decimal comma reads
 tables and writes numbers into its plots as any other, and keeps its locale.
 Covers: decimals after integer rows, inf and a BOM in CSV files, the type inference of CSV columns,
 a value not matching its column reported for each request, a bad CSV value (only its plot lost), the ROOT error for a graph of points with x values that
@@ -81,6 +81,7 @@ FAILING = {  # file: (content, the error, it is a warning)
     "aligned.txt": ("a    b\n10   2\n3    4\n", "columns seem to be aligned with several spaces or tabs; use exactly one delimiter between the values", False),
     "comments_only.csv": ("# nothing\n\n", "does not contain any data", False),
     "hash_among_comments.csv": ("a,c\n1,x#1\n# between\n2,y\n", "line 2 contains a '#', which starts a comment in a table with comment lines among its rows (line 3)", False),
+    "comment_after_value.csv": ("# runs\na,b\n1 # first,2\n2,3\n", "line 3 has a comment after a number ('1 # first'): column a is read as text", True),
     "bad_value.csv": ("a,b\n1,2\n2,3\n3,x\n", "does not match the type of its column", False),
     "spaces_around.csv": ("a ,b\n1 ,2.5\n", "has spaces around its delimiters (line 1)", True),
     "decimal_comma.csv": ("a;b\n1,5;2,5\n", "seems to use decimal commas (e.g. '1,5')", True),  # the values are text, the plot of them lost
