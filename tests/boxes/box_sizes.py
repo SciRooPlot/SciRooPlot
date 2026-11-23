@@ -5,7 +5,8 @@ a margin; the outline of a box is a line (no shadow); a text of a font sized in 
 everything of a box is s times as large in pixels (within the few % rendered text grows more) and at the same place; an automatic box wider than the frame is
 reported as a hint, so is a box at a position set for it that reaches beyond its pad (drawn, cut off at the pad); the hints name the plot,
 the box and its pad as show mode does (legend 1 of pad 1), and are printed only from verbosity hint on (not at the default verbosity); a box
-wholly outside of its pad is reported as a warning (also at the default verbosity).
+wholly outside of its pad is reported as a warning (also at the default verbosity); a text size not fitting its font is warned about naming
+the plot and the box or axis.
 Cases: legends (one column, two columns, a title wider than the rows), texts and statistics boxes × a font sized relative to the pad (42) or in pixels (43) × plain
 text, TLatex with drawn parts (#sqrt, #frac), unicode, three rows × a wide, square and tall canvas × bitmapscale 1, 2 and 3; at every
 bitmapscale a box is at the same place (scaled), also a legend placed by SciRooPlot.
@@ -125,6 +126,17 @@ def measure(img):
     return {"box": (top, bottom, left, right), "sides": sides, "content": content, "outside": outsideBlack}
 
 
+# a text size that does not fit its font (relative for 42, pixels for 43) is warned about naming the plot and what it is set on
+FONT_SIZES = {  # plot: (definition, what the warning names)
+    "font_text": (lambda pad: pad.AddText(0.2, 0.9, "a text").SetText(42, 30.0, ROOT.kBlack), "a text box of pad 1"),
+    "font_axis": (lambda pad: pad["X"].SetTitleFont(43).SetTitleSize(0.04), "the title of the X axis of pad 1"),
+}
+for name, (define, _) in FONT_SIZES.items():
+    plot = S.Plot(name, "fonts", "1d")
+    plot[1].AddData("h", "s")
+    define(plot[1])
+    p.pm.AddPlot(plot)
+
 measured = {}  # (case, scale): the measures of the box in its png (the pictures themselves are not kept: hundreds of large arrays)
 for scale in SCALES:
     p.srp("bitmapscale", str(scale))
@@ -213,6 +225,11 @@ groupMessages = groups.messages("empty_groups", "groups")
 for kind, text in EMPTY_GROUPS.items():
     shown = text.replace("{{ }}", "").replace("{}", "")
     check(f"{kind} '{text}': drawn as '{shown}', warned once", shown in drawnTexts and sum(f"Text '{text}' has an empty group" in m for m in groupMessages) == 1, f"drawn {drawnTexts}; {' | '.join(groupMessages)}")
+
+fonts = p.plot("fonts")
+for name, (_, what) in FONT_SIZES.items():
+    said = fonts.warnings("though text font")
+    check(f"a text size not fitting its font is named with its plot and element: {name}", any(f"Plot {name} from group fonts:" in m and m.rstrip().endswith(f"for {what}.") for m in said), " | ".join(said))
 
 # the same text in pads whose smaller side is the same: the same box in pixels
 for i, case in enumerate(todo):

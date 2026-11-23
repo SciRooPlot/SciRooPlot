@@ -5468,40 +5468,50 @@ TH1* PlotPainter::ExtendFrameAxis(const TH1* frame, char axisLabel, optional<dou
  * for a font of precision 0 to 2, a pixel size of at most 1 for precision 3.
  */
 //**************************************************************************************************
-void PlotPainter::CheckFontSizes(TList* list)
+void PlotPainter::CheckFontSizes(TList* list) const
 {
-  auto compatible = [](int16_t textFont, float_t textSize, TObject* obj) {
+  auto compatible = [this](int16_t textFont, float_t textSize, const string& what) {
     if (!textSize) return true;
     if (textFont % 10 <= 2 && textSize >= 1.f) {
-      logger::warning("Though text font {} implies a relative text size it is set to {} for {}.", textFont, textSize, obj->GetName());
+      logger::warning("Plot {}: though text font {} implies a relative text size it is set to {} for {}.", mPlotLabel, textFont, textSize, what);
       return false;
     }
     if (textFont % 10 > 2 && textSize <= 1.f) {
-      logger::warning("Though text font {} implies a text size in pixel it is set to {} for {}.", textFont, textSize, obj->GetName());
+      logger::warning("Plot {}: though text font {} implies a text size in pixel it is set to {} for {}.", mPlotLabel, textFont, textSize, what);
       return false;
     }
     return true;
   };
+  // what the user set the size on, as named in show mode (pad 0: the canvas, e.g. common titles)
+  auto describe = [](TObject* obj, int32_t padID) -> string {
+    const string where = (padID) ? fmt::format(" of pad {}", padID) : " of the plot";
+    if (auto* entry = dynamic_cast<TLegendEntry*>(obj)) return fmt::format("the legend row '{}'{}", entry->GetLabel(), where);
+    if (obj->InheritsFrom(TLegend::Class())) return "a legend" + where;
+    if (obj->InheritsFrom(TPaveStats::Class())) return "a statistics box" + where;
+    if (obj->InheritsFrom(TPave::Class())) return "a text box" + where;
+    return fmt::format("a text '{}'{}", obj->GetTitle(), where);
+  };
   // stops at the first incompatible setting (one wrong default would otherwise warn for every text)
-  std::function<bool(TList*)> check = [&](TList* primitives) {
+  std::function<bool(TList*, int32_t)> check = [&](TList* primitives, int32_t padID) {
     if (!primitives) return true;
     for (TObject* obj : *primitives) {
       auto* pad = dynamic_cast<TPad*>(obj);
       auto* leg = dynamic_cast<TLegend*>(obj);
       auto* txt = dynamic_cast<TAttText*>(obj);
       auto* h = dynamic_cast<TH1*>(obj);
-      if (pad && !check(pad->GetListOfPrimitives())) return false;
-      if (leg && !check(leg->GetListOfPrimitives())) return false;
-      if (txt && !compatible(txt->GetTextFont(), txt->GetTextSize(), obj)) return false;
+      if (pad && !check(pad->GetListOfPrimitives(), pad->GetNumber())) return false;
+      if (leg && !check(leg->GetListOfPrimitives(), padID)) return false;
+      if (txt && !compatible(txt->GetTextFont(), txt->GetTextSize(), describe(obj, padID))) return false;
       if (h && TString(h->GetName()).BeginsWith("axis_hist")) {
         for (TAxis* ax : {h->GetXaxis(), h->GetYaxis(), h->GetZaxis()}) {
-          if (!compatible(ax->GetLabelFont(), ax->GetLabelSize(), ax) || !compatible(ax->GetTitleFont(), ax->GetTitleSize(), ax)) return false;
+          const string axis = fmt::format("the {} axis of pad {}", static_cast<char>(std::toupper(ax->GetName()[0])), padID);
+          if (!compatible(ax->GetLabelFont(), ax->GetLabelSize(), "the labels of " + axis) || !compatible(ax->GetTitleFont(), ax->GetTitleSize(), "the title of " + axis)) return false;
         }
       }
     }
     return true;
   };
-  check(list);
+  check(list, 0);
 }
 
 //**************************************************************************************************
