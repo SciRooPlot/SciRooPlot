@@ -2,13 +2,13 @@
 log, or that it is a 3d view or polar), each data item as drawn (class, drawing option, marker, line and fill with their colours, the z
 range of 2d data in a flat pad, and for 1d histograms and graphs in a flat pad how many values lie within the x range of the frame and
 how many of them above or below it) and the rows of each legend. Below verbosity debug nothing of it is logged.
-Covers: the report of every data kind alone (default and set colours, with a log y axis, cut by a y range), and in multi-panel layouts (ratio panels, shared axes, a legend strip,
+Covers: the report of every data kind alone (default and set colours, with a log y axis, cut by a y range, a log y range ending at values), and in multi-panel layouts (ratio panels, shared axes, a legend strip,
 a 3d view beside a map), checked against the canvas read back from Plots.root (the positions of boxes and shapes: boxes/coordinate_systems.py).
 """
 
 import re
 
-from srptest import DATA_KINDS, LAYOUT_BASES, LAYOUTS, Project, S, add_data, base_of, cases, check, data_objects, describe, finish, has_layout, layout_plot, option, rgba
+from srptest import DATA_KINDS, LAYOUT_BASES, LAYOUTS, ROOT, Project, S, add_data, base_of, cases, check, data_objects, describe, finish, has_layout, layout_plot, option, own, rgba
 
 p = Project("debug_report", bases=("1d", "2d", *LAYOUT_BASES))
 p.inputs()
@@ -44,6 +44,15 @@ for i, case in enumerate(todo):
     else:
         plot = layout_plot(f"r{i}", "report", case["kind"], case["layout"])
     p.pm.AddPlot(plot)
+# contents 1 to 10 on log y, a y range ending at two of them: 10^log10(8) comes back below 8, the values there are still on the frame
+steps = own(ROOT.TH1D("steps", "", 10, 0, 10))
+for b in range(1, 11):
+    steps.SetBinContent(b, b)
+p.pm.AddDataSource("steps", steps)
+plot = S.Plot("edge", "report", "1d")
+plot[1].AddData("steps", "steps")
+plot[1]["Y"].SetLog().SetRange(1, 8)
+p.pm.AddPlot(plot)
 run = p.plot(env={"SCIROOPLOT_VERBOSITY": "debug"})
 
 
@@ -108,8 +117,10 @@ for i, case in enumerate(todo):
             # the values within the x range of the frame and those beyond its top or bottom, counted here from the drawn object
             counted = None
             if flat and ((obj.InheritsFrom("TH1") and obj.GetDimension() == 1) or obj.InheritsFrom("TGraph")):
-                xs = (pad.GetUxmin(), pad.GetUxmax())
-                ys = (pad.GetUymin(), pad.GetUymax())
+                # a value at a range end lies on the frame, also when it comes back from a log axis a rounding error beyond it
+                spanX, spanY = 1e-9 * (pad.GetUxmax() - pad.GetUxmin()), 1e-9 * (pad.GetUymax() - pad.GetUymin())
+                xs = (pad.GetUxmin() - spanX, pad.GetUxmax() + spanX)
+                ys = (pad.GetUymin() - spanY, pad.GetUymax() + spanY)
                 xMin, xMax = (10**v for v in xs) if pad.GetLogx() else xs
                 yMin, yMax = (10**v for v in ys) if pad.GetLogy() else ys
                 if obj.InheritsFrom("TH1"):
@@ -128,6 +139,8 @@ for i, case in enumerate(todo):
             reported = [line[len(prefix) :] for line in said if line.startswith(prefix)]
             want = [f'{j + 1}: "{label}" ({f"symbol {chr(34)}{opt}{chr(34)}" if opt else "no symbol"})' for j, (label, opt) in enumerate(rows)]
             check(f"pad {k}, the rows of {prefix[:-6]} as drawn: {what}", reported == want, f"{reported}, expected {want}")
+edge = [line for line in run.messages("edge", "report") if "Pad 1, data 1 (" in line]
+check("values at the ends of a y range on a log axis are on the frame", len(edge) == 1 and edge[0].endswith("; 10 bins within the x range of the frame, 2 above it"), " | ".join(edge))
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
 
 # below verbosity debug: no report

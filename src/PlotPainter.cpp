@@ -9505,6 +9505,7 @@ void PlotPainter::ReportOutsideFrame(TPad* pad) const
   const double_t yMin = FromPad(pad->GetUymin(), pad->GetLogy());
   const double_t yMax = FromPad(pad->GetUymax(), pad->GetLogy());
   const bool countCut = !logger::muted() && logger::detail::verbosity() >= logger::detail::level::hint;
+  const auto countFrame = CountedFrame(pad);
   for (TObject* obj : *pad->GetListOfPrimitives()) {
     // the data of the pad: named <number>:<name>
     const string name = obj->GetName();
@@ -9527,8 +9528,7 @@ void PlotPainter::ReportOutsideFrame(TPad* pad) const
     };
     // the values within the x range of the frame, and those cut off at its top or bottom
     frame_count_t counted;
-    const std::array<double_t, 4> frame{xMin, yMin, xMax, yMax};
-    const auto count = [&](double_t x, double_t y) { counted.Add(x, y, frame, pad->GetLogy()); };
+    const auto count = [&](double_t x, double_t y) { counted.Add(x, y, countFrame, pad->GetLogy()); };
     string unit;
     if (auto* hist = dynamic_cast<TH1*>(obj); hist && hist->GetDimension() == 1) {
       unit = "bins";
@@ -9573,12 +9573,23 @@ void PlotPainter::ReportOutsideFrame(TPad* pad) const
 
 //**************************************************************************************************
 /**
+ * The frame of a pad the values are counted against, a billionth of its span wider (see the declaration).
+ */
+//**************************************************************************************************
+std::array<double_t, 4> PlotPainter::CountedFrame(const TVirtualPad* pad)
+{
+  const double_t spanX = 1e-9 * (pad->GetUxmax() - pad->GetUxmin()), spanY = 1e-9 * (pad->GetUymax() - pad->GetUymin());
+  return {FromPad(pad->GetUxmin() - spanX, pad->GetLogx()), FromPad(pad->GetUymin() - spanY, pad->GetLogy()), FromPad(pad->GetUxmax() + spanX, pad->GetLogx()), FromPad(pad->GetUymax() + spanY, pad->GetLogy())};
+}
+
+//**************************************************************************************************
+/**
  * The values of a 1d histogram or graph drawn in a flat pad counted against its frame (see frame_count_t); nothing for other objects.
  */
 //**************************************************************************************************
 optional<PlotPainter::frame_count_t> PlotPainter::CountInFrame(const TObject* obj, const TVirtualPad* pad)
 {
-  const std::array<double_t, 4> frame{FromPad(pad->GetUxmin(), pad->GetLogx()), FromPad(pad->GetUymin(), pad->GetLogy()), FromPad(pad->GetUxmax(), pad->GetLogx()), FromPad(pad->GetUymax(), pad->GetLogy())};
+  const auto frame = CountedFrame(pad);
   frame_count_t counted;
   if (const auto* hist = dynamic_cast<const TH1*>(obj); hist && hist->GetDimension() == 1) {
     for (int32_t bin = 1; bin <= hist->GetNbinsX(); ++bin) {

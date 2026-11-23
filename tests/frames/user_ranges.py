@@ -4,7 +4,7 @@ bins of a histogram the frame shows whole bins (ROOT): it ends at the edges of t
 functions have no bins: their frame ends exactly at the values.
 Also: no histogram bin outside the frame is drawn, and widening x around all the data leaves the automatic y range as it is. Values of 1d
 histograms (bins that are not empty) and graphs (points) within the x range of the frame but above or below it are cut off: a hint says how
-many of how many, and no hint is given where none are. A formula of
+many of how many, and no hint is given where none are (values at a range end are on the frame, also on a log axis). A formula of
 the plot definition without a range of its own that gives the frame spans the pad range (it has no range but ROOT's default 0 to 1): it is
 drawn across the whole frame, and the automatic y range (colour scale) is that of the drawn function, also of a function drawn
 with many samples (SetNpx).
@@ -13,7 +13,7 @@ Covers: range beyond the axis, exact ends on graph frames, log y headroom, bins 
 import math
 import re
 
-from srptest import BINNED_AXES, DATA_1D, DATA_2D, DATA_KINDS, ROOT, Project, S, add_data, cases, check, close, describe, finish, formula
+from srptest import BINNED_AXES, DATA_1D, DATA_2D, DATA_KINDS, ROOT, Project, S, add_data, cases, check, close, describe, finish, formula, own
 
 X_RANGES = {"inside": (2.3, 7.7), "beyond": (0.5, 14.0), "above": (1.0, 13.7), "below": (0.5, 10.0), "exact": (1.0, 10.0), "min_only": (3.0, None), "max_only": (None, 7.0)}
 Y_RANGES = {"inside": (2.0, 6.0), "beyond": (0.5, 20.0), "min_only": (2.0, None), "max_only": (None, 30.0)}
@@ -75,6 +75,17 @@ for i, (kind, x, log) in enumerate(FORMULA_CASES):
 plot = S.Plot("narrow_peak", "ranges", "1d")
 plot[1].AddFunction("TMath::Gaus(x, 0.5003, 0.0002)").SetNpx(10000)
 p.pm.AddPlot(plot)
+# contents 1 to 10, a y range ending at two of them: on log y, 10^log10(8) comes back below 8
+steps = own(ROOT.TH1D("steps", "", 10, 0, 10))
+for b in range(1, 11):
+    steps.SetBinContent(b, b)
+p.pm.AddDataSource("steps", steps)
+EDGE_RANGES = [(log, r) for log in (False, True) for r in ((1, 8), (5, 10))]
+for i, (log, r) in enumerate(EDGE_RANGES):
+    plot = S.Plot(f"edge{i}", "ranges", "1d")
+    plot[1].AddData("steps", "steps")
+    plot[1]["Y"].SetLog(log).SetRange(*r)
+    p.pm.AddPlot(plot)
 run = p.plot("ranges")
 
 for i, case in enumerate(todo):
@@ -158,6 +169,11 @@ for i, (kind, x, log) in enumerate(FORMULA_CASES):
     else:
         covered = low <= min(values) + 1e-6 * span and high >= max(values) - 1e-6 * span
     check(f"automatic value range is that of the drawn function: {what}", covered, f"range {low:.6g} to {high:.6g}, function {min(values):.6g} to {max(values):.6g}")
+
+for i, (log, r) in enumerate(EDGE_RANGES):
+    said = [m for m in run.messages(f"edge{i}", "ranges") if "within the x range of the frame of pad 1 lie" in m]
+    want = "2 of the 10 bins" if r == (1, 8) else "4 of the 10 bins"
+    check(f"values at the ends of a y range {r[0]} to {r[1]} are not cut off" + " (log y)" * log, len(said) == 1 and want in said[0], " | ".join(said))
 
 frame = run.frame("narrow_peak", "ranges")
 funcs = [obj for obj in run.objects("narrow_peak", "ranges") if obj.InheritsFrom("TF1")]

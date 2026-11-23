@@ -247,6 +247,9 @@ class PlotPainter
       below += (y < frame[1]);
     }
   };
+  // the frame values are counted against (x1, y1, x2, y2): a billionth of its span wider, since a value at a range end set by the user is
+  // drawn on the edge, but comes back from a log axis a rounding error beyond it (10^log10(8) = 7.999...)
+  static std::array<double_t, 4> CountedFrame(const TVirtualPad* pad);
   static std::optional<frame_count_t> CountInFrame(const TObject* obj, const TVirtualPad* pad);
   // the name of the data an object of the last painted plot draws, as messages give it (kept only at verbosity debug; empty otherwise)
   std::string DataLabel(const TObject* obj) const
