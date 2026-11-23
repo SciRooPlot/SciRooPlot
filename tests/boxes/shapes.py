@@ -8,8 +8,8 @@ polygon with a set line gets its outline as a second TPolyLine right after its f
 Cases: every kind × every layer × a histogram, a graph, a map and a log axis giving the frame × the default or a set look, and the named
 cases (lines at the limits of a log axis, positions at or below zero on a log axis, shapes of a base plot and of pad 0, arrow heads, arcs).
 In fractions of the pad a vertical or horizontal line beside the frame is drawn there, as a region (not wholly outside of the pad); an ellipse given only a fill alpha
-is filled; an ellipse in fractions on a log pad is the ellipse asked for, drawn as the polygon of its perimeter (TEllipse adds its radii in
-axis values).
+is filled; an ellipse in fractions on a log pad, or rotated, is the ellipse asked for, drawn as the polygon of its perimeter (TEllipse adds its radii in
+axis values and rotates in axis units).
 Reference: the primitives of the pad and the same plot without the shape.
 Covers: shapes in their layers, a line at the limit of a log axis, lines at the edges of the frame and the pad, and the named cases.
 """
@@ -280,6 +280,14 @@ plot[1]["Y"].SetLog()
 plot[1].AddEllipse((0.5, 0.5), 0.2, 0.1).SetFrameCoordinates()
 plot[1].AddEllipse((0.5, 0.5), 0.2, 0.1).SetFrameCoordinates().SetArc(0.0, 90.0)
 q.pm.AddPlot(plot)
+# rotated ellipses in fractions of the frame, on a log and a linear pad: rotated in pixels, so they keep their shape (a quarter turn makes
+# the radius along x of the frame width the one along y)
+for name, log in (("rotated_log", True), ("rotated_linear", False)):
+    plot = S.Plot(name, "beside", "1d")
+    plot[1].AddData("h", "s")
+    plot[1]["Y"].SetLog(log)
+    plot[1].AddEllipse((0.5, 0.5), 0.2, 0.05).SetFrameCoordinates().SetRotation(90.0)
+    q.pm.AddPlot(plot)
 # wholly outside of the pad: not drawn, one warning each
 plot = S.Plot("outside_pad", "beside", "1d")
 plot[1].AddData("h", "s")
@@ -315,6 +323,25 @@ check(
     len(polygons) == 4 and extents[0] == extents[1] == [0.3, 0.7, 0.4, 0.6] and extents[2] == extents[3] == [0.5, 0.7, 0.5, 0.6] and not besideRun.messages("log_ellipse", "beside"),
     f"{extents} | {' | '.join(besideRun.messages('log_ellipse', 'beside'))}",
 )
+for name in ("rotated_log", "rotated_linear"):
+    rotPad = besideRun.pad(name, "beside")
+    rotated = [o for o, _ in besideRun.links(name, "beside") if o.ClassName() == "TPolyLine"]
+    extent = []
+    if rotPad and rotated:
+        logY = rotPad.GetLogy()
+        xs = [rotated[0].GetX()[i] for i in range(rotated[0].GetN())]
+        ys = [math.log10(rotated[0].GetY()[i]) if logY else rotated[0].GetY()[i] for i in range(rotated[0].GetN())]
+        # half the extent in pixels of the frame, from the pad's pixel size
+        width = rotPad.GetAbsWNDC() * rotPad.GetWw() / (rotPad.GetX2() - rotPad.GetX1())
+        height = rotPad.GetAbsHNDC() * rotPad.GetWh() / (rotPad.GetY2() - rotPad.GetY1())
+        frameW = (rotPad.GetUxmax() - rotPad.GetUxmin()) * width
+        frameH = (rotPad.GetUymax() - rotPad.GetUymin()) * height
+        extent = [0.5 * (max(xs) - min(xs)) * width, 0.5 * (max(ys) - min(ys)) * height, 0.05 * frameH, 0.2 * frameW]
+    check(
+        f"a rotated ellipse in fractions of the frame ({'log' if 'log' in name else 'linear'} pad): rotated in pixels, its shape kept",
+        len(extent) == 4 and abs(extent[0] - extent[2]) < 0.02 * extent[2] and abs(extent[1] - extent[3]) < 0.02 * extent[3],
+        f"half extents in pixels {extent[:2]}, expected {extent[2:]}",
+    )
 # lines at the edges of the frame (frame coordinates 0 and 1) and of the pad (pad coordinates 0 and 1), over many axis ranges: drawn
 edgeRanges = [(0.37 * i, 3.0 + 1.13 * i + 0.01 * i * i) for i in range(40)]
 e = Project("shapes_edges")

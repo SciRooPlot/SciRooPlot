@@ -349,7 +349,7 @@ check(
     f"{[(t.GetX1NDC(), t.GetY2NDC()) for t in viewTexts]} {viewSaid}",
 )
 # the positions a double-click in show mode reports, logged at verbosity debug: as given, in the coordinate system given (a text of one line
-# aligned at its position: that position; an ellipse in fractions on log axes, drawn as a polygon: its centre and radii)
+# aligned at its position: that position; an ellipse in fractions on log axes, drawn as a polygon: its centre and radii, also rotated)
 
 q = Project("reports")
 plot = S.Plot("reports", "reports", "1d")
@@ -360,6 +360,7 @@ plot[1].AddText(0.1, 0.9, ["upper left", "corner"])
 plot[1].AddLegend(0.6, 0.9).AddEntry("a row")
 plot[1].AddEllipse((0.5, 0.5), 0.2, 0.1).SetFrameCoordinates()
 plot[1].AddEllipse((0.4, 0.3), 0.1, 0.05).SetPadCoordinates()
+plot[1].AddEllipse((0.7, 0.4), 0.15, 0.05).SetPadCoordinates().SetRotation(30.0)
 plot[1].AddArrow((2.0, 5.0), (20.0, 50.0))
 q.pm.AddPlot(plot)
 reported = q.plot("reports", env={"SCIROOPLOT_VERBOSITY": "debug"})
@@ -370,8 +371,9 @@ for what, want in (
     ("a legend: its upper left corner", 'Pad 1, legend 1 "a row": (0.6, 0.9)'),
     ("an ellipse in fractions of the frame on log axes (a polygon): its centre and radii", "Pad 1, ellipse 1: ((0.5, 0.5), 0.2, 0.1)"),
     ("an ellipse in fractions of the pad on log axes: its centre and radii", "Pad 1, ellipse 2: ((0.4, 0.3), 0.1, 0.05)"),
+    ("a rotated ellipse in fractions of the pad on log axes: its centre and radii", "Pad 1, ellipse 3: ((0.7, 0.4), 0.15, 0.05)"),
     ("an arrow in axis values on log axes", "Pad 1, arrow 1: ((2, 5), (20, 50))"),
 ):
     check(f"the position reported at verbosity debug: {what}", sum(line.endswith(want) for line in said) == 1, " | ".join(said))
-check("each box and shape is reported once", len(said) == 6, " | ".join(said))
+check("each box and shape is reported once", len(said) == 7, " | ".join(said))
 finish()

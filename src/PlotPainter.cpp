@@ -5836,15 +5836,19 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
         const double_t ry = (isUser) ? c[3] : c[3] * (span[3] - span[1]) * (pad_ptr->GetY2() - pad_ptr->GetY1());
         const auto arc = shape->GetArc().value_or(std::pair<double_t, double_t>{0., 360.});
         const double_t rotation = shape->GetRotation().value_or(0.);
-        if (isUser || !(pad_ptr->GetLogx() || pad_ptr->GetLogy())) {
+        if (isUser || (!(pad_ptr->GetLogx() || pad_ptr->GetLogy()) && rotation == 0.)) {
           object = new TEllipse(x, y, rx, ry, arc.first, arc.second, rotation);
           break;
         }
-        // on a log axis TEllipse adds the radii to the centre in axis values: an ellipse in fractions is drawn as the polygon of its
-        // perimeter computed in pad coordinates (an arc as a sector, from the centre and back to it, as TEllipse draws it)
+        // on a log axis TEllipse adds the radii to the centre in axis values, and it rotates in axis units: an ellipse in fractions on a log
+        // pad or with a rotation is drawn as the polygon of its perimeter computed in pad coordinates, rotated in pixels so that it keeps
+        // its shape (an arc as a sector, from the centre and back to it, as TEllipse draws it)
         const bool logX = pad_ptr->GetLogx(), logY = pad_ptr->GetLogy();
         const double_t px = ToPad(x, logX), py = ToPad(y, logY);
         const double_t theta = rotation * TMath::DegToRad();
+        // pixels per pad coordinate
+        const double_t sx = pad_ptr->GetAbsWNDC() * pad_ptr->GetWw() / (pad_ptr->GetX2() - pad_ptr->GetX1());
+        const double_t sy = pad_ptr->GetAbsHNDC() * pad_ptr->GetWh() / (pad_ptr->GetY2() - pad_ptr->GetY1());
         const bool fullTurn = arc.second - arc.first >= 360.;
         vector<double_t> xs, ys;
         auto add = [&](double_t u, double_t v) {
@@ -5854,8 +5858,8 @@ void PlotPainter::DrawShapes(const Plot::Pad& pad, const Plot::Pad& padDefaults,
         if (!fullTurn) add(px, py);
         for (int32_t i = 0; i <= kEllipseSteps; ++i) {
           const double_t phi = (arc.first + (arc.second - arc.first) * i / kEllipseSteps) * TMath::DegToRad();
-          const double_t dx = rx * std::cos(phi), dy = ry * std::sin(phi);
-          add(px + dx * std::cos(theta) - dy * std::sin(theta), py + dx * std::sin(theta) + dy * std::cos(theta));
+          const double_t dx = rx * sx * std::cos(phi), dy = ry * sy * std::sin(phi);
+          add(px + (dx * std::cos(theta) - dy * std::sin(theta)) / sx, py + (dx * std::sin(theta) + dy * std::cos(theta)) / sy);
         }
         if (!fullTurn) add(px, py);
         object = new TPolyLine(static_cast<int32_t>(xs.size()), xs.data(), ys.data(), "f");
