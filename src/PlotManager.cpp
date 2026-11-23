@@ -4641,6 +4641,12 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
         if ((qualifier.empty() || qualifier == other->GetName()) && columnLeaf(other.get(), column)) holders.push_back(other->GetName());
       }
       const bool isJoinedAlias = std::any_of(joinedChains.begin(), joinedChains.end(), [&](const auto& other) { return qualifier == other->GetName(); });
+      // a tree joined before without rows in any input, keeping every row without a match: no row has a match here either
+      const bool holderHasNoRows = !qualifier.empty() && std::any_of(joinMatches.begin(), joinMatches.end(), [&](const auto& match) { return match->alias == qualifier && !match->renames.empty(); });
+      if (holderHasNoRows && !isJoinedAlias) {
+        if (join.keepUnmatched && firstJoinedTree) return keepAllUnmatched();
+        return fmt::format("index column {}: {} has no rows in any input of {}, so no row has a match", join.indexColumn, qualifier, treeName);
+      }
       if (!qualifier.empty() && qualifier != treeAlias && !isJoinedAlias) {
         return fmt::format("index column {}: {} is neither {} nor a tree joined before", join.indexColumn, qualifier, treeAlias);
       }

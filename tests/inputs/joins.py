@@ -15,7 +15,7 @@ not possible is reported with the reason and loses the plot: keys appearing more
 row counts that differ (per input, or in total from another data source), a joined tree or key column missing (also in only one input),
 a tree written by a multi-threaded Snapshot joined row by row, a tree in a list, a table or an RNTuple, an undefined data source, an
 alias equal to the name of the tree, an index column missing or not integer, a joined tree without rows in any input (or in its data
-source). A data source only joined has its inputs expanded once per run (its warnings said once); ROOT's warning about inputs whose tree
+source), also as the tree of an index column (kept without a match with keepUnmatched). A data source only joined has its inputs expanded once per run (its warnings said once); ROOT's warning about inputs whose tree
 has no rows is not shown.
 Covers: joins (row by row, by key, by an index column, inner join, shuffled tracks, entry ranges, ratios, the error cases).
 """
@@ -181,8 +181,9 @@ AOC = {k: np.array(v) for k, v in AOC.items()}
 aoMatched = AO["idx"] >= 0
 noColl = p.path("AO2D_none.root")
 for d in range(2):
-    write_tree(noColl, {"fPosZ": np.zeros(0)}, name="O2collision", folder=f"DF_{d}")
+    write_tree(noColl, {"fPosZ": np.zeros(0), "fIndexBCs": np.zeros(0, dtype=np.int32)}, name="O2collision", folder=f"DF_{d}")
     write_tree(noColl, {"fIndexCollisions": np.zeros(5, dtype=np.int32), "fPt": np.ones(5)}, name="O2track", folder=f"DF_{d}")
+    write_tree(noColl, {"fTime": np.ones(3)}, name="O2bc", folder=f"DF_{d}")
 # keys k of a tree joined to trees with some of them: the columns of the joined trees of types without a value of their own in rows without
 # a match (Double32_t, strings), a column v in two joined trees, and a joined tree without rows
 km = p.path("keys.root")
@@ -376,13 +377,18 @@ for what, joinedTree in (("of the same data source", "emptySide"), ("of another 
     )
 case(
     "keeping rows without a match by a key: a C-string column of a joined tree without rows is an empty string in every row",
-    H(5, -0.5, 4.5, np.where(np.arange(5) == 0, 12, 0)),
+    H(5, -0.5, 4.5, np.zeros(12)),
     lambda pad: pad.AddData("main", "km").Join("emptyTyped", ["k"], "et", True).Project1D(("et.s.size()", 5, [-0.5, 4.5])),
 )
 case(
     "keeping rows without a match by an index column: a joined tree without rows in any input leaves every row without a match",
     H(2, -0.5, 1.5, np.zeros(10)),
     lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions", "col", True).Project1D(("col.matched", 2, [-0.5, 1.5])),
+)
+case(
+    "keeping rows without a match by an index column of a joined tree without rows: every row without a match there too",
+    H(2, -0.5, 1.5, np.zeros(10)),
+    lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions", "col", True).JoinByIndex("O2bc", "col.fIndexBCs", "b", True).Project1D(("b.matched", 2, [-0.5, 1.5])),
 )
 withBC = ~np.isnan(AO["bcTime"])
 case(
@@ -414,6 +420,10 @@ FAILING = {  # what: (setup, the reason)
     "a key appearing twice in the joined tree of one input": (lambda pad: pad.AddData("O2collision", "ao2d").Join("O2dupft0", ["fIndexBCs"]), f"appears in more than one row of {ao2d[1]}:DF_1/O2dupft0"),
     "an index column that is no integer": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2collision", "fPt"), "index column fPt of O2track is of type Double_t, but it must hold one integer per row"),
     "a tree joined by an index column without rows in any input": (lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions"), "it has no rows in any input of O2track"),
+    "a tree joined by an index column of a joined tree without rows in any input": (
+        lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions", "col", True).JoinByIndex("O2bc", "col.fIndexBCs", "b"),
+        "index column col.fIndexBCs: col has no rows in any input of O2track, so no row has a match",
+    ),
     "a joined tree missing beside a tree joined by an index column": (lambda pad: pad.AddData("O2track", "ao2d").JoinByIndex("O2nobc", "fIndexCollisions"), f"{ao2d[0]}:DF_0/O2nobc does not exist"),
     "a tree joined by keys from another data source without rows": (lambda pad: pad.AddData("tracks", "trk").Join(["events", "emptyKeys"], ["run", "event"], "ev"), "it has no rows in data source emptyKeys"),
     "an alias equal to the name of the tree": (lambda pad: pad.AddData("events", "A").Join(byKey, ["run", "event"]), "the columns of both would be called events.column, please specify an alias"),
