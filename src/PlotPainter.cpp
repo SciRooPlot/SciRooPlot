@@ -7469,7 +7469,13 @@ optional<data_ptr_t> PlotPainter::GetDataClone(TObject* obj, const optional<Plot
                 }
                 ptr->SetMinimum();
                 ptr->SetMaximum();
-              } else if constexpr (std::is_base_of_v<TGraph2D, T> || std::is_base_of_v<TF1, T>) {
+              } else if constexpr (std::is_base_of_v<TGraph2D, T>) {
+                // TGraph2D::SetMinimum/SetMaximum interpolate the points into the histogram of the graph: only for a stored range
+                if (ptr->GetMinimum() != -1111. || ptr->GetMaximum() != -1111.) {
+                  ptr->SetMinimum();
+                  ptr->SetMaximum();
+                }
+              } else if constexpr (std::is_base_of_v<TF1, T>) {
                 ptr->SetMinimum();
                 ptr->SetMaximum();
               }
@@ -8557,6 +8563,18 @@ void PlotPainter::ScaleGraphAxis(TGraph2D* graph, int16_t axis, double_t scaleFa
     if (errorsHigh) errorsHigh[i] *= errorFactor;
     if (scaleFactor < 0. && errorsLow && errorsHigh) std::swap(errorsLow[i], errorsHigh[i]);
   }
+  // ROOT keeps the histogram interpolated from the points until a point is removed: drop it as RemovePoint does, so it is made from the scaled ones
+  struct Interpolated : TGraph2D {
+    static void Drop(TGraph2D& g)
+    {
+      auto& histogram = g.*(&Interpolated::fHistogram);
+      if (!histogram) return;
+      delete histogram;
+      histogram = nullptr;
+      g.*(&Interpolated::fDelaunay) = nullptr;
+    }
+  };
+  Interpolated::Drop(*graph);
 }
 
 //**************************************************************************************************

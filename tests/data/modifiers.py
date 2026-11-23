@@ -14,7 +14,8 @@ labels.
 Covers: TGraphMultiErrors scaled: both error dimensions follow; the Normalize range of a TH2Poly; graphs scaled by a negative
 factor (Normalize of values summing up below zero) keep positive errors, low and high swapped; a TGraphMultiErrors sorted for Smooth keeps
 each error with its point; messages after Cumulative name the data; scaled functions keep their points per axis and their contour
-levels (given levels scaled with the values, as TH1::Scale does).
+levels (given levels scaled with the values, as TH1::Scale does); scaled 2d graphs (also with a stored range) painted as the
+same points scaled beforehand.
 """
 
 import bisect
@@ -36,6 +37,7 @@ from srptest import (
     Project,
     S,
     add_data,
+    bitmap,
     base_of,
     cases,
     check,
@@ -340,4 +342,38 @@ for name, expected in {"auto": (4, True), "given": ([2.0, 4.0, 10.0], False), "z
         n = obs[0].GetContour()
         got = (n if name == "auto" else [obs[0].GetContourLevel(i) for i in range(n)], ROOT.SrpTestContourOf.First(obs[0]) == -9999.0)
     check(f"contour levels of a scaled 2d function, {name}", got == expected, f"{got} (levels, computed by ROOT), expected {expected}")
+
+# 2d graphs are painted through a histogram interpolated from their points (ROOT keeps it once made): a scaled graph is painted as the
+# same points scaled beforehand, also one with a stored range (whose reset makes that histogram)
+g = Project("graph2d_painted")
+grid = [(x, y) for x in np.linspace(0.0, 1.0, 6) for y in np.linspace(0.0, 1.0, 6)]
+painted = {}
+for name, fx, fz, stored in (("g", 1.0, 1.0, False), ("gs", 1.0, 1.0, True), ("gz", 1.0, 10.0, False), ("gx", 10.0, 1.0, False), ("gm", 1.0, 0.2, False)):
+    graph = ROOT.TGraph2D(len(grid))
+    graph.SetName(name)
+    for i, (x, y) in enumerate(grid):
+        graph.SetPoint(i, fx * x, y, fz * (1.0 + x + 3.0 * y * y))
+    if stored:
+        graph.SetMaximum(3.0)
+    painted[name] = graph
+g.source("g2", painted)
+PAINTED = {  # plot: (data, modifier, the same points scaled beforehand)
+    "scale_z": ("g", lambda d: d.ScaleZ(10.0), "gz"),
+    "scale_z_stored": ("gs", lambda d: d.ScaleZ(10.0), "gz"),
+    "scale_x": ("g", lambda d: d.ScaleX(10.0), "gx"),
+    "scale": ("gs", lambda d: d.Scale(10.0), "gz"),
+    "max": ("gs", lambda d: d.NormalizeToMaximum(), "gm"),
+}
+for name, (data, modify, ref) in PAINTED.items():
+    for plotName, define in ((name, lambda pad: modify(pad.AddData(data, "g2"))), (f"{name}_ref", lambda pad: pad.AddData(ref, "g2"))):
+        plot = S.Plot(plotName, "painted", "2d")
+        define(plot[1])
+        g.pm.AddPlot(plot)
+paintedRun = g.plot("painted", mode="png")
+for name in PAINTED:
+    got, ref = (bitmap(g.path("out", "painted", f"{n}.png")) for n in (name, f"{name}_ref"))
+    same = got is not None and ref is not None and got.shape == ref.shape and bool((got == ref).all())
+    differing = int((got != ref).sum()) if got is not None and ref is not None and got.shape == ref.shape else None
+    check(f"a scaled 2d graph is painted as its scaled points: {name}", same, f"{differing} pixels differ")
+check("scaled 2d graphs painted without errors", not paintedRun.errors(), " | ".join(paintedRun.errors()[:3]))
 finish()
