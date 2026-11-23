@@ -3,12 +3,12 @@ plot: the groups and names it offers for a typed regular expression are those pl
 reference: completion matches with the shell's POSIX ERE, plot with std::regex, so env.sh translates \\d \\w \\s and their negations),
 in every combination of matchmode and matchcase: a group word offers the main groups (all groups once it holds a slash) starting with a
 match (any match in contains mode), a name word the names of the plots plot selects for the complete group word, trailing slashes
-included, for the project SCIROOPLOT_PROJECT names if set. bash inserts a single match and keeps the typed word, open for editing, when
-the matches do not all start with it. srp: the commands, plot modes and
+included, for the project SCIROOPLOT_PROJECT names if set. bash inserts a single match and keeps the typed word (group or name), open for
+editing, when the matches do not all start with it. srp: the commands, plot modes and
 setting values it offers are exactly those srp help documents, and srp accepts each of them; the projects offered are the registered ones (also with a ~ in SCIROOPLOT_CONFIG_PATH that the shell did not expand);
 the properties offered for a project are program, outdir and the settings its program declares, with their descriptions, and the values
 offered for a setting are on and off of a switch or the choices of a text, each accepted by srp set; bash inserts them escaped (a choice with spaces,
-quotes or braces stays one word) and offers them for their typed start.
+quotes or braces stays one word) and offers them for their typed start, also typed escaped as it inserts them.
 Completing 3000 plots takes well below two seconds.
 Covers: regex dialect, trailing slash, projects with a brace in a setting value, descriptions and choices with quotes, braces and a backslash, completion speed."""
 
@@ -152,8 +152,9 @@ for words, want in ((("plot", "qa\\d"), ["qa3"]), (("plot", "ab", "h_\\d"), ["h_
     check(f"bash completion of {' '.join(words[1:])}: {want}", sorted(got) == sorted(want), f"{got} {out.stderr[-200:]}")
 
 
-def bash_tab(line, cfg=config):
-    """what bash in a terminal puts after the typed line when Tab is pressed at its end (readline's own insertion, not COMPREPLY)"""
+def bash_tab(*lines, cfg=config):
+    """what bash in a terminal puts after each typed line when Tab is pressed at its end (readline's own insertion, not COMPREPLY), all in
+    one session (each line is cleared before the next)"""
     home = os.path.join(WORK, "home_bash_tab")
     os.makedirs(home, exist_ok=True)
     pid, fd = pty.fork()
@@ -173,20 +174,27 @@ def bash_tab(line, cfg=config):
     read(1)
     os.write(fd, f'source "{ENV_SCRIPT}"\n'.encode())
     read(2)
-    os.write(fd, line.encode())
-    read(1)
-    os.write(fd, b"\t")
-    inserted = read(2)
-    os.kill(pid, signal.SIGKILL)  # the typed line is never run
+    inserted = []
+    for line in lines:
+        os.write(fd, line.encode())
+        read(1)
+        os.write(fd, b"\t")
+        inserted.append(read(2))
+        os.write(fd, b"\x05\x15")  # end of line, then cleared (the typed line is never run)
+        read(0.5)
+    os.kill(pid, signal.SIGKILL)
     os.waitpid(pid, 0)
     os.close(fd)
     return inserted
 
 
-# where bash keeps the typed word (the matches do not all start with it), the word stays open: no space after it
+# where bash keeps the typed word (the matches do not all start with it), the word stays open: no space after it; a single match is
+# inserted with a space in the same session (completion runs)
 settings("exact")
-inserted = bash_tab("plot QA\\d p\\d")
-check("bash keeps an ambiguous plot word open for editing (no space added)", " " not in inserted.replace("\x07", ""), repr(inserted))
+control, group, name = bash_tab("plot QA1/su", "plot QA\\d", "plot QA\\d p\\d")
+check("bash inserts a single match with a space (the completion runs)", control.replace("\x07", "") == "b ", repr(control))
+for word, inserted in (("group", group), ("name", name)):
+    check(f"bash keeps an ambiguous plot {word} word open for editing (no space added)", " " not in inserted.replace("\x07", ""), repr(inserted))
 
 # srp: what is offered is what srp help documents and srp accepts
 helpText = run(SRP, "help").stdout
@@ -256,6 +264,11 @@ for name, default, _, choices in DECLARED:
         typed = value.split(" ")[0]  # the start of a value with spaces: bash splits the typed words there
         got, out = bash_complete("srp", "set", "comp", name, typed)
         check(f"srp set comp {name} {typed!r} offers {value!r}", any(shlex.split(g) == [value] for g in got), f"{got}")
+        if " " in value:  # typed escaped past a space, as bash inserted it: one word
+            escaped = re.sub(r"""([\s"'{}\\$])""", r"\\\1", value)
+            typed = escaped[: escaped.index("\\ ") + 2]
+            got, out = bash_complete("srp", "set", "comp", name, typed)
+            check(f"srp set comp {name} {typed!r} (escaped) offers {value!r}", any(shlex.split(g) == [value] for g in got), f"{got}")
     refused = [v for v in offered if run(SRP, "set", "comp", name, v, config=config).rc != 0]
     check(f"srp set comp {name} accepts every value offered", not refused, f"refused {refused}")
     run(SRP, "unset", "comp", name, config=config)
