@@ -3906,7 +3906,7 @@ Plot::Pad::Axis::Axis(const ptree& axisTree) : Axis()
   read_from_tree(axisTree, mRange.max, "range_max");
   read_from_tree(axisTree, mRoom.belowMin, "room_below_min");
   read_from_tree(axisTree, mRoom.aboveMax, "room_above_max");
-  read_from_tree(axisTree, mAxisFrame.style, "num_divisions");
+  read_from_tree(axisTree, mAxisFrame.numDivisions, "num_divisions");
   read_from_tree(axisTree, mAxisFrame.maxDigits, "max_digits");
   read_from_tree(axisTree, mAxisFrame.scale, "tick_length");
   read_from_tree(axisTree, mAxisFrame.color, "axis_color");
@@ -3944,7 +3944,7 @@ ptree Plot::Pad::Axis::GetPropertyTree() const
   put_in_tree(axisTree, mRange.max, "range_max");
   put_in_tree(axisTree, mRoom.belowMin, "room_below_min");
   put_in_tree(axisTree, mRoom.aboveMax, "room_above_max");
-  put_in_tree(axisTree, mAxisFrame.style, "num_divisions");
+  put_in_tree(axisTree, mAxisFrame.numDivisions, "num_divisions");
   put_in_tree(axisTree, mAxisFrame.maxDigits, "max_digits");
   put_in_tree(axisTree, mAxisFrame.scale, "tick_length");
   put_in_tree(axisTree, mAxisFrame.color, "axis_color");
@@ -3983,7 +3983,7 @@ void Plot::Pad::Axis::operator+=(const Axis& axis)
   if (axis.mRoom.belowMin) mRoom.belowMin = axis.mRoom.belowMin;
   if (axis.mRoom.aboveMax) mRoom.aboveMax = axis.mRoom.aboveMax;
   if (axis.mAxisFrame.title) mAxisFrame.title = axis.mAxisFrame.title;
-  if (axis.mAxisFrame.style) mAxisFrame.style = axis.mAxisFrame.style;
+  if (axis.mAxisFrame.numDivisions) mAxisFrame.numDivisions = axis.mAxisFrame.numDivisions;
   if (axis.mAxisFrame.maxDigits) mAxisFrame.maxDigits = axis.mAxisFrame.maxDigits;
   if (axis.mAxisFrame.scale) mAxisFrame.scale = axis.mAxisFrame.scale;
   if (axis.mAxisFrame.color) mAxisFrame.color = axis.mAxisFrame.color;
@@ -4075,9 +4075,9 @@ auto Plot::Pad::Axis::SetAxisAlpha(float_t alpha) -> decltype(*this)
   mAxisFrame.alpha = alpha;
   return *this;
 }
-auto Plot::Pad::Axis::SetNumDivisions(int16_t numDivisions) -> decltype(*this)
+auto Plot::Pad::Axis::SetNumDivisions(int32_t numDivisions) -> decltype(*this)
 {
-  mAxisFrame.style = numDivisions;
+  mAxisFrame.numDivisions = numDivisions;
   return *this;
 }
 auto Plot::Pad::Axis::SetMaxDigits(int32_t maxDigits) -> decltype(*this)

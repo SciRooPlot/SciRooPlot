@@ -1518,7 +1518,7 @@ class Plot::Pad::Axis
   Axis& SetColor(color_t color);
   Axis& SetAxisColor(color_t color);
   Axis& SetAxisAlpha(float_t alpha);
-  Axis& SetNumDivisions(int16_t numDivisions);
+  Axis& SetNumDivisions(int32_t numDivisions);
   Axis& SetMaxDigits(int32_t maxDigits);
   Axis& SetTickLength(float_t tickLength);
   Axis& SetTitleFont(int16_t font);
@@ -1561,7 +1561,7 @@ class Plot::Pad::Axis
   const auto& GetRoomAboveMax() const { return mRoom.aboveMax; }
   const auto& GetRoomBelowMin() const { return mRoom.belowMin; }
   const auto& GetTickLength() const { return mAxisFrame.scale; }
-  const auto& GetNumDivisions() const { return mAxisFrame.style; }
+  const auto& GetNumDivisions() const { return mAxisFrame.numDivisions; }
   const auto& GetMaxDigits() const { return mAxisFrame.maxDigits; }
   const auto& GetAxisColor() const { return mAxisFrame.color; }
   const auto& GetAxisAlpha() const { return mAxisFrame.alpha; }
@@ -1606,6 +1606,7 @@ class Plot::Pad::Axis
   };
   struct axis_frame_t : layout_t {
     std::optional<std::string> title;
+    std::optional<int32_t> numDivisions;  // ROOT's divisions (n1 + 100 n2 + 10000 n3) do not fit the style of a layout
     std::optional<int32_t> maxDigits;
     std::optional<bool> isLog;
     std::optional<bool> isGrid;

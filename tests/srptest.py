@@ -2994,7 +2994,7 @@ SETTER_VALUES = {
     "max": {"plain": 7.5, "precise": 22 / 3, "extreme": 1e300},
     "maxDigits": {"plain": 3},
     "numColumns": {"plain": 2},
-    "numDivisions": {"plain": 506, "extreme": -510},
+    "numDivisions": {"plain": 506, "extreme": -40510},  # with tertiary divisions (beyond 16 bits), not optimised
     "nContours": {"plain": 12},
     "nGroup": {"plain": 2},
     "nGroupX": {"plain": 2},

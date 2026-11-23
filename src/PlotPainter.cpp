@@ -1299,7 +1299,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
     TAxis* yAxis = axisHist_ptr->GetYaxis();
     const bool logRadius = pad_ptr->GetLogy();
     // half of ROOT's divisions of an axis spanning the frame, unless the user set them: the radius runs over half of it
-    optional<int16_t> divisions;
+    optional<int32_t> divisions;
     for (const auto* axis : AxisSettings(pad, padDefaults, 'Y')) {
       if (axis->GetNumDivisions()) divisions = axis->GetNumDivisions();
     }
@@ -3037,7 +3037,7 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
     // the polar grid as the axes of the pad set it: x is the angle, y the radius; ranges and divisions only where the user set them
     // (otherwise ROOT's from the points), labels as those of the axes
     optional<double_t> minAngle, maxAngle, minRadius, maxRadius;
-    optional<int16_t> divAngle, divRadius;
+    optional<int32_t> divAngle, divRadius;
     for (auto [axisLabel, min, max, div] : {std::make_tuple('X', &minAngle, &maxAngle, &divAngle), std::make_tuple('Y', &minRadius, &maxRadius, &divRadius)}) {
       for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
         if (axis->GetMinRange()) *min = axis->GetMinRange();
