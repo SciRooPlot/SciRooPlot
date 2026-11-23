@@ -3,7 +3,8 @@ older than the program, than a Python file next to it or one folder below (a mod
 folder, than the program rebuilt from changed sources, or when srp set gave a setting the program declares another value; never when
 nothing changed, only other files did or a setting was set to the value it had. It then plots what the program
 saved. A failing program stops plot with a non-zero exit status before anything is plotted; a program that saved another project's
-definitions is named in a warning; a missing program is named in a warning and the stored definitions are used. In bash and zsh.
+definitions is named in a warning; a missing program is named in a warning and the stored definitions are used; a program run by hand
+(not by plot) says what it saved, and plot names the folder of the files it wrote. In bash and zsh.
 Covers: a changed imported module, a changed setting, C++ program in a build folder other than build/, program of another
 project, failing program."""
 
@@ -89,6 +90,17 @@ for i, case in enumerate(todo):
     check(f"program run {'again' if reruns else 'not again'}: {what}", (stamp2 != stamp) == reruns and out.rc == 0 and " - p from group g" in out.stdout and not out.warnings(), out.tail())
     if case["change"] in ("module", "setting"):
         check(f"plots what the re-run program saved: {what}", ("second" if case["change"] == "module" else "high") in text, text[-200:])
+
+# a program run by hand says what it saved and how the plots are made; run by plot it does not
+config = config_folder("config_by_hand")
+folder = os.path.normpath(os.path.join(config, "..", "by_hand"))
+python_project(config, folder, "proj")
+byPlot = shell("plot g p list", config=config)
+byHand = shell(f"cd {folder} && python3 def.py", config=config)
+check("a program run by plot does not say what it saved", byPlot.rc == 0 and "Saved 1 plot" not in byPlot.stdout + byPlot.stderr, byPlot.tail())
+pictures = shell("plot g p png", config=config)
+check("plot in a mode writing a file per plot names the output folder", pictures.rc == 0 and f"The files are in {os.path.join(folder, 'out')}" in pictures.stdout, pictures.tail())
+check("a program run by hand says what it saved and how the plots are made", byHand.rc == 0 and "Saved 1 plot in 1 group of project proj: plot <group> <name>" in byHand.stdout + byHand.stderr, byHand.tail())
 
 for sh in SHELLS:
     config = config_folder(f"config_{sh}_failing")

@@ -1949,6 +1949,8 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       mGifPendingFrame->SaveAs((mGifName + mGifLastFrameSuffix).data());
       mGifPendingFrame.reset();
       logger::log("Saved gif {}.", mGifName);
+    } else if (!mWrittenFiles.empty()) {
+      logger::log("The files are in {} (a folder per group).", mOutputDirectory);
     }
     bool saved = true;
     if (mode == "file") {
@@ -5335,5 +5337,14 @@ void PlotManager::SaveProject() const
   }
   tabCompFile.close();
   if (!tabCompFile) logger::warning("Cannot write {}: the tab completion of plot misses the plots of project {}.", tabCompPath.string(), mProjectName);
+
+  // a program run by hand says what it did and how the plots are made (plot and srp init-* run it with SCIROOPLOT_RUN_BY_PLOT)
+  if (!std::getenv("SCIROOPLOT_RUN_BY_PLOT") && Config::Get().Exists(mProjectName)) {
+    set<string> groups;
+    for (const auto& plot : mPlots)
+      groups.insert(plot.GetGroup());
+    const string select = (Config::Get().CurrentProject() == mProjectName) ? "" : fmt::format("srp select {}, then ", mProjectName);
+    logger::log("Saved {} in {} of project {}: {}plot <group> <name> [<mode>] makes them.", plural(mPlots.size(), "plot"), plural(groups.size(), "group"), mProjectName, select);
+  }
 }
 }  // end namespace SciRooPlot
