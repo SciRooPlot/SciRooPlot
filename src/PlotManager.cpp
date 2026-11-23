@@ -5628,7 +5628,10 @@ void PlotManager::SaveProject() const
     set<string> groups;
     for (const auto& plot : mPlots)
       groups.insert(plot.GetGroup());
-    const string select = (Config::Get().CurrentProject() == mProjectName) ? "" : fmt::format("srp select {}, then ", mProjectName);
+    // with the project of one process (SCIROOPLOT_PROJECT) set, the selection is not what is meant to change
+    const bool processProject = std::getenv("SCIROOPLOT_PROJECT") && *std::getenv("SCIROOPLOT_PROJECT");
+    const string select = (Config::Get().CurrentProject() == mProjectName) ? "" : (processProject) ? fmt::format("SCIROOPLOT_PROJECT={} ", mProjectName)
+                                                                                                   : fmt::format("srp select {}, then ", mProjectName);
     logger::log("Saved {} in {} of project {}: {}plot <group> <name> [<mode>] makes them.", plural(mPlots.size(), "plot"), plural(groups.size(), "group"), mProjectName, select);
   }
 }

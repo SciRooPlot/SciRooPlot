@@ -3,7 +3,8 @@ plot: the groups and names it offers for a typed regular expression are those pl
 reference: completion matches with the shell's POSIX ERE, plot with std::regex, so env.sh translates \\d \\w \\s and their negations),
 in every combination of matchmode and matchcase: a group word offers the main groups (all groups once it holds a slash) starting with a
 match (any match in contains mode), a name word the names of the plots plot selects for the complete group word, trailing slashes
-included. bash inserts a single match and keeps the typed word, open for editing, when the matches do not all start with it. srp: the commands, plot modes and
+included, for the project SCIROOPLOT_PROJECT names if set. bash inserts a single match and keeps the typed word, open for editing, when
+the matches do not all start with it. srp: the commands, plot modes and
 setting values it offers are exactly those srp help documents, and srp accepts each of them; the projects offered are the registered ones (also with a ~ in SCIROOPLOT_CONFIG_PATH that the shell did not expand);
 the properties offered for a project are program, outdir and the settings its program declares, with their descriptions, and the values
 offered for a setting are on and off of a switch or the choices of a text, each accepted by srp set; bash inserts them escaped (a choice with spaces,
@@ -268,6 +269,9 @@ for sh in SHELLS:
         os.symlink(config, link)
     out = shell('_scirooplot_helper load_config; echo "current: ${current_project}"', sh, interactive=True, env={"SCIROOPLOT_CONFIG_PATH": "~/tilde_config"})
     check(f"{sh}: a ~ in SCIROOPLOT_CONFIG_PATH is the home folder", "current: comp" in out.stdout, out.tail())
+    # the project of one process (SCIROOPLOT_PROJECT), as for plot itself
+    out = shell('_scirooplot_helper load_config; echo "current: ${current_project}"', sh, config=config, interactive=True, env={"SCIROOPLOT_PROJECT": "second"})
+    check(f"{sh}: SCIROOPLOT_PROJECT is the project completed", "current: second" in out.stdout, out.tail())
 
 # speed with 3000 plots in 150 groups
 bigConfig = config_folder("config_big")

@@ -4,8 +4,9 @@ folder, than the program rebuilt from changed sources, or when srp set gave a se
 nothing changed, only other files did or a setting was set to the value it had. It then plots what the program
 saved. A failing program stops plot with a non-zero exit status before anything is plotted; a program that saved another project's
 definitions is named in a warning (once: the plot program run by plot does not warn again); a missing program is named in a warning
-and the stored definitions are used; a program run by hand (not by plot) says what it saved, and plot names the folder of the files it
-wrote. In bash and zsh.
+and the stored definitions are used; a program run by hand (not by plot) says what it saved and how the plots are made (with
+SCIROOPLOT_PROJECT naming another project: that variable, not srp select), and plot names the folder of the files it wrote. In bash
+and zsh.
 The program plot called directly (a script, xvfb-run) runs nothing and warns that the definitions may be outdated exactly when the
 program is newer than them (a changed program or setting); never when nothing changed or only other files did.
 Covers: a changed imported module, a changed setting, C++ program in a build folder other than build/, program of another
@@ -109,6 +110,11 @@ check("a program run by plot does not say what it saved", byPlot.rc == 0 and "Sa
 pictures = shell("plot g p png", config=config)
 check("plot in a mode writing a file per plot names the output folder", pictures.rc == 0 and f"The files are in {os.path.join(folder, 'out')}" in pictures.stdout, pictures.tail())
 check("a program run by hand says what it saved and how the plots are made", byHand.rc == 0 and "Saved 1 plot in 1 group of project proj: plot <group> <name>" in byHand.stdout + byHand.stderr, byHand.tail())
+# with another project as the current one of the process (SCIROOPLOT_PROJECT), it names that variable instead of srp select
+python_project(config, os.path.normpath(os.path.join(config, "..", "by_hand_other")), "other")
+byHandOther = shell(f"cd {folder} && python3 def.py", config=config, env={"SCIROOPLOT_PROJECT": "other"})
+said = byHandOther.stdout + byHandOther.stderr
+check("a program run by hand while SCIROOPLOT_PROJECT names another project says to plot with the variable", byHandOther.rc == 0 and "project proj: SCIROOPLOT_PROJECT=proj plot <group> <name>" in said and "srp select" not in said, byHandOther.tail())
 
 for sh in SHELLS:
     config = config_folder(f"config_{sh}_failing")
