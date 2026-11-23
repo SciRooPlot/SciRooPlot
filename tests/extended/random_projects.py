@@ -2,8 +2,9 @@
 every kind and variant in its panels, ratios in ratio panels, tree requests, legends, texts and shapes, and the setters of every
 object with their test values, chained at random: srptest.random_definition).
 - the C++ program compiles and saves the same definitions as the Python program;
-- in every output mode (file, data, pdf, png, svg; macro with a display) every plot is made, the plot program ends normally and reports
-  no error of SciRooPlot or ROOT, no crash and nothing of a sanitizer (the weekly sanitizer job runs this with the sanitizer build).
+- in every output mode (file, data, pdf, png, svg; macro with a display) every plot is made (mode data: the data file is written), the
+  plot program ends normally and reports no error of SciRooPlot or ROOT, no crash and nothing of a sanitizer (the weekly sanitizer job
+  runs this with the sanitizer build).
 Warnings are allowed: random combinations warn about what does not fit (a range of the wrong axis, a modifier for another kind of data).
 """
 
@@ -53,8 +54,11 @@ for seed in seeds:
     S.run(S.SRP, "select", project)
     for mode in modes:
         ran = S.run(S.PLOT, ".+", ".+", mode, timeout=3600)
-        made = len([line for line in ran.text.splitlines() if "Created plot" in line])
-        check(f"seed {seed}, mode {mode}: every plot made", made == nPlots, f"{made} of {nPlots}; {' | '.join(ran.errors()[:3])}")
+        if mode == "data":  # paints nothing: the input data of every plot is written to one file
+            check(f"seed {seed}, mode data: the data file is written", os.path.exists(os.path.join(work, "out", "Data.root")), " | ".join(ran.errors()[:3]))
+        else:
+            made = len([line for line in ran.text.splitlines() if "Created plot" in line])
+            check(f"seed {seed}, mode {mode}: every plot made", made == nPlots, f"{made} of {nPlots}; {' | '.join(ran.errors()[:3])}")
         errors = [line for line in ran.text.splitlines() if line.startswith("[ ERR") or "Error in <" in line or "Fatal in <" in line or "*** Break" in line or any(s in line for s in SANITIZERS)]
         check(f"seed {seed}, mode {mode}: the plot program ends normally without errors", ran.rc == 0 and not errors, f"exit status {ran.rc}: {' | '.join(errors[:5])}"[:1500])
 finish()
