@@ -2,11 +2,16 @@
 inside the data, beyond it (the frame is widened: SciRooPlot's rule, unlike ROOT's clamping) and set on one side only. Inside the
 bins of a histogram the frame shows whole bins (ROOT): it ends at the edges of the bins holding the requested values. Graphs and
 functions have no bins: their frame ends exactly at the values.
-Also: no histogram bin outside the frame is drawn, and widening x around all the data leaves the automatic y range as it is. A formula of
+Also: no histogram bin outside the frame is drawn, and widening x around all the data leaves the automatic y range as it is. Values of 1d
+histograms (bins that are not empty) and graphs (points) within the x range of the frame but above or below it are cut off: a hint says how
+many of how many, and no hint is given where none are. A formula of
 the plot definition without a range of its own that gives the frame spans the pad range (it has no range but ROOT's default 0 to 1): it is
 drawn across the whole frame, and the automatic y range (colour scale) is that of the drawn function, also of a function drawn
 with many samples (SetNpx).
 Covers: range beyond the axis, exact ends on graph frames, log y headroom, bins outside the frame, formulas spanning the pad range."""
+
+import math
+import re
 
 from srptest import BINNED_AXES, DATA_1D, DATA_2D, DATA_KINDS, ROOT, Project, S, add_data, cases, check, close, describe, finish, formula
 
@@ -98,6 +103,24 @@ for i, case in enumerate(todo):
                 axis = obj.GetXaxis()
                 first, last = axis.GetBinLowEdge(axis.GetFirst()), axis.GetBinUpEdge(axis.GetLast())
                 check(f"no bin drawn outside the frame: {what}", first >= x0 * (1 - 1e-9) - 1e-12 and last <= x1 * (1 + 1e-9) + 1e-12, f"bins {first:.6g} to {last:.6g}, frame {x0:.6g} to {x1:.6g}")
+
+    if case["kind"] not in DATA_2D:
+        (x0, x1), (y0, y1) = frame["X"], frame["Y"]
+        logY = "Y" in SCALES[case["scale"]]
+        values = []
+        for obj in run.objects(f"c{i}", "ranges"):
+            if obj.InheritsFrom("TH1") and obj.GetDimension() == 1:
+                values += [(obj.GetBinCenter(b), obj.GetBinContent(b)) for b in range(1, obj.GetNbinsX() + 1) if obj.GetBinContent(b) != 0]
+            elif obj.InheritsFrom("TGraph") and not obj.InheritsFrom("TGraph2D") and obj.GetFillStyle() == 0:
+                values += [(obj.GetPointX(k), obj.GetPointY(k)) for k in range(obj.GetN())]
+        values = [y for x, y in values if x0 <= x <= x1 and math.isfinite(y) and not (logY and y <= 0)]
+        cut = sum(y > y1 or y < y0 for y in values)
+        said = [m for m in run.messages(f"c{i}", "ranges") if "within the x range of the frame of pad 1 lie" in m]
+        counts = [tuple(int(n) for n in re.search(r": (\d+) of the (\d+) ", m).groups()) for m in said]
+        if cut and cut < len(values):
+            check(f"values cut off at the frame: a hint with their number: {what}", counts == [(cut, len(values))], f"{cut} of {len(values)}; " + " | ".join(said))
+        elif not cut:
+            check(f"no value cut off at the frame: no hint: {what}", not said, " | ".join(said))
 
     if case["axis"] == "X" and case["range"] in CONTAINS_DATA and case["kind"] not in DATA_2D:
         reference = run.frame(f"ref_{case['kind']}_{case['scale']}", "ranges")

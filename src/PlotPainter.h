@@ -404,7 +404,7 @@ class PlotPainter
   void ReportIgnored(const std::string& setting, const std::string& reason, bool plural = false);
   void ReportIgnored(const item_state_t& state, const std::string& setting, const std::string& reason);
   // 1d histograms and graphs of a flat pad that lie entirely beyond one edge of its frame (the first data decides the frame): warned
-  void WarnIfOutsideFrame(TPad* pad) const;
+  void ReportOutsideFrame(TPad* pad) const;
   // the outline of a fill symbol: the line of the data (as TLegend draws it), none, or thin and solid in the line colour (boxes)
   enum class Outline { line,
                        none,

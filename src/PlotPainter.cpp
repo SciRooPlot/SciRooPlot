@@ -1458,7 +1458,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
       }
     }
   }
-  if (axisHist_ptr && !polarFrame && !polargram && !hbarFrame && !pad_ptr->GetView()) WarnIfOutsideFrame(pad_ptr);
+  if (axisHist_ptr && !polarFrame && !polargram && !hbarFrame && !pad_ptr->GetView()) ReportOutsideFrame(pad_ptr);
 }
 
 //**************************************************************************************************
@@ -9384,15 +9384,17 @@ void PlotPainter::ReportIgnored(const item_state_t& state, const string& setting
 /**
  * Warns about 1d histograms and graphs that lie entirely beyond one edge of the frame of a flat pad (called once the pad is updated,
  * so that its ranges are final): every bin or point with its error bars, a filled histogram down to zero. Data beyond two edges is
- * not warned about, since its lines may cross the frame. One pass over the bins or points of each item.
+ * not warned about, since its lines may cross the frame. At verbosity hint, for data partly in the frame: a hint at the bins (not empty)
+ * or points within the x range of the frame whose values lie above or below it, cut off. One pass over the bins or points of each item.
  */
 //**************************************************************************************************
-void PlotPainter::WarnIfOutsideFrame(TPad* pad) const
+void PlotPainter::ReportOutsideFrame(TPad* pad) const
 {
   const double_t xMin = FromPad(pad->GetUxmin(), pad->GetLogx());
   const double_t xMax = FromPad(pad->GetUxmax(), pad->GetLogx());
   const double_t yMin = FromPad(pad->GetUymin(), pad->GetLogy());
   const double_t yMax = FromPad(pad->GetUymax(), pad->GetLogy());
+  const bool countCut = !logger::muted() && logger::detail::verbosity() >= logger::detail::level::hint;
   for (TObject* obj : *pad->GetListOfPrimitives()) {
     // the data of the pad: named <number>:<name>
     const string name = obj->GetName();
@@ -9413,11 +9415,22 @@ void PlotPainter::WarnIfOutsideFrame(TPad* pad) const
         inside = true;
       }
     };
+    // the values within the x range of the frame (a log axis shows no values at or below zero), and those cut off at its top or bottom
+    size_t nValues{}, nAbove{}, nBelow{};
+    const auto count = [&](double_t x, double_t y) {
+      if (x < xMin || x > xMax || !std::isfinite(y) || (pad->GetLogy() && y <= 0.)) return;
+      ++nValues;
+      nAbove += (y > yMax);
+      nBelow += (y < yMin);
+    };
+    string unit;
     if (auto* hist = dynamic_cast<TH1*>(obj); hist && hist->GetDimension() == 1) {
+      unit = "bins";
       const bool filled = hist->GetFillStyle() != 0;
-      for (int32_t bin = 1; bin <= hist->GetNbinsX() && !inside; ++bin) {
+      for (int32_t bin = 1; bin <= hist->GetNbinsX() && (!inside || countCut); ++bin) {
         const double_t content = hist->GetBinContent(bin);
         if (!std::isfinite(content)) continue;
+        if (countCut && content != 0.) count(hist->GetXaxis()->GetBinCenter(bin), content);
         double_t low = content - hist->GetBinErrorLow(bin);
         double_t high = content + hist->GetBinErrorUp(bin);
         if (filled) {
@@ -9427,21 +9440,28 @@ void PlotPainter::WarnIfOutsideFrame(TPad* pad) const
         add(hist->GetXaxis()->GetBinLowEdge(bin), hist->GetXaxis()->GetBinUpEdge(bin), low, high);
       }
     } else if (auto* graph = dynamic_cast<TGraph*>(obj); graph && graph->GetFillStyle() == 0) {
-      for (int32_t i = 0; i < graph->GetN() && !inside; ++i) {
+      unit = "points";
+      for (int32_t i = 0; i < graph->GetN() && (!inside || countCut); ++i) {
         const double_t x = graph->GetPointX(i);
         const double_t y = graph->GetPointY(i);
+        if (countCut) count(x, y);
         add(x - std::max(graph->GetErrorXlow(i), 0.), x + std::max(graph->GetErrorXhigh(i), 0.), y - std::max(graph->GetErrorYlow(i), 0.), y + std::max(graph->GetErrorYhigh(i), 0.));
       }
     } else {
       continue;
     }
+    auto definition = mDataDefinitions.find(obj);
+    const string dataName = (definition != mDataDefinitions.end()) ? DataName(*definition->second) : name.substr(colon + 1);
+    if (inside && (nAbove || nBelow)) {
+      string where = (nAbove) ? "above it" : "below it";
+      if (nAbove && nBelow) where = fmt::format("above and below it ({} above)", nAbove);
+      logger::hint("Plot {}: {} of the {} {} of data {} ({}) within the x range of the frame of pad {} lie {}: cut off.", mPlotLabel, nAbove + nBelow, nValues, unit, name.substr(0, colon), dataName, pad->GetNumber(), where);
+    }
     if (inside || (left + right + below + above) != 1) continue;
     const char* where = (left) ? "left of" : (right) ? "right of"
                                            : (below) ? "below"
                                                      : "above";
-    auto definition = mDataDefinitions.find(obj);
-    logger::warning("Data {} lies entirely {} the frame of its pad (the first data, or the data set with SetDefinesFrame, decides the frame): nothing of it is visible.",
-                    (definition != mDataDefinitions.end()) ? DataName(*definition->second) : name.substr(colon + 1), where);
+    logger::warning("Data {} lies entirely {} the frame of its pad (the first data, or the data set with SetDefinesFrame, decides the frame): nothing of it is visible.", dataName, where);
   }
 }
 
