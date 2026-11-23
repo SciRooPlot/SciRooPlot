@@ -1,5 +1,5 @@
-"""Every request of a tree or table (Project1D with fixed bins, edges, automatic range and bins, Project2D, Project in 3d and 4d, Profile1D,
-Profile2D, Scatter of 2, 3, 4 and 6 columns) gives what the same rows give when filled directly, for every input format (a tree in a file,
+"""Every request of a tree or table (Project1D with fixed bins, edges, automatic range and bins, Project2D, Project in 3d, 4d, 5d (one axis
+with edges) and 7d, Profile1D, Profile2D, Scatter of 2, 3, 4 and 6 columns) gives what the same rows give when filled directly, for every input format (a tree in a file,
 chained over files and over folders of a file, in a list handed over in memory, a table() of numpy arrays, a CSV file, an RNTuple in one
 file and chained over two), every column type a user may have (double, float, signed and unsigned integers of 8 to 64 bits, bool, a
 collection; values that are not finite) and every selection (Filter, two filters, a filter comparing a string or C-string column, Define
@@ -252,6 +252,10 @@ def kind_request(kind, data, var, rng_, weight):
         data.Project([(var, 4, [lo, hi]), ("y", 3, [-1.0, 1.0]), ("z", EDGES_Z)], weight)
     elif kind == "project4d":
         data.Project([(var, 4, [lo, hi]), ("y", 3, [-1.0, 1.0]), ("z", 4, [-3.0, 3.0]), ("w", 2, [0.5, 2.0])], weight).Project([0, 1])
+    elif kind == "project5d_edges":
+        data.Project([(var, 4, [lo, hi]), ("y", 3, [-1.0, 1.0]), ("z", EDGES_Z), ("w", 2, [0.5, 2.0]), ("ex", 3, [0.0, 0.3])], weight).Project([0, 1])
+    elif kind == "project7d":
+        data.Project([(var, 4, [lo, hi]), ("y", 3, [-1.0, 1.0]), ("z", 4, [-3.0, 3.0]), ("w", 2, [0.5, 2.0]), ("ex", 3, [0.0, 0.3]), ("ex2", 2, [0.0, 0.3]), ("ey", 2, [0.0, 0.3])], weight).Project([0, 1])
     elif kind == "profile1d":
         data.Profile1D((var, 10, [lo, hi]), "y", weight)
     elif kind == "profile1d_auto":
@@ -288,7 +292,7 @@ def kind_reference(kind, values, rows, integer, rng_, weights):
     if kind == "profile1d_auto":
         n, a, b = auto_axis(values, integer, 100)
         return filled(ROOT.TProfile("ref", "", n, a, b), [values, col["y"]], weights)
-    if kind in ("project2d", "project4d"):
+    if kind in ("project2d", "project4d", "project5d_edges", "project7d"):
         h = ROOT.TH2D("ref", "", 10, lo, hi, 4, np.array(EDGES_Y)) if kind == "project2d" else ROOT.TH2D("ref", "", 4, lo, hi, 3, -1.0, 1.0)
         return filled(h, [values, col["y"]], weights)
     if kind == "project3d":
@@ -307,8 +311,8 @@ def kind_reference(kind, values, rows, integer, rng_, weights):
     return {"x": list(values), "y": list(col["y"]), **{k: list(e) for k, e in zip(("ErrorXlow", "ErrorXhigh", "ErrorYlow", "ErrorYhigh"), errors)}}
 
 
-KINDS = ("project1d", "project1d_edges", "project1d_auto", "project1d_bins", "project2d", "project2d_auto", "project3d", "project4d", "profile1d", "profile1d_auto", "profile2d", "scatter2", "scatter3", "scatter4", "scatter6")
-BASE = {"project2d": "2d", "project2d_auto": "2d", "project3d": "2d", "project4d": "2d", "profile2d": "2d", "scatter3": "2d"}
+KINDS = ("project1d", "project1d_edges", "project1d_auto", "project1d_bins", "project2d", "project2d_auto", "project3d", "project4d", "project5d_edges", "project7d", "profile1d", "profile1d_auto", "profile2d", "scatter2", "scatter3", "scatter4", "scatter6")
+BASE = {"project2d": "2d", "project2d_auto": "2d", "project3d": "2d", "project4d": "2d", "project5d_edges": "2d", "project7d": "2d", "profile2d": "2d", "scatter3": "2d"}
 AUTO = ("project1d_auto", "project1d_bins", "project2d_auto", "profile1d_auto")  # kinds with an automatic range of the first axis
 
 
@@ -332,6 +336,8 @@ todo = cases(
         {"format": "tree", "kind": "project1d", "column": "i32", "selection": "define", "why": "requests booked with the types of their columns"},
         {"format": "tree", "kind": "project1d", "column": "x", "selection": "body", "why": "requests booked with the types of their columns"},
         {"format": "tree", "kind": "project4d", "column": "x", "selection": "body", "why": "axis titles of expressions with ';'"},
+        {"format": "tree", "kind": "project5d_edges", "column": "x", "selection": "weight", "why": "five axes and a weight booked with their types"},
+        {"format": "tree", "kind": "project7d", "column": "x", "selection": "weight", "why": "seven axes and a weight, more columns than booked with types"},
         {"format": "tree", "kind": "scatter3", "column": "x", "selection": "body", "why": "axis titles of expressions with ';'"},
         {"format": "tree", "kind": "project1d_auto", "column": "i32", "selection": "none", "why": "requests booked with the types of their columns"},
         {"format": "tree", "kind": "project1d", "column": "x", "selection": "filter_cstring", "why": "filters on C-string columns"},
@@ -556,6 +562,7 @@ for plotName, (case, ref) in expected.items():
         var = first_axis(case["column"], case["selection"])[0]
         counts = "weighted counts" if SELECTIONS[case["selection"]][1] else "counts"
         want = {"project2d": (var, "y", counts), "project2d_auto": (var, "y", counts), "profile1d_auto": (var, "#LT y #GT"), "project3d": (var, "y", "z"), "project4d": (var, "y"), "profile1d": (var, "#LT y #GT"), "profile2d": (var, "y", "#LT z #GT"), "scatter3": (var, "y", "z")}
+        want |= dict.fromkeys(("project5d_edges", "project7d"), (var, "y"))  # projected onto their first two axes as project4d
         want = want.get(case["kind"], (var, "y") if case["kind"].startswith("scatter") else (var, counts))
         got = tuple(getattr(obs[0], f"Get{axis}axis")().GetTitle() for axis in "XYZ"[: len(want)])
         check(f"{describe(case)}: the axis titles name the expressions", got == want, f"{got}, expected {want}")
