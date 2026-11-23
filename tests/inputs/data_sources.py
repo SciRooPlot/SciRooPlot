@@ -12,7 +12,7 @@ illegal name is refused. Inputs added after GeneratePlots (appended or replaced)
 GeneratePlots, also the input of a data source a tree is joined from; without a change the data is not read again.
 Covers: the same file through a symlink in a directory source, or ./, chained once, tables read only when requested;
 the same table name in two inputs: the first wins, a second AddDataSource replacing an input warns, a file added
-before a second GeneratePlots: the tree read again over both, an input file rewritten between two GeneratePlots giving the old data, inputs below a directory with ':' in its name.
+before a second GeneratePlots: the tree read again over both, an input file rewritten between two GeneratePlots giving the old data, inputs below a directory with ':' in its name, a data source joined from rewritten (also one whose tree had no rows at first).
 """
 
 import os
@@ -350,4 +350,34 @@ report("rewritten")
 means = dict(re.findall(r"^MEAN (\w+) (\S+)$", out.stdout, re.M))
 check("a data source joined from rewritten: the next GeneratePlots reads the joined data again", means.get("first") == "1.0" and means.get("rewritten") == "2.0", str(means) + " " + out.tail())
 check("a data source joined from rewritten: said naming the data source of the tree", "Inputs of data source m changed since they were read" in out.text, out.tail())
+
+# the same with a joined tree without rows at first, keeping the rows without a match (no tree is joined then)
+out = python(f"""
+import ROOT
+import SciRooPlot as S
+main, joined = {p.path("joinempty", "main.root")!r}, {p.path("joinempty", "joined.root")!r}
+import os
+os.makedirs(os.path.dirname(main), exist_ok=True)
+ROOT.RDataFrame(4).Define("k", "int(rdfentry_)").Snapshot("t", main)
+ROOT.RDataFrame(4).Define("k", "int(rdfentry_)").Filter("k < 0").Snapshot("u", joined)
+pm = S.PlotManager("rejoinempty")
+pm.AddBasePlot(S.PlotManager.MakeBasePlot("1d"))
+pm.AddDataSource("m", main)
+pm.AddDataSource("j", joined)
+plot = S.Plot("joined", "g", "1d")
+plot[1].AddData("t", "m").Join(["u", "j"], ["k"], "e", True).Project1D(("e.matched", 2, [-0.5, 1.5]))
+pm.AddPlot(plot)
+pm.SetOutputDirectory({p.path("rejoinempty")!r})
+def report(step):
+    pm.GeneratePlots("file")
+    f = ROOT.TFile.Open({p.path("rejoinempty", "Plots.root")!r})
+    data = [o for o in f.Get("g/joined").GetPrimitive("Pad_1").GetListOfPrimitives() if o.GetName().startswith("1:")]
+    print("MATCHED", step, data[0].GetBinContent(2) if data else None)
+    f.Close()
+report("first")
+ROOT.RDataFrame(4).Define("k", "int(rdfentry_)").Snapshot("u", joined)
+report("rewritten")
+""")
+matched = dict(re.findall(r"^MATCHED (\w+) (\S+)$", out.stdout, re.M))
+check("a data source joined from without rows at first, then rewritten with rows: the next GeneratePlots reads it again", matched.get("first") == "0.0" and matched.get("rewritten") == "4.0", str(matched) + " " + out.tail())
 finish()

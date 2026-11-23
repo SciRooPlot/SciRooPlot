@@ -282,7 +282,7 @@ class PlotManager
   mutable std::map<std::string, std::shared_ptr<TFile>> mRemoteFiles;  // remote input -> its file while the data is read (null: cannot be opened)
   std::optional<std::string> AttachJoin(TChain& chain, const std::string& treeName, const std::vector<tree_input_t>& treeInputs,
                                         const Plot::Pad::Data::data_info_t::join_t& join, std::vector<std::shared_ptr<TChain>>& joinedChains,
-                                        std::vector<std::shared_ptr<join_match_t>>& joinMatches);
+                                        std::vector<std::shared_ptr<join_match_t>>& joinMatches, std::vector<std::string>& joinedFiles);
 };
 
 }  // end namespace SciRooPlot

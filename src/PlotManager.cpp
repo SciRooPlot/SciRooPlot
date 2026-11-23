@@ -2342,15 +2342,14 @@ void PlotManager::ChainTrees(required_data_t& requiredData)
         for (const auto& join : joins) {
           if (failedJoins.count(join.ToString())) {
             isJoined = false;
-          } else if (auto error = AttachJoin(*chain, treeName, treeInputs, join, joinedChains, joinMatches)) {
+          } else if (vector<string> joinedFiles; auto error = AttachJoin(*chain, treeName, treeInputs, join, joinedChains, joinMatches, joinedFiles)) {
             logger::error("Cannot join {} to tree {}: {}.", join.GetDescription(), DataLocation(dataSource, treeName), *error);
             failedJoins.insert(join.ToString());
             isJoined = false;
-          } else if (!join.dataSource.empty() && !joinedChains.empty() && joinedChains.back()->GetName() == join.GetAlias()) {
-            // a tree of another data source: its inputs rewritten make this data source be read again too
+          } else {
+            // a tree of another data source (also one without rows): its inputs rewritten make this data source be read again too
             auto& times = mInputTimes[dataSource.substr(0, dataSource.find(':'))];
-            for (const auto* element : *joinedChains.back()->GetListOfFiles()) {
-              const string fileName = element->GetTitle();
+            for (const auto& fileName : joinedFiles) {
               std::error_code timeError;
               const auto time = std::filesystem::last_write_time(fileName, timeError);
               if (!timeError && !is_remote(fileName) && fileName != mUserDataFile && fileName != UserDataProcessFile()) times[fileName] = time;
@@ -4335,7 +4334,7 @@ shared_ptr<TFile> PlotManager::OpenInput(const string& fileName) const
 //**************************************************************************************************
 optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, const vector<tree_input_t>& treeInputs,
                                          const Plot::Pad::Data::data_info_t::join_t& join, vector<shared_ptr<TChain>>& joinedChains,
-                                         vector<shared_ptr<join_match_t>>& joinMatches)
+                                         vector<shared_ptr<join_match_t>>& joinMatches, vector<string>& joinedFiles)
 {
   if (const string treeAlias = split_path(treeName).second; join.GetAlias() == treeAlias) {
     return fmt::format("the columns of both would be called {}.column, please specify an alias", treeAlias);
@@ -4593,6 +4592,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     if (joinedInputs.empty()) return fmt::format("it was not found in data source {}", join.dataSource);
     for (const auto& joinedInput : joinedInputs) {
       joinedChain->AddFile(joinedInput.file.data(), TTree::kMaxEntries, joinedInput.treePath.data());
+      joinedFiles.push_back(joinedInput.file);
     }
     firstJoinedTree = getTree(joinedInputs.front().file, joinedInputs.front().treePath);
     if (auto error = reshuffled(firstJoinedTree, join.tree)) return error;
