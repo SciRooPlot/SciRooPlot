@@ -493,6 +493,7 @@ class Plot : public FillSetters<Plot>
   const auto& GetUniqueName() const { return mUniqueName; }
   boost::property_tree::ptree GetPropertyTree() const;
   auto& GetPads() { return mPads; }
+  const auto& GetPads() const { return mPads; }
 
   const auto& GetHeight() const { return mPlotDimensions.height; }
   const auto& GetWidth() const { return mPlotDimensions.width; }

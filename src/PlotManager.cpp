@@ -3461,10 +3461,18 @@ void PlotManager::LogReport(const Plot& plot, TCanvas* canvas, const PlotPainter
     const bool flat = !pad->GetView() && !polar;
     // the colour range of 2d data is the one of the frame the data is drawn on (the data keeps its own minimum and maximum)
     const TH1* frameHist = dynamic_cast<TH1*>(pad->GetListOfPrimitives()->FindObject(fmt::format("axis_hist_pad_{}", pad->GetNumber()).data()));
-    if (pad->GetView()) {
+    // a ColorScale() cell draws the scale of another pad, with a frame of its own that shows nothing
+    const auto padSettings = plot.GetPads().find(static_cast<uint8_t>(pad->GetNumber()));
+    const int32_t scaleOf = (padSettings != plot.GetPads().end()) ? padSettings->second.GetColorScaleOf().value_or(0) : 0;
+    const TH1* cellScale = dynamic_cast<TH1*>(pad->GetListOfPrimitives()->FindObject(fmt::format("color_scale_pad_{}", pad->GetNumber()).data()));
+    if (scaleOf > 0 && cellScale) {
+      add("colour scale", fmt::format("of pad {}, z {:.4g} to {:.4g}{}", scaleOf, cellScale->GetMinimum(), cellScale->GetMaximum(), (pad->GetLogz()) ? " (log)" : ""));
+    } else if (pad->GetView()) {
       add("frame", "a 3d view");
     } else if (polar) {
       add("frame", "polar");
+    } else if (!frameHist) {
+      add("frame", "none");
     } else {
       auto range = [](char axis, double_t low, double_t high, bool log) { return fmt::format("{} {:.4g} to {:.4g}{}", axis, (log) ? std::pow(10., low) : low, (log) ? std::pow(10., high) : high, (log) ? " (log)" : ""); };
       add("frame", range('x', pad->GetUxmin(), pad->GetUxmax(), pad->GetLogx()) + ", " + range('y', pad->GetUymin(), pad->GetUymax(), pad->GetLogy()));
@@ -3493,10 +3501,12 @@ void PlotManager::LogReport(const Plot& plot, TCanvas* canvas, const PlotPainter
         const TH1* zHist = (frameHist && frameHist->GetDimension() == 2) ? frameHist : hist;
         look += fmt::format(", z {:.4g} to {:.4g}{}", zHist->GetMinimum(), zHist->GetMaximum(), (pad->GetLogz()) ? " (log)" : "");
       }
-      if (auto counted = (flat) ? PlotPainter::CountInFrame(obj, pad) : nullopt) {
-        look += fmt::format("; {} {} within the x range of the frame", counted->values, (hist) ? "bins" : "points");
-        if (counted->above) look += fmt::format(", {} above it", counted->above);
-        if (counted->below) look += fmt::format(", {} below it", counted->below);
+      // a histogram drawn with HBAR has its bins along y and its values along x
+      const bool hbar = hist && option.Contains("HBAR");
+      if (auto counted = (flat) ? PlotPainter::CountInFrame(obj, pad, hbar) : nullopt) {
+        look += fmt::format("; {} {} within the {} range of the frame", counted->values, (hist) ? "bins" : "points", (hbar) ? 'y' : 'x');
+        if (counted->above) look += fmt::format(", {} {} it", counted->above, (hbar) ? "right of" : "above");
+        if (counted->below) look += fmt::format(", {} {} it", counted->below, (hbar) ? "left of" : "below");
       }
       const string number = name.substr(0, colon);
       const string dataLabel = painter.DataLabel(obj);
@@ -3512,6 +3522,11 @@ void PlotManager::LogReport(const Plot& plot, TCanvas* canvas, const PlotPainter
       size_t row = 0;
       for (auto* entryObj : *legend->GetListOfPrimitives()) {
         const auto* entry = static_cast<TLegendEntry*>(entryObj);
+        // the title (TLegend::SetHeader) is an entry of its own, not a row the user added
+        if (TString(entry->GetOption()).EqualTo("h", TString::kIgnoreCase)) {
+          add(fmt::format("legend {}, title", string(legend->GetName()).substr(10)), fmt::format("\"{}\"", entry->GetLabel()));
+          continue;
+        }
         const string symbol = (std::strlen(entry->GetOption())) ? fmt::format("symbol \"{}\"", entry->GetOption()) : "no symbol";
         add(fmt::format("legend {}, row {}", string(legend->GetName()).substr(10), ++row), fmt::format("\"{}\" ({})", entry->GetLabel(), symbol));
       }

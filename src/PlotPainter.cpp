@@ -9618,18 +9618,20 @@ std::array<double_t, 4> PlotPainter::CountedFrame(const TVirtualPad* pad)
  * The values of a 1d histogram or graph drawn in a flat pad counted against its frame (see frame_count_t); nothing for other objects.
  */
 //**************************************************************************************************
-optional<PlotPainter::frame_count_t> PlotPainter::CountInFrame(const TObject* obj, const TVirtualPad* pad)
+optional<PlotPainter::frame_count_t> PlotPainter::CountInFrame(const TObject* obj, const TVirtualPad* pad, bool hbar)
 {
-  const auto frame = CountedFrame(pad);
+  auto frame = CountedFrame(pad);
+  if (hbar) frame = {frame[1], frame[0], frame[3], frame[2]};
+  const bool logValues = (hbar) ? pad->GetLogx() : pad->GetLogy();
   frame_count_t counted;
   if (const auto* hist = dynamic_cast<const TH1*>(obj); hist && hist->GetDimension() == 1) {
     for (int32_t bin = 1; bin <= hist->GetNbinsX(); ++bin) {
       const double_t content = hist->GetBinContent(bin);
-      if (content != 0.) counted.Add(hist->GetXaxis()->GetBinCenter(bin), content, frame, pad->GetLogy());
+      if (content != 0.) counted.Add(hist->GetXaxis()->GetBinCenter(bin), content, frame, logValues);
     }
   } else if (const auto* graph = dynamic_cast<const TGraph*>(obj)) {
     for (int32_t i = 0; i < graph->GetN(); ++i)
-      counted.Add(graph->GetPointX(i), graph->GetPointY(i), frame, pad->GetLogy());
+      counted.Add(graph->GetPointX(i), graph->GetPointY(i), frame, logValues);
   } else {
     return nullopt;
   }

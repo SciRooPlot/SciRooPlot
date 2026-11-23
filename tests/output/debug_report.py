@@ -1,8 +1,9 @@
 """At verbosity debug every plot logs what it shows, pad by pad, for scripts and agents that cannot look at it: the frame (axis ranges and
-log, or that it is a 3d view or polar), each data item as drawn (class, drawing option, marker, line and fill with their colours, the z
-range of 2d data in a flat pad, and for 1d histograms and graphs in a flat pad how many values lie within the x range of the frame and
-how many of them above or below it) and the rows of each legend. Below verbosity debug nothing of it is logged.
-Covers: the report of every data kind alone (default and set colours, with a log y axis, cut by a y range, a log y range ending at values; 2d histograms with a z range and on log z), and in multi-panel layouts (ratio panels, shared axes, a legend strip,
+log, or that it is a 3d view or polar, or none), a ColorScale() cell as the colour scale of its panel with its range, each data item as
+drawn (class, drawing option, marker, line and fill with their colours, the z range of 2d data in a flat pad, and for 1d histograms and
+graphs in a flat pad how many values lie within the x range of the frame and how many of them above or below it; for a histogram drawn
+with HBAR within the y range and right or left of it), the title and the rows of each legend. Below verbosity debug nothing of it is logged.
+Covers: the report of every data kind alone (default and set colours, with a log y axis, cut by a y range, a log y range ending at values; 2d histograms with a z range and on log z; a histogram drawn with HBAR; a legend title), a ColorScale() cell and an empty panel, and in multi-panel layouts (ratio panels, shared axes, a legend strip,
 a 3d view beside a map), checked against the canvas read back from Plots.root (the positions of boxes and shapes: boxes/coordinate_systems.py).
 """
 
@@ -73,6 +74,17 @@ plot = S.Plot("zeros", "report", "2d")
 plot[1].AddData("cells", "cells")
 plot[1]["Z"].SetLog()
 p.pm.AddPlot(plot)
+# a histogram drawn with HBAR: its bins along y, its values along x, cut by an x range; a legend with a title
+plot = S.Plot("hbar", "report", "1d")
+plot[1].AddData("steps", "steps").SetDrawOption(S.hbars).SetLegendLabel("steps")
+plot[1].AddLegend("header")
+plot[1]["X"].SetRange(0, 6)
+p.pm.AddPlot(plot)
+# a map beside a ColorScale() cell showing its scale, and an empty cell
+plot = S.Plot("cell", S.PanelLayout([[S.Panel(), S.ColorScale(), S.Panel()]]))
+plot.SetGroup("report")
+plot[1].AddData("cells", "cells")
+p.pm.AddPlot(plot)
 run = p.plot(env={"SCIROOPLOT_VERBOSITY": "debug"})
 
 
@@ -101,12 +113,15 @@ for i, case in enumerate(todo):
         said = [line[len(f"Pad {k}, ") :] for line in lines if line.startswith(f"Pad {k}, ")]
         frame = [line[len("frame: ") :] for line in said if line.startswith("frame: ")]
         polar = any(obj.InheritsFrom("TGraphPolargram") for obj in pad.GetListOfPrimitives())
+        if pad.GetPrimitive(f"color_scale_pad_{k}"):  # a ColorScale() cell: see the named case below
+            check(f"pad {k}, a colour scale cell reported as such: {what}", any(line.startswith("colour scale: of pad ") for line in said) and not frame, " | ".join(said))
+            continue
         if len(frame) != 1:
             check(f"the frame of pad {k} reported once: {what}", False, " | ".join(said))
         elif frame[0] != "a 3d view":  # a canvas read back has no TView: 3d views are reported as such, their ranges are not
             x = f"x {number(pad.GetUxmin(), pad.GetLogx())} to {number(pad.GetUxmax(), pad.GetLogx())}{' (log)' if pad.GetLogx() else ''}"
             y = f"y {number(pad.GetUymin(), pad.GetLogy())} to {number(pad.GetUymax(), pad.GetLogy())}{' (log)' if pad.GetLogy() else ''}"
-            want = "polar" if polar else f"{x}, {y}"
+            want = "polar" if polar else f"{x}, {y}" if pad.GetPrimitive(f"axis_hist_pad_{k}") else "none"
             check(f"the frame of pad {k} as drawn: {what}", frame[0] == want, f"{frame[0]}, expected {want}")
         flat = len(frame) == 1 and frame[0] not in ("a 3d view", "polar")
         for obj, opt in run.drawn(f"r{i}", "report", k):
@@ -161,7 +176,7 @@ for i, case in enumerate(todo):
             check(f"pad {k}, {who.rstrip(' (')}: values within, above and below the frame as drawn: {what}", got == counted, f"{look}; counted {counted}")
         legends = [obj for obj in pad.GetListOfPrimitives() if obj.InheritsFrom("TLegend") and obj.GetName().startswith("LegendBox_")]
         for legend in legends:
-            rows = [(e.GetLabel(), e.GetOption()) for e in legend.GetListOfPrimitives()]
+            rows = [(e.GetLabel(), e.GetOption()) for e in legend.GetListOfPrimitives() if e.GetOption().lower() != "h"]  # not the title
             prefix = f"legend {legend.GetName()[10:]}, row "
             reported = [line[len(prefix) :] for line in said if line.startswith(prefix)]
             want = [f'{j + 1}: "{label}" ({f"symbol {chr(34)}{opt}{chr(34)}" if opt else "no symbol"})' for j, (label, opt) in enumerate(rows)]
@@ -172,9 +187,28 @@ zeros = [line for line in run.messages("zeros", "report") if "Pad 1, data 1 (" i
 frameHist = next(pad for pad in run.canvas("zeros", "report").GetListOfPrimitives() if pad.GetName().startswith("Pad_")).GetPrimitive("axis_hist_pad_1")
 want = f"z {frameHist.GetMinimum():.4g} to {frameHist.GetMaximum():.4g} (log)"
 check("a map with empty cells on log z: the colour range of the frame, above zero", len(zeros) == 1 and want in zeros[0] and frameHist.GetMinimum() > 0, f"{' | '.join(zeros)}; expected {want}")
+
+
+def report(name):
+    """the report lines of a plot, without colours and the plot label"""
+    lines = [re.sub(r"\x1b\[[0-9;]*m", "", line) for line in run.messages(name, "report") if "[ DEBU" in line]
+    return [line.split(f"Plot {name} from group report: ", 1)[1] for line in lines if f"Plot {name} from group report: " in line]
+
+
+# values 1 to 10 along x, an x range up to 6: four bars reach beyond the frame on the right
+hbar = report("hbar")
+data = [line for line in hbar if line.startswith("Pad 1, data 1 (")]
+check("a histogram drawn with HBAR: its bins counted along y, its values along x", len(data) == 1 and data[0].endswith("; 10 bins within the y range of the frame, 4 right of it"), " | ".join(hbar))
+check("a legend title is reported as title, not as a row", 'Pad 1, legend 1, title: "header"' in hbar and any(line.startswith('Pad 1, legend 1, row 1: "steps"') for line in hbar), " | ".join(hbar))
+cell = report("cell")
+frameHist = next(pad for pad in run.canvas("cell", "report").GetListOfPrimitives() if pad.GetName() == "Pad_1").GetPrimitive("axis_hist_pad_1")
+want = f"Pad 2, colour scale: of pad 1, z {frameHist.GetMinimum():.4g} to {frameHist.GetMaximum():.4g}"
+check("a ColorScale() cell is reported as the colour scale of its panel, with its range", want in cell and not any(line.startswith("Pad 2, frame") for line in cell), f"{' | '.join(cell)}; expected {want}")
+check("a pad without data is reported as without frame", "Pad 3, frame: none" in cell, " | ".join(cell))
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
 
-# below verbosity debug: no report
+# below verbosity debug: no report (the plot is still made)
 quiet = p.plot(name="r0", env={"SCIROOPLOT_VERBOSITY": "hint"})
+check("the plot is made below verbosity debug", "Created plot r0" in quiet.log and not quiet.errors(), quiet.log[-300:])
 check("nothing of the report below verbosity debug", not [line for line in quiet.log.splitlines() if "[ DEBU" in line], quiet.log[-300:])
 finish()
