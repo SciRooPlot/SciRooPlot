@@ -6,8 +6,12 @@ its colours as stored) does not, nor does the reference function of the pad. Alp
 Data that is not drawn (a graph without points) takes its entry too, so the data after it gets the colours it would get if it were drawn.
 Every data kind, with lists of the pad, of pad 0 and of both, separate marker, line and fill lists of different lengths, and plots
 without a base plot.
+Data of a pad drawn alike (the same drawing option, colours, styles and sizes of lines, markers and fills; 1d data only) is named in a
+hint, each item with the first one before it that it looks like, and no hint is given for data that differs.
 Covers: each colour setter sets only its own part, marker and line of one data item from the same entry.
 """
+
+import re
 
 from srptest import DATA_KINDS, DEFAULT_COLORS, ROOT, Project, S, add_data, base_of, cases, check, colour_diff, data_objects, describe, drawn_type, finish, has_variant, source_of
 
@@ -147,6 +151,18 @@ for i, case in enumerate(todo):
         found = [colour_diff(expected(case, part, entryUsed, stylish), getattr(obj, f"Get{attr}Color")()) for part, attr in (("marker", "Marker"), ("line", "Line"), ("fill", "Fill")) if obj.InheritsFrom(f"TAtt{attr}") and expected(case, part, entryUsed, stylish) is not None]
         found = [f for f in found if f]
         check(f"data {position + 1} takes entry {entryUsed}: {what}", not found, " | ".join(found))
+    # data drawn alike: hinted at, each with the first data before it that looks the same
+    looks = {}
+    for obj, opt in run.links(f"c{i}", "colours"):
+        if not re.match(r"^[1-9]\d*:", obj.GetName()) or (obj.InheritsFrom("TH1") and obj.GetDimension() > 1) or obj.InheritsFrom("TGraph2D") or obj.InheritsFrom("TF2"):
+            continue
+        if not (obj.InheritsFrom("TAttLine") and obj.InheritsFrom("TAttMarker") and obj.InheritsFrom("TAttFill")):
+            continue
+        look = (str(opt).upper().replace("SAME", "").replace(" ", ""), obj.GetLineColor(), obj.GetLineStyle(), obj.GetLineWidth(), obj.GetMarkerColor(), obj.GetMarkerStyle(), round(obj.GetMarkerSize(), 6), obj.GetFillColor(), obj.GetFillStyle())
+        looks.setdefault(int(obj.GetName().split(":")[0]), look)
+    alike = {(next(m for m in sorted(looks) if looks[m] == looks[n]), n) for n in looks} - {(n, n) for n in looks}
+    said = {tuple(int(v) for v in m.groups()) for line in run.messages(f"c{i}", "colours") if (m := re.search(r"data (\d+) and (\d+) of pad 1 look alike", line))}
+    check(f"data drawn alike named in a hint, other data not: {what}", said == alike, f"alike {sorted(alike)}, hinted {sorted(said)}")
 others = [line for line in run.warnings() if "inputs_empty has no points: it is not drawn" not in line]
 check("no warnings but those of graphs without points", not others, " | ".join(others[:5]))
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))

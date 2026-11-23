@@ -1459,6 +1459,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
     }
   }
   if (axisHist_ptr && !polarFrame && !polargram && !hbarFrame && !pad_ptr->GetView()) ReportOutsideFrame(pad_ptr);
+  HintAlikeData(pad_ptr);
 }
 
 //**************************************************************************************************
@@ -9462,6 +9463,47 @@ void PlotPainter::ReportOutsideFrame(TPad* pad) const
                                            : (below) ? "below"
                                                      : "above";
     logger::warning("Data {} lies entirely {} the frame of its pad (the first data, or the data set with SetDefinesFrame, decides the frame): nothing of it is visible.", dataName, where);
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Hints at data of a pad drawn alike, which nothing tells apart: the same drawing option and the same colours, styles and sizes of lines,
+ * markers and fills (2d data, coloured by the palette, and the reference function are not compared). Only at verbosity hint.
+ */
+//**************************************************************************************************
+void PlotPainter::HintAlikeData(TPad* pad) const
+{
+  if (logger::muted() || logger::detail::verbosity() < logger::detail::level::hint) return;
+  // the look of each data item: its first primitive, named <number>:<name>
+  using look_t = std::tuple<string, Color_t, Style_t, Width_t, Color_t, Style_t, Size_t, Color_t, Style_t>;
+  std::map<uint32_t, look_t> looks;
+  for (TObjLink* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+    TObject* obj = link->GetObject();
+    const string name = obj->GetName();
+    const size_t colon = name.find(':');
+    const bool isData = colon != string::npos && colon != 0 && colon <= 5 && std::all_of(name.begin(), name.begin() + colon, [](char c) { return std::isdigit(static_cast<unsigned char>(c)); });
+    if (!isData) continue;
+    const auto number = static_cast<uint32_t>(std::stoul(name.substr(0, colon)));
+    if (number == 0) continue;  // the reference function
+    const auto* hist = dynamic_cast<TH1*>(obj);
+    if ((hist && hist->GetDimension() > 1) || obj->InheritsFrom(TGraph2D::Class()) || obj->InheritsFrom(TF2::Class())) continue;
+    const auto* line = dynamic_cast<TAttLine*>(obj);
+    const auto* marker = dynamic_cast<TAttMarker*>(obj);
+    const auto* fill = dynamic_cast<TAttFill*>(obj);
+    if (!line || !marker || !fill) continue;
+    // the drawing option without SAME (all but the first data have it)
+    TString option = link->GetOption();
+    option.ToUpper();
+    option.ReplaceAll("SAME", "");
+    option.ReplaceAll(" ", "");
+    looks.emplace(number, look_t{option.Data(), line->GetLineColor(), line->GetLineStyle(), line->GetLineWidth(), marker->GetMarkerColor(), marker->GetMarkerStyle(), marker->GetMarkerSize(), fill->GetFillColor(), fill->GetFillStyle()});
+  }
+  for (auto it = looks.begin(); it != looks.end(); ++it) {
+    const auto alike = std::find_if(looks.begin(), it, [&](const auto& earlier) { return earlier.second == it->second; });
+    if (alike != it) {
+      logger::hint("Plot {}: data {} and {} of pad {} look alike (the same drawing option, colours and styles): nothing tells them apart.", mPlotLabel, alike->first, it->first, pad->GetNumber());
+    }
   }
 }
 
