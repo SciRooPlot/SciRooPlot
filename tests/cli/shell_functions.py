@@ -6,13 +6,15 @@ the program (a C++ program: of its CMake source folder, else of its own folder),
 unknown project, srp out without an output folder or before it exists fail with a message; srp update of a build configured for
 another prefix fails naming srp reinstall; plot shows why srp cannot give the program of the current project. The srp program alone refuses the
 commands that need env.sh, unknown commands, a missing command and too many arguments, with exit status 1. In zsh without a terminal, env.sh registers the
-completion silently also with an insecure directory in fpath.
+completion silently also with an insecure directory in fpath. srp info names the version, the installation of the env.sh sourced, the
+configuration folder, the current project and the ROOT version.
 Covers: the bash plot alias in compound commands (pre-release braces rule), 2026-11-03 (zsh read-only names in env.sh)."""
 
 import os
+import re
 import shutil
 
-from srptest import ENV_SCRIPT, SHELLS, SRP, check, config_folder, finish, run, shell
+from srptest import ENV_SCRIPT, ROOT, SHELLS, SOURCE, SRP, check, config_folder, finish, run, shell
 
 config = config_folder("config")
 folder = config_folder("cwd")
@@ -149,6 +151,18 @@ if "zsh" in SHELLS:
     default = run("zsh", "-f", "-c", "print -r -- $FPATH").stdout.strip()
     out = shell("print -r -- $_comps[plot]", "zsh", config=config, interactive=True, env={"FPATH": f"{insecure}:{default}"})
     check("zsh: without a terminal and with an insecure directory in fpath, env.sh registers the completion silently", out.stdout.strip() == "_plot_completions_zsh" and not out.stderr.strip(), out.tail())
+
+# srp info: the installation of the env.sh sourced, the configuration folder and project, the version and the ROOT found at build time
+version = re.search(r"^\s*VERSION (\S+)", open(os.path.join(SOURCE, "CMakeLists.txt")).read(), re.MULTILINE).group(1)
+infoConfig = config_folder("info_config")
+for sh in SHELLS:
+    out = shell("srp info; echo prefix=$SCIROOPLOT_ROOT", sh, config=infoConfig)
+    text = re.sub(r"\x1b\[[0-9;]*m", "", out.stdout)
+    rows = {m.group(1): m.group(2).strip() for m in re.finditer(r"^\s*\|?\s+(prefix|folder|current project|ROOT)\s{2,}(.*)$", text, re.MULTILINE)}
+    sourced = re.search(r"^prefix=(.*)$", text, re.MULTILINE)
+    ok = out.rc == 0 and f"SciRooPlot {version}" in text and sourced and rows.get("prefix") == sourced.group(1) and rows.get("folder") == f"{infoConfig}  (SCIROOPLOT_CONFIG_PATH)"
+    ok = ok and rows.get("current project") == "none" and rows.get("ROOT", "").split()[:1] == [ROOT.gROOT.GetVersion().replace("/", ".")]
+    check(f"{sh}: srp info names the version, the installation sourced, the configuration folder, no current project and the ROOT version", ok, f"{rows} | {out.tail()}")
 
 # the srp program alone
 for args, message in (
