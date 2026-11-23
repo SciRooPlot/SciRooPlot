@@ -4552,7 +4552,15 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       if (!branch || branch->GetMother() != branch || branch->GetListOfBranches()->GetEntries() > 0) continue;  // top-level branches only
       const string column = (branch->GetNleaves() == 1) ? string(branch->GetName()) : string(branch->GetName()) + "." + leaf->GetName();
       string type = leaf->GetTypeName();
-      if (leaf->GetLenStatic() > 1 || leaf->GetLeafCount()) type = "ROOT::VecOps::RVec<" + type + ">";
+      if (dynamic_cast<TLeafC*>(leaf)) {
+        type = "std::string";  // a C string, read as a string by RDataFrame
+      } else if (leaf->GetLenStatic() > 1 || leaf->GetLeafCount()) {
+        type = "ROOT::VecOps::RVec<" + type + ">";
+      }
+      if (!with_default_of(type, [](auto) {})) {
+        logger::warning("Column {}.{} of type {} has no value for rows without a match: it is left out, the joined tree has no rows in any input of {}.", join.GetAlias(), column, type, treeName);
+        continue;
+      }
       const string defined = "SRP_UNMATCHED_" + join.GetAlias() + "_" + std::to_string(columns.size());
       columns.emplace_back(defined, type);
       match->renames.emplace_back(join.GetAlias() + "." + column, defined);

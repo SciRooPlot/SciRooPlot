@@ -7,7 +7,7 @@ the joined tree skipped, also into a joined tree whose first column is an array 
 joined rows, read in parallel; an index column with a dot in its name
 taken whole, a leaf of a leaflist branch; an index column of a tree joined before that keeps rows without a match: rows without a match
 there skipped). Keeping rows without a match: alias.matched, the joined columns NaN, 0 or empty there (also Double32_t and strings; a
-column of two joined trees by its bare name that of the first), every row without a match for a joined tree without rows.
+column of two joined trees by its bare name that of the first), every row without a match for a joined tree without rows (its C strings empty, columns of types without such a value left out with a warning).
 Columns of the joined tree are reached as alias.column, or by their name where the tree has no column of that name (the tree's own column
 wins), those of the tree also as <tree>.column; filters (also on C strings of the joined tree), defines, weights, entry ranges (counted over the rows of the tree, before rows without a match are skipped) and ratios
 work on joined columns; two joins at once, and requests with other joins on the same tree, each give their own result. A join that is
@@ -203,6 +203,13 @@ for key in sideKeys:
     sideS.replace(0, sideS.size(), "text")
     side.Fill()
 side.Write()
+# a joined tree without rows with a C-string column and one of a type without a value of its own (a vector of vectors)
+emptyTyped = ROOT.TTree("emptyTyped", "")
+typedK, typedS, typedVV = np.zeros(1, np.int32), np.zeros(8, dtype="S1"), ROOT.std.vector[ROOT.std.vector["float"]]()
+emptyTyped.Branch("k", typedK, "k/I")
+emptyTyped.Branch("s", typedS, "s/C")
+emptyTyped.Branch("vv", typedVV)
+emptyTyped.Write()
 kmFile.Close()
 inSide, inSide2 = np.isin(K["k"], sideKeys), np.isin(K["k"], side2Keys)
 # an index column with a dot in its name (a branch of a split object, event.fIndex): taken whole, not as alias.column
@@ -368,6 +375,11 @@ for what, joinedTree in (("of the same data source", "emptySide"), ("of another 
         lambda pad, joinedTree=joinedTree: pad.AddData("main", "km").Join(joinedTree, ["k"], "e", True).Project1D(("std::isnan(v) && std::isnan(e.v)", 2, [-0.5, 1.5])),
     )
 case(
+    "keeping rows without a match by a key: a C-string column of a joined tree without rows is an empty string in every row",
+    H(5, -0.5, 4.5, np.where(np.arange(5) == 0, 12, 0)),
+    lambda pad: pad.AddData("main", "km").Join("emptyTyped", ["k"], "et", True).Project1D(("et.s.size()", 5, [-0.5, 4.5])),
+)
+case(
     "keeping rows without a match by an index column: a joined tree without rows in any input leaves every row without a match",
     H(2, -0.5, 1.5, np.zeros(10)),
     lambda pad: pad.AddData("O2track", "aoNone").JoinByIndex("O2collision", "fIndexCollisions", "col", True).Project1D(("col.matched", 2, [-0.5, 1.5])),
@@ -426,7 +438,13 @@ for plotName, (what, ref, contents) in expected.items():
     check(f"{what}: computed from the raw arrays", not diff, diff)
 nUnmatched = int((~matched).sum())
 check("rows without a match are counted in the reading summary", f"{nUnmatched} rows without a match skipped" in run.log, " | ".join(line for line in run.log.splitlines() if " - trk:" in line))
-check("the joins give no warnings or errors", not run.warnings() and not run.errors(), " | ".join(run.warnings() + run.errors()))
+others = [w for w in run.warnings() if "Column et.vv of type" not in w]  # the column left out on purpose, checked below
+check("the joins give no other warnings and no errors", not others and not run.errors(), " | ".join(others + run.errors()))
+check(
+    "keeping rows without a match: a column without a value of its own of a joined tree without rows is left out, said",
+    "Column et.vv of type vector<vector<float> > has no value for rows without a match: it is left out" in run.log,
+    " | ".join(line for line in run.log.splitlines() if "et." in line),
+)
 check("no ROOT warning about inputs whose tree has no rows", "Adding tree with no entries" not in run.log, " | ".join(line for line in run.log.splitlines() if "no entries" in line))
 warnRun = p.plot("joinwarn")
 said = [w for w in warnRun.warnings() if "No files match" in w]
