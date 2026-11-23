@@ -6,8 +6,8 @@ everything of a box is s times as large in pixels (within the few % rendered tex
 reported as a hint, so is a box at a position set for it that reaches beyond its pad (drawn, cut off at the pad); the hints name the plot,
 the box and its pad as show mode does (legend 1 of pad 1), and are printed only from verbosity hint on (not at the default verbosity); a box
 wholly outside of its pad is reported as a warning (also at the default verbosity); a text size not fitting its font is warned about naming
-the plot and the box or axis. A legend title growing past the width of the rows widens the box step by step, with a margin on its right as
-on its left.
+the plot and the box or axis as show mode does (text 2, legend 1; the axis of an HBAR frame as the user set it). A legend title growing past
+the width of the rows widens the box step by step, with a margin on its right as on its left.
 Cases: legends (one column, two columns, a title wider than the rows), texts and statistics boxes × a font sized relative to the pad (42) or in pixels (43) × plain
 text, TLatex with drawn parts (#sqrt, #frac), unicode, three rows × a wide, square and tall canvas × bitmapscale 1, 2 and 3; at every
 bitmapscale a box is at the same place (scaled), also a legend placed by SciRooPlot.
@@ -128,14 +128,16 @@ def measure(img):
 
 
 # a text size that does not fit its font (relative for 42, pixels for 43) is warned about naming the plot and what it is set on
+# (named as in show mode: the second text of pad 1 is "text 2"; the axis of a frame drawn with HBAR as the user set it)
 FONT_SIZES = {  # plot: (definition, what the warning names)
-    "font_text": (lambda pad: pad.AddText(0.2, 0.9, "a text").SetText(42, 30.0, ROOT.kBlack), "a text box of pad 1"),
-    "font_axis": (lambda pad: pad["X"].SetTitleFont(43).SetTitleSize(0.04), "the title of the X axis of pad 1"),
+    "font_text": (lambda pad, data: (pad.AddText(0.2, 0.9, "a text"), pad.AddText(0.2, 0.7, "a second text").SetText(42, 30.0, ROOT.kBlack)), "text 2 of pad 1"),
+    "font_legend": (lambda pad, data: (data.SetLegendLabel("row"), pad.AddLegend(0.2, 0.9).SetText(42, 30.0, ROOT.kBlack)), "legend 1 of pad 1"),
+    "font_axis": (lambda pad, data: pad["X"].SetTitleFont(43).SetTitleSize(0.04), "the title of the X axis of pad 1"),
+    "font_axis_hbar": (lambda pad, data: (data.SetDrawOption(S.hbars), pad["X"].SetTitleFont(43).SetTitleSize(0.04)), "the title of the X axis of pad 1"),
 }
 for name, (define, _) in FONT_SIZES.items():
     plot = S.Plot(name, "fonts", "1d")
-    plot[1].AddData("h", "s")
-    define(plot[1])
+    define(plot[1], plot[1].AddData("h", "s"))
     p.pm.AddPlot(plot)
 
 # a legend title growing past the width of the rows: the box grows with it, always with a margin right of the title as on its left

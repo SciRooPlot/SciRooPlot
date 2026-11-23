@@ -5496,33 +5496,36 @@ void PlotPainter::CheckFontSizes(TList* list) const
   // what the user set the size on, as named in show mode (pad 0: the canvas, e.g. common titles)
   auto describe = [](TObject* obj, int32_t padID) -> string {
     const string where = (padID) ? fmt::format(" of pad {}", padID) : " of the plot";
+    const string name = obj->GetName();
     if (auto* entry = dynamic_cast<TLegendEntry*>(obj)) return fmt::format("the legend row '{}'{}", entry->GetLabel(), where);
-    if (obj->InheritsFrom(TLegend::Class())) return "a legend" + where;
-    if (obj->InheritsFrom(TPaveStats::Class())) return "a statistics box" + where;
-    if (obj->InheritsFrom(TPave::Class())) return "a text box" + where;
+    if (obj->InheritsFrom(TLegend::Class())) return ((str_starts_with(name, "LegendBox_")) ? "legend " + name.substr(10) : "a legend") + where;
+    if (obj->InheritsFrom(TPaveStats::Class())) return ((str_starts_with(name, "stats_")) ? "the statistics box of data " + name.substr(6) : "a statistics box") + where;
+    if (obj->InheritsFrom(TPave::Class())) return ((str_starts_with(name, "TextBox_")) ? "text " + name.substr(8) : "a text box") + where;
     return fmt::format("a text '{}'{}", obj->GetTitle(), where);
   };
   // stops at the first incompatible setting (one wrong default would otherwise warn for every text)
-  std::function<bool(TList*, int32_t)> check = [&](TList* primitives, int32_t padID) {
+  std::function<bool(TList*, TPad*, int32_t)> check = [&](TList* primitives, TPad* inPad, int32_t padID) {
     if (!primitives) return true;
     for (TObject* obj : *primitives) {
       auto* pad = dynamic_cast<TPad*>(obj);
       auto* leg = dynamic_cast<TLegend*>(obj);
       auto* txt = dynamic_cast<TAttText*>(obj);
       auto* h = dynamic_cast<TH1*>(obj);
-      if (pad && !check(pad->GetListOfPrimitives(), pad->GetNumber())) return false;
-      if (leg && !check(leg->GetListOfPrimitives(), padID)) return false;
+      if (pad && !check(pad->GetListOfPrimitives(), pad, pad->GetNumber())) return false;
+      if (leg && !check(leg->GetListOfPrimitives(), inPad, padID)) return false;
       if (txt && !compatible(txt->GetTextFont(), txt->GetTextSize(), describe(obj, padID))) return false;
       if (h && TString(h->GetName()).BeginsWith("axis_hist")) {
+        // named as the user set it: a frame drawn with HBAR shows its x axis as the y axis of the pad
+        const bool hbar = inPad && IsHBarFrame(inPad, h);
         for (TAxis* ax : {h->GetXaxis(), h->GetYaxis(), h->GetZaxis()}) {
-          const string axis = fmt::format("the {} axis of pad {}", static_cast<char>(std::toupper(ax->GetName()[0])), padID);
+          const string axis = fmt::format("the {} axis of pad {}", HBarAxis(static_cast<char>(std::toupper(ax->GetName()[0])), hbar), padID);
           if (!compatible(ax->GetLabelFont(), ax->GetLabelSize(), "the labels of " + axis) || !compatible(ax->GetTitleFont(), ax->GetTitleSize(), "the title of " + axis)) return false;
         }
       }
     }
     return true;
   };
-  check(list, 0);
+  check(list, nullptr, 0);
 }
 
 //**************************************************************************************************
