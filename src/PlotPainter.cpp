@@ -6372,7 +6372,8 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
       totalHeightNDC = (1 + lineSpacing) * lineHeightNDC * std::ceil(static_cast<double_t>(nLines) / nColumns);
       if (box->GetTitle()) {
         if (titleWidthNDC > totalWidthNDC) {
-          totalWidthNDC = borderWidthNDC + titleWidthNDC + 0.1 * totalMarginWidthNDC;  // root places header at margin/10
+          // TLegend places the header at a tenth of the margin; on its right the margin of a text box
+          totalWidthNDC = borderWidthNDC + 0.1 * totalMarginWidthNDC + titleWidthNDC + marginNDC;
         }
         totalHeightNDC += (1 + lineSpacing) * lineHeightNDC;
       }

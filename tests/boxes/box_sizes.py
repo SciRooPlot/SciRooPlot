@@ -6,7 +6,7 @@ everything of a box is s times as large in pixels (within the few % rendered tex
 reported as a hint, so is a box at a position set for it that reaches beyond its pad (drawn, cut off at the pad); the hints name the plot,
 the box and its pad as show mode does (legend 1 of pad 1), and are printed only from verbosity hint on (not at the default verbosity); a box
 wholly outside of its pad is reported as a warning (also at the default verbosity).
-Cases: legends (one column, two columns), texts and statistics boxes × a font sized relative to the pad (42) or in pixels (43) × plain
+Cases: legends (one column, two columns, a title wider than the rows), texts and statistics boxes × a font sized relative to the pad (42) or in pixels (43) × plain
 text, TLatex with drawn parts (#sqrt, #frac), unicode, three rows × a wide, square and tall canvas × bitmapscale 1, 2 and 3; at every
 bitmapscale a box is at the same place (scaled), also a legend placed by SciRooPlot.
 Reference: the png of the plot: the box's outline (drawn red) and its rows (black) found by their colour.
@@ -27,11 +27,13 @@ CONTENTS = {
 }
 CANVASES = {"wide": (1000, 600), "square": (600, 600), "tall": (600, 1000)}
 FONTS = {42: 0.04, 43: 24.0}
-BOXES = ("legend", "legend_columns", "legend_auto", "text", "stats")  # legend_auto: placed by SciRooPlot
+BOXES = ("legend", "legend_columns", "legend_auto", "legend_title", "text", "stats")  # legend_auto: placed by SciRooPlot; legend_title: a title wider than its rows
 SCALES = (1, 2, 3)
 
 
 def valid(case):
+    if case["box"] == "legend_title":
+        return case["content"] in ("plain", "rows") and case["canvas"] == "wide"  # rows narrower than the title, the box clear of the frame
     return case["box"] != "stats" or case["content"] == "plain"  # a statistics box shows its values
 
 
@@ -58,7 +60,8 @@ for i, case in enumerate(todo):
     elif case["box"] == "text":
         box = pad.AddText(0.2, 0.9, rows)
     else:
-        box = pad.AddLegend() if case["box"] == "legend_auto" else pad.AddLegend(0.2, 0.9)
+        title = "a legend title much wider than all of its rows" if case["box"] == "legend_title" else None
+        box = pad.AddLegend(title) if case["box"] == "legend_auto" else pad.AddLegend(0.2, 0.9, title)
         for row in rows[1:] + (["fourth", "fifth"] if case["box"] == "legend_columns" else []):
             box.AddEntry(row)
         if case["box"] == "legend_columns":
@@ -150,8 +153,10 @@ for i, case in enumerate(todo):
         gaps = (cLeft - left - sides[0], right - sides[1] - cRight, cTop - top - sides[2], bottom - sides[3] - cBottom)
         # also rows with drawn parts below or above the line (#frac), which TLegend does not centre in pads taller than wide
         check(f"{where}: the rows lie inside the outline, apart from it", min(gaps) >= 1 and not m["outside"], f"gaps left, right, top, bottom {gaps}; {m['outside']} black pixels just outside")
+        if case["box"] == "legend_title":  # a title wider than the rows: as much room on its right as on its left
+            check(f"{where}: a title wider than the rows keeps a margin on its right", gaps[1] >= gaps[0], f"gaps left, right {gaps[:2]}")
         # no more room than a margin: on each side at most the height of a row (the content height divided by the rows)
-        nRows = len(CONTENTS[case["content"]]) if case["box"] in ("text", "legend", "legend_auto") else 3 if case["box"] == "legend_columns" else 4
+        nRows = len(CONTENTS[case["content"]]) + (case["box"] == "legend_title") if case["box"] in ("text", "legend", "legend_auto", "legend_title") else 3 if case["box"] == "legend_columns" else 4
         rowHeight = (cBottom - cTop + 1) / nRows
         check(f"{where}: the box leaves no more room around its rows than a margin", max(gaps) <= 1.6 * rowHeight + 2 * scale, f"gaps left, right, top, bottom {gaps} for rows of {rowHeight:.0f} pixels")
 
