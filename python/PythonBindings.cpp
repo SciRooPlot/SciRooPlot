@@ -334,7 +334,16 @@ void exportPlotManager(py::module_& m)
       };
       // arrays (numpy, pandas, lists of numbers, dicts of columns) are made into ROOT objects by the helpers of the module first
       auto notConvertible = [&dataSource](py::handle obj) {
-        if (py::hasattr(obj, "__array__") || py::isinstance<py::dict>(obj) || py::isinstance<py::float_>(obj) || py::isinstance<py::int_>(obj)) {
+        // a dict of ROOT objects: the objects are named already
+        if (py::isinstance<py::dict>(obj)) {
+          for (auto item : py::reinterpret_borrow<py::dict>(obj)) {
+            if (py::isinstance(item.second, TObjectClass)) {
+              throw py::type_error("Data source " + dataSource + ": ROOT objects are given as a list, not a dict (they are found by their own names), e.g. AddDataSource(\"" + dataSource + "\", list(objects.values())).");
+            }
+          }
+        }
+        const bool isNumber = py::isinstance<py::float_>(obj) || (py::isinstance<py::int_>(obj) && !py::isinstance<py::bool_>(obj));
+        if (py::hasattr(obj, "__array__") || py::isinstance<py::dict>(obj) || isNumber) {
           throw py::type_error("Data source " + dataSource + ": arrays and DataFrames are made into ROOT objects with histo(), histo2d(), graph() or table() first, e.g. AddDataSource(\"" + dataSource + "\", [histo(\"h\", values)]).");
         }
       };
