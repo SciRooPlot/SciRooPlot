@@ -4,7 +4,8 @@ bins of a histogram the frame shows whole bins (ROOT): it ends at the edges of t
 functions have no bins: their frame ends exactly at the values.
 Also: no histogram bin outside the frame is drawn, and widening x around all the data leaves the automatic y range as it is. Values of 1d
 histograms (bins that are not empty) and graphs (points) within the x range of the frame but above or below it are cut off: a hint says how
-many of how many, and no hint is given where none are (values at a range end are on the frame, also on a log axis). A formula of
+many of how many, and no hint is given where none are (values at a range end are on the frame, also on a log axis: no hint, and no
+warning that a graph of such values lies entirely beyond the frame). A formula of
 the plot definition without a range of its own that gives the frame spans the pad range (it has no range but ROOT's default 0 to 1): it is
 drawn across the whole frame, and the automatic y range (colour scale) is that of the drawn function, also of a function drawn
 with many samples (SetNpx).
@@ -81,9 +82,19 @@ for b in range(1, 11):
     steps.SetBinContent(b, b)
 p.pm.AddDataSource("steps", steps)
 EDGE_RANGES = [(log, r) for log in (False, True) for r in ((1, 8), (5, 10))]
+# graphs whose points all lie at one end of the y range: drawn on the frame edge, so not entirely beyond the frame
+for i, (log, r) in enumerate(EDGE_RANGES):
+    for end, value in (("low", r[0]), ("high", r[1])):
+        graph = own(ROOT.TGraph(3))
+        graph.SetName(f"{end}{i}")
+        for k in range(3):
+            graph.SetPoint(k, 2 + 3 * k, value)
+        p.pm.AddDataSource("steps", graph)
 for i, (log, r) in enumerate(EDGE_RANGES):
     plot = S.Plot(f"edge{i}", "ranges", "1d")
     plot[1].AddData("steps", "steps")
+    plot[1].AddData(f"low{i}", "steps")
+    plot[1].AddData(f"high{i}", "steps")
     plot[1]["Y"].SetLog(log).SetRange(*r)
     p.pm.AddPlot(plot)
 run = p.plot("ranges")
@@ -174,6 +185,8 @@ for i, (log, r) in enumerate(EDGE_RANGES):
     said = [m for m in run.messages(f"edge{i}", "ranges") if "within the x range of the frame of pad 1 lie" in m]
     want = "2 of the 10 bins" if r == (1, 8) else "4 of the 10 bins"
     check(f"values at the ends of a y range {r[0]} to {r[1]} are not cut off" + " (log y)" * log, len(said) == 1 and want in said[0], " | ".join(said))
+    beyond = [m for m in run.messages(f"edge{i}", "ranges") if "lies entirely" in m]
+    check(f"graphs at the ends of a y range {r[0]} to {r[1]} are not beyond the frame" + " (log y)" * log, not beyond, " | ".join(beyond))
 
 frame = run.frame("narrow_peak", "ranges")
 funcs = [obj for obj in run.objects("narrow_peak", "ranges") if obj.InheritsFrom("TF1")]

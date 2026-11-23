@@ -9521,12 +9521,10 @@ void PlotPainter::ReportIgnored(const item_state_t& state, const string& setting
 //**************************************************************************************************
 void PlotPainter::ReportOutsideFrame(TPad* pad) const
 {
-  const double_t xMin = FromPad(pad->GetUxmin(), pad->GetLogx());
-  const double_t xMax = FromPad(pad->GetUxmax(), pad->GetLogx());
-  const double_t yMin = FromPad(pad->GetUymin(), pad->GetLogy());
-  const double_t yMax = FromPad(pad->GetUymax(), pad->GetLogy());
   const bool countCut = !logger::muted() && logger::detail::verbosity() >= logger::detail::level::hint;
+  // values at a range end are on the frame, also when they come back from a log axis a rounding error beyond it
   const auto countFrame = CountedFrame(pad);
+  const double_t xMin = countFrame[0], yMin = countFrame[1], xMax = countFrame[2], yMax = countFrame[3];
   for (TObject* obj : *pad->GetListOfPrimitives()) {
     // the data of the pad: named <number>:<name>
     const string name = obj->GetName();
