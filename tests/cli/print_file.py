@@ -207,7 +207,8 @@ check("srp colorwheel expands environment variables in the file name: written, n
 
 # srp colorwheel <file> writes the wheel as an image without ROOT's messages; a name that is no image file (ROOT would write PostScript, also for .PNG)
 # ends with exit status 1 and one error, nothing written
-for name, ok in (("wheel.png", True), ("wheel.pdf", True), ("wheel", False), ("wheel.txt", False), ("wheel.PNG", False)):  # ROOT compares endings case-sensitively
+# ROOT compares endings case-sensitively, writes PostScript for .tif and cannot write .tiff
+for name, ok in (("wheel.png", True), ("wheel.pdf", True), ("wheel", False), ("wheel.txt", False), ("wheel.PNG", False), ("wheel.tif", False), ("wheel.tiff", False)):
     target = os.path.join(folder, name)
     out = run(SRP, "colorwheel", target, timeout=120)
     if ok:
