@@ -8,12 +8,14 @@ Every data kind, with lists of the pad, of pad 0 and of both, separate marker, l
 without a base plot.
 Data of a pad drawn alike (the same drawing option, colours, styles and sizes of lines, markers and fills; 1d data only) is named in a
 hint, each item with the first one before it that it looks like, and no hint is given for data that differs.
+A colour overview of a pad of a base plot (AddColorOverview) shows, in order, the marker colours the data of that pad gets when it sets
+none (lists and gradients of the pad, of pad 0, SciRooPlot's); a base plot or pad that does not exist is refused with an error.
 Covers: each colour setter sets only its own part, marker and line of one data item from the same entry.
 """
 
 import re
 
-from srptest import DATA_KINDS, DEFAULT_COLORS, ROOT, Project, S, add_data, base_of, cases, check, colour_diff, data_objects, describe, drawn_type, finish, has_variant, source_of
+from srptest import DATA_KINDS, DEFAULT_COLORS, ROOT, Project, S, add_data, base_of, captured, cases, check, colour_diff, data_objects, describe, drawn_type, finish, has_variant, source_of
 
 L3 = [ROOT.kRed + 1, "#00aa55", (0.2, 0.3, 0.9)]  # every colour form
 L3_PAD0 = [ROOT.kOrange + 7, ROOT.kCyan + 2, ROOT.kMagenta + 3]
@@ -112,7 +114,34 @@ for i, case in enumerate(todo):
     SETUPS[case["setup"]][0](add_data(plot[1], case["kind"], source))
     add_data(plot[1], case["kind"])
     p.pm.AddPlot(plot)
-run = p.plot("colours")
+
+# colour overview of a pad of a base plot: its boxes show, in order, the marker colours the data of that pad gets when it sets none
+GRADIENT = [(ROOT.kRed + 1, 0.0), (ROOT.kBlue + 1, 1.0)]
+OVERVIEWS = {  # base plot setup, pad, number of boxes
+    "srp": (lambda b: None, 1, len(DEFAULT_COLORS)),
+    "pad": (lambda b: b[1].SetDefaultMarkerColors(MARKERS).SetDefaultLineColors(LINES), 1, len(MARKERS)),
+    "pad0": (lambda b: b[0].SetDefaultColors(L3), 1, len(L3)),
+    "pad_over_pad0": (lambda b: (b[0].SetDefaultColors(L3_PAD0), b[1].SetDefaultColors(L3)), 1, len(L3)),
+    "gradient": (lambda b: b[1].SetDefaultColors(GRADIENT, None, 5), 1, 5),
+    "gradient_open": (lambda b: b[1].SetDefaultColors(GRADIENT), 1, 8),  # as many colours as data: shown with 8
+    "ratio_pad": (lambda b: (b[1].SetDefaultColors(L3_PAD0), b[2].SetDefaultColors(L3)), 2, len(L3)),
+}
+for name, (setup, padID, n) in OVERVIEWS.items():
+    base = S.PlotManager.MakeBasePlot("1d_ratio" if padID == 2 else "1d")
+    base.SetName(f"ov_{name}")
+    setup(base)
+    p.pm.AddBasePlot(base)
+    p.pm.AddColorOverview(f"overview_{name}", "overview", f"ov_{name}", padID)
+    plot = S.Plot(f"data_{name}", "overview", f"ov_{name}")
+    for _ in range(n):
+        add_data(plot[padID], "hist")
+    if padID == 2:
+        add_data(plot[1], "hist")  # a pad above to draw
+    p.pm.AddPlot(plot)
+for args, said in ((("no_base", 1), "there is no base plot no_base"), (("ov_srp", 3), "base plot ov_srp has no pad 3"), (("ov_srp", 0), "base plot ov_srp has no pad 0")):
+    _, text = captured(lambda args=args: p.pm.AddColorOverview("bad", "overview", *args))
+    check(f"colour overview of a missing base plot or pad refused: {said}", said in text, text.strip())
+run = p.plot("colours|overview")
 
 for i, case in enumerate(todo):
     what = describe(case)
@@ -163,6 +192,14 @@ for i, case in enumerate(todo):
     alike = {(next(m for m in sorted(looks) if looks[m] == looks[n]), n) for n in looks} - {(n, n) for n in looks}
     said = {tuple(int(v) for v in m.groups()) for line in run.messages(f"c{i}", "colours") if (m := re.search(r"data (\d+) and (\d+) of pad 1 look alike", line))}
     check(f"data drawn alike named in a hint, other data not: {what}", said == alike, f"alike {sorted(alike)}, hinted {sorted(said)}")
+for name, (_, padID, n) in OVERVIEWS.items():
+    boxes = [obj for obj, _ in run.links(f"overview_{name}", "overview") if obj.InheritsFrom("TPave")]
+    data = [obj for obj, _ in run.drawn(f"data_{name}", "overview", padID) if not obj.GetName().startswith("0:")]  # 0: reference function
+    if len(boxes) != n or len(data) != n:
+        check(f"colour overview of the pad of a base plot ({name}): plots made", False, f"{len(boxes)} boxes, {len(data)} data | " + " | ".join(run.errors()[:2]))
+        continue
+    found = [f"box {k + 1}: " + colour_diff(d.GetMarkerColor(), b.GetFillColor()) for k, (b, d) in enumerate(zip(boxes, data)) if colour_diff(d.GetMarkerColor(), b.GetFillColor())]
+    check(f"colour overview of the pad of a base plot ({name}): the marker colours its data gets, in order", not found, " | ".join(found))
 others = [line for line in run.warnings() if "inputs_empty has no points: it is not drawn" not in line]
 check("no warnings but those of graphs without points", not others, " | ".join(others[:5]))
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
