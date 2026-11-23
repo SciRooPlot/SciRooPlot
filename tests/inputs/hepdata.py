@@ -63,8 +63,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
-        if "version" in args and os.path.exists(os.path.join(served, "record", f"{record}.v{args['version'][0]}")):
-            self.path = f"/record/{record}.v{args['version'][0]}"
+        root = os.path.normpath(os.path.join(served, "record"))
+        versioned = os.path.normpath(os.path.join(root, f"{record}.v{args['version'][0]}")) if "version" in args else ""
+        if versioned.startswith(root + os.sep) and os.path.exists(versioned):  # only files inside record/
+            self.path = "/record/" + os.path.relpath(versioned, root)
         super().do_GET()
 
 
