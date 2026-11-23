@@ -16,7 +16,8 @@ HEPData's own; it says per table what the record's ROOT file does not hold; a ta
 the tables there.
 The record is served by a local web server as hepdata.net serves its ROOT download (a .tar.gz holding the ROOT file).
 Covers: an error label with characters not allowed in data names; two labels that become the same name; an asymmetric error with both
-shifts on one side; a table with two dependent variables of different points; a 2d table of points without bins; text bins with a bin
+shifts on one side; a table with two dependent variables of different points; a 2d table of points without bins; 2d tables with an
+asymmetric error source (a 2d graph with asymmetric errors; without HEPData's graph its points are the bins); text bins with a bin
 without value; axis titles of a 2d table; a table name with a colon; a bare ROOT file as download (a mirror); a download that is no ROOT
 file or holds no tables.
 """
@@ -148,6 +149,36 @@ def write_map(out, index, values, stat):
     out.cd()
 
 
+def write_map_asymmetric(out, index, values, sources, graph):
+    """a 2d table of 2 x 3 bins with error sources, one of them asymmetric (label: contents, or (up, down)); hepdata.net writes the
+    graph only when every error is symmetric, but checks only the up shifts: with graph, a graph with the given total errors"""
+    out.mkdir(f"Table {index}").cd()
+    xEdges, yEdges = array.array("d", [0, 1, 2]), array.array("d", [0, 1, 2, 3])
+    points = [(x + 0.5, y + 0.5) for x in range(2) for y in range(3)]
+    hists = [("Hist2D_y1", "z", values)]
+    for k, (label, contents) in enumerate(sources, start=1):
+        if isinstance(contents, tuple):
+            hists += [(f"Hist2D_y1_e{k}plus", label + "_plus", contents[0]), (f"Hist2D_y1_e{k}minus", label + "_minus", contents[1])]
+        else:
+            hists.append((f"Hist2D_y1_e{k}", label, contents))
+    for name, title, contents in hists:
+        h = ROOT.TH2F(name, DOI.format(index), 2, xEdges, 3, yEdges)
+        h.GetZaxis().SetTitle(title)
+        for (x, y), c in zip(points, contents):
+            h.Fill(x, y, c)
+        h.Write()
+        keep.append(h)
+    if graph:
+        n = len(points)
+        columns = ([p[0] for p in points], [p[1] for p in points], values, [0.5] * n, [0.5] * n, graph)
+        g = ROOT.TGraph2DErrors(n, *(array.array("d", v) for v in columns))
+        g.SetNameTitle("Graph2D_y1", DOI.format(index))
+        g.SetDirectory(ROOT.nullptr)
+        g.Write()
+        keep.append(g)
+    out.cd()
+
+
 def write_points2d(out, index, values, errors):
     """a 2d table of points without bins: hepdata.net writes the graph alone"""
     out.mkdir(f"Table {index}").cd()
@@ -188,6 +219,9 @@ write_table(out, 8, [3.0, 7.0, 11.0], [("stat", [0.125, 0.25, 0.5])], bins=[(-0.
 write_table(out, 9, [1.0, None, 3.0], [("stat", [0.125, 0.0, 0.25])], edges=[0.5, 1.5, 2.5, 3.5], labels=["a", "b", "c"])
 write_table3d(out, 10)
 write_table(out, 11, [2.0, 4.0], [("stat", [0.25, 0.5])], edges=[0, 1, 2], name="Table 11: left")
+# 2d tables with an asymmetric error source: without HEPData's graph, and with it beside a symmetric source
+write_map_asymmetric(out, 12, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [("sys", ([0.5] * 6, [-0.25] * 6))], graph=None)
+write_map_asymmetric(out, 13, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [("stat", [0.125] * 6), ("sys", ([0.5] * 6, [-0.25] * 6))], graph=[0.5] * 6)
 out.Close()
 with tarfile.open(os.path.join(served, "record", "ins12345"), "w:gz") as archive:
     archive.add(rootFile, arcname=os.path.basename(rootFile))
@@ -262,6 +296,11 @@ expected = [
     ("a label that becomes the name of another source gets the number of its own", "Table 6/y1_a_b_3", "ref", "TGraphAsymmErrors", [1, 2, 3], [0.5] * 3, [0.5] * 3),
     ("a second dependent variable with its own points: a histogram of them", "Table 6/y2_stat", "ref", "TH1D", [4, 5], [0.5, 0.25], None),
     ("a 2d table of points without bins: a 2d graph with the total errors", "Table 7/y1", "ref", "TGraph2DErrors", [1, 2, 3], [0.5, 0.25, 0.125], None),
+    # the points of a map without HEPData's graph are its bins, x inner, y outer
+    ("a 2d table with an asymmetric error without HEPData's graph: a 2d graph of its bins with the summed errors", "Table 12/y1", "ref", "TGraph2DAsymmErrors", [1, 4, 2, 5, 3, 6], [0.25] * 6, [0.5] * 6),
+    ("a 2d table with an asymmetric error without HEPData's graph: the error source", "Table 12/y1_sys", "ref", "TGraph2DAsymmErrors", [1, 4, 2, 5, 3, 6], [0.25] * 6, [0.5] * 6),
+    ("a symmetric error source of a 2d table with an asymmetric one: a 2d graph too", "Table 13/y1_stat", "ref", "TGraph2DAsymmErrors", [1, 2, 3, 4, 5, 6], [0.125] * 6, [0.125] * 6),
+    ("the total errors of a 2d table with an asymmetric error and HEPData's graph: those of the graph", "Table 13/y1", "ref", "TGraph2DAsymmErrors", [1, 2, 3, 4, 5, 6], [0.5] * 6, [0.5] * 6),
     ("bins that overlap: a graph with the total errors", "Table 8/y1", "ref", "TGraphAsymmErrors", [3, 7, 11], [0.125, 0.25, 0.5], [0.125, 0.25, 0.5]),
     ("text bins with a bin without value: a histogram of the bins with values", "Table 9/y1_stat", "ref", "TH1D", [1, 3], [0.125, 0.25], None),
     ("a table name with a colon: the colon is _ in the data name", "Table 11_ left/y1_stat", "ref", "TH1D", [2, 4], [0.25, 0.5], None),
@@ -276,7 +315,7 @@ expected = [
 # the labels of the drawn x axis by the data name of a case
 labelled = {"Table 3/y1_stat": ["pp", "PbPb"], "Table 9/y1_stat": ["a", "c"]}
 for i, (what, name, source, cls, values, low, high) in enumerate(expected):
-    plot = S.Plot(f"h{i}", "hepdata", "2d" if cls in ("TH2D", "TGraph2DErrors") else "1d")
+    plot = S.Plot(f"h{i}", "hepdata", "2d" if cls in ("TH2D", "TGraph2DErrors", "TGraph2DAsymmErrors") else "1d")
     plot[1].AddData(name, source)
     p.pm.AddPlot(plot)
 plot = S.Plot("missing_table", "hepdata", "1d")
@@ -293,6 +332,8 @@ def values_of(obj):
         bins = range(1, obj.GetNbinsX() + 1)
         return [obj.GetBinContent(b) for b in bins], [obj.GetBinError(b) for b in bins], [obj.GetBinError(b) for b in bins]
     n = obj.GetN()
+    if obj.InheritsFrom("TGraph2DAsymmErrors"):
+        return [obj.GetZ()[i] for i in range(n)], [obj.GetErrorZlow(i) for i in range(n)], [obj.GetErrorZhigh(i) for i in range(n)]
     if obj.InheritsFrom("TGraph2D"):
         return [obj.GetZ()[i] for i in range(n)], [obj.GetEZ()[i] for i in range(n)], [obj.GetEZ()[i] for i in range(n)]
     return [obj.GetPointY(i) for i in range(n)], [obj.GetErrorYlow(i) for i in range(n)], [obj.GetErrorYhigh(i) for i in range(n)]
@@ -353,6 +394,8 @@ axes = [y1.GetXaxis().GetTitle(), y1.GetYaxis().GetTitle(), y1.GetZaxis().GetTit
 check("a 2d table: the axis titles of its histograms", axes == ["x [cm]", "y [cm]", "z"], f"{axes}")
 made = sorted(k.GetName() for k in copy.Get("Table 8").GetListOfKeys() if k.GetName().startswith("y")) if copy else []
 check("bins that overlap: no objects per error source", made == ["y1"], f"{made}")
+made = sorted(k.GetName() for k in copy.Get("Table 13").GetListOfKeys() if k.GetName().startswith("y")) if copy else []
+check("a 2d table with an asymmetric error: every object made", made == ["y1", "y1_stat", "y1_sys"], f"{made}")
 check("downloaded files: nothing is downloaded", not [r for r in requests if "table1" in r or "tar.gz" in r], f"requests {requests}")
 check("downloaded files are left as they are", all(content(p.path(name)) == data for name, data in originals.items()), "changed")
 

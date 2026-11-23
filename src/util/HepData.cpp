@@ -26,6 +26,7 @@
 #include <TFile.h>
 #include <TGraph.h>
 #include <TGraph2D.h>
+#include <TGraph2DAsymmErrors.h>
 #include <TGraph2DErrors.h>
 #include <TGraphAsymmErrors.h>
 #include <TH1.h>
@@ -157,7 +158,8 @@ std::map<int, string> source_names(const string& name, const hepdata_variable_t&
 
 // adds to the copy of a table an object per dependent variable y<i> and error source: y<i> with the total errors, y<i>_<label> with one
 // error source; a histogram for a binned table with one point per bin (text bins: per bin with a value) and symmetric errors, a graph
-// otherwise
+// otherwise (a 2d table with asymmetric errors, for which HEPData writes no graph, takes its points from the bins and its total errors
+// from the error sources)
 void add_variables(TDirectory* table, TDirectory* out, const string& tableName, record_notes_t& notes)
 {
   const auto read = read_hepdata_table(table);
@@ -169,21 +171,51 @@ void add_variables(TDirectory* table, TDirectory* out, const string& tableName, 
   bool withoutBins = false;
   for (const auto& [index, variable] : read.variables) {
     const string name = "y" + std::to_string(index);
-    const bool is2d = (variable.graph2d != nullptr);
+    const TH1* bins = variable.bins;
+    // the points of a 2d table without HEPData's graph: the bin centres, half the bin widths as x and y errors, the contents as values
+    const bool fromBins = !variable.graph && !variable.graph2d && bins && bins->GetDimension() == 2;
+    vector<double> binX, binY, binZ, binEX, binEY;
+    if (fromBins) {
+      for (int iy = 1; iy <= bins->GetNbinsY(); ++iy) {
+        for (int ix = 1; ix <= bins->GetNbinsX(); ++ix) {
+          binX.push_back(bins->GetXaxis()->GetBinCenter(ix));
+          binY.push_back(bins->GetYaxis()->GetBinCenter(iy));
+          binZ.push_back(bins->GetBinContent(ix, iy));
+          binEX.push_back(0.5 * bins->GetXaxis()->GetBinWidth(ix));
+          binEY.push_back(0.5 * bins->GetYaxis()->GetBinWidth(iy));
+        }
+      }
+    }
+    const bool is2d = (variable.graph2d != nullptr) || fromBins;
     if (!variable.graph && !is2d) continue;
     const TGraph* graph = (is2d) ? static_cast<const TGraph*>(nullptr) : variable.graph;
     const TGraph2DErrors* graph2d = variable.graph2d;
-    const int n = (is2d) ? variable.graph2d->GetN() : graph->GetN();
-    const double* x = (is2d) ? variable.graph2d->GetX() : graph->GetX();
-    const double* y = (is2d) ? variable.graph2d->GetY() : graph->GetY();
-    const TH1* bins = variable.bins;
+    // the points: x, y (and the values of a 2d table) with the x and y errors of a 2d table
+    int n{};
+    const double *x{}, *y{}, *z{}, *xErrors{}, *yErrors{};
+    string title;
+    if (fromBins) {
+      n = static_cast<int>(binX.size());
+      x = binX.data(), y = binY.data(), z = binZ.data(), xErrors = binEX.data(), yErrors = binEY.data();
+      title = bins->GetTitle();
+    } else if (is2d) {
+      n = graph2d->GetN();
+      x = graph2d->GetX(), y = graph2d->GetY(), z = graph2d->GetZ(), xErrors = graph2d->GetEX(), yErrors = graph2d->GetEY();
+      title = graph2d->GetTitle();
+    } else {
+      n = graph->GetN();
+      x = graph->GetX(), y = graph->GetY();
+      title = graph->GetTitle();
+    }
     if (!bins) withoutBins = true;
     auto binOf = [&](const TH1* hist, int i) { return (is2d) ? hist->FindFixBin(x[i], y[i]) : hist->FindFixBin(x[i]); };
 
     variants_t variants{{name, {}}};
     for (int i = 0; i < n; ++i) {
-      if (is2d) {
-        variants[0].second.emplace_back(variable.graph2d->GetErrorZ(i), variable.graph2d->GetErrorZ(i));
+      if (fromBins) {
+        variants[0].second.emplace_back(0., 0.);  // the sum of the error sources, below
+      } else if (is2d) {
+        variants[0].second.emplace_back(graph2d->GetErrorZ(i), graph2d->GetErrorZ(i));
       } else {
         variants[0].second.emplace_back(variable.graph->GetErrorYlow(i), variable.graph->GetErrorYhigh(i));
       }
@@ -211,9 +243,19 @@ void add_variables(TDirectory* table, TDirectory* out, const string& tableName, 
         errors.emplace_back(-std::min({up, down, 0.}), std::max({up, down, 0.}));
       }
     }
+    // total errors of points taken from the bins: the error sources added in quadrature, below and above separately
+    if (fromBins) {
+      for (size_t variant = 1; variant < variants.size(); ++variant) {
+        for (int i = 0; i < n; ++i) {
+          auto& [down, up] = variants[0].second[i];
+          down = std::hypot(down, variants[variant].second[i].first);
+          up = std::hypot(up, variants[variant].second[i].second);
+        }
+      }
+    }
 
     // values of a 1d table are the y of its graph, of a 2d table the z
-    const double* values = (is2d) ? variable.graph2d->GetZ() : y;
+    const double* values = (is2d) ? z : y;
     const bool symmetric = std::all_of(variants.begin(), variants.end(), [](const auto& variant) {
       return std::all_of(variant.second.begin(), variant.second.end(), [](const auto& e) { return std::abs(e.first - e.second) <= 1e-9 * std::max(e.first, e.second); });
     });
@@ -235,8 +277,8 @@ void add_variables(TDirectory* table, TDirectory* out, const string& tableName, 
     // the axis titles of the graph, else of HEPData's histogram (the graph of a 2d table has none)
     auto axisTitle = [&](int axis) -> string {
       const TAxis* fromGraph{};
-      if (is2d) fromGraph = (axis == 0) ? graph2d->GetXaxis() : (axis == 1) ? graph2d->GetYaxis()
-                                                                            : graph2d->GetZaxis();
+      if (graph2d) fromGraph = (axis == 0) ? graph2d->GetXaxis() : (axis == 1) ? graph2d->GetYaxis()
+                                                                               : graph2d->GetZaxis();
       if (!is2d) fromGraph = (axis == 0) ? graph->GetXaxis() : graph->GetYaxis();
       if (fromGraph && !is_blank(fromGraph->GetTitle())) return fromGraph->GetTitle();
       if (!bins) return "";
@@ -248,7 +290,6 @@ void add_variables(TDirectory* table, TDirectory* out, const string& tableName, 
     const string yTitle = axisTitle(1);
     const string zTitle = (is2d) ? axisTitle(2) : "";
 
-    const string title = (is2d) ? variable.graph2d->GetTitle() : graph->GetTitle();
     auto copyLabels = [](const TAxis* from, TAxis* to) {
       if (from->GetLabels()) {
         for (int bin = 1; bin <= from->GetNbins(); ++bin) {
@@ -299,14 +340,20 @@ void add_variables(TDirectory* table, TDirectory* out, const string& tableName, 
         hist->SetEntries(n);
         made = std::move(hist);
       } else if (is2d) {
-        if (!symmetric) continue;  // a graph in 2d has symmetric errors only (HEPData writes none then)
-        vector<double> ex(variable.graph2d->GetEX(), variable.graph2d->GetEX() + n);
-        vector<double> ey(variable.graph2d->GetEY(), variable.graph2d->GetEY() + n);
-        vector<double> ez;
+        vector<double> ex(xErrors, xErrors + n);
+        vector<double> ey(yErrors, yErrors + n);
+        vector<double> ezLow, ezHigh;
         for (const auto& error : errors) {
-          ez.push_back(error.second);
+          ezLow.push_back(error.first);
+          ezHigh.push_back(error.second);
         }
-        auto graph2d = std::make_unique<TGraph2DErrors>(n, const_cast<double*>(x), const_cast<double*>(y), const_cast<double*>(values), ex.data(), ey.data(), ez.data());
+        std::unique_ptr<TGraph2D> graph2d;
+        if (symmetric) {
+          graph2d = std::make_unique<TGraph2DErrors>(n, const_cast<double*>(x), const_cast<double*>(y), const_cast<double*>(values), ex.data(), ey.data(), ezHigh.data());
+        } else {
+          graph2d = std::make_unique<TGraph2DAsymmErrors>(n, const_cast<double*>(x), const_cast<double*>(y), const_cast<double*>(values), ex.data(), ex.data(), ey.data(), ey.data(),
+                                                          ezLow.data(), ezHigh.data());
+        }
         graph2d->SetDirectory(nullptr);
         graph2d->SetName(variantName.data());
         graph2d->SetTitle(title.data());
