@@ -1139,7 +1139,7 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
   </div>
   <div style="display:grid;gap:12px">
     <h2 class="title">With an AI coding agent</h2>
-    <p>SciRooPlot ships an agent skill: a condensed description of the workflow, the API and the common pitfalls, with the method reference generated from the headers. Import <a href="https://scirooplot.github.io/SciRooPlot/skill/scirooplot.skill">scirooplot.skill</a> into your agent as a skill, or point the agent to <a href="https://scirooplot.github.io/SciRooPlot/llms.txt">llms.txt</a>. The skill's text is readable too: <a href="https://scirooplot.github.io/SciRooPlot/skill/scirooplot/SKILL.md">SKILL.md</a>.</p>
+    <p>A coding agent writes and runs code from a request in plain words. With SciRooPlot's skill it writes a few lines of plot definition instead of a long ROOT macro: plots that look good from the start and stay in your project, for you to show with <code>plot</code> and keep editing. Import <a href="https://scirooplot.github.io/SciRooPlot/skill/scirooplot.skill">scirooplot.skill</a> into your agent as a skill, or point the agent to <a href="https://scirooplot.github.io/SciRooPlot/llms.txt">llms.txt</a>. Why this pays off: <a href="#ref-agents">With an AI coding agent</a>.</p>
   </div>
   <div style="display:grid;gap:12px">
     <h2 class="title">Your first project</h2>
@@ -1855,13 +1855,22 @@ const REF = [
 srp set myProject syst off                # pm.Setting("syst", True, "draw systematic uncertainties")</pre></div>
 <div class="code"><pre data-snip="project"></pre></div>
 <p>When <code>DefinePlots</code> grows, split it into files, one function per group of plots that takes the <code>PlotManager</code>; the main file calls them. <code>plot</code> re-runs the program when it changed; a Python program also when a <code>.py</code> file next to it or one folder below changed.</p>` },
-  { id: "agents", g: "basics", t: "With an AI coding agent", body: `<p>SciRooPlot ships an agent skill: the workflow, the API and the common pitfalls in condensed form, with the method reference generated from the headers, so an agent writes plot definitions that match the current version.</p>
+  { id: "agents", g: "basics", t: "With an AI coding agent", body: `<p>A coding agent is an AI assistant that writes and runs code for you from a request in plain words, such as "plot the spectra of both runs with their ratio below". Left to itself it writes a plotting macro in plain ROOT or matplotlib, which it knows well. With SciRooPlot's skill it writes SciRooPlot plot definitions instead, and that pays off for you:</p>
+<div class="tablewrap"><table><tbody>
+<tr><td><b>Less code</b></td><td>A plot takes a few lines instead of a macro of a hundred (see <a href="#from-root">ROOT vs SciRooPlot</a>): quicker to write, fewer places for mistakes, and short enough to check at a glance.</td></tr>
+<tr><td><b>A good look by default</b></td><td>Layouts, margins, colours and legends are presentable from the first try. The agent needs no round after round of fixing cut-off labels or a legend on top of the data, and has no conventions to remember: markers and lines of one data in one colour, its ratio in the same colour.</td></tr>
+<tr><td><b>Plots you keep</b></td><td>The plots end up in your project as a readable program, not as throwaway scripts. Show any of them with <code>plot</code>, change a colour yourself or come back to them months later, without asking the agent again.</td></tr>
+<tr><td><b>Mistakes reported, not drawn</b></td><td>A misspelt histogram name, missing data or an invalid setting gives a clear message (with a "did you mean" for names) instead of an empty or wrong plot that nobody notices.</td></tr>
+<tr><td><b>Checked without looking</b></td><td>On request SciRooPlot tells in words what each plot shows: axis ranges, data cut off by the frame, boxes covering data, the rows of each legend. An agent can check its own work with it instead of guessing from an image.</td></tr>
+<tr><td><b>Your setup stays as it is</b></td><td>The skill tells the agent how to try out plots without switching your selected project or changing your settings.</td></tr>
+</tbody></table></div>
+<h3>Setting it up</h3>
 <div class="tablewrap"><table><tbody>
 <tr><td><a href="https://scirooplot.github.io/SciRooPlot/skill/scirooplot.skill">scirooplot.skill</a></td><td>the skill as one file: import it into your agent as a skill</td></tr>
 <tr><td><a href="https://scirooplot.github.io/SciRooPlot/llms.txt">llms.txt</a></td><td>the entry point for agents that read the web: links to the skill, the references and the examples</td></tr>
 <tr><td><a href="https://scirooplot.github.io/SciRooPlot/skill/scirooplot/SKILL.md">SKILL.md</a></td><td>the skill as text, readable for people as well</td></tr>
 </tbody></table></div>
-<p>When an agent adapts code written for an older version, point it to <a href="#updating">Updating</a> (the same list as <code>api-changes.md</code>).</p>` },
+<p>The skill describes the workflow, the API and the common pitfalls of the current version, with the method reference generated from the headers. Still look at the plots yourself before you use them. When an agent adapts code written for an older version, point it to <a href="#updating">Updating</a>.</p>` },
   { id: "sources", g: "data", t: "Data sources and finding data", body: `<p>A data source is one data set made of its inputs. Within it, the first input containing a requested name wins; trees and RNTuples found in several inputs are chained. The files of a directory or wildcard are taken in alphabetical order (<code>run10.root</code> before <code>run2.root</code>). Train and test samples therefore belong in separate sources.</p>
 <div class="code"><pre data-snip="sources"></pre></div>
 <h3>What it reads</h3>

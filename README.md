@@ -69,7 +69,9 @@ You can also choose a custom install location via `--prefix <my/install/director
 
 ### AI agents
 If you work with a coding agent, import [scirooplot.skill](https://scirooplot.github.io/SciRooPlot/skill/scirooplot.skill) into it.
+The agent then writes a few lines of plot definition instead of a long ROOT macro: plots that look good from the start and stay in your project, for you to show with `plot` and keep editing.
 The file describes the workflow, the API and common pitfalls; the same content is indexed for web-based agents in [llms.txt](https://scirooplot.github.io/SciRooPlot/llms.txt).
+Why this pays off: [With an AI coding agent](https://scirooplot.github.io/SciRooPlot/#ref-agents).
 
 ## 🚀 Quick start
 ```bash
