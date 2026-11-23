@@ -3,7 +3,7 @@ plot: the groups and names it offers for a typed regular expression are those pl
 reference: completion matches with the shell's POSIX ERE, plot with std::regex, so env.sh translates \\d \\w \\s and their negations),
 in every combination of matchmode and matchcase: a group word offers the main groups (all groups once it holds a slash) starting with a
 match (any match in contains mode), a name word the names of the plots plot selects for the complete group word, trailing slashes
-included. bash inserts a single match and keeps the typed word when the matches do not all start with it. srp: the commands, plot modes and
+included. bash inserts a single match and keeps the typed word, open for editing, when the matches do not all start with it. srp: the commands, plot modes and
 setting values it offers are exactly those srp help documents, and srp accepts each of them; the projects offered are the registered ones (also with a ~ in SCIROOPLOT_CONFIG_PATH that the shell did not expand);
 the properties offered for a project are program, outdir and the settings its program declares, with their descriptions, and the values
 offered for a setting are on and off of a switch or the choices of a text, each accepted by srp set; bash inserts them escaped (a choice with spaces,
@@ -12,10 +12,14 @@ Completing 3000 plots takes well below two seconds.
 Covers: regex dialect, trailing slash, projects with a brace in a setting value, descriptions and choices with quotes, braces and a backslash, completion speed."""
 
 import os
+import pty
 import re
+import select
 import shlex
+import signal
+import time
 
-from srptest import PLOT, SHELLS, SRP, cases, check, config_folder, describe, finish, listed, run, shell
+from srptest import ENV_SCRIPT, PLOT, SHELLS, SRP, WORK, cases, check, config_folder, describe, finish, listed, run, shell
 
 PLOTS = [("p1", "QA1"), ("p2", "QA1"), ("p1", "QA1/sub"), ("p1", "QA2"), ("p1", "QAd"), ("p1", "QA_x"), ("p1", "QA-y"), ("p1", "qa3"), ("h_1", "ab"), ("h_d", "ab"), ("hx", "ab")]
 PLOTS += [("p", "group"), ("q", "group/sub"), ("r", "groupx"), ("s", "other/group")]
@@ -145,6 +149,43 @@ def bash_complete(*words, cfg=config):
 for words, want in ((("plot", "qa\\d"), ["qa3"]), (("plot", "ab", "h_\\d"), ["h_1"]), (("plot", "QA\\d", "p\\d"), ["p\\d"]), (("plot", "QA"), ["QA1", "QA2", "QA_x", "QA-y", "QAd"])):
     got, out = bash_complete(*words)
     check(f"bash completion of {' '.join(words[1:])}: {want}", sorted(got) == sorted(want), f"{got} {out.stderr[-200:]}")
+
+
+def bash_tab(line, cfg=config):
+    """what bash in a terminal puts after the typed line when Tab is pressed at its end (readline's own insertion, not COMPREPLY)"""
+    home = os.path.join(WORK, "home_bash_tab")
+    os.makedirs(home, exist_ok=True)
+    pid, fd = pty.fork()
+    if pid == 0:
+        os.execvpe("bash", ["bash", "--norc", "--noprofile", "-i"], dict(os.environ, HOME=home, SCIROOPLOT_CONFIG_PATH=cfg, PS1="> ", TERM="dumb"))
+
+    def read(seconds):
+        out, end = b"", time.time() + seconds
+        while time.time() < end:
+            if select.select([fd], [], [], 0.1)[0]:
+                try:
+                    out += os.read(fd, 4096)
+                except OSError:
+                    break
+        return out.decode(errors="replace")
+
+    read(1)
+    os.write(fd, f'source "{ENV_SCRIPT}"\n'.encode())
+    read(2)
+    os.write(fd, line.encode())
+    read(1)
+    os.write(fd, b"\t")
+    inserted = read(2)
+    os.kill(pid, signal.SIGKILL)  # the typed line is never run
+    os.waitpid(pid, 0)
+    os.close(fd)
+    return inserted
+
+
+# where bash keeps the typed word (the matches do not all start with it), the word stays open: no space after it
+settings("exact")
+inserted = bash_tab("plot QA\\d p\\d")
+check("bash keeps an ambiguous plot word open for editing (no space added)", " " not in inserted.replace("\x07", ""), repr(inserted))
 
 # srp: what is offered is what srp help documents and srp accepts
 helpText = run(SRP, "help").stdout
