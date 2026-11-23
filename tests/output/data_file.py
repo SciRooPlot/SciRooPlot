@@ -9,7 +9,11 @@ nothing is written (an earlier Data.root stays).
 Covers: a data source restricted to a folder (also given with a trailing slash, or empty), a path in a name, functions and points of the plot
 definition, the fixed key order, missing data, data read by earlier calls in the same process, a canvas of Plots.root drawn in the
 process that wrote it, names of Plots.root and Data.root outside of the output directory or the same for both (refused with a warning
-where set), a picture that cannot be written over an earlier one (reported, not logged as created)."""
+where set), a picture that cannot be written over an earlier one (reported, not logged as created), a picture written again within the
+same second on a file system with timestamps in seconds (written, not reported; only where an ext2 image can be mounted, as root)."""
+
+import os
+import subprocess
 
 from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, captured, cases, check, data_objects, describe, finish, func_diff, graph_diff, has_variant, hist_diff, points_name, source_of
 from srptest import formula as formula_of
@@ -192,4 +196,25 @@ refused = [line for line in out.text.splitlines() if "is ignored: it must be a n
 check("names of Plots.root and Data.root outside of the output directory or the same for both: refused where set, Plots.root written", len(refused) == 4 and "PLOTS True" in out.stdout, out.text[-600:])
 after = out.text.split("LOCKED")[-1]
 check("a picture that cannot be written over an earlier one: reported, not logged as created", "Could not write" in after and "Created plot" not in after, after[-400:])
+
+# a picture written again within the same second on a file system with timestamps in seconds (ext2 with 128-byte inodes, like AFS or HFS+):
+# its time does not change, but it was written
+image, mounted = p.path("coarse.img"), p.path("coarse")
+os.makedirs(mounted, exist_ok=True)
+coarse = os.geteuid() == 0 and subprocess.run(["truncate", "-s", "8M", image]).returncode == 0 and subprocess.run(["mkfs.ext2", "-q", "-F", "-I", "128", image], capture_output=True).returncode == 0 and subprocess.run(["mount", "-o", "loop", image, mounted], capture_output=True).returncode == 0
+if coarse:
+    out = python(f"""
+import ROOT
+import SciRooPlot as S
+ROOT.gROOT.SetBatch(True)
+pm = S.PlotManager("")
+pm.AddBasePlot(S.PlotManager.MakeBasePlot("1d"))
+plot = S.Plot("again", "g", "1d")
+plot[1].AddData(S.Function("x"), S.kUserFunctions)
+pm.AddPlot(plot)
+pm.SetOutputDirectory({os.path.join(mounted, "out")!r})
+print("RESULTS", [pm.GeneratePlots("png") for _ in range(4)], flush=True)
+""")
+    subprocess.run(["umount", mounted])
+    check("a picture written again within one second of a file system with timestamps in seconds: not reported", "RESULTS [True, True, True, True]" in out.stdout and "Could not write" not in out.text, out.text[-400:])
 finish()

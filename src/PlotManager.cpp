@@ -2854,11 +2854,12 @@ bool PlotManager::WriteOutput(Plot& fullPlot, const string& mode, const shared_p
   auto noPdfImagesGuard = filter_root_messages([silenceNoPdfImages](Int_t, Bool_t, const char* location, const char* msg) {
     return silenceNoPdfImages && TString(location) == "TASImage::Paint" && TString(msg).Contains("PDF");
   });
-  // written: the file exists and, if one was there before, it was written again (a failed write leaves the earlier file)
+  // written: the file exists and, if one was there before, it could be written over (a failed write leaves the earlier file; its time
+  // cannot tell, file systems with timestamps in seconds keep it for a picture written again within the same second)
   std::error_code writtenError;
-  const auto writtenBefore = (std::filesystem::is_regular_file(fullName, writtenError)) ? optional(std::filesystem::last_write_time(fullName, writtenError)) : nullopt;
+  const bool writable = !std::filesystem::is_regular_file(fullName, writtenError) || !gSystem->AccessPathName(fullName.data(), kWritePermission);
   canvas->SaveAs(fullName.data());
-  if (!std::filesystem::is_regular_file(fullName, writtenError) || (writtenBefore && std::filesystem::last_write_time(fullName, writtenError) == *writtenBefore)) {
+  if (!writable || !std::filesystem::is_regular_file(fullName, writtenError)) {
     logger::error("Could not write {}.", fullName);
     return false;
   }
