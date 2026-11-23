@@ -1,6 +1,7 @@
 """Table files (.csv, .tsv, .dat, .txt, .tab; the data name is the file name without its ending) give the values written in them: the delimiter
 is the one of , ; tab | space that splits every line into as many fields as the header (in quotes it does not count); quoted column names,
-a byte order mark (also on a comment line), comment lines starting with # anywhere, blank lines, Windows line ends, spaces around the
+a byte order mark (also on a comment line), comment lines starting with # anywhere (a # within a value is kept; with comment lines among the
+rows, where ROOT would cut the value there, it is reported), blank lines, Windows line ends, spaces around the
 line and a missing last line end are read as intended. A column is numeric when all its values are numbers: integers stay integers
 (exact also beyond 32 bits, bins of whole-number width), a decimal point anywhere (also only in a late row), exponents, inf and nan make
 it floating point, an empty cell of a numeric column is nan; a column with text is text (usable in filters). Column names that are no C++
@@ -67,6 +68,7 @@ TEXT = {  # file: (content, filter on its text column, the values of column a it
     "text.csv": ("a,c\n1,ab\n2,cd\n3,ab\n", 'c == "ab"', [1, 3]),
     "text_exponent.csv": ("a,c\n1,1e-3\n2,abc\n3,1e-3\n", 'c == "1e-3"', [1, 3]),
     "quoted_text.csv": ('a,c\n1,"x, y"\n2,z\n', 'c == "x, y"', [1]),
+    "hash_text.csv": ("# runs\na,c\n1,run#3\n2,B\n3,run#3\n", 'c == "run#3"', [1, 3]),
 }
 for file_name, (text, _, _) in TEXT.items():
     table(file_name, text)
@@ -78,6 +80,7 @@ FAILING = {  # file: (content, the error, it is a warning)
     "aligned_header.txt": ("a b\n10  2\n3 4\n", "columns seem to be aligned with several spaces or tabs; use exactly one delimiter between the values", False),
     "aligned.txt": ("a    b\n10   2\n3    4\n", "columns seem to be aligned with several spaces or tabs; use exactly one delimiter between the values", False),
     "comments_only.csv": ("# nothing\n\n", "does not contain any data", False),
+    "hash_among_comments.csv": ("a,c\n1,x#1\n# between\n2,y\n", "line 2 contains a '#', which starts a comment in a table with comment lines among its rows (line 3)", False),
     "bad_value.csv": ("a,b\n1,2\n2,3\n3,x\n", "does not match the type of its column", False),
     "spaces_around.csv": ("a ,b\n1 ,2.5\n", "has spaces around its delimiters (line 1)", True),
     "decimal_comma.csv": ("a;b\n1,5;2,5\n", "seems to use decimal commas (e.g. '1,5')", True),  # the values are text, the plot of them lost

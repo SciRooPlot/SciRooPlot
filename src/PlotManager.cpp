@@ -3962,22 +3962,22 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
   vector<std::pair<size_t, string>> lines;
   string line;
   size_t lineNumber = 0;
-  bool hasComments = false;
-  bool hasBom = false;            // Excel's "CSV UTF-8" starts the file with a byte order mark, which ROOT makes part of the first column name
-  bool isBomLineSkipped = false;  // the line with the mark is not data (a comment): ROOT can simply skip it
+  size_t commentAmongRows = 0;  // the first comment line after the header: ROOT then needs '#' as its comment character
+  size_t hashInLine = 0;        // the first line of the header or the rows with a '#' within it (a value such as a label in ROOT's latex)
+  bool hasBom = false;          // Excel's "CSV UTF-8" starts the file with a byte order mark, which ROOT makes part of the first column name
   while (lines.size() < 100 && std::getline(file, line)) {
     ++lineNumber;
     if (lineNumber == 1 && str_starts_with(line, "\xEF\xBB\xBF")) {
       hasBom = true;
       line.erase(0, 3);
-      isBomLineSkipped = trim(line).empty() || trim(line)[0] == '#';
     }
     line = trim(line);
     if (line.empty()) continue;
     if (line[0] == '#') {
-      hasComments = true;
+      if (!lines.empty() && !commentAmongRows) commentAmongRows = lineNumber;
       continue;
     }
+    if (!hashInLine && line.find('#') != string::npos) hashInLine = lineNumber;
     lines.emplace_back(lineNumber, line);
   }
   if (lines.empty()) {
@@ -4095,9 +4095,10 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
     line = trim(line);
     if (line.empty()) continue;
     if (line[0] == '#') {  // a comment also after the lines above (ROOT then needs to know)
-      hasComments = true;
+      if (!commentAmongRows) commentAmongRows = lineNumber;
       continue;
     }
+    if (!hashInLine && line.find('#') != string::npos) hashInLine = lineNumber;
     const auto fields = split(line, delimiter);
     if (fields.size() != nFields) {
       logger::error("Cannot read table {}: {}.", inputFileName, describeMismatch(delimiter, nFields, lineNumber, fields.size()));
@@ -4132,6 +4133,14 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
     }
   }
 
+  // ROOT cuts every line at its first comment character: comment lines before the header are skipped by number instead, which keeps a '#'
+  // within a value; with comment lines among the rows that cannot be read
+  if (commentAmongRows && hashInLine) {
+    logger::error("Cannot read table {}: line {} contains a '#', which starts a comment in a table with comment lines among its rows (line {}); remove the comment lines or the '#'.",
+                  inputFileName, hashInLine, commentAmongRows);
+    return;
+  }
+
   ROOT::RDF::RCsvDS::ROptions options;
   auto columnName = [&](const string& field) {
     string name = trim(field);
@@ -4142,9 +4151,8 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
     const string name = columnName(columnNames[column]);
     if (forceDouble[column] && !name.empty()) options.fColumnTypes[name] = 'D';
   }
-  if (isBomLineSkipped) {
-    options.fSkipFirstNLines = 1;
-  } else if (hasBom) {
+  options.fSkipFirstNLines = lines[0].first - 1;  // the blank and comment lines before the header (also one with the byte order mark)
+  if (hasBom && lines[0].first == 1) {
     for (const auto& field : columnNames) {
       options.fColumnNames.push_back(columnName(field));
     }
@@ -4152,7 +4160,7 @@ void PlotManager::ReadTableData(const string& inputFileName, const string& name,
   options.fDelimiter = delimiter;
   options.fLeftTrim = true;  // as for the checks above: only the line as a whole is trimmed
   options.fRightTrim = true;
-  if (hasComments) options.fComment = '#';
+  if (commentAmongRows) options.fComment = '#';
   options.fLinesChunkSize = 50000;
   ProcessDataRequests("table", dataSource, name, ":" + dataSource, [&]() { return std::make_unique<ROOT::RDataFrame>(ROOT::RDF::FromCSV(inputFileName, options)); }, nullptr);
 }
