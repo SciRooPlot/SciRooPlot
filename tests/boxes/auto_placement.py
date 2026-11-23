@@ -17,6 +17,7 @@ views of functions, boxes on top of each other when there is no room, a box aske
 hint for a box placed by hand on the data, and the named cases.
 """
 
+import math
 import re
 
 import numpy as np
@@ -298,7 +299,7 @@ in_chunks(todo, compare)
 
 # a box asked for a corner gets it before a box free to take any corner: with a rising graph the best corner is the top left, which the
 # text asks for, so the legend added before it goes elsewhere; a box at a position set for it that lies on the data gets a hint (verbosity
-# hint), one in free space or beside the frame none
+# hint), one in free space, beside the frame, above data clipped at the frame or on the empty part of a polar grid or beside a polar map none
 rising = ROOT.TGraph(20)
 for i in range(20):
     rising.SetPoint(i, i + 0.5, 1.0 + i)
@@ -316,6 +317,33 @@ plot[1].AddText(0.55, 0.75, "a text on the points").SetFrameCoordinates()
 plot[1].AddText(0.05, 0.95, "a text in free space").SetFrameCoordinates()
 plot[1].AddLegend(0.55, 0.25).SetFrameCoordinates()
 q.pm.AddPlot(plot)
+# boxes placed by hand next to data that is not drawn there: a step histogram beyond the frame (ROOT clips it) under a text in the top margin,
+# the empty part of a polar grid, the corner beside the disc of a polar map
+steep = ROOT.TH1D("steep", "", 20, 0.0, 10.0)
+for b in range(1, 21):
+    steep.SetBinContent(b, steep.GetBinCenter(b) ** 2)
+polarGraph = ROOT.TGraphPolar(20)
+for i in range(20):
+    polarGraph.SetPoint(i, 0.04 * i, 0.5 + 0.02 * i)
+polarGraph.SetName("polar")
+disc = ROOT.TH2D("disc", "", 36, -math.pi, math.pi, 10, 0.0, 4.0)
+for i in range(1, 37):
+    for j in range(1, 11):
+        disc.SetBinContent(i, j, 1.0 + 0.3 * math.cos(2 * disc.GetXaxis().GetBinCenter(i)))
+q.source("clear", {"steep": steep, "polar": polarGraph, "disc": disc})
+plot = S.Plot("beyond_frame", "order", "1d")
+plot[1].AddData("steep", "clear").SetDrawOption("hist")
+plot[1]["Y"].SetRange(0.0, 45.0)
+plot[1].AddText(0.6, 0.99, "a text above the frame").SetPadCoordinates()
+q.pm.AddPlot(plot)
+plot = S.Plot("polar_grid", "order", "1d")
+plot[1].AddData("polar", "clear", "polar graph").SetDrawOption(S.points_line)
+plot[1].AddLegend(0.55, 0.8).SetPadCoordinates()
+q.pm.AddPlot(plot)
+plot = S.Plot("polar_map", "order", "2d")
+plot[1].AddData("disc", "clear").SetDrawOption(S.colz_polar)
+plot[1].AddText(0.02, 0.98, "corner text").SetPadCoordinates()
+q.pm.AddPlot(plot)
 order = q.plot("order")
 with order.held():
     pad = order.pad("corner_first", "order")
@@ -325,7 +353,10 @@ with order.held():
 check("a box asked for a corner is placed before a box free to take the best corner: the text gets the top left", placed is not None and placed[1][0] < placed[0][0] and placed[1][3] > placed[0][3], f"{placed}")
 hints = order.hints("lies on drawn data")
 check("a text placed by hand on the data gets a hint", any("text 1 of pad 1" in h for h in hints), " | ".join(hints))
-check("a text and a legend placed by hand in free space get none", not any("text 2 of pad 1" in h or "legend 1 of pad 1" in h for h in hints), " | ".join(hints))
+check("a text and a legend placed by hand in free space get none", not any("text 2 of pad 1" in h or "legend 1 of pad 1" in h for h in order.messages("by_hand", "order")), " | ".join(hints))
+for name, what in (("beyond_frame", "above data ROOT clips at the frame"), ("polar_grid", "on the empty part of a polar grid"), ("polar_map", "beside the disc of a polar map")):
+    said = [m for m in order.messages(name, "order") if "lies on drawn data" in m]
+    check(f"a box placed by hand {what} gets no hint", not said, " | ".join(said))
 quiet = q.plot("order", env={"SCIROOPLOT_VERBOSITY": None})
 check("at the default verbosity the look at boxes placed by hand gives nothing", quiet.file and not quiet.hints(), " | ".join(quiet.hints()))
 finish()

@@ -6897,6 +6897,33 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
       }
       TAxis* xAxis = hist->GetXaxis();
       TAxis* yAxis = hist->GetYaxis();
+      // a polar map (POL, THistPainter::PaintColorLevels): each bin a crown in the ellipse inscribed in the frame, x the angle from the right
+      // over a full turn, y the radius
+      if (str_upper(DrawOption(pad, hist)).find("POL") != string::npos) {
+        const double_t ux1 = pad->GetUxmin(), ux2 = pad->GetUxmax(), uy1 = pad->GetUymin(), uy2 = pad->GetUymax();
+        const double_t midX = 0.5 * (ux1 + ux2), midY = 0.5 * (uy1 + uy2), halfX = 0.5 * (ux2 - ux1), halfY = 0.5 * (uy2 - uy1);
+        for (int32_t binX = xAxis->GetFirst(); binX <= xAxis->GetLast(); ++binX) {
+          for (int32_t binY = yAxis->GetFirst(); binY <= yAxis->GetLast(); ++binY) {
+            if (hist->GetBinContent(binX, binY) == 0.) continue;
+            const double_t a1 = (std::max(xAxis->GetBinLowEdge(binX), ux1) - ux1) / (ux2 - ux1) * TMath::TwoPi();
+            const double_t a2 = (std::min(xAxis->GetBinUpEdge(binX), ux2) - ux1) / (ux2 - ux1) * TMath::TwoPi();
+            const double_t r1 = (std::max(yAxis->GetBinLowEdge(binY), uy1) - uy1) / (uy2 - uy1), r2 = (std::min(yAxis->GetBinUpEdge(binY), uy2) - uy1) / (uy2 - uy1);
+            if (a2 <= a1 || r2 <= r1) continue;
+            const int32_t steps = 1 + static_cast<int32_t>((a2 - a1) / TMath::TwoPi() * 72.);
+            vector<std::pair<double_t, double_t>> crown;
+            for (int32_t k = 0; k <= steps; ++k) {
+              const double_t a = a1 + (a2 - a1) * k / steps;
+              crown.emplace_back(midX + r2 * halfX * std::cos(a), midY + r2 * halfY * std::sin(a));
+            }
+            for (int32_t k = steps; k >= 0; --k) {
+              const double_t a = a1 + (a2 - a1) * k / steps;
+              crown.emplace_back(midX + r1 * halfX * std::cos(a), midY + r1 * halfY * std::sin(a));
+            }
+            markPolygon(crown, kMap);
+          }
+        }
+        return;
+      }
       for (int32_t binX = xAxis->GetFirst(); binX <= xAxis->GetLast(); ++binX) {
         for (int32_t binY = yAxis->GetFirst(); binY <= yAxis->GetLast(); ++binY) {
           if (hist->GetBinContent(binX, binY) == 0.) continue;
@@ -7144,11 +7171,12 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
         const double_t phi = TMath::TwoPi() * i / 72.;
         disc.emplace_back(std::cos(phi), std::sin(phi));
       }
-      markPolygon(disc);
+      // the grid is avoided like a shape, but it is no data a box covers
+      markPolygon(disc, kShape);
       const double_t userPerPixelX = (pad->GetX2() - pad->GetX1()) / padWidthPixel;
       const double_t userPerPixelY = (pad->GetY2() - pad->GetY1()) / padHeightPixel;
       const bool ortho = grid->TestBit(TGraphPolargram::kLabelOrtho);
-      auto markLabel = [&](double_t x1, double_t y1, double_t x2, double_t y2) { setRect(cellX(padX(x1)), cellY(padY(y1)), cellX(padX(x2)), cellY(padY(y2)), kObject); };
+      auto markLabel = [&](double_t x1, double_t y1, double_t x2, double_t y2) { setRect(cellX(padX(x1)), cellY(padY(y1)), cellX(padX(x2)), cellY(padY(y2)), kShape); };
       TLatex measure;
       measure.SetTextFont(grid->GetPolarLabelFont());
       measure.SetTextSize(grid->GetPolarLabelSize());
@@ -7240,8 +7268,8 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
 
 //**************************************************************************************************
 /**
- * Whether a box (lower left corner and size in NDC) lies on drawn data (objects or filled bins of maps; shapes and other boxes do not
- * count).
+ * Whether a box (lower left corner and size in NDC) lies on drawn data (objects or filled bins of maps; shapes, polar grids and other boxes
+ * do not count).
  */
 //**************************************************************************************************
 bool PlotPainter::CoversData(TPad* pad, double_t lowerLeftX, double_t lowerLeftY, double_t width, double_t height)
@@ -7249,12 +7277,15 @@ bool PlotPainter::CoversData(TPad* pad, double_t lowerLeftX, double_t lowerLeftY
   const auto occupancy = OccupiedCells(pad);
   const int32_t nx = occupancy.nx, ny = occupancy.ny;
   if (nx <= 0 || ny <= 0) return false;
-  // the cells the box lies on: those it covers by more than a small part of a cell (its edge on a cell boundary does not count)
-  constexpr double_t tolerance = 0.25;
-  const int32_t i1 = std::clamp(static_cast<int32_t>(std::floor(lowerLeftX * nx + tolerance)), 0, nx);
-  const int32_t i2 = std::clamp(static_cast<int32_t>(std::ceil((lowerLeftX + width) * nx - tolerance)), 0, nx);
-  const int32_t j1 = std::clamp(static_cast<int32_t>(std::floor(lowerLeftY * ny + tolerance)), 0, ny);
-  const int32_t j2 = std::clamp(static_cast<int32_t>(std::ceil((lowerLeftY + height) * ny - tolerance)), 0, ny);
+  // the cells wholly inside the box and the frame (data is somewhere in a marked cell; ROOT clips the data at the frame): data next to the
+  // box or beyond the frame does not count
+  const auto frame = FrameInPad(pad);
+  const double_t x1 = std::max(lowerLeftX, frame[0]), x2 = std::min(lowerLeftX + width, frame[2]);
+  const double_t y1 = std::max(lowerLeftY, frame[1]), y2 = std::min(lowerLeftY + height, frame[3]);
+  const int32_t i1 = std::clamp(static_cast<int32_t>(std::ceil(x1 * nx)), 0, nx);
+  const int32_t i2 = std::clamp(static_cast<int32_t>(std::floor(x2 * nx)), 0, nx);
+  const int32_t j1 = std::clamp(static_cast<int32_t>(std::ceil(y1 * ny)), 0, ny);
+  const int32_t j2 = std::clamp(static_cast<int32_t>(std::floor(y2 * ny)), 0, ny);
   for (int32_t i = i1; i < i2; ++i) {
     for (int32_t j = j1; j < j2; ++j) {
       if (occupancy.blocked[i + static_cast<size_t>(j) * nx] & (occupancy_t::kObject | occupancy_t::kMap)) return true;
