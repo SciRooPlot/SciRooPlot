@@ -36,6 +36,7 @@
 #include <TSystem.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
@@ -666,11 +667,13 @@ std::optional<string> hepdata_local_file(const string& given, const std::filesys
     return std::nullopt;
   }
   // the copy is named after the file and its path, has the time of the file, and is made again when the file has another time (also an
-  // older one: a file replaced by a copy keeping its time, e.g. cp -p or unpacked from an archive)
+  // older one: a file replaced by a copy keeping its time, e.g. cp -p or unpacked from an archive); compared in whole seconds, since a
+  // cache folder on a file system keeping only seconds (AFS) truncates the time given to the copy
   const string file = (folder / "hepdata" / "files" / (source.stem().string() + "-" + std::to_string(std::hash<string>{}(source.string())) + ".root")).string();
   std::error_code timeError;
   const auto sourceTime = std::filesystem::last_write_time(source, timeError);
-  if (std::filesystem::exists(file, ec) && !timeError && std::filesystem::last_write_time(file, timeError) == sourceTime && !timeError) {
+  const auto seconds = [](std::filesystem::file_time_type t) { return std::chrono::floor<std::chrono::seconds>(t.time_since_epoch()); };
+  if (std::filesystem::exists(file, ec) && !timeError && seconds(std::filesystem::last_write_time(file, timeError)) == seconds(sourceTime) && !timeError) {
     std::lock_guard lock(failedMutex);
     filesOfCopies[file] = source.string();
     return file;

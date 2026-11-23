@@ -439,6 +439,14 @@ os.utime(p.path("table1.root"), (earlier, earlier))
 run = p.plot("hepdata")
 drawn = run.objects(f"h{index}", "hepdata")
 gotOlder = values_of(drawn[0]) if len(drawn) == 1 else None
+# a cache folder keeping only whole seconds (AFS): the copy got the time of the file truncated, and is kept
+copies = [os.path.join(root, f) for root, _, files in os.walk(standard) for f in files if f.startswith("table1-")]
+fileTime = os.stat(p.path("table1.root")).st_mtime_ns // 10**9 * 10**9 + 250_000_000
+os.utime(p.path("table1.root"), ns=(fileTime, fileTime))
+for copy in copies:
+    os.utime(copy, ns=(fileTime // 10**9 * 10**9, fileTime // 10**9 * 10**9))
+run = p.plot("hepdata")
+converted = [m for m in run.log.splitlines() if "Saved HEPData file" in m and "table1.root" in m]
 
 
 # srp print hepdata:...: the data names, per table what is missing
@@ -495,6 +503,7 @@ check("srp print hepdata:<file> lists a downloaded file", own.returncode == 0 an
 none = p.srp("print", "hepdata:ins99999")
 check("srp print hepdata:<record that does not exist> fails", none.returncode == 1, none.stdout + none.stderr)
 check("a downloaded file that changed is converted again", got is not None and all(close(a, b, 1e-6) for a, b in zip(got[0] + got[1], [40, 20, 8, 4, 2, 1], strict=True)), f"{got}")
+check("the copy of a downloaded file whose time lost its fraction of a second is not made again", len(copies) == 1 and not converted, f"{copies} | {converted}")
 check("a downloaded file replaced by one with an older time is converted again", gotOlder is not None and all(close(a, b, 1e-6) for a, b in zip(gotOlder[0] + gotOlder[1], [60, 30, 12, 6, 3, 1.5], strict=True)), f"{gotOlder}")
 
 
