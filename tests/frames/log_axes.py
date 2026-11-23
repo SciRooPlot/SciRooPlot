@@ -12,6 +12,8 @@ value and coordinates at and below zero (variant crossing), without a range and 
   zero (2d functions as drawn, sampled as the frame), and is off with a warning where 2d data shows no positive value
 - a positive lower range below the data widens the frame to exactly that value, also below bins that end at or cross zero; a lower range
   at or below zero is reported and ignored: the frame is the one with only the upper end of the range set
+- a log x or y axis of a flat frame whose range holds no power of ten, on which ROOT draws no labels, is named in a hint; one that holds a
+  power of ten is not
 Covers: lowest bins of log z not drawn, log y minimum from bins and points outside the frame, graph on log x
 lost its small-x points, widening below the first positive bin edge, log x frame below zero ends at the last bin,
 lower range at or below zero warns, the y range of a graph from the points shown, the z range of a 2d graph read before it is
@@ -318,6 +320,18 @@ for i, case in enumerate(todo):
             check(f"log z colours every value shown: {what}", z[0] <= min(values) * (1 + 1e-9) and z[1] >= max(values) * (1 - 1e-9), f"z {fmt(z)}, values {min(values):.6g} to {max(values):.6g}")
         else:
             check(f"log z of values at or below zero starts at ROOT's floor: {what}", close(z[0], floor, 1e-6) and z[1] >= max(values) * (1 - 1e-9), f"z {fmt(z)}, values up to {max(values):.6g}, floor {floor:.6g}")
+
+for i, case in enumerate(todo):
+    frame = run.frame(f"c{i}", "log")
+    if dim(case["kind"]) == 3 or not frame or "LEGO" in (run.frame_option(f"c{i}", "log") or "") or "SURF" in (run.frame_option(f"c{i}", "log") or ""):
+        continue
+    for axis in "XY":
+        if axis not in case["log"]:
+            continue
+        lo, hi = frame[axis]
+        decade = math.floor(math.log10(hi) + 1e-9) >= math.ceil(math.log10(lo) - 1e-9)
+        said = [m for m in run.messages(f"c{i}", "log") if f"the log {axis} axis of pad 1 (" in m and "holds no power of ten" in m]
+        check(f"log {axis} axis {'with' if decade else 'without'} a power of ten: {'no hint' if decade else 'a hint'}: {describe(case)}", len(said) == (0 if decade else 1), f"{lo:.6g} to {hi:.6g}; " + " | ".join(said))
 
 fh = run.frame_hist("ones", "log")
 check("log z colours the ones next to a maximum of 2e4", bool(fh) and 0 < fh.GetMinimum() <= 1.0, f"z from {fh.GetMinimum()}" if fh else "plot not made")

@@ -1458,6 +1458,19 @@ void PlotPainter::FinishPad(pad_state_t& padState)
       }
     }
   }
+  // a log axis without a power of ten in its range: ROOT labels only the powers of ten (unless MoreLogLabels), so it draws no labels on it
+  if (axisHist_ptr && !polarFrame && !polargram && !pad_ptr->GetView()) {
+    for (const char axisLabel : {'X', 'Y'}) {
+      const bool isX = axisLabel == 'X';
+      if (!((isX) ? pad_ptr->GetLogx() : pad_ptr->GetLogy())) continue;
+      const TAxis* axis = (isX != hbarFrame) ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis();
+      const double_t low = (isX) ? pad_ptr->GetUxmin() : pad_ptr->GetUymin();  // the exponents of the ends
+      const double_t high = (isX) ? pad_ptr->GetUxmax() : pad_ptr->GetUymax();
+      if (axis->GetLabelSize() > 0.f && !axis->GetMoreLogLabels() && std::floor(high + 1e-9) < std::ceil(low - 1e-9)) {
+        logger::hint("Plot {}: the log {} axis of pad {} ({:.3g} to {:.3g}) holds no power of ten, so ROOT draws no labels on it: widen its range to one, or use a linear axis.", mPlotLabel, axisLabel, padID, std::pow(10., low), std::pow(10., high));
+      }
+    }
+  }
   if (axisHist_ptr && !polarFrame && !polargram && !hbarFrame && !pad_ptr->GetView()) ReportOutsideFrame(pad_ptr);
   HintAlikeData(pad_ptr);
 }
