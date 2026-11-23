@@ -259,7 +259,12 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
       try {
         node = node.Filter(toRootCode(filter));
       } catch (const std::runtime_error& e) {
-        logger::error("Illegal filter expression {} for {}{}.", filter, mContext, refusal(e));
+        // RDataFrame refuses a filter of another type than bool (e.g. an int column) without a compiler error
+        if (util::str_contains(e.what(), "does not evaluate to bool")) {
+          logger::error("Filter expression {} for {} does not give a bool: write a condition (e.g. {} != 0).", filter, mContext, filter);
+        } else {
+          logger::error("Illegal filter expression {} for {}{}.", filter, mContext, refusal(e));
+        }
         return false;
       }
     }
