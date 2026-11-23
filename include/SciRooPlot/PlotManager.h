@@ -164,7 +164,7 @@ class PlotManager
   bool HandleOpenWindows(bool& closeAll);
   static void LogWindowKeys();
   std::optional<std::string> PositionReport(TObject* selected, TVirtualPad* pad) const;
-  void LogPositions(const Plot& plot, TCanvas* canvas) const;
+  void LogReport(const Plot& plot, TCanvas* canvas, const PlotPainter& painter) const;
   void WaitForOpenWindows();
   static void SetTerminalKeys(bool on);
   static char TerminalKey();

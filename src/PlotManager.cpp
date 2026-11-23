@@ -2531,8 +2531,8 @@ bool PlotManager::GeneratePlot(Plot& plot, const string& mode)
   if (!canvas) return false;
   PaintedCanvases()[canvas.get()] = nPainted;
   if (isBitmapMode) WarnNonAsciiTexts(canvas.get());
-  // at verbosity debug: where its boxes, images and shapes are, as a double-click in show mode reports them (for scripts and agents)
-  if (!logger::muted() && logger::detail::verbosity() >= logger::detail::level::debug) LogPositions(fullPlot, canvas.get());
+  // at verbosity debug: what the plot shows, pad by pad (for scripts and agents)
+  if (!logger::muted() && logger::detail::verbosity() >= logger::detail::level::debug) LogReport(fullPlot, canvas.get(), painter);
 
   if (TColor::GetFreeColorIndex() > std::numeric_limits<int16_t>::max()) {
     // ROOT colour indices are of type short, which limits the number of custom colours
@@ -3278,23 +3278,88 @@ optional<size_t> PlotManager::NextBrowseIndex(size_t index, bool forward) const
 
 //**************************************************************************************************
 /**
- * Logs (verbosity debug) the line a double-click in show mode prints for each legend, text, statistics box, image and shape of the plot.
+ * Logs (verbosity debug) what the painted plot shows, pad by pad, for scripts and agents that cannot look at it: the frame (axis ranges,
+ * log), each data item as drawn (class, drawing option, marker, line and fill, and for 1d data in a flat pad how many values within the
+ * x range of the frame lie above or below it), the line a double-click in show mode prints for each legend, text, statistics box, image
+ * and shape, and the rows of each legend (labels with their placeholders filled in).
  */
 //**************************************************************************************************
-void PlotManager::LogPositions(const Plot& plot, TCanvas* canvas) const
+void PlotManager::LogReport(const Plot& plot, TCanvas* canvas, const PlotPainter& painter) const
 {
-  vector<string> lines;  // a shape drawn as two objects (a region and its outline) is reported once
+  const string plotLabel = Plot::Label(plot);
+  auto colorText = [](Color_t index) {
+    const TColor* color = gROOT->GetColor(index);
+    if (!color) return fmt::format("colour {}", index);
+    auto component = [](float_t value) { return static_cast<int32_t>(value * 255.f + 0.5f); };
+    const string rgb = fmt::format("#{:02x}{:02x}{:02x}", component(color->GetRed()), component(color->GetGreen()), component(color->GetBlue()));
+    return (color->GetAlpha() < 1.f) ? fmt::format("{} alpha {:.2g}", rgb, color->GetAlpha()) : rgb;
+  };
   for (auto* padObj : *canvas->GetListOfPrimitives()) {
     auto* pad = dynamic_cast<TPad*>(padObj);
     if (!pad || !str_starts_with(pad->GetName(), "Pad_")) continue;
+    vector<string> lines;  // a shape drawn as two objects (a region and its outline) is reported once
+    auto add = [&](const string& what, const string& text) {
+      lines.push_back(fmt::format("{}Pad {}, {}{}: {}", logger::begin_color(logger::Color::Yellow), pad->GetNumber(), what, logger::end_color(), text));
+    };
+    bool polar{};
+    for (auto* obj : *pad->GetListOfPrimitives())
+      polar = polar || obj->InheritsFrom("TGraphPolargram");
+    const bool flat = !pad->GetView() && !polar;
+    if (pad->GetView()) {
+      add("frame", "a 3d view");
+    } else if (polar) {
+      add("frame", "polar");
+    } else {
+      auto range = [](char axis, double_t low, double_t high, bool log) { return fmt::format("{} {:.4g} to {:.4g}{}", axis, (log) ? std::pow(10., low) : low, (log) ? std::pow(10., high) : high, (log) ? " (log)" : ""); };
+      add("frame", range('x', pad->GetUxmin(), pad->GetUxmax(), pad->GetLogx()) + ", " + range('y', pad->GetUymin(), pad->GetUymax(), pad->GetLogy()));
+    }
+    // the data, named <number>:<name> (0: the reference function); the frame drawn by a copy of the first data (AXIS) is not data
+    vector<TLegend*> legends;
+    for (TObjLink* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+      TObject* obj = link->GetObject();
+      if (auto* legend = dynamic_cast<TLegend*>(obj); legend && str_starts_with(legend->GetName(), "LegendBox_")) {
+        legends.push_back(legend);
+      }
+      const string name = obj->GetName();
+      const size_t colon = name.find(':');
+      const bool isData = colon != string::npos && colon != 0 && colon <= 5 && std::all_of(name.begin(), name.begin() + colon, [](char c) { return std::isdigit(static_cast<unsigned char>(c)); });
+      TString option = link->GetOption();
+      option.ToUpper();
+      option.ReplaceAll("SAME", "");
+      option = option.Strip(TString::kBoth);
+      if (!isData || option.Contains("AXIS")) continue;
+      string look = fmt::format("{} drawn \"{}\"", obj->ClassName(), option.Data());
+      const auto* hist = dynamic_cast<TH1*>(obj);
+      if (const auto* marker = dynamic_cast<TAttMarker*>(obj)) look += fmt::format(", marker {} {} size {:.3g}", marker->GetMarkerStyle(), colorText(marker->GetMarkerColor()), marker->GetMarkerSize());
+      if (const auto* line = dynamic_cast<TAttLine*>(obj)) look += fmt::format(", line {} {} width {}", line->GetLineStyle(), colorText(line->GetLineColor()), line->GetLineWidth());
+      if (const auto* fill = dynamic_cast<TAttFill*>(obj)) look += (fill->GetFillStyle() == 0) ? ", no fill" : fmt::format(", fill {} {}", fill->GetFillStyle(), colorText(fill->GetFillColor()));
+      if (hist && hist->GetDimension() == 2 && !pad->GetView()) look += fmt::format(", z {:.4g} to {:.4g}{}", hist->GetMinimum(), hist->GetMaximum(), (pad->GetLogz()) ? " (log)" : "");
+      if (auto counted = (flat) ? PlotPainter::CountInFrame(obj, pad) : nullopt) {
+        look += fmt::format("; {} {} within the x range of the frame", counted->values, (hist) ? "bins" : "points");
+        if (counted->above) look += fmt::format(", {} above it", counted->above);
+        if (counted->below) look += fmt::format(", {} below it", counted->below);
+      }
+      const string number = name.substr(0, colon);
+      const string dataLabel = painter.DataLabel(obj);
+      add((number == "0") ? "reference function" : "data " + number + " (" + ((dataLabel.empty()) ? name.substr(colon + 1) : dataLabel) + ")", look);
+    }
     for (auto* obj : *pad->GetListOfPrimitives()) {
       auto* imagePad = dynamic_cast<TPad*>(obj);  // an image is drawn in a sub-pad of its pad
       const auto report = (imagePad && str_starts_with(imagePad->GetName(), "ImageBox_")) ? PositionReport(imagePad, imagePad) : PositionReport(obj, pad);
       if (report && std::find(lines.begin(), lines.end(), *report) == lines.end()) lines.push_back(*report);
     }
-  }
-  for (const auto& line : lines) {
-    logger::debug("Plot {}: {}", Plot::Label(plot), line);
+    // the rows of each legend: label (placeholders filled in) and symbol
+    for (auto* legend : legends) {
+      size_t row = 0;
+      for (auto* entryObj : *legend->GetListOfPrimitives()) {
+        const auto* entry = static_cast<TLegendEntry*>(entryObj);
+        const string symbol = (std::strlen(entry->GetOption())) ? fmt::format("symbol \"{}\"", entry->GetOption()) : "no symbol";
+        add(fmt::format("legend {}, row {}", string(legend->GetName()).substr(10), ++row), fmt::format("\"{}\" ({})", entry->GetLabel(), symbol));
+      }
+    }
+    for (const auto& line : lines) {
+      logger::debug("Plot {}: {}", plotLabel, line);
+    }
   }
 }
 

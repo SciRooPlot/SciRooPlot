@@ -527,6 +527,12 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
 {
   auto sourceHistsGuard = make_scope_guard([this]() {  // needed until the boxes of the plot are made
     mSourceHists.clear();
+    // the names of the data drawn, for the report of the painted plot at verbosity debug
+    mDataLabels.clear();
+    if (!logger::muted() && logger::detail::verbosity() >= logger::detail::level::debug) {
+      for (const auto& [obj, data] : mDataDefinitions)
+        mDataLabels[obj] = DataName(*data);
+    }
     mDataDefinitions.clear();
     mProjectionAxisTitles.clear();
     mGraphFrameRangeX.clear();
@@ -9501,14 +9507,10 @@ void PlotPainter::ReportOutsideFrame(TPad* pad) const
         inside = true;
       }
     };
-    // the values within the x range of the frame (a log axis shows no values at or below zero), and those cut off at its top or bottom
-    size_t nValues{}, nAbove{}, nBelow{};
-    const auto count = [&](double_t x, double_t y) {
-      if (x < xMin || x > xMax || !std::isfinite(y) || (pad->GetLogy() && y <= 0.)) return;
-      ++nValues;
-      nAbove += (y > yMax);
-      nBelow += (y < yMin);
-    };
+    // the values within the x range of the frame, and those cut off at its top or bottom
+    frame_count_t counted;
+    const std::array<double_t, 4> frame{xMin, yMin, xMax, yMax};
+    const auto count = [&](double_t x, double_t y) { counted.Add(x, y, frame, pad->GetLogy()); };
     string unit;
     if (auto* hist = dynamic_cast<TH1*>(obj); hist && hist->GetDimension() == 1) {
       unit = "bins";
@@ -9538,10 +9540,10 @@ void PlotPainter::ReportOutsideFrame(TPad* pad) const
     }
     auto definition = mDataDefinitions.find(obj);
     const string dataName = (definition != mDataDefinitions.end()) ? DataName(*definition->second) : name.substr(colon + 1);
-    if (inside && (nAbove || nBelow)) {
-      string where = (nAbove) ? "above it" : "below it";
-      if (nAbove && nBelow) where = fmt::format("above and below it ({} above)", nAbove);
-      logger::hint("Plot {}: {} of the {} {} of data {} ({}) within the x range of the frame of pad {} lie {}: cut off.", mPlotLabel, nAbove + nBelow, nValues, unit, name.substr(0, colon), dataName, pad->GetNumber(), where);
+    if (inside && (counted.above || counted.below)) {
+      string where = (counted.above) ? "above it" : "below it";
+      if (counted.above && counted.below) where = fmt::format("above and below it ({} above)", counted.above);
+      logger::hint("Plot {}: {} of the {} {} of data {} ({}) within the x range of the frame of pad {} lie {}: cut off.", mPlotLabel, counted.above + counted.below, counted.values, unit, name.substr(0, colon), dataName, pad->GetNumber(), where);
     }
     if (inside || (left + right + below + above) != 1) continue;
     const char* where = (left) ? "left of" : (right) ? "right of"
@@ -9549,6 +9551,29 @@ void PlotPainter::ReportOutsideFrame(TPad* pad) const
                                                      : "above";
     logger::warning("Data {} lies entirely {} the frame of its pad (the first data, or the data set with SetDefinesFrame, decides the frame): nothing of it is visible.", dataName, where);
   }
+}
+
+//**************************************************************************************************
+/**
+ * The values of a 1d histogram or graph drawn in a flat pad counted against its frame (see frame_count_t); nothing for other objects.
+ */
+//**************************************************************************************************
+optional<PlotPainter::frame_count_t> PlotPainter::CountInFrame(const TObject* obj, const TVirtualPad* pad)
+{
+  const std::array<double_t, 4> frame{FromPad(pad->GetUxmin(), pad->GetLogx()), FromPad(pad->GetUymin(), pad->GetLogy()), FromPad(pad->GetUxmax(), pad->GetLogx()), FromPad(pad->GetUymax(), pad->GetLogy())};
+  frame_count_t counted;
+  if (const auto* hist = dynamic_cast<const TH1*>(obj); hist && hist->GetDimension() == 1) {
+    for (int32_t bin = 1; bin <= hist->GetNbinsX(); ++bin) {
+      const double_t content = hist->GetBinContent(bin);
+      if (content != 0.) counted.Add(hist->GetXaxis()->GetBinCenter(bin), content, frame, pad->GetLogy());
+    }
+  } else if (const auto* graph = dynamic_cast<const TGraph*>(obj)) {
+    for (int32_t i = 0; i < graph->GetN(); ++i)
+      counted.Add(graph->GetPointX(i), graph->GetPointY(i), frame, pad->GetLogy());
+  } else {
+    return nullopt;
+  }
+  return counted;
 }
 
 //**************************************************************************************************

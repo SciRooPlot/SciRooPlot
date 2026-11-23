@@ -375,5 +375,6 @@ for what, want in (
     ("an arrow in axis values on log axes", "Pad 1, arrow 1: ((2, 5), (20, 50))"),
 ):
     check(f"the position reported at verbosity debug: {what}", sum(line.endswith(want) for line in said) == 1, " | ".join(said))
-check("each box and shape is reported once", len(said) == 7, " | ".join(said))
+positions = [line for line in said if not re.search(r"Pad \d+, (frame|data \d+|reference function|legend \d+, row \d+):", line)]
+check("each box and shape is reported once", len(positions) == 7, " | ".join(positions))
 finish()

@@ -235,6 +235,25 @@ class PlotPainter
   static void RestoreStyle();  // undo the scale of the last plot in gStyle (sUnscaledStyle)
   // the frame of a pad as fractions of the pad (x1, y1, x2, y2); a 3d view: the pad within its margins; an empty layout cell: the pad
   static std::array<double_t, 4> FrameInPad(const TVirtualPad* pad);
+  // the values of a 1d histogram (bins not empty) or graph within the x range of the frame (x1, y1, x2, y2 in axis values; a log y axis
+  // shows none at or below zero), and how many of them lie above or below it
+  struct frame_count_t {
+    size_t values{}, above{}, below{};
+    void Add(double_t x, double_t y, const std::array<double_t, 4>& frame, bool logY)
+    {
+      if (x < frame[0] || x > frame[2] || !std::isfinite(y) || (logY && y <= 0.)) return;
+      ++values;
+      above += (y > frame[3]);
+      below += (y < frame[1]);
+    }
+  };
+  static std::optional<frame_count_t> CountInFrame(const TObject* obj, const TVirtualPad* pad);
+  // the name of the data an object of the last painted plot draws, as messages give it (kept only at verbosity debug; empty otherwise)
+  std::string DataLabel(const TObject* obj) const
+  {
+    auto label = mDataLabels.find(obj);
+    return (label != mDataLabels.end()) ? label->second : "";
+  }
   // added to the coordinate system kept as unique ID of a single-line text whose position is its alignment point (SetTextAlign)
   static constexpr uint32_t kAlignedAtPosition = 16;
   // an ellipse in fractions on a log pad is drawn as polygon: steps along its perimeter (an arc: the centre before and after them)
@@ -507,6 +526,7 @@ class PlotPainter
   std::map<std::pair<const TVirtualPad*, uint16_t>, std::pair<TObject*, std::string>> mNotPainted;
   // definition of the drawn data (also for the histogram a graph is drawn from): for <name>, <source>, <projection> and <selection>
   std::unordered_map<const TObject*, std::shared_ptr<const Plot::Pad::Data>> mDataDefinitions;
+  std::unordered_map<const TObject*, std::string> mDataLabels;
   // axis titles of the input a projection was made from, keyed by the projection: <projection> and <selection> name the axes by them
   std::unordered_map<const TObject*, std::vector<std::string>> mProjectionAxisTitles;
   // x range of the frame a graph is drawn in: its <maximum> and <minimum> take the points inside, as those of histograms the bins in the frame
