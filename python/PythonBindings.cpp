@@ -332,6 +332,12 @@ void exportPlotManager(py::module_& m)
         if (!object) throw py::value_error("Data source " + dataSource + ": a ROOT object is null (a name not found by Get?).");
         return object;
       };
+      // arrays (numpy, pandas) are made into ROOT objects by the helpers of the module first
+      auto notConvertible = [&dataSource](py::handle obj) {
+        if (py::hasattr(obj, "__array__")) {
+          throw py::type_error("Data source " + dataSource + ": arrays and DataFrames are made into ROOT objects with histo(), histo2d(), graph() or table() first, e.g. AddDataSource(\"" + dataSource + "\", [histo(\"h\", values)]).");
+        }
+      };
       if (py::isinstance<py::str>(input)) {
         self.AddDataSource(dataSource, input.cast<string>(), replace);
       } else if (py::isinstance(input, TObjectClass)) {
@@ -345,6 +351,7 @@ void exportPlotManager(py::module_& m)
           } else if (py::isinstance(item, TObjectClass)) {
             objects.push_back(toTObject(item));
           } else {
+            notConvertible(item);
             throw py::type_error("Inputs must be file names or ROOT TObjects (e.g. histograms, graphs, or trees).");
           }
         }
@@ -357,6 +364,7 @@ void exportPlotManager(py::module_& m)
           self.AddDataSource(dataSource, files, replace);
         }
       } else {
+        notConvertible(input);
         throw py::type_error("Inputs must be a file name, a ROOT TObject, or a list of either.");
       } }, arg("dataSource"), arg("inputs"), arg("replace") = false)
     .def("SaveDataSources", &PlotManager::SaveDataSources, arg("file") = py::none())

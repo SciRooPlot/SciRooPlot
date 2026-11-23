@@ -88,7 +88,7 @@ using util::str_starts_with;
 color_t::color_t(const string& hex) : mIndex(nullopt)
 {
   const bool valid = (hex.size() == 7 && hex[0] == '#' && std::all_of(hex.begin() + 1, hex.end(), [](unsigned char c) { return std::isxdigit(c); }));
-  if (!valid) logger::throw_invalid_argument("Colour '{}' is not valid: give a ROOT colour (e.g. kRed + 1), \"#rrggbb\" or {{r, g, b}} with components from 0 to 1.", hex);
+  if (!valid) logger::throw_invalid_argument("Colour '{}' is not valid: give a ROOT colour (e.g. kRed + 1), \"#rrggbb\" or red, green and blue components from 0 to 1.", hex);
   for (size_t i = 0; i < 3; ++i) {
     mRGB[i] = static_cast<uint8_t>(std::stoi(hex.substr(1 + 2 * i, 2), nullptr, 16));
   }
@@ -104,7 +104,7 @@ color_t::color_t(double_t red, double_t green, double_t blue) : mIndex(nullopt)
   const std::array<double_t, 3> components{red, green, blue};
   for (size_t i = 0; i < 3; ++i) {
     if (!(components[i] >= 0. && components[i] <= 1.)) {
-      logger::throw_invalid_argument("Colour {{{}, {}, {}}} is not valid: the components go from 0 to 1.", red, green, blue);
+      logger::throw_invalid_argument("Colour ({}, {}, {}) is not valid: the components go from 0 to 1.", red, green, blue);
     }
     mRGB[i] = static_cast<uint8_t>(std::lround(components[i] * 255.));
   }
