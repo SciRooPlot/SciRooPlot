@@ -4,7 +4,8 @@ a margin; the outline of a box is a line (no shadow); a text of a font sized in 
 (precision 3) has the same size in pixels in any canvas, and so has its box where the smaller side of the pad is the same; at bitmapscale s
 everything of a box is s times as large in pixels (within the few % rendered text grows more) and at the same place; an automatic box wider than the frame is
 reported as a hint, so is a box at a position set for it that reaches beyond its pad (drawn, cut off at the pad); the hints name the plot,
-the box and its pad as show mode does (legend 1 of pad 1), and are printed only from verbosity hint on (not at the default verbosity).
+the box and its pad as show mode does (legend 1 of pad 1), and are printed only from verbosity hint on (not at the default verbosity); a box
+wholly outside of its pad is reported as a warning (also at the default verbosity).
 Cases: legends (one column, two columns), texts and statistics boxes × a font sized relative to the pad (42) or in pixels (43) × plain
 text, TLatex with drawn parts (#sqrt, #frac), unicode, three rows × a wide, square and tall canvas × bitmapscale 1, 2 and 3; at every
 bitmapscale a box is at the same place (scaled), also a legend placed by SciRooPlot.
@@ -67,8 +68,9 @@ for i, case in enumerate(todo):
         data.SetStatsBox(box)
     p.pm.AddPlot(plot)
 
-# a row wider than the frame: an automatic box says so, a box at a position set for it reaching beyond its pad too
-for name, position in (("too_long", ()), ("too_long_fixed", (0.2, 0.9))):
+# a row wider than the frame: an automatic box says so, a box at a position set for it reaching beyond its pad too; a box wholly outside
+# of its pad (a position in pixels, above, left of it) is not visible at all
+for name, position in (("too_long", ()), ("too_long_fixed", (0.2, 0.9)), ("pixels", (500, 400)), ("above", (0.5, 1.3)), ("left", (-3, 0.5))):
     plot = S.Plot(name, "long", "1d")
     plot[1].AddData("h", "s", "#it{p}_{T} " * 30)
     plot[1].AddLegend(*position)
@@ -181,6 +183,14 @@ for box in ("legend", "text"):
 check("boxes at positions inside their pad give no such hint", not any("reaches beyond its pad" in m for m in run.hints()), " | ".join(run.hints()[:3]))
 quiet = p.plot("long", env={"SCIROOPLOT_VERBOSITY": None})
 check("at the default verbosity the hints are not printed", quiet.file and not quiet.hints() and "is larger than the space" not in quiet.log, " | ".join(quiet.hints()))
+for name in ("pixels", "above", "left"):
+    for box in ("legend", "text"):
+        check(
+            f"a {box} wholly outside of its pad ({name}) is reported as a warning at the default verbosity, naming the plot, the box and its pad",
+            len(quiet.warnings(f"Plot {name} from group long: the {box} 1 of pad 1 lies wholly outside of its pad")) == 1,
+            " | ".join(quiet.warnings(name)),
+        )
+check("a box only reaching beyond its pad gives no such warning", not quiet.warnings("too_long_fixed"), " | ".join(quiet.warnings("too_long_fixed")))
 
 groups = p.plot("groups")
 check("texts with an empty group and a backslash: the plot and the plots after it are made", groups.canvas("empty_groups", "groups") and groups.canvas("after_groups", "groups"), " | ".join(groups.errors()[:3]))

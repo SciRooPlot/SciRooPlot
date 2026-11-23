@@ -6585,12 +6585,17 @@ std::pair<double_t, double_t> PlotPainter::PlaceBox(const BoxType& box, coordina
 
 //**************************************************************************************************
 /**
- * Hints at a box at a position set for it that reaches beyond its pad (it is drawn: the part outside is cut off) or lies on drawn data.
- * Only when hints are printed: the look at the data costs the occupancy grid of the pad.
+ * Warns about a box at a position set for it that lies wholly outside of its pad; hints at one that reaches beyond its pad (it is drawn: the part
+ * outside is cut off) or lies on drawn data. The hints only when they are printed: the look at the data costs the occupancy grid of the pad.
  */
 //**************************************************************************************************
 void PlotPainter::HintAtPlacedBox(TPad* pad, const string& boxType, double_t upperLeftX, double_t upperLeftY, double_t widthNDC, double_t heightNDC)
 {
+  // a box wholly outside of its pad is not visible at all (e.g. a position given in pixels)
+  if (upperLeftX >= 1. || upperLeftY <= 0. || upperLeftX + widthNDC <= 0. || upperLeftY - heightNDC >= 1.) {
+    logger::warning("Plot {}: the {} lies wholly outside of its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}, in units of the pad) and is not visible. Positions in pad or frame coordinates are fractions from 0 to 1.", mPlotLabel, boxType, upperLeftX, upperLeftY, widthNDC, heightNDC);
+    return;
+  }
   if (logger::muted() || logger::detail::verbosity() < logger::detail::level::hint) return;
   if (BeyondPad(upperLeftX, upperLeftY, widthNDC, heightNDC)) {
     logger::hint("Plot {}: the {} reaches beyond its pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}, in units of the pad): the part outside of it is cut off.", mPlotLabel, boxType, upperLeftX, upperLeftY, widthNDC, heightNDC);
