@@ -37,9 +37,19 @@ namespace po = boost::program_options;
 
 int main(int argc, char* argv[])
 {
-  if (Config::Get().CurrentProject().empty()) {
+  const string project = Config::Get().CurrentProject();
+  if (project.empty()) {
     logger::error("No project selected (srp select <project> selects one).");
     return 1;
+  }
+  // the plot command of env.sh runs a changed program before this one; called directly (a script, xvfb-run) the stored definitions are used
+  {
+    std::error_code programError, plotsError;
+    const auto programTime = std::filesystem::last_write_time(Config::Get().Program(project), programError);
+    const auto plotsTime = std::filesystem::last_write_time(Config::Get().PlotsFile(project), plotsError);
+    if (!programError && !plotsError && programTime > plotsTime) {
+      logger::warning("The plot definitions of project {} may be outdated: its program changed after they were saved (the plot command of env.sh runs it first, {} alone does not).", project, argv[0]);
+    }
   }
 
   string group;

@@ -5,6 +5,8 @@ nothing changed, only other files did or a setting was set to the value it had. 
 saved. A failing program stops plot with a non-zero exit status before anything is plotted; a program that saved another project's
 definitions is named in a warning; a missing program is named in a warning and the stored definitions are used; a program run by hand
 (not by plot) says what it saved, and plot names the folder of the files it wrote. In bash and zsh.
+The program plot called directly (a script, xvfb-run) runs nothing and warns that the definitions may be outdated exactly when the
+program is newer than them (a changed program or setting); never when nothing changed or only other files did.
 Covers: a changed imported module, a changed setting, C++ program in a build folder other than build/, program of another
 project, failing program."""
 
@@ -12,7 +14,7 @@ import os
 import shutil
 import time
 
-from srptest import PREFIX, SHELLS, SRP, cases, check, config_folder, describe, finish, run, shell
+from srptest import PLOT, PREFIX, SHELLS, SRP, cases, check, config_folder, describe, finish, run, shell
 
 PYTHON = """import os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -84,6 +86,10 @@ for i, case in enumerate(todo):
     if srpArgs:
         run(SRP, srpArgs[0], "proj", *srpArgs[1:], config=config)
     stamp = os.stat(os.path.join(config, "proj", "plots.info")).st_mtime
+    direct = run(PLOT, "g", "p", "list", config=config)
+    warns = case["change"] in ("program", "setting")  # the program itself newer than the definitions (a setting dates them back)
+    said = any("may be outdated: its program changed after they were saved" in w for w in direct.warnings())
+    check(f"plot called directly {'warns' if warns else 'does not warn'} of outdated definitions, runs nothing: {what}", said == warns and direct.rc == 0 and os.stat(os.path.join(config, "proj", "plots.info")).st_mtime == stamp, direct.tail())
     out = shell("plot g p list", case["shell"], config=config)
     stamp2, text = plots_info(config, "proj")
     check(f"first plot runs the program: {what}", first.rc == 0 and stamp is not None and " - p from group g" in first.stdout, first.tail())
