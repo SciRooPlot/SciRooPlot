@@ -6,7 +6,8 @@ everything of a box is s times as large in pixels (within the few % rendered tex
 reported as a hint, so is a box at a position set for it that reaches beyond its pad (drawn, cut off at the pad); the hints name the plot,
 the box and its pad as show mode does (legend 1 of pad 1), and are printed only from verbosity hint on (not at the default verbosity); a box
 wholly outside of its pad is reported as a warning (also at the default verbosity); a text size not fitting its font is warned about naming
-the plot and the box or axis.
+the plot and the box or axis. A legend title growing past the width of the rows widens the box step by step, with a margin on its right as
+on its left.
 Cases: legends (one column, two columns, a title wider than the rows), texts and statistics boxes × a font sized relative to the pad (42) or in pixels (43) × plain
 text, TLatex with drawn parts (#sqrt, #frac), unicode, three rows × a wide, square and tall canvas × bitmapscale 1, 2 and 3; at every
 bitmapscale a box is at the same place (scaled), also a legend placed by SciRooPlot.
@@ -137,6 +138,16 @@ for name, (define, _) in FONT_SIZES.items():
     define(plot[1])
     p.pm.AddPlot(plot)
 
+# a legend title growing past the width of the rows: the box grows with it, always with a margin right of the title as on its left
+TITLE_GROWTH = range(9)
+for k in TITLE_GROWTH:
+    plot = S.Plot(f"title{k}", "titles", "1d")
+    plot.SetDimensions(1000, 600)
+    plot[1].AddData("h", "s", "XXXXXXXX").SetColor(ROOT.kBlue)
+    plot[1]["Y"].SetRange(0.0, 1.0)
+    plot[1].AddLegend(0.2, 0.9, "X" * 10 + "i" * k).SetPadCoordinates().SetText(43, 24.0, ROOT.kBlack).SetBorder(ROOT.kSolid, 1, ROOT.kRed)
+    p.pm.AddPlot(plot)
+
 measured = {}  # (case, scale): the measures of the box in its png (the pictures themselves are not kept: hundreds of large arrays)
 for scale in SCALES:
     p.srp("bitmapscale", str(scale))
@@ -230,6 +241,21 @@ fonts = p.plot("fonts")
 for name, (_, what) in FONT_SIZES.items():
     said = fonts.warnings("though text font")
     check(f"a text size not fitting its font is named with its plot and element: {name}", any(f"Plot {name} from group fonts:" in m and m.rstrip().endswith(f"for {what}.") for m in said), " | ".join(said))
+
+titles = p.plot("titles", mode="png")
+widths = []
+for k in TITLE_GROWTH:
+    img = bitmap(p.path("out", "titles", f"title{k}.png"))
+    m = measure(img) if img is not None else None
+    if not m or not m["content"]:
+        check(f"a legend title of {10 + k} characters: the box is drawn", False, "no outline" if not m else "nothing inside")
+        continue
+    (top, bottom, left, right), (cTop, cBottom, cLeft, cRight), sides = m["box"], m["content"], m["sides"]
+    gaps = (cLeft - left - sides[0], right - sides[1] - cRight)
+    check(f"a legend title of {10 + k} characters next to a shorter row: a margin on its right as on its left", gaps[1] >= gaps[0], f"gaps left, right {gaps}")
+    widths.append(right - left)
+steps = [b - a for a, b in zip(widths, widths[1:])]
+check("a growing legend title widens its box step by step, without a jump", widths and min(steps, default=0) >= 0 and max(steps, default=0) <= 8, f"box widths {widths} pixels")
 
 # the same text in pads whose smaller side is the same: the same box in pixels
 for i, case in enumerate(todo):
