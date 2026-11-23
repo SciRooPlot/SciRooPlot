@@ -9190,6 +9190,11 @@ void PlotPainter::DrawColorScaleCell(TCanvas* canvas, Plot& plot, uint8_t padID)
     logger::warning("Pad {} is the cell of a colour scale and stays empty: no panel left of it, name one with ColorScale(padID).", padID);
     return;
   }
+  // a pad number that names no panel: a pad the plot does not have, another colour scale cell or an empty cell
+  if (auto other = plot.GetPads().find(shown); other == plot.GetPads().end() || other->second.GetColorScaleOf() || other->second.GetIsEmptyCell()) {
+    logger::warning("Pad {} is the cell of a colour scale and stays empty: pad {} named by its ColorScale({}) is no panel of the plot.", padID, shown, shown);
+    return;
+  }
   const vector<uint8_t> alone{shown};  // a panel in no z group: the cell shows its own scale
   const vector<uint8_t>* group{&alone};
   for (const auto& members : mSharedAxes['Z']) {

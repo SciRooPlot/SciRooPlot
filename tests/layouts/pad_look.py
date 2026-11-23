@@ -8,7 +8,8 @@ drawing shares no x and y axes and keeps its own; a flat panel beside one keeps 
 Every data kind is drawn in every panel of a base plot of its dimension (1d: a grid with ratio panels, 2d: a grid with one
 colour scale and a gap grid with own scales, 3d: a touching grid), in the map-with-projections layout and in layouts with spanning panels.
 A ColorScale() cell draws nothing but the scale: its own data, legends, texts, images and shapes, and boxes naming data of other pads,
-are left out with one warning naming them.
+are left out with one warning naming them; one naming no panel (a pad the plot does not have, another cell) stays empty with a
+warning saying so.
 Covers: sizes given to MakeBasePlot, colour scales in pixels, ratio panels between the rows of a grid, labels hidden only where the axis is shared and flat panels beside 3d views keeping their labels hidden, boxes in a colour scale cell.
 """
 
@@ -213,6 +214,12 @@ plot = S.Plot("lonely", S.PanelLayout([[S.ColorScale(), S.Panel()]]))
 plot.SetGroup("cell")
 add_data(plot[2], "hist2d").SetDrawOption(S.colz)
 c.pm.AddPlot(plot)
+# a ColorScale(padID) naming no panel: a pad the layout does not have, or another colour scale cell
+for name, cells in (("missing", [S.Panel(), S.ColorScale(9)]), ("scale_of_scale", [S.Panel(), S.ColorScale(), S.ColorScale(2)])):
+    plot = S.Plot(name, S.PanelLayout([cells]))
+    plot.SetGroup("cell")
+    add_data(plot[1], "hist2d").SetDrawOption(S.colz)
+    c.pm.AddPlot(plot)
 cellRun = c.plot("cell")
 inCell = [o.ClassName() for o, _ in cellRun.links("cell", "cell", 2) if o.InheritsFrom("TPave") and not o.InheritsFrom("TPaletteAxis") or o.ClassName() == "TLine"]
 said = [m for m in cellRun.messages("cell", "cell") if "cell of a colour scale" in m]
@@ -220,4 +227,7 @@ check("a ColorScale() cell draws no legend, text or shape of its own, nor boxes 
 check("a ColorScale() cell: one warning naming what is left out", len(said) == 1 and "legends, texts, shapes are not drawn" in said[0], " | ".join(cellRun.messages("cell", "cell")))
 said = [m for m in cellRun.messages("lonely", "cell") if "cell of a colour scale" in m]
 check("a ColorScale() cell without a panel left of it: warned, named as a cell of a colour scale", len(said) == 1 and "Pad 1 is the cell of a colour scale and stays empty" in said[0], " | ".join(cellRun.messages("lonely", "cell")))
+for name, cell, named in (("missing", 2, 9), ("scale_of_scale", 3, 2)):
+    said = [m for m in cellRun.messages(name, "cell") if "cell of a colour scale" in m]
+    check(f"a ColorScale({named}) naming no panel ({name}): warned as such", len(said) == 1 and f"Pad {cell} is the cell of a colour scale and stays empty: pad {named} named by its ColorScale({named}) is no panel of the plot" in said[0], " | ".join(cellRun.messages(name, "cell")))
 finish()
