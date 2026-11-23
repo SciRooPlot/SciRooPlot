@@ -261,7 +261,9 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
       } catch (const std::runtime_error& e) {
         // RDataFrame refuses a filter of another type than bool (e.g. an int column) without a compiler error
         if (util::str_contains(e.what(), "does not evaluate to bool")) {
-          logger::error("Filter expression {} for {} does not give a bool: write a condition (e.g. {} != 0).", filter, mContext, filter);
+          // a column name compared as it is, an expression in parentheses (n ? 1 : 0 != 0 would compare the 0 only)
+          const bool isName = std::all_of(filter.begin(), filter.end(), [](unsigned char c) { return std::isalnum(c) || c == '_' || c == '.'; });
+          logger::error("Filter expression {} for {} does not give a bool: write a condition (e.g. {} != 0).", filter, mContext, (isName) ? filter : "(" + filter + ")");
         } else {
           logger::error("Illegal filter expression {} for {}{}.", filter, mContext, refusal(e));
         }
