@@ -6,12 +6,14 @@ match (any match in contains mode), a name word the names of the plots plot sele
 included. bash inserts a single match and keeps the typed word when the matches do not all start with it. srp: the commands, plot modes and
 setting values it offers are exactly those srp help documents, and srp accepts each of them; the projects offered are the registered ones (also with a ~ in SCIROOPLOT_CONFIG_PATH that the shell did not expand);
 the properties offered for a project are program, outdir and the settings its program declares, with their descriptions, and the values
-offered for a setting are on and off of a switch or the choices of a text, each accepted by srp set.
+offered for a setting are on and off of a switch or the choices of a text, each accepted by srp set; bash inserts them escaped (a choice with spaces,
+quotes or braces stays one word) and offers them for their typed start.
 Completing 3000 plots takes well below two seconds.
 Covers: regex dialect, trailing slash, projects with a brace in a setting value, descriptions and choices with quotes, braces and a backslash, completion speed."""
 
 import os
 import re
+import shlex
 
 from srptest import PLOT, SHELLS, SRP, cases, check, config_folder, describe, finish, listed, run, shell
 
@@ -203,10 +205,15 @@ for sh in SHELLS:
 for name, default, _, choices in DECLARED:
     offered = choices or (["on", "off"] if isinstance(default, bool) else [])
     got, out = bash_complete("srp", "set", "comp", name, "")
-    check(f"srp set comp {name} offers {offered or 'nothing'}", got == offered, f"{got}")
+    words = [shlex.split(g) for g in got]  # bash inserts the reply as typed: escaped where needed
+    check(f"srp set comp {name} offers {offered or 'nothing'}, each as one word", words == [[v] for v in offered], f"{got}")
     for sh in SHELLS[1:]:
         out = shell(f'_scirooplot_helper load_srp_lists; _scirooplot_helper load_project_settings @current {name}; for v in "${{setting_values[@]}}"; do echo "$v"; done', sh, config=config, interactive=True)
         check(f"{sh}: srp set comp {name} offers {offered or 'nothing'}", out.stdout.splitlines() == offered, out.tail())
+    for value in offered:
+        typed = value.split(" ")[0]  # the start of a value with spaces: bash splits the typed words there
+        got, out = bash_complete("srp", "set", "comp", name, typed)
+        check(f"srp set comp {name} {typed!r} offers {value!r}", any(shlex.split(g) == [value] for g in got), f"{got}")
     refused = [v for v in offered if run(SRP, "set", "comp", name, v, config=config).rc != 0]
     check(f"srp set comp {name} accepts every value offered", not refused, f"refused {refused}")
     run(SRP, "unset", "comp", name, config=config)
