@@ -83,7 +83,7 @@ labels = [row[0] for row in rows(run.pad("own_row_twice", "named", 1))]
 messages = run.messages("own_row_twice", "named")
 check("data of the legend's own pad added with AddDataEntry keeps both rows", labels == ["one", "two", "two"], f"{labels}")
 check("data of the legend's own pad added with AddDataEntry is warned about", sum("data 2 has two rows" in m for m in messages) == 1, " | ".join(messages))
-# an empty legend or text, a row of data that is not there: warned naming the pad, rows of both kinds alike
+# an empty legend or text: a hint naming the pad; a row of data that is not there: warned naming the pad, rows of both kinds alike
 e = Project("empty_boxes", bases=("1d_2x1_gap",))
 e.inputs()
 plot = S.Plot("empty", "boxes", "1d_2x1_gap")
@@ -96,7 +96,7 @@ plot[1](1).GetLegendEntry().AddSymbolOf(7)
 e.pm.AddPlot(plot)
 emptyRun = e.plot("boxes")
 said = emptyRun.messages("empty", "boxes")
-check("an empty legend: warned naming its pad", any("Legend 1 of pad 2 is empty: it is not drawn." in m for m in said), " | ".join(said))
-check("an empty text: warned naming its pad", any("Text 1 of pad 2 is empty: it is not drawn." in m for m in said), " | ".join(said))
+check("an empty legend: a hint naming the plot and the pad", any("Plot empty from group boxes: legend 1 of pad 2 is empty: it is not drawn." in m for m in emptyRun.hints()), " | ".join(said))
+check("an empty text: a hint naming the plot and the pad", any("Plot empty from group boxes: text 1 of pad 2 is empty: it is not drawn." in m for m in emptyRun.hints()), " | ".join(said))
 check("rows referring to data that is not there: both warned as legend rows", sum("Legend row '" in m and "there is no data" in m for m in said) == 2, " | ".join(said))
 finish()

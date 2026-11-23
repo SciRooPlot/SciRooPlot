@@ -3043,8 +3043,8 @@ std::unique_ptr<TCanvas> PlotManager::ApplySharedAxes(PlotPainter& painter, Plot
       const auto axis = pad.GetAxes().find(axisLabel);
       const bool ownLabels = axis != pad.GetAxes().end() && axis->second.GetLabelSize();
       if (unshared != touching.end() && !ownLabels) {
-        logger::warning("Plot {}: the {} labels and title of pad {} are hidden beside pad {}, which shares no axis with it (a 3D view or a polar drawing); separate them with a Gap() to show them.",
-                        Plot::Label(fullPlot), static_cast<char>(std::tolower(axisLabel)), padID, *unshared);
+        logger::hint("Plot {}: the {} labels and title of pad {} are hidden beside pad {}, which shares no axis with it (a 3D view or a polar drawing); separate them with a Gap() to show them.",
+                     Plot::Label(fullPlot), static_cast<char>(std::tolower(axisLabel)), padID, *unshared);
       }
     }
   }

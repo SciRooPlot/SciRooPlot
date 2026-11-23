@@ -949,7 +949,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       }
       pad_ptr->cd();
       if (!DrawBox(box, pad, padDefaults, pad_ptr, "LegendBox_" + std::to_string(legendIndex))) {
-        logger::warning("Legend {} of pad {} is empty: it is not drawn.", legendIndex, padID);
+        logger::hint("Plot {}: legend {} of pad {} is empty: it is not drawn.", mPlotLabel, legendIndex, padID);
       }
     }
     uint8_t textIndex{};
@@ -958,7 +958,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       if (!box->RefersToOtherPads() || !pad_ptr) continue;
       pad_ptr->cd();
       if (!DrawBox(box, pad, padDefaults, pad_ptr, "TextBox_" + std::to_string(textIndex))) {
-        logger::warning("Text {} of pad {} is empty: it is not drawn.", textIndex, padID);
+        logger::hint("Plot {}: text {} of pad {} is empty: it is not drawn.", mPlotLabel, textIndex, padID);
       }
     }
   }
@@ -1379,7 +1379,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
       if (passOf(*box) != pass || box->HasForeignRows()) continue;           // a legend with rows of other pads comes once all are drawn
       box->MergeLegendEntries(static_cast<uint16_t>(pad.GetData().size()));  // put the rows added by the user between those of the data
       if (!DrawBox(box, pad, padDefaults, pad_ptr, "LegendBox_" + std::to_string(legendIndex))) {
-        logger::warning("Legend {} of pad {} is empty: it is not drawn.", legendIndex, padID);
+        logger::hint("Plot {}: legend {} of pad {} is empty: it is not drawn.", mPlotLabel, legendIndex, padID);
       }
     }
     uint8_t textIndex{};
@@ -1387,7 +1387,7 @@ void PlotPainter::FinishPad(pad_state_t& padState)
       ++textIndex;
       if (passOf(*box) != pass || box->RefersToOtherPads()) continue;  // a text naming data of other pads comes once all are drawn
       if (!DrawBox(box, pad, padDefaults, pad_ptr, "TextBox_" + std::to_string(textIndex))) {
-        logger::warning("Text {} of pad {} is empty: it is not drawn.", textIndex, padID);
+        logger::hint("Plot {}: text {} of pad {} is empty: it is not drawn.", mPlotLabel, textIndex, padID);
       }
     }
     uint8_t imageIndex{};

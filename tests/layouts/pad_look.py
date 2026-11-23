@@ -4,7 +4,7 @@ them (fractions of the smaller pad side, pixel fonts in pixels), in font 42; dra
 a colour scale is the colour-scale offset away from its frame and the colour-scale width wide (in its panel and in a ColorScale() cell);
 ratio panels of base plots draw their reference line at 1 with few divisions and a centred title.
 The labels and title of an axis are hidden towards a touching panel (below for x, on the left for y) in flat frames; a 3D view or a polar
-drawing shares no x and y axes and keeps its own; a flat panel beside one keeps them hidden (no room for them) with a warning, once per axis.
+drawing shares no x and y axes and keeps its own; a flat panel beside one keeps them hidden (no room for them) with a hint, once per axis.
 Every data kind is drawn in every panel of a base plot of its dimension (1d: a grid with ratio panels, 2d: a grid with one
 colour scale and a gap grid with own scales, 3d: a touching grid), in the map-with-projections layout and in layouts with spanning panels.
 A ColorScale() cell draws nothing but the scale: its own data, legends, texts, images and shapes, and boxes naming data of other pads,
@@ -190,9 +190,9 @@ for i, case in enumerate(todo):
             if frame:
                 axis = frame.GetYaxis()
                 check(f"few y divisions and a centred title in pad {padID}: {what}", axis.GetNdivisions() % 1000000 == 305 and axis.TestBit(ROOT.TAxis.kCenterTitle), f"divisions {axis.GetNdivisions()}, centred {axis.TestBit(ROOT.TAxis.kCenterTitle)}")
-unsharedWanted.add("Plot beside_a_3D_view from group look: the y labels and title of pad 2 are hidden beside pad 1,")  # own sizes: no warning
-unsharedGot = {line[line.index("Plot ") : line.index(", which") + 1] for line in run.warnings("are hidden beside pad")}
-check("a flat panel beside a 3D view or polar drawing warns that its hidden axis is not shared (each such axis once)", unsharedGot == unsharedWanted, f"missing {sorted(unsharedWanted - unsharedGot)[:3]}, not expected {sorted(unsharedGot - unsharedWanted)[:3]}")
+unsharedWanted.add("Plot beside_a_3D_view from group look: the y labels and title of pad 2 are hidden beside pad 1,")  # own sizes: no hint
+unsharedGot = {line[line.index("Plot ") : line.index(", which") + 1] for line in run.hints("are hidden beside pad")}
+check("a flat panel beside a 3D view or polar drawing hints that its hidden axis is not shared (each such axis once)", unsharedGot == unsharedWanted, f"missing {sorted(unsharedWanted - unsharedGot)[:3]}, not expected {sorted(unsharedGot - unsharedWanted)[:3]}")
 for name, (kind, place, label, title, want) in OWN_SIZES.items():
     frame = run.frame_hist(name.replace(" ", "_"), "look", 2)
     got = (round(frame.GetYaxis().GetLabelSize(), 6), frame.GetYaxis().GetTitleSize() > 0) if frame else None  # (a y title gets a pixel size)

@@ -6,7 +6,7 @@ scale of the group does not reach it, with a warning); a TF3 has no colour scale
 A range, log scale or time format set in one pad of the group or in pad 0 holds for all of them (a 3d histogram first in a group with
 a log map: the cell shows the log scale of the map, a warning names the 3d histogram) (differing ranges: the first pad's,
 with a warning). 3D views and polar drawings share no x and y axes: they and the flat pads beside them keep their own ranges (an explicit
-group warns that it leaves them out; a flat panel right of one warns that its hidden y axis is not shared). ShareAxis regroups: an empty list undoes the groups of the axis (the layout's too, with a warning
+group warns that it leaves them out; a flat panel right of one hints that its hidden y axis is not shared). ShareAxis regroups: an empty list undoes the groups of the axis (the layout's too, with a warning
 that the layout shows the axis once), a single pad leaves its group (no warning for a group of ShareAxis), a pad listed twice or a pad the plot does not have is warned about,
 an unknown axis and pad 0 are refused when defined. Panels spanning other columns share no x with the narrow ones, panels apart by a
 panel spacing still share. The title of a row (x) or column (y) of touching panels showing the same title is drawn once, under or beside
@@ -250,7 +250,7 @@ for i, c in enumerate(zpairs):
     warned = [line for line in linear if f"Plot z{i}_True from group " in line]
     check(f"a log scale not reaching the 3d histogram is warned about{'' if expected else ' only there'}: {describe(c)}", len(warned) == (1 if expected else 0) and (not expected or "pad 2" in warned[0]), str(warned))
 leftOut = run.warnings("is left out of the pads sharing")
-besides = run.warnings("are hidden beside pad")
+besides = run.hints("are hidden beside pad")
 for i, c in enumerate(views):
     what = describe(c)
     alone = [run.frame(f"v{i}_False", pad) for pad in (1, 2)]
@@ -264,12 +264,12 @@ for i, c in enumerate(views):
         check(f"an explicit group warns that it leaves out the pad without flat frame: {what}", len(warned) == 1 and "pad 1" in warned[0], str(warned))
     else:
         check(f"the layout leaves it out silently: {what}", not warned, str(warned))
-    # the flat pad right of the drawing keeps its y labels hidden (no room for them), with a warning; below it (x) the drawing shows its own
+    # the flat pad right of the drawing keeps its y labels hidden (no room for them), with a hint; below it (x) the drawing shows its own
     for shared in (True, False):
         warned = [line for line in besides if f"Plot v{i}_{shared} from group " in line]
         expected = c["group"] == "layout" and c["axis"] == "Y"
         check(
-            f"a flat pad beside the drawing warns that its hidden {c['axis'].lower()} axis is not shared{'' if expected else ' only where it touches'}: {what} shared={shared}",
+            f"a flat pad beside the drawing hints that its hidden {c['axis'].lower()} axis is not shared{'' if expected else ' only where it touches'}: {what} shared={shared}",
             len(warned) == (1 if expected else 0) and (not expected or "the y labels and title of pad 2 are hidden beside pad 1" in warned[0]),
             str(warned),
         )
@@ -346,7 +346,6 @@ known = (
     "no pad 7",
     "is left out of the pads sharing",
     "whose boxes ROOT colours linearly",
-    "are hidden beside pad",
     "with a log z axis: ROOT then paints its colour scale without colours",
     "implies a text size in pixel",
 )  # ROOT on the pixel-font plots

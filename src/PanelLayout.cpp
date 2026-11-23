@@ -679,8 +679,8 @@ void PanelLayout::ApplyGeometry(Plot& plot, Grid& grid) const
     for (size_t c = c0; below.panel && rowSep[r1].shared && c <= c1; ++c)
       unsharedBelow = unsharedBelow || otherLength(r1 + 1, c, false);
     if (unsharedLeft || unsharedBelow) {
-      logger::warning("Layout: pad {} touches a panel of another {} {}: their {} axes cannot be shared, yet the labels between them are hidden. Separate them with a Gap().",
-                      padID, unsharedBelow ? "width" : "height", unsharedBelow ? "below it" : "left of it", unsharedBelow ? "x" : "y");
+      logger::hint("Layout: pad {} touches a panel of another {} {}: their {} axes cannot be shared, yet the labels between them are hidden. Separate them with a Gap().",
+                   padID, unsharedBelow ? "width" : "height", unsharedBelow ? "below it" : "left of it", unsharedBelow ? "x" : "y");
     }
   }
   plot[0].SetDefaultLineWidth(mLineWidth);
