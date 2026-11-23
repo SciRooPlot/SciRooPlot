@@ -1942,7 +1942,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
           vector<string> sources;
           for (const auto& [source, inputs] : mInputs)
             sources.push_back(source);
-          const auto similar = SimilarNames(dataSource.substr(0, dataSource.find(':')), sources);
+          const auto similar = SimilarNames(dataSource.substr(0, dataSource.find(':')), name_candidates_t(std::move(sources)));
           message += (similar.empty()) ? " (data source not defined)" : " (data source not defined; did you mean " + join_strings(similar, ", ") + "?)";
         } else if (auto it = mNotFoundData.find(dataSource); it != mNotFoundData.end() && it->second.count(name)) {
           string suggestion;
@@ -2236,7 +2236,9 @@ void PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
 void PlotManager::FindSimilarNames(const string& baseSource, const vector<string>& dataSources)
 {
   constexpr size_t kMaxNames = 100000;
-  auto quiet = ignore_root_messages_below(kFatal);  // the inputs were read before: what cannot be opened has been reported
+  // the inputs were read before: what cannot be opened or looked into has been reported
+  auto quiet = ignore_root_messages_below(kFatal);
+  auto unmute = make_scope_guard([wasMuted = std::exchange(logger::muted(), true)]() { logger::muted() = wasMuted; });
   for (const auto& dataSource : dataSources) {
     auto notFound = mNotFoundData.find(dataSource);
     if (notFound == mNotFoundData.end()) continue;
@@ -2249,8 +2251,11 @@ void PlotManager::FindSimilarNames(const string& baseSource, const vector<string
         for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {
           if (!key || !seen.insert(key->GetName()).second || names.size() >= kMaxNames) continue;
           TClass* keyClass = readable_class(key);
-          if (!keyClass) continue;
           const string path = prefix + key->GetName();
+          if (!keyClass) {
+            if (std::string_view(key->GetClassName()) == "ROOT::RNTuple") names.push_back(path);  // read without a class of its own
+            continue;
+          }
           if (keyClass->InheritsFrom(TDirectory::Class())) {
             if (auto* sub = open_directory(directory, key)) collect(sub, path + "/", depth + 1);
           } else if (is_container(keyClass)) {
@@ -2272,27 +2277,48 @@ void PlotManager::FindSimilarNames(const string& baseSource, const vector<string
       });
     };
     for (const auto& inputRaw : mExpandedInputs[baseSource]) {
+      if (names.size() >= kMaxNames) break;
       const string input = expand_path(inputRaw).value_or("");
       if (str_ends_with(input, mTableFileEndings)) {
         if (dataSource == baseSource) names.push_back(std::filesystem::path(input).stem().string());
         continue;
       }
+      // the inputs as they were read: a remote one is opened once per reading, a missing one not tried again
       const auto fileNamePath = split_input_path(input);
-      auto file = open_input_file(fileNamePath[0]);
+      std::error_code existsError;
+      if (!is_root_input(fileNamePath[0]) || is_missing_local_file(fileNamePath[0], existsError)) continue;
+      auto file = OpenInput(fileNamePath[0]);
       if (!file || file->IsZombie()) continue;
       const string folderPath = SearchedFolder(dataSource, (fileNamePath.size() > 1) ? fileNamePath[1] : "");
       const bool isRestricted = (dataSource.find(':') != string::npos);
+      read_cache_t readCache;  // lists and folders on the way to the folder searched
       for (const auto& folder : (isRestricted && folderPath.find_first_of("*?[") != string::npos) ? MatchFolders(file.get(), folderPath) : vector<string>{folderPath}) {
-        TDirectory* directory = (folder.empty()) ? file.get() : file->GetDirectory(folder.data());
-        if (directory) collect(directory, "", 0);
+        TObject* searched = (folder.empty()) ? file.get() : FindSubDirectory(file.get(), split_string(folder, '/'), readCache);
+        if (searched) collect(searched, "", 0);
       }
     }
     std::sort(names.begin(), names.end());
     names.erase(std::unique(names.begin(), names.end()), names.end());
+    const name_candidates_t candidates(std::move(names));
     for (const auto& name : notFound->second) {
-      auto similar = SimilarNames(name, names);
+      auto similar = SimilarNames(name, candidates);
       if (!similar.empty()) mSimilarNames[dataSource][name] = std::move(similar);
     }
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Names to suggest from: each upper-cased once, as a whole path and its last part.
+ */
+//**************************************************************************************************
+PlotManager::name_candidates_t::name_candidates_t(vector<string> candidates) : names(std::move(candidates))
+{
+  upper.reserve(names.size());
+  leaves.reserve(names.size());
+  for (const auto& name : names) {
+    upper.push_back(str_upper(name));
+    leaves.push_back(str_upper(split_path(name).second));
   }
 }
 
@@ -2303,20 +2329,26 @@ void PlotManager::FindSimilarNames(const string& baseSource, const vector<string
  * ones those whose whole path is closer (e.g. in the same folder) first.
  */
 //**************************************************************************************************
-vector<string> PlotManager::SimilarNames(const string& wanted, const vector<string>& candidates)
+vector<string> PlotManager::SimilarNames(const string& wanted, const name_candidates_t& candidates)
 {
   const string wantedUpper = str_upper(wanted);
   const string wantedLeaf = str_upper(split_path(wanted).second);
   const size_t allowed = (wantedLeaf.size() <= 4) ? 1 : ((wantedLeaf.size() <= 10) ? 2 : 3);
+  // at least as many typos as the lengths differ: most names are left out without comparing them
+  auto apart = [allowed](const string& a, const string& b) { return std::max(a.size(), b.size()) - std::min(a.size(), b.size()) > allowed; };
   vector<std::tuple<size_t, size_t, string>> ranked;  // how alike, distance of the whole paths, the name
-  for (const auto& candidate : candidates) {
+  for (size_t i = 0; i < candidates.names.size(); ++i) {
+    const string& candidate = candidates.names[i];
+    const string& upper = candidates.upper[i];
+    const string& leaf = candidates.leaves[i];
     if (candidate == wanted) continue;  // found, but not readable as data: reported where it was read
-    const string upper = str_upper(candidate);
-    const string leaf = str_upper(split_path(candidate).second);
-    const size_t pathDistance = edit_distance(upper, wantedUpper);
     if (upper == wantedUpper) {
       ranked.emplace_back(0, 0, candidate);
-    } else if (leaf == wantedLeaf) {
+      continue;
+    }
+    if (leaf != wantedLeaf && apart(leaf, wantedLeaf) && apart(upper, wantedUpper)) continue;
+    const size_t pathDistance = edit_distance(upper, wantedUpper);
+    if (leaf == wantedLeaf) {
       ranked.emplace_back(1, pathDistance, candidate);
     } else if (const size_t distance = std::min(pathDistance, edit_distance(leaf, wantedLeaf)); distance <= allowed) {
       ranked.emplace_back(1 + distance, pathDistance, candidate);

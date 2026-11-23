@@ -2,16 +2,18 @@
 same name in other case, the same name in another folder, then names a few typos away (a character inserted, left out, replaced or two
 neighbours swapped; case ignored; one typo for names of up to 4 characters, two up to 10, three beyond; among equally good ones those
 whose whole path is closer first, e.g. in the same folder), searched in every input of the
-data source, in directories and in collections (lists, stacks, multigraphs, folders, maps), in tables, and for a data source restricted to
-a folder (src:folder) only in that folder. A name nothing is close to gets no suggestion. A data source that is not defined gets the
+data source, in directories and in collections (lists, stacks, multigraphs, folders, maps), in tables, RNTuples included, and for a
+data source or an input restricted to a folder (src:folder, file.root:folder; a directory or a list) only in that folder. A name nothing is close to gets no suggestion. A data source that is not defined gets the
 defined data sources like its name.
 Covers: case, folder, insertion, deletion, replacement, swap, too many typos, the limit of three, the order, collections, a second input,
-tables, a restricted data source, an undefined data source.
+tables, an RNTuple, restricted data sources and inputs (directory, list), an undefined data source.
 """
 
 import os
 
-from srptest import ROOT, Project, S, check, collection, finish, one_bin, own, put, write_csv
+import numpy as np
+
+from srptest import ROOT, Project, S, check, collection, finish, one_bin, own, put, write_csv, write_tree
 
 p = Project("similar_names")
 path = p.path("inputs.root")
@@ -51,6 +53,9 @@ p.pm.AddDataSource("two", [path, p.path("other.root")])
 os.makedirs(p.path("tables"))
 write_csv(p.path("tables", "ptTable.csv"), {"x": [1.0, 2.0]})
 p.pm.AddDataSource("tables", p.path("tables"))
+p.pm.AddDataSource("inlist", path + ":lst")
+write_tree(p.path("ntuple.root"), {"x": np.array([1.0, 2.0])}, name="events", ntuple=True)
+p.pm.AddDataSource("nt", p.path("ntuple.root"))
 
 CASES = (  # name, data source, the suggestions expected (best first), what it checks
     ("hpt", "data", ["hPt"], "the same name in other case"),
@@ -73,6 +78,11 @@ CASES = (  # name, data source, the suggestions expected (best first), what it c
     ("pttable", "tables", ["ptTable"], "a table"),
     ("hspec", "folder", ["hSpec"], "a restricted data source: within its folder"),
     ("hpt", "folder", [], "a restricted data source: not outside its folder"),
+    ("hSpce", "data:results", ["hSpec"], "a data source restricted to a directory (src:folder)"),
+    ("hpt", "data:results", [], "a data source restricted to a directory: not outside it"),
+    ("hEtaa", "data:lst", ["hEta"], "a data source restricted to a list (src:list)"),
+    ("hEtaa", "inlist", ["hEta"], "an input that is a list (file.root:list)"),
+    ("event", "nt", ["events"], "an RNTuple"),
 )
 for i, (name, source, _, _) in enumerate(CASES):
     plot = S.Plot(f"n{i}", "names", "1d")

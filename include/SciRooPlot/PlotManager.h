@@ -260,7 +260,12 @@ class PlotManager
   using required_data_t = std::map<std::string, std::unordered_map<std::string, std::set<std::string>>>;  // data source -> folder -> names still to find
   void ReadSourceGroup(const std::string& baseSource, const std::vector<std::string>& dataSources);
   void FindSimilarNames(const std::string& baseSource, const std::vector<std::string>& dataSources);
-  static std::vector<std::string> SimilarNames(const std::string& wanted, const std::vector<std::string>& candidates);
+  // names to suggest from, upper-cased once (whole path and last part) for the comparison with every name not found
+  struct name_candidates_t {
+    std::vector<std::string> names, upper, leaves;
+    explicit name_candidates_t(std::vector<std::string> candidates);
+  };
+  static std::vector<std::string> SimilarNames(const std::string& wanted, const name_candidates_t& candidates);
   void MakeUserData(const std::string& dataSource, const std::string& dataName, std::unique_ptr<TObject>& dataPtr);
   void ChainTrees(required_data_t& requiredData);
   bool IsBuffered(const std::string& dataSource, const std::string& name) const;
