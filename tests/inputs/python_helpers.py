@@ -5,7 +5,8 @@ weights with errors from the sum of their squares) from numpy arrays of any nume
 TGraphErrors with optional errors; table makes a tree of a dict of arrays, a structured array, a DataFrame or a 2d array with column
 names: numbers and bools keep their type, strings become std::string, columns that cannot be stored are skipped with a warning naming
 the reason. Wrong input raises an exception saying what is wrong (a TypeError for the wrong kind of argument, a ValueError for wrong
-values). Handed to AddDataSource, a table works with Project1D and Filter (also on strings), a histogram is drawn as filled.
+values). Arrays, lists of numbers and dicts of columns given to AddDataSource directly raise a TypeError naming the helpers. Handed to
+AddDataSource, a table works with Project1D and Filter (also on strings), a histogram is drawn as filled.
 Covers: histo, histo2d, graph, table and their checks.
 """
 
@@ -211,6 +212,9 @@ raises("table: a 2d array without names, with a hint", lambda: S.table("e", matr
 raises("table: columns of other lengths", lambda: S.table("e", {"a": [1, 2], "b": [1]}), ValueError, "same length")
 raises("table of a list", lambda: S.table("e", [1, 2]), TypeError)
 raises("table: nothing that can be stored", lambda: S.table("e", {"w": pd.date_range("2026-01-01", periods=2)}), ValueError, "no column that can be stored")
+# arrays given to AddDataSource directly: the error points to the helpers
+for what, given in (("a numpy array", np.arange(3.0)), ("a list of numbers", [1.0, 2.0, 3.0]), ("a dict of columns", {"a": np.arange(3.0)}), ("a list holding a dict of columns", [{"a": np.arange(3.0)}])):
+    raises(f"AddDataSource of {what}", lambda given=given: S.PlotManager().AddDataSource("arr", given), TypeError, "Data source arr: arrays and DataFrames are made into ROOT objects with histo()")
 
 # the objects as data of a project
 p = Project("python_helpers")

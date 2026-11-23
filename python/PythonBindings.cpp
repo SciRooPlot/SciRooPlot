@@ -332,9 +332,9 @@ void exportPlotManager(py::module_& m)
         if (!object) throw py::value_error("Data source " + dataSource + ": a ROOT object is null (a name not found by Get?).");
         return object;
       };
-      // arrays (numpy, pandas) are made into ROOT objects by the helpers of the module first
+      // arrays (numpy, pandas, lists of numbers, dicts of columns) are made into ROOT objects by the helpers of the module first
       auto notConvertible = [&dataSource](py::handle obj) {
-        if (py::hasattr(obj, "__array__")) {
+        if (py::hasattr(obj, "__array__") || py::isinstance<py::dict>(obj) || py::isinstance<py::float_>(obj) || py::isinstance<py::int_>(obj)) {
           throw py::type_error("Data source " + dataSource + ": arrays and DataFrames are made into ROOT objects with histo(), histo2d(), graph() or table() first, e.g. AddDataSource(\"" + dataSource + "\", [histo(\"h\", values)]).");
         }
       };
