@@ -126,6 +126,25 @@ plot = S.Plot("input_after", "proj", "2d")
 plot[1].SetFrame("p2", "proj")
 p.pm.AddPlot(plot)
 
+# a frame widened by a pad range beyond its axis (empty bins added) keeps the automatic end of its value range next to a stored one
+widened = {}
+for dim in (1, 2):
+    for end, offset, value in (("max", 50.0, 70.0), ("min", -70.0, -90.0)):
+        h = ROOT.TH1D(f"w{dim}{end}", "", 10, 0.0, 10.0) if dim == 1 else ROOT.TH2D(f"w{dim}{end}", "", 10, 0.0, 10.0, 10, 0.0, 10.0)
+        for c in range(h.GetNcells()):
+            if not (h.IsBinUnderflow(c) or h.IsBinOverflow(c)):
+                h.SetBinContent(c, offset + 1 + c % 10)
+        (h.SetMaximum if end == "max" else h.SetMinimum)(value)
+        widened[h.GetName()] = h
+p.source("widened", widened)
+for name in widened:
+    for wide in (False, True):
+        plot = S.Plot(f"{name}_{'wide' if wide else 'own'}", "widened", "1d" if name[1] == "1" else "2d")
+        plot[1].AddData(name, "widened").SetDefinesFrame()
+        if wide:
+            plot[1]["X"].SetRange(-5.0, 15.0)
+        p.pm.AddPlot(plot)
+
 run = p.plot("stored")
 
 
@@ -158,6 +177,15 @@ for i, case in enumerate(todo):
         check(f"{rule}: {what}", close(got[axis][0], low, 1e-6) and close(got[axis][1], high, 1e-6), f"{axis} {got[axis][0]:.6g} to {got[axis][1]:.6g}, expected {low:.6g} to {high:.6g}")
 check("stored ranges discarded silently", not run.warnings(), " | ".join(run.warnings()[:3]))
 check("no errors", not run.errors(), " | ".join(run.errors()[:3]))
+
+run = p.plot("widened")
+for name in widened:
+    axis = "Y" if name[1] == "1" else "Z"
+    own, wide = (run.frame(f"{name}_{w}", "widened") for w in ("own", "wide"))
+    if axis == "Z":
+        own, wide = ({"Z": (h.GetMinimum(), h.GetMaximum())} if h else None for h in (run.frame_hist(f"{name}_{w}", "widened") for w in ("own", "wide")))
+    same = own is not None and wide is not None and all(close(own[axis][e], wide[axis][e], 1e-6) for e in (0, 1))
+    check(f"a frame widened along x keeps its {axis} range with one end stored: {name}", same, f"widened {wide and wide[axis]}, own {own and own[axis]}")
 
 run = p.plot("proj")
 warnings = run.warnings("is not applied to its")

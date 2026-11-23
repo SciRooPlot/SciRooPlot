@@ -2992,19 +2992,19 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
         pad_ptr->Update();
       }
       TH1* extended = ExtendFrameAxis(axisHist_ptr, axisLabel, userMin, userMax, rangeMin, rangeMax);
-      // the added empty bins must not change the automatic range of the dependent axis: keep the one of the original frame
+      // the added empty bins must not change the automatic range of the dependent axis: keep the one of the original frame for each end not stored
       // (for 1d the range ROOT determined when drawing it, for 2d the extremes of the contents, which define the colour scale below)
-      if (axisHist_ptr->GetMinimumStored() == -1111 && axisHist_ptr->GetMaximumStored() == -1111) {
-        if (frameDim > 1) {
-          extended->SetMinimum(axisHist_ptr->GetMinimum());
-          extended->SetMaximum(axisHist_ptr->GetMaximum());
-        } else if (hbarFrame) {
-          extended->SetMinimum(FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx()));
-          extended->SetMaximum(FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx()));
-        } else {
-          extended->SetMinimum(FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()));
-          extended->SetMaximum(FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy()));
-        }
+      const bool automaticMin = axisHist_ptr->GetMinimumStored() == -1111;
+      const bool automaticMax = axisHist_ptr->GetMaximumStored() == -1111;
+      if (frameDim > 1) {
+        if (automaticMin) extended->SetMinimum(axisHist_ptr->GetMinimum());
+        if (automaticMax) extended->SetMaximum(axisHist_ptr->GetMaximum());
+      } else if (hbarFrame) {
+        if (automaticMin) extended->SetMinimum(FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx()));
+        if (automaticMax) extended->SetMaximum(FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx()));
+      } else {
+        if (automaticMin) extended->SetMinimum(FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()));
+        if (automaticMax) extended->SetMaximum(FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy()));
       }
       TList* primitives = pad_ptr->GetListOfPrimitives();
       while (primitives->Remove(axisHist_ptr)) {
