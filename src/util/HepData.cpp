@@ -178,7 +178,15 @@ void add_variables(TDirectory* table, TDirectory* out, const string& tableName, 
     if (fromBins) {
       for (int iy = 1; iy <= bins->GetNbinsY(); ++iy) {
         for (int ix = 1; ix <= bins->GetNbinsX(); ++ix) {
-          binX.push_back(bins->GetXaxis()->GetBinCenter(ix));
+          // a cell the table has no value for stays empty in every histogram: no point
+          const double cx = bins->GetXaxis()->GetBinCenter(ix), cy = bins->GetYaxis()->GetBinCenter(iy);
+          auto zeroAt = [&](const TH1* hist) { return !hist || hist->GetBinContent(hist->FindFixBin(cx, cy)) == 0.; };
+          bool empty = bins->GetBinContent(ix, iy) == 0.;
+          for (const auto& entry : variable.sources) {
+            empty = empty && zeroAt(entry.second.up) && zeroAt(entry.second.down);
+          }
+          if (empty) continue;
+          binX.push_back(cx);
           binY.push_back(bins->GetYaxis()->GetBinCenter(iy));
           binZ.push_back(bins->GetBinContent(ix, iy));
           binEX.push_back(0.5 * bins->GetXaxis()->GetBinWidth(ix));

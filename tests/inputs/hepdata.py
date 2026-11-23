@@ -151,7 +151,8 @@ def write_map(out, index, values, stat):
 
 def write_map_asymmetric(out, index, values, sources, graph):
     """a 2d table of 2 x 3 bins with error sources, one of them asymmetric (label: contents, or (up, down)); hepdata.net writes the
-    graph only when every error is symmetric, but checks only the up shifts: with graph, a graph with the given total errors"""
+    graph only when every error is symmetric, but checks only the up shifts: with graph, a graph with the given total errors; a cell
+    without value (None) stays empty in every histogram"""
     out.mkdir(f"Table {index}").cd()
     xEdges, yEdges = array.array("d", [0, 1, 2]), array.array("d", [0, 1, 2, 3])
     points = [(x + 0.5, y + 0.5) for x in range(2) for y in range(3)]
@@ -165,7 +166,8 @@ def write_map_asymmetric(out, index, values, sources, graph):
         h = ROOT.TH2F(name, DOI.format(index), 2, xEdges, 3, yEdges)
         h.GetZaxis().SetTitle(title)
         for (x, y), c in zip(points, contents):
-            h.Fill(x, y, c)
+            if c is not None:
+                h.Fill(x, y, c)
         h.Write()
         keep.append(h)
     if graph:
@@ -222,6 +224,8 @@ write_table(out, 11, [2.0, 4.0], [("stat", [0.25, 0.5])], edges=[0, 1, 2], name=
 # 2d tables with an asymmetric error source: without HEPData's graph, and with it beside a symmetric source
 write_map_asymmetric(out, 12, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [("sys", ([0.5] * 6, [-0.25] * 6))], graph=None)
 write_map_asymmetric(out, 13, [1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [("stat", [0.125] * 6), ("sys", ([0.5] * 6, [-0.25] * 6))], graph=[0.5] * 6)
+# a 2d table with an asymmetric error source and a cell without value
+write_map_asymmetric(out, 14, [1.0, 2.0, 3.0, 4.0, 5.0, None], [("sys", ([0.5] * 5 + [None], [-0.25] * 5 + [None]))], graph=None)
 out.Close()
 with tarfile.open(os.path.join(served, "record", "ins12345"), "w:gz") as archive:
     archive.add(rootFile, arcname=os.path.basename(rootFile))
@@ -300,6 +304,7 @@ expected = [
     # the points of a map without HEPData's graph are its bins, x inner, y outer
     ("a 2d table with an asymmetric error without HEPData's graph: a 2d graph of its bins with the summed errors", "Table 12/y1", "ref", "TGraph2DAsymmErrors", [1, 4, 2, 5, 3, 6], [0.25] * 6, [0.5] * 6),
     ("a 2d table with an asymmetric error without HEPData's graph: the error source", "Table 12/y1_sys", "ref", "TGraph2DAsymmErrors", [1, 4, 2, 5, 3, 6], [0.25] * 6, [0.5] * 6),
+    ("a 2d table with an asymmetric error without HEPData's graph: no point for a cell without value", "Table 14/y1", "ref", "TGraph2DAsymmErrors", [1, 4, 2, 5, 3], [0.25] * 5, [0.5] * 5),
     ("a symmetric error source of a 2d table with an asymmetric one: a 2d graph too", "Table 13/y1_stat", "ref", "TGraph2DAsymmErrors", [1, 2, 3, 4, 5, 6], [0.125] * 6, [0.125] * 6),
     ("the total errors of a 2d table with an asymmetric error and HEPData's graph: those of the graph", "Table 13/y1", "ref", "TGraph2DAsymmErrors", [1, 2, 3, 4, 5, 6], [0.5] * 6, [0.5] * 6),
     ("bins that overlap: a graph with the total errors", "Table 8/y1", "ref", "TGraphAsymmErrors", [3, 7, 11], [0.125, 0.25, 0.5], [0.125, 0.25, 0.5]),
