@@ -8,11 +8,12 @@ before; a plot whose data is missing is reported with its reasons and the run fa
 nothing is written (an earlier Data.root stays).
 Covers: a data source restricted to a folder (also given with a trailing slash, or empty), a path in a name, functions and points of the plot
 definition, the fixed key order, missing data, data read by earlier calls in the same process, a canvas of Plots.root drawn in the
-process that wrote it, names of Plots.root and Data.root outside of the output directory or the same for both (refused with a warning
+process that wrote it (a plot whose canvas ROOT deleted that way and that is not plotted again is left out, with a warning), names of Plots.root and Data.root outside of the output directory or the same for both (refused with a warning
 where set), a picture that cannot be written over an earlier one (reported, not logged as created), a picture written again within the
 same second on a file system with timestamps in seconds (written, not reported; only where an ext2 image can be mounted, as root)."""
 
 import os
+import re
 import subprocess
 
 from srptest import DATA_KINDS, ROOT, VARIANTS, Project, S, add_data, base_of, captured, cases, check, data_objects, describe, finish, func_diff, graph_diff, has_variant, hist_diff, points_name, source_of
@@ -161,6 +162,27 @@ pm.GeneratePlots("file")
 print("DONE")
 """)
 check("a canvas of Plots.root drawn in the process that wrote it: the process ends cleanly, Plots.root written again", out.rc == 0 and "DONE" in out.stdout and out.text.count("Saved 1 plot") == 2, f"exit status {out.rc}: {out.text[-400:]}")
+
+# a plot of an earlier call whose canvas ROOT deleted (one of its name read back and drawn), not plotted again: left out of Plots.root, said
+out = python(f"""
+import ROOT
+import SciRooPlot as S
+ROOT.gROOT.SetBatch(True)
+pm = S.PlotManager("")
+pm.AddBasePlot(S.PlotManager.MakeBasePlot("1d"))
+for name in ("a", "b"):
+    plot = S.Plot(name, "g", "1d")
+    plot[1].AddData(S.Function("x"), S.kUserFunctions)
+    pm.AddPlot(plot)
+pm.SetOutputDirectory({p.path("redrawn_other")!r})
+pm.GeneratePlots("file")
+f = ROOT.TFile.Open({p.path("redrawn_other", "Plots.root")!r})
+f.Get("g/a").Draw()
+pm.GeneratePlots("file", "b")
+pm.GeneratePlots("file", "b")
+""")
+left = [line for line in out.text.splitlines() if "is left out of Plots.root: ROOT deleted its canvas" in line]
+check("a plot whose canvas ROOT deleted is left out of Plots.root, said once", len(left) == 1 and "Plot a from group g" in re.sub(r"\x1b\[[0-9;]*m", "", left[0]) and out.text.count("Saved 1 plot") == 2, out.text[-600:])
 
 # names of the two files outside of the output directory or the same for both: refused where set; a picture whose earlier file cannot be
 # written over (immutable for root, read-only otherwise) is reported, not logged as created

@@ -167,7 +167,7 @@ class PlotManager
   void WaitForOpenWindows();
   static void SetTerminalKeys(bool on);
   static char TerminalKey();
-  bool SavePlotsToRootFile() const;
+  bool SavePlotsToRootFile();
   bool CreateOutputDirectory() const;
   std::optional<std::string> InfoFile(const std::optional<std::string>& file, const std::string& projectFile, const std::string& what) const;
   static void WriteInfoFile(const boost::property_tree::ptree& tree, const std::string& path, const std::string& content);

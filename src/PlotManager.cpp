@@ -265,7 +265,7 @@ PlotManager::~PlotManager()
  * Save stored plots to .root file.
  */
 //**************************************************************************************************
-bool PlotManager::SavePlotsToRootFile() const
+bool PlotManager::SavePlotsToRootFile()
 {
   if (!mCanvasRegistry.empty()) {
     if (!CreateOutputDirectory()) return false;
@@ -283,9 +283,18 @@ bool PlotManager::SavePlotsToRootFile() const
     // a ROOT directory cannot hold an object and a subdirectory of the same name: a plot named like a subgroup of its group gets a suffix
     set<string> directories;
     set<string> plotPaths;
-    auto deleted = [](const shared_ptr<TCanvas>& canvas) { return !canvas_deleter_t::Exists(canvas); };  // by ROOT
+    // a canvas ROOT deleted (another one of its name was drawn, e.g. one read back from Plots.root) is lost: said once, then forgotten
+    for (auto it = mCanvasRegistry.begin(); it != mCanvasRegistry.end();) {
+      if (canvas_deleter_t::Exists(it->second)) {
+        ++it;
+        continue;
+      }
+      const size_t delimiterPos = it->first.find(":");
+      logger::warning("Plot {} is left out of {}: ROOT deleted its canvas when another one of its name was drawn; plot it again to store it.",
+                      Plot::Label(it->first.substr(0, delimiterPos), it->first.substr(delimiterPos + 1)), mPlotsRootFile);
+      it = mCanvasRegistry.erase(it);
+    }
     for (const auto& [uniqueName, canvas] : mCanvasRegistry) {
-      if (deleted(canvas)) continue;
       const size_t delimiterPos = uniqueName.find(":");
       const string subfolder = uniqueName.substr(delimiterPos + 1);
       plotPaths.insert(joinPath(subfolder, uniqueName.substr(0, delimiterPos)));
@@ -296,7 +305,6 @@ bool PlotManager::SavePlotsToRootFile() const
     }
     uint32_t nPlots{0u};
     for (const auto& [uniqueName, canvas] : mCanvasRegistry) {
-      if (deleted(canvas)) continue;
       size_t delimiterPos = uniqueName.find(":");
       string plotName = uniqueName.substr(0, delimiterPos);
       string subfolder = uniqueName.substr(delimiterPos + 1);
