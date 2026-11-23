@@ -2130,7 +2130,7 @@ plot.SetDimensions(710, 710).SetTransparent().AppendGroup("QA")
 plot[0].SetDefaultMarkerColors([kBlack, kRed + 1])   # defaults for all pads, cycled over the data
 plot[1].SetMargins(0.07, 0.14, 0.12, 0.07).SetFrameFill(1001, kGray, 0.2)
 plot[1].SetRefFunc("1")                               # reference line, e.g. in a ratio pad
-plot[1]['X'].SetTitle("#it{x}").SetRange(1.4, 2.8).SetLog().SetGrid().SetNumDivisions(505)
+plot[1]['X'].SetTitle("#it{x}").SetRange(1.4, 2.8).SetLog().SetMoreLogLabels().SetGrid().SetNumDivisions(505)   # 2 to 9 x 10^n labelled too
 plot[1]['Y'].SetMaxDigits(3).SetNoExponent().SetTitleOffset(1.1).SetTitleCenter()
 plot[1]['Z'].SetLog()
 plot[1]['X'].SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")
@@ -2141,7 +2141,7 @@ plot.SetDimensions(710, 710).SetTransparent().AppendGroup("QA");
 plot[0].SetDefaultMarkerColors({kBlack, kRed + 1});   // defaults for all pads, cycled over the data
 plot[1].SetMargins(0.07, 0.14, 0.12, 0.07).SetFrameFill(1001, kGray, 0.2);
 plot[1].SetRefFunc("1");                              // reference line, e.g. in a ratio pad
-plot[1]['X'].SetTitle("#it{x}").SetRange(1.4, 2.8).SetLog().SetGrid().SetNumDivisions(505);
+plot[1]['X'].SetTitle("#it{x}").SetRange(1.4, 2.8).SetLog().SetMoreLogLabels().SetGrid().SetNumDivisions(505);   // 2 to 9 x 10^n labelled too
 plot[1]['Y'].SetMaxDigits(3).SetNoExponent().SetTitleOffset(1.1).SetTitleCenter();
 plot[1]['Z'].SetLog();
 plot[1]['X'].SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M");

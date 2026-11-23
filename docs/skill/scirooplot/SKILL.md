@@ -105,6 +105,7 @@ plot[1]['X'].SetTitle("#it{x}").SetRange(a, b).SetLog().SetGrid().SetNumDivision
             .SetTitleFont(43).SetTitleSize(28).SetTitleOffset(1.1).SetLabelFont(43).SetLabelSize(24)   // sizes in pixels only with font 43; with the default font 42 they are fractions of the pad
             .SetOppositeTicks().SetTickOrientation("+-").SetTimeFormat("%H:%M")   // ticks every fixed number of seconds: not on calendar years; for long ranges store decimal years on a plain axis
             .SetHideClippedLabels(false) // the base plots drop a label whose text would reach beyond the pad (top label of a ratio pad at the shared edge); false keeps it
+            .SetMoreLogLabels()          // a log axis over one or two decades: also the labels 2 to 9 times the powers of ten (ROOT draws only 1 otherwise)
             .SetLabelOffset(0.01).SetLabelAngle(45.).SetTitleCenter().SetTickLength(0.03).SetAxisColor(kGray + 2)   // label angle: alphanumeric bin labels of x only
 plot[1]['Z'].SetColorScaleOffset(0.01).SetColorScaleWidth(0.05)   // colour scale beside the frame, fractions of the pad width ('C' for a TH3); room for it: PanelLayout().SetColorScaleMargin(pixel)
 plot[1].SetRedrawAxes()               // axes (ticks) drawn again on top of the data, e.g. over filled areas

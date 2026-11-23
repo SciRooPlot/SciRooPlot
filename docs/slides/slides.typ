@@ -2105,6 +2105,8 @@
         [#names("SetAxisColor(color)", "SetAxisAlpha(alpha)")], [Axis line colour or transparency.],
         [#names("SetNumDivisions(n)", "SetMaxDigits(n)", "SetTickLength(len)")], [Tick divisions, max digits before scientific notation, and tick length.],
         [#names("SetLog(isLog = true)", "SetGrid(isGrid = true)")], [Logarithmic axis, or grid lines.],
+        [`SetMoreLogLabels(isMoreLogLabels = true)`], [Log axis: also label 2 to 9 times the powers of ten.],
+        [#names("SetColorScaleOffset(offset)", "SetColorScaleWidth(width)")], [Distance and width of the colour scale (Z; C of a 3d histogram).],
       ))
     ],
     [
@@ -2116,6 +2118,7 @@
         [#names("SetTitleCenter(center = true)", "SetLabelCenter(center = true)")], [Center the title or labels.],
         [#names("SetOppositeTicks(isOppositeTicks = true)", "SetNoExponent(isNoExponent = true)", "SetTickOrientation(mode)")], [Ticks on both sides, disable exponent notation, or set tick orientation (e.g. `"+-"`).],
         [`SetTimeFormat(fmt)`], [ROOT time-axis format string.],
+        [`SetHideClippedLabels(hide = true)`], [Drop labels reaching beyond the pad (on in the base plots).],
       ))
     ],
   )
