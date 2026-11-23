@@ -4561,7 +4561,8 @@ vector<PlotManager::tree_input_t> PlotManager::FindTreeInputs(const string& data
 
 //**************************************************************************************************
 /**
- * Joins that keep rows without a match: what tells whether a row has one, and the values of the joined columns in rows without.
+ * Joins that keep rows without a match: what tells whether a row has one, and the values of the joined columns in rows without (with the
+ * column helpers of the join code).
  */
 //**************************************************************************************************
 struct PlotManager::join_match_t {
@@ -4571,52 +4572,50 @@ struct PlotManager::join_match_t {
   string requiredMatch;
   // a joined tree without rows: its columns (alias.column, column) defined in every row
   vector<std::pair<string, string>> renames;
+
+  // the types of basic columns as RDataFrame names them (branches as ROOT does, defined columns as C++ does), with the value of each in rows
+  // without a match: NaN for floating point, 0 for integers and bool, empty for strings and arrays (and calls f with that value)
+  template <typename F>
+  static bool WithDefaultOf(const string& type, F&& f)
+  {
+    auto as = [&](auto value, std::initializer_list<const char*> names) {
+      using T = decltype(value);
+      for (const char* name : names) {
+        if (type == name) return f(std::numeric_limits<T>::has_quiet_NaN ? std::numeric_limits<T>::quiet_NaN() : T{}), true;
+        if (type == string("ROOT::VecOps::RVec<") + name + ">") return f(ROOT::RVec<T>{}), true;
+        if (type == string("vector<") + name + ">" || type == string("std::vector<") + name + ">") return f(std::vector<T>{}), true;
+      }
+      return false;
+    };
+    return as(Float_t{}, {"Float_t", "float", "Float16_t"}) || as(Double_t{}, {"Double_t", "double", "Double32_t"}) || as(Int_t{}, {"Int_t", "int"}) || as(UInt_t{}, {"UInt_t", "unsigned int"}) ||
+           as(Short_t{}, {"Short_t", "short"}) || as(UShort_t{}, {"UShort_t", "unsigned short"}) || as(Char_t{}, {"Char_t", "char"}) ||
+           as(UChar_t{}, {"UChar_t", "unsigned char"}) || as(static_cast<signed char>(0), {"signed char"}) || as(Long64_t{}, {"Long64_t", "long long"}) ||
+           as(ULong64_t{}, {"ULong64_t", "unsigned long long"}) || as(Long_t{}, {"Long_t", "long"}) || as(ULong_t{}, {"ULong_t", "unsigned long"}) ||
+           as(Bool_t{}, {"Bool_t", "bool"}) || as(string{}, {"string", "std::string"});
+  }
+  // a joined column with its default value in rows without a match (whose joined row is only a stand-in: ROOT cannot read arrays with a separate
+  // size column in a missing row); false if its type has no default
+  static bool MaskUnmatched(ROOT::RDF::RNode& node, const string& column, const string& matchedColumn)
+  {
+    return WithDefaultOf(node.GetColumnType(column), [&](auto value) {
+      using T = decltype(value);
+      node = node.Redefine(column, [value](bool matched, const T& joined) { return (matched) ? joined : value; }, {matchedColumn, column});
+    });
+  }
+  // a copy of an integer column as Long64_t (compiled, without the interpreter)
+  static ROOT::RDF::RNode DefineAsLong64(ROOT::RDF::RNode node, const string& name, const string& column)
+  {
+    std::optional<ROOT::RDF::RNode> result;
+    WithDefaultOf(node.GetColumnType(column), [&](auto value) {
+      using T = decltype(value);
+      if constexpr (std::is_integral_v<T>) {
+        result = node.Define(name, [](T v) { return static_cast<Long64_t>(v); }, {column});
+      }
+    });
+    if (!result) throw std::runtime_error(fmt::format("column {} of type {} is no integer", column, node.GetColumnType(column)));
+    return *result;
+  }
 };
-namespace
-{
-// the types of basic columns as RDataFrame names them (branches as ROOT does, defined columns as C++ does), with the value of each in rows
-// without a match: NaN for floating point, 0 for integers and bool, empty for strings and arrays (and calls f with that value)
-template <typename F>
-bool with_default_of(const string& type, F&& f)
-{
-  auto as = [&](auto value, std::initializer_list<const char*> names) {
-    using T = decltype(value);
-    for (const char* name : names) {
-      if (type == name) return f(std::numeric_limits<T>::has_quiet_NaN ? std::numeric_limits<T>::quiet_NaN() : T{}), true;
-      if (type == string("ROOT::VecOps::RVec<") + name + ">") return f(ROOT::RVec<T>{}), true;
-      if (type == string("vector<") + name + ">" || type == string("std::vector<") + name + ">") return f(std::vector<T>{}), true;
-    }
-    return false;
-  };
-  return as(Float_t{}, {"Float_t", "float", "Float16_t"}) || as(Double_t{}, {"Double_t", "double", "Double32_t"}) || as(Int_t{}, {"Int_t", "int"}) || as(UInt_t{}, {"UInt_t", "unsigned int"}) ||
-         as(Short_t{}, {"Short_t", "short"}) || as(UShort_t{}, {"UShort_t", "unsigned short"}) || as(Char_t{}, {"Char_t", "char"}) ||
-         as(UChar_t{}, {"UChar_t", "unsigned char"}) || as(static_cast<signed char>(0), {"signed char"}) || as(Long64_t{}, {"Long64_t", "long long"}) ||
-         as(ULong64_t{}, {"ULong64_t", "unsigned long long"}) || as(Long_t{}, {"Long_t", "long"}) || as(ULong_t{}, {"ULong_t", "unsigned long"}) ||
-         as(Bool_t{}, {"Bool_t", "bool"}) || as(string{}, {"string", "std::string"});
-}
-// a joined column with its default value in rows without a match (whose joined row is only a stand-in: ROOT cannot read arrays with a separate
-// size column in a missing row); false if its type has no default
-bool mask_unmatched(ROOT::RDF::RNode& node, const string& column, const string& matchedColumn)
-{
-  return with_default_of(node.GetColumnType(column), [&](auto value) {
-    using T = decltype(value);
-    node = node.Redefine(column, [value](bool matched, const T& joined) { return (matched) ? joined : value; }, {matchedColumn, column});
-  });
-}
-// a copy of an integer column as Long64_t (compiled, without the interpreter)
-ROOT::RDF::RNode define_as_long64(ROOT::RDF::RNode node, const string& name, const string& column)
-{
-  std::optional<ROOT::RDF::RNode> result;
-  with_default_of(node.GetColumnType(column), [&](auto value) {
-    using T = decltype(value);
-    if constexpr (std::is_integral_v<T>) {
-      result = node.Define(name, [](T v) { return static_cast<Long64_t>(v); }, {column});
-    }
-  });
-  if (!result) throw std::runtime_error(fmt::format("column {} of type {} is no integer", column, node.GetColumnType(column)));
-  return *result;
-}
-}  // namespace
 
 //**************************************************************************************************
 /**
@@ -4862,7 +4861,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       } else if (leaf->GetLenStatic() > 1 || leaf->GetLeafCount()) {
         type = "ROOT::VecOps::RVec<" + type + ">";
       }
-      if (!with_default_of(type, [](auto) {})) {
+      if (!join_match_t::WithDefaultOf(type, [](auto) {})) {
         logger::warning("Column {}.{} of type {} has no value for rows without a match: it is left out, the joined tree has no rows in any input of {}.", join.GetAlias(), column, type, treeName);
         continue;
       }
@@ -4874,7 +4873,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     match->defineMatched = [matchedColumn, columns](ROOT::RDF::RNode node) {
       node = node.Define(matchedColumn, []() { return false; });
       for (const auto& [column, type] : columns) {
-        with_default_of(type, [&node, &column = column](auto value) { node = node.Define(column, [value]() { return value; }); });
+        join_match_t::WithDefaultOf(type, [&node, &column = column](auto value) { node = node.Define(column, [value]() { return value; }); });
       }
       return node;
     };
@@ -4990,7 +4989,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       }
       const string indexColumn = "SRP_INDEX_" + join.GetAlias();
       auto defineMatched = [=](ROOT::RDF::RNode node) {
-        node = define_as_long64(node, indexColumn, indexExpression);
+        node = join_match_t::DefineAsLong64(node, indexColumn, indexExpression);
         auto isRow = [nRowsOf](const string& sample, Long64_t row) {
           auto nRows = nRowsOf->find(sample);
           return nRows != nRowsOf->end() && row >= 0 && row < nRows->second;
@@ -5056,9 +5055,9 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
             auto rowsOf = rowsOfSample->find(sample);
             return rowsOf != rowsOfSample->end() && rowsOf->second->count({major, minor}) > 0;
           };
-          node = define_as_long64(node, "SRP_KEY0_" + alias, keys[0]);
+          node = join_match_t::DefineAsLong64(node, "SRP_KEY0_" + alias, keys[0]);
           if (keys.size() > 1) {
-            node = define_as_long64(node, "SRP_KEY1_" + alias, keys[1]);
+            node = join_match_t::DefineAsLong64(node, "SRP_KEY1_" + alias, keys[1]);
             return node.Define(matchedColumn, has, {"SRP_SAMPLE", "SRP_KEY0_" + alias, "SRP_KEY1_" + alias});
           }
           return node.Define(matchedColumn, [has](const string& sample, Long64_t major) { return has(sample, major, 0); }, {"SRP_SAMPLE", "SRP_KEY0_" + alias});
@@ -5097,9 +5096,9 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       const vector<string> keys = join.keys;
       const string alias = join.GetAlias();
       auto defineMatched = [=](ROOT::RDF::RNode node) {
-        node = define_as_long64(node, "SRP_KEY0_" + alias, keys[0]);
+        node = join_match_t::DefineAsLong64(node, "SRP_KEY0_" + alias, keys[0]);
         if (keys.size() > 1) {
-          node = define_as_long64(node, "SRP_KEY1_" + alias, keys[1]);
+          node = join_match_t::DefineAsLong64(node, "SRP_KEY1_" + alias, keys[1]);
           auto has = [keyIndex](Long64_t major, Long64_t minor) { return keyIndex->GetEntryNumberWithIndex(major, minor) >= 0; };
           return node.Define(matchedColumn, has, {"SRP_KEY0_" + alias, "SRP_KEY1_" + alias});
         }
@@ -5364,14 +5363,14 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           const string matchedColumn = "SRP_MATCHED_" + join.GetAlias();
           for (const auto& column : df->GetColumnNames()) {
             if (!str_starts_with(column, prefix)) continue;
-            if (!mask_unmatched(base, column, matchedColumn)) {
+            if (!join_match_t::MaskUnmatched(base, column, matchedColumn)) {
               logger::warning("Column {} of type {} for {} has no value for rows without a match: they read the value of another row (filter on {}matched).", column,
                               df->GetColumnType(column), DataLocation(dataSource, name), prefix);
               continue;
             }
             const string bare = column.substr(prefix.size());
             const bool isOwn = tree && tree->GetListOfBranches() && tree->GetListOfBranches()->FindObject(bare.data());
-            if (!isOwn && bare.find('.') == string::npos && firstJoinedWith[bare] == join.GetAlias() && df->HasColumn(bare)) mask_unmatched(base, bare, matchedColumn);
+            if (!isOwn && bare.find('.') == string::npos && firstJoinedWith[bare] == join.GetAlias() && df->HasColumn(bare)) join_match_t::MaskUnmatched(base, bare, matchedColumn);
           }
           renames.emplace_back(prefix + "matched", matchedColumn);
         }
