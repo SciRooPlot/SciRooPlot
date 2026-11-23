@@ -195,6 +195,8 @@ class PlotManager
   std::set<std::string> mMissingBasePlots;                     // reported once each
   std::set<std::string> mNonAsciiTexts;                        // reported once each (bitmap modes)
   std::map<std::string, std::set<std::string>> mNotFoundData;  // data source -> names not found in any of its inputs (last reading)
+  // data source -> name not found -> names like it in its inputs
+  std::map<std::string, std::map<std::string, std::vector<std::string>>> mSimilarNames;
   struct open_window_t {
     std::shared_ptr<TCanvas> canvas;
     canvas_event_t handledEvent;  // the last event handled (it stays the canvas' current one until the next)
@@ -257,6 +259,8 @@ class PlotManager
   void FillBuffer();
   using required_data_t = std::map<std::string, std::unordered_map<std::string, std::set<std::string>>>;  // data source -> folder -> names still to find
   void ReadSourceGroup(const std::string& baseSource, const std::vector<std::string>& dataSources);
+  void FindSimilarNames(const std::string& baseSource, const std::vector<std::string>& dataSources);
+  static std::vector<std::string> SimilarNames(const std::string& wanted, const std::vector<std::string>& candidates);
   void MakeUserData(const std::string& dataSource, const std::string& dataName, std::unique_ptr<TObject>& dataPtr);
   void ChainTrees(required_data_t& requiredData);
   bool IsBuffered(const std::string& dataSource, const std::string& name) const;

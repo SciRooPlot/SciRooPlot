@@ -18,8 +18,10 @@
 
 #include "util/Strings.h"
 
+#include <algorithm>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 using std::string;
@@ -54,5 +56,24 @@ string join_strings(const vector<string>& items, const string& separator)
     joined += ((i) ? separator : "") + items[i];
   }
   return joined;
+}
+
+size_t edit_distance(const string& a, const string& b)
+{
+  // rows i - 2, i - 1 and i of the table of distances between the first i characters of a and the first j of b
+  vector<size_t> beforePrevious(b.size() + 1), previous(b.size() + 1), current(b.size() + 1);
+  for (size_t j = 0; j <= b.size(); ++j)
+    previous[j] = j;
+  for (size_t i = 1; i <= a.size(); ++i) {
+    current[0] = i;
+    for (size_t j = 1; j <= b.size(); ++j) {
+      const size_t replaced = previous[j - 1] + (a[i - 1] != b[j - 1]);
+      current[j] = std::min({previous[j] + 1, current[j - 1] + 1, replaced});
+      if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1]) current[j] = std::min(current[j], beforePrevious[j - 2] + 1);
+    }
+    std::swap(beforePrevious, previous);
+    std::swap(previous, current);
+  }
+  return previous[b.size()];
 }
 }  // end namespace SciRooPlot::util

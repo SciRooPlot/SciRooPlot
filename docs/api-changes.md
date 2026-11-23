@@ -29,6 +29,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 
 | Old | New | Kind | Action |
 |---|---|---|---|
+| Data not found was reported with "(not found in the inputs of <data source>)", an unknown data source with "(data source not defined)" | Both add up to three names like it, if any: "did you mean results/hSpec?" (the same name in other case or in another folder, or a few typos away; the defined data sources for an unknown one) | behaviour | Scripts matching the whole line: match its start. |
 | Automatically placed boxes were placed in the order added: a legend at the best corner (`AddLegend()`) added before a text asked for a corner (`AddText(top_left, …)`) could take that corner, the text going below it | Boxes asked for a corner are placed before those taking the best corner (statistics boxes, legends, texts and images, in that order) | behaviour | Nothing; check plots mixing both kinds of placement. |
 | The labels of a log axis without exponent (`Axis::SetNoExponent`, on X in the base plots) were measured as `10^{n}` for hiding those cut at the pad edge (`Axis::SetHideClippedLabels`) | Measured as written (`0.01`, `1000`), as are the labels between the powers of ten of the new `Axis::SetMoreLogLabels` | behaviour | Nothing. |
 | A box at a position set for it (`AddLegend(x, y)`, `AddText(x, y, …)`, `AddImage(x, y, …)`, a statistics box with `SetPosition`) that lies on the data was not mentioned | A hint at verbosity `hint` says so (the drawn data only, not shapes or other boxes) | behaviour | Nothing. |

@@ -142,6 +142,7 @@ using std::vector;
 namespace SciRooPlot
 {
 using util::disable_implicit_mt;
+using util::edit_distance;
 using util::expand_path;
 using util::filter_root_messages;
 using util::find_container_key;
@@ -153,6 +154,7 @@ using util::is_container;
 using util::is_missing_local_file;
 using util::is_remote;
 using util::is_root_input;
+using util::join_strings;
 using util::key_inherits;
 using util::make_scope_guard;
 using util::open_directory;
@@ -166,6 +168,7 @@ using util::split_string;
 using util::str_contains;
 using util::str_ends_with;
 using util::str_starts_with;
+using util::str_upper;
 
 //**************************************************************************************************
 /**
@@ -1905,9 +1908,19 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
         message += "\n         - missing " + DataLocation(dataSource, name);
         if (!dataInfo.dataDims.empty()) message += " [" + dataInfo.GetDescription() + "]";
         if (!IsDataSourceDefined(dataSource)) {
-          message += " (data source not defined)";
+          vector<string> sources;
+          for (const auto& [source, inputs] : mInputs)
+            sources.push_back(source);
+          const auto similar = SimilarNames(dataSource.substr(0, dataSource.find(':')), sources);
+          message += (similar.empty()) ? " (data source not defined)" : " (data source not defined; did you mean " + join_strings(similar, ", ") + "?)";
         } else if (auto it = mNotFoundData.find(dataSource); it != mNotFoundData.end() && it->second.count(name)) {
-          message += " (not found in the inputs of " + dataSource + ")";
+          string suggestion;
+          if (auto similar = mSimilarNames.find(dataSource); similar != mSimilarNames.end()) {
+            if (auto names = similar->second.find(name); names != similar->second.end()) {
+              suggestion = "; did you mean " + join_strings(names->second, ", ") + "?";
+            }
+          }
+          message += " (not found in the inputs of " + dataSource + suggestion + ")";
         }
       }
       logger::error("{}", message);
@@ -2003,6 +2016,7 @@ void PlotManager::FillBuffer()
   // data sources restricted to a folder (dataSource:some/folder) are read in the same pass as the data source they are part of,
   // so each input file is opened only once
   mNotFoundData.clear();
+  mSimilarNames.clear();
   mHiddenDirectories.clear();
   map<string, vector<string>> sourceGroups;  // data source -> requested data sources that are part of it (itself or restricted to a folder)
   for (const auto& [dataSource, buffer] : mDataBuffer) {
@@ -2169,13 +2183,119 @@ void PlotManager::ReadSourceGroup(const string& baseSource, const vector<string>
     }
   }
   ChainTrees(requiredData);
+  bool notFound{};
   for (const auto& [dataSource, required] : requiredData) {
     for (const auto& [path, names] : required) {
       for (const auto& name : names) {
         mNotFoundData[dataSource].insert((path.empty()) ? name : path + "/" + name);
+        notFound = true;
       }
     }
   }
+  if (notFound) FindSimilarNames(baseSource, dataSources);
+}
+
+//**************************************************************************************************
+/**
+ * For the names a data source and its folders (dataSource:some/folder) did not find: the names like them in its inputs, as suggestions in
+ * the report of the plots that cannot be made. Only after something was not found: the inputs are walked again, every directory and
+ * collection in them (at most 100000 names per data source).
+ */
+//**************************************************************************************************
+void PlotManager::FindSimilarNames(const string& baseSource, const vector<string>& dataSources)
+{
+  constexpr size_t kMaxNames = 100000;
+  auto quiet = ignore_root_messages_below(kFatal);  // the inputs were read before: what cannot be opened has been reported
+  for (const auto& dataSource : dataSources) {
+    auto notFound = mNotFoundData.find(dataSource);
+    if (notFound == mNotFoundData.end()) continue;
+    vector<string> names;
+    // the names below a folder: the data in directories and collections, by its path from the folder searched
+    std::function<void(TObject*, const string&, int32_t)> collect = [&](TObject* folder, const string& prefix, int32_t depth) {
+      if (names.size() >= kMaxNames || depth > 20) return;  // a collection may hold itself
+      if (auto* directory = dynamic_cast<TDirectory*>(folder)) {
+        set<string> seen;  // the latest cycle of a name
+        for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {
+          if (!key || !seen.insert(key->GetName()).second || names.size() >= kMaxNames) continue;
+          TClass* keyClass = readable_class(key);
+          if (!keyClass) continue;
+          const string path = prefix + key->GetName();
+          if (keyClass->InheritsFrom(TDirectory::Class())) {
+            if (auto* sub = open_directory(directory, key)) collect(sub, path + "/", depth + 1);
+          } else if (is_container(keyClass)) {
+            std::unique_ptr<TObject, container_deleter_t> container(key->ReadObj());
+            if (container) collect(container.get(), path + "/", depth + 1);
+          } else {
+            names.push_back(path);
+          }
+        }
+        return;
+      }
+      for_each_item(folder, [&](const string& name, TObject* item) {
+        if (is_container(item->IsA())) {
+          collect(item, prefix + name + "/", depth + 1);
+        } else {
+          names.push_back(prefix + name);
+        }
+        return names.size() >= kMaxNames;
+      });
+    };
+    for (const auto& inputRaw : mExpandedInputs[baseSource]) {
+      const string input = expand_path(inputRaw).value_or("");
+      if (str_ends_with(input, mTableFileEndings)) {
+        if (dataSource == baseSource) names.push_back(std::filesystem::path(input).stem().string());
+        continue;
+      }
+      const auto fileNamePath = split_input_path(input);
+      auto file = open_input_file(fileNamePath[0]);
+      if (!file || file->IsZombie()) continue;
+      const string folderPath = SearchedFolder(dataSource, (fileNamePath.size() > 1) ? fileNamePath[1] : "");
+      const bool isRestricted = (dataSource.find(':') != string::npos);
+      for (const auto& folder : (isRestricted && folderPath.find_first_of("*?[") != string::npos) ? MatchFolders(file.get(), folderPath) : vector<string>{folderPath}) {
+        TDirectory* directory = (folder.empty()) ? file.get() : file->GetDirectory(folder.data());
+        if (directory) collect(directory, "", 0);
+      }
+    }
+    std::sort(names.begin(), names.end());
+    names.erase(std::unique(names.begin(), names.end()), names.end());
+    for (const auto& name : notFound->second) {
+      auto similar = SimilarNames(name, names);
+      if (!similar.empty()) mSimilarNames[dataSource][name] = std::move(similar);
+    }
+  }
+}
+
+//**************************************************************************************************
+/**
+ * The candidates like a name that was not found, best first and at most three: the same name in other case, the same name in another
+ * folder, then names a few typos away (case ignored; one for names of up to 4 characters, two up to 10, else three); among equally good
+ * ones those whose whole path is closer (e.g. in the same folder) first.
+ */
+//**************************************************************************************************
+vector<string> PlotManager::SimilarNames(const string& wanted, const vector<string>& candidates)
+{
+  const string wantedUpper = str_upper(wanted);
+  const string wantedLeaf = str_upper(split_path(wanted).second);
+  const size_t allowed = (wantedLeaf.size() <= 4) ? 1 : ((wantedLeaf.size() <= 10) ? 2 : 3);
+  vector<std::tuple<size_t, size_t, string>> ranked;  // how alike, distance of the whole paths, the name
+  for (const auto& candidate : candidates) {
+    if (candidate == wanted) continue;  // found, but not readable as data: reported where it was read
+    const string upper = str_upper(candidate);
+    const string leaf = str_upper(split_path(candidate).second);
+    const size_t pathDistance = edit_distance(upper, wantedUpper);
+    if (upper == wantedUpper) {
+      ranked.emplace_back(0, 0, candidate);
+    } else if (leaf == wantedLeaf) {
+      ranked.emplace_back(1, pathDistance, candidate);
+    } else if (const size_t distance = std::min(pathDistance, edit_distance(leaf, wantedLeaf)); distance <= allowed) {
+      ranked.emplace_back(1 + distance, pathDistance, candidate);
+    }
+  }
+  std::stable_sort(ranked.begin(), ranked.end(), [](const auto& a, const auto& b) { return std::tie(std::get<0>(a), std::get<1>(a)) < std::tie(std::get<0>(b), std::get<1>(b)); });
+  vector<string> similar;
+  for (size_t i = 0; i < ranked.size() && i < 3; ++i)
+    similar.push_back(std::get<2>(ranked[i]));
+  return similar;
 }
 
 //**************************************************************************************************

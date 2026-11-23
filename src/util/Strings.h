@@ -43,6 +43,9 @@ namespace SciRooPlot::util
 {
 std::vector<std::string> split_string(const std::string& argString, char delimiter, bool onlyFirst = false);
 std::string join_strings(const std::vector<std::string>& items, const std::string& separator);
+// the number of single characters to insert, delete or replace, or neighbours to swap, that turn one string into the other (optimal string
+// alignment distance): how far a mistyped name is from the meant one
+size_t edit_distance(const std::string& a, const std::string& b);
 
 // a count with its noun: 1 file, 2 files (2 passes with suffix "es")
 inline std::string plural(size_t n, const std::string& word, const std::string& suffix = "s")
