@@ -1,7 +1,8 @@
 """Join gives the rows of the joined tree beside those of the tree, as computed from the raw arrays: row by row from the same data source
 (every input of the tree holds its joined tree, in a folder relative to where the tree is), from another data source (its rows in the order
 of its inputs, however they are split into files), by one or two integer keys from another data source (rows of the tree without a match
-skipped and counted in the reading summary; the joined data source may be restricted to a folder, the joined tree named by a path), by
+skipped and counted in the reading summary; the joined data source may be restricted to a folder, the joined tree named by a path or
+found by its name in a folder below the files: the first folder holding it read, a folder beside it holding it too named in a warning), by
 an index column holding the row number within the joined tree of the same input (AO2D-like DF_ folders: rows whose index is -1 or beyond
 the joined tree skipped, also into a joined tree whose first column is an array with a size column, folders that are empty or have no
 joined rows, read in parallel; an index column with a dot in its name
@@ -303,6 +304,16 @@ case("by two keys: with an alias", H(20, 0, 100, tCent[matched]), lambda pad: pa
 case("by two keys: a filter on a joined column", H(50, 0, 10, T["pt"][matched & (tCent > 50)]), lambda pad: pad.AddData("tracks", "trk").Join(byKey, ["run", "event"]).Project1D(("pt", 50, [0.0, 10.0])).Filter("cent > 50"))
 case("by two keys from a data source restricted to a folder", H(20, 1000, 1100, tCent[matched] + 1000), lambda pad: pad.AddData("tracks", "trk").Join(["events", "evInfo:sub"], ["run", "event"]).Project1D(("cent", 20, [1000.0, 1100.0])))
 case("by two keys: the joined tree named by a path", H(20, 1000, 1100, tCent[matched] + 1000), lambda pad: pad.AddData("tracks", "trk").Join(["sub/events", "evInfo"], ["run", "event"]).Project1D(("cent", 20, [1000.0, 1100.0])))
+# the joined tree only in folders of its data source: found by its name in the first folder holding it, folders beside it are not read
+deep, twice = p.path("D.root"), p.path("D2.root")
+write_tree(deep, {**keys, "cent": cent + 2000}, name="events", folder="outer/inner")
+write_tree(twice, {**keys, "cent": cent + 3000}, name="events", folder="f1")
+write_tree(twice, {**keys, "cent": cent + 4000}, name="events", folder="f2")
+p.pm.AddDataSource("evDeep", deep)
+p.pm.AddDataSource("evTwice", twice)
+case("by two keys: the joined tree found by its name in a folder below the files", H(20, 2000, 2100, tCent[matched] + 2000), lambda pad: pad.AddData("tracks", "trk").Join(["events", "evDeep"], ["run", "event"]).Project1D(("cent", 20, [2000.0, 2100.0])))
+case("by two keys: the joined tree in two folders, the first read", H(20, 3000, 3100, tCent[matched] + 3000), lambda pad: pad.AddData("tracks", "trk").Join(["events", "evTwice"], ["run", "event"]).Project1D(("cent", 20, [3000.0, 3100.0])))
+TWICE = "Tree events is in 2 folders of"
 inRange = G["gid"] < NE
 case("by one key of 64 bits", H(20, 0, 1, score[G["gid"][inRange]]), lambda pad: pad.AddData("items", "gid").Join(["byGid", "evInfo"], ["gid"]).Project1D(("val", 20, [0.0, 1.0])))
 h2 = ROOT.TH2D("ref", "", 10, 0.0, 1.0, 10, -3.0, 3.0)
@@ -448,7 +459,9 @@ for plotName, (what, ref, contents) in expected.items():
     check(f"{what}: computed from the raw arrays", not diff, diff)
 nUnmatched = int((~matched).sum())
 check("rows without a match are counted in the reading summary", f"{nUnmatched} rows without a match skipped" in run.log, " | ".join(line for line in run.log.splitlines() if " - trk:" in line))
-others = [w for w in run.warnings() if "Column et.vv of type" not in w]  # the column left out on purpose, checked below
+others = [w for w in run.warnings() if "Column et.vv of type" not in w and TWICE not in w]  # said on purpose, checked below
+twiceSaid = run.warnings(TWICE)
+check("a joined tree in two folders: the folder beside the one read named in one warning", len(twiceSaid) == 1 and "f1" in twiceSaid[0] and "f2" in twiceSaid[0], " | ".join(twiceSaid))
 check("the joins give no other warnings and no errors", not others and not run.errors(), " | ".join(others + run.errors()))
 check(
     "keeping rows without a match: a column without a value of its own of a joined tree without rows is left out, said",
