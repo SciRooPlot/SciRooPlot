@@ -1022,12 +1022,14 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
       return;
     }
     auto fileAndFolder = split_input_path(entry);
-    // a local directory with a folder (dir/:folder, or dir:folder of an existing directory): that folder in each of its ROOT files
-    if (const size_t colon = entry.rfind(':'); fileAndFolder.size() == 1 && !is_remote(entry) && colon != string::npos && colon > 0) {
+    // a directory with a folder (dir/:folder, or dir:folder of an existing local directory): that folder in each of its ROOT files
+    if (const size_t colon = entry.rfind(':'); fileAndFolder.size() == 1 && colon != string::npos && colon > 0) {
       std::error_code dirError;
       const string dirPart = entry.substr(0, colon);
-      if (!std::filesystem::exists(expand_path(entry).value_or(""), dirError) &&
-          (str_ends_with(dirPart, "/") || std::filesystem::is_directory(expand_path(dirPart).value_or(""), dirError))) {
+      if (is_remote(entry)) {
+        if (str_ends_with(dirPart, "/")) fileAndFolder = {dirPart, entry.substr(colon + 1)};
+      } else if (!std::filesystem::exists(expand_path(entry).value_or(""), dirError) &&
+                 (str_ends_with(dirPart, "/") || std::filesystem::is_directory(expand_path(dirPart).value_or(""), dirError))) {
         fileAndFolder = {dirPart, entry.substr(colon + 1)};
       }
     }
@@ -1060,7 +1062,7 @@ vector<string> PlotManager::ExpandInputs(const string& dataSource) const
       if (dirFileNames.empty()) logger::warning("No ROOT files found in directory {} (data source {}).", entry, dataSource);
       std::sort(dirFileNames.begin(), dirFileNames.end());
       for (const auto& fileName : dirFileNames) {
-        addFile(fileName + query, "");
+        addFile(fileName + query, folderPart);
       }
       return;
     }

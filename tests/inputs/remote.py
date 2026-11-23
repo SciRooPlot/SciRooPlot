@@ -1,6 +1,6 @@
 """Inputs on a remote server (root://, read through ROOT's XRootD plugin) give the same data as the same inputs on the local disk: a
 file, a folder in it (also with wildcards), wildcards in file names and in directory levels (alphabetically, a directory without the
-file is left out), a directory (every ROOT file below it, alphabetically), an environment variable in the URL, a query after the file
+file is left out), a directory (every ROOT file below it, alphabetically; also a folder in each of them, dir/:folder), an environment variable in the URL, a query after the file
 name (also before a folder), a restricted data source, trees and RNTuples chained over remote files. A remote file that cannot be
 opened, a wildcard matching nothing and a remote table are reported and the other inputs are still read.
 Needs the xrootd server and ROOT's XRootD plugin (skipped without them); the server runs on a free local port, serving a temporary directory.
@@ -91,6 +91,9 @@ write("periods/A/out.root", {"h": 201})
 write("periods/B/out.root", {"h": 202})
 os.makedirs(os.path.join(served, "periods", "C"))  # a directory without the file
 os.makedirs(os.path.join(served, "ntuples"))
+for i in (1, 2):  # files with the data in a folder (as AO2Ds)
+    write(f"dfs/x{i}.root", {}, {"DF_0": {"h": 300 + i}})
+    write_tree(os.path.join(served, "dfs", f"x{i}.root"), {"x": np.arange(10) + 0.5}, folder="DF_0")
 write_tree(os.path.join(served, "ntuples", "n1.root"), {"x": np.arange(5) + 0.5}, name="n", ntuple=True)
 write_tree(os.path.join(served, "ntuples", "n2.root"), {"x": np.arange(5) + 0.5}, name="n", ntuple=True)
 with open(os.path.join(served, "table.csv"), "w") as f:
@@ -108,6 +111,7 @@ sources = {
     "wildcard": [URL + "/runs/run*.root"],
     "level": [URL + "/periods/*/out.root"],
     "dir": [URL + "/runs/"],
+    "dir_folder": [URL + "/dfs/:DF_*"],
     "env": ["${SRP_TEST_SERVER}//b.root"],
     "query": [URL + "/a.root?xrd.wantprot=unix"],
     "query_folder": [URL + "/a.root?xrd.wantprot=unix:DF_1"],
@@ -142,6 +146,8 @@ case("wildcards in remote file names: a tree chained over the matches", [("t", "
 case("a wildcard for a remote directory level: alphabetically, a directory without the file left out", [("h", "level", 201)])
 case("a remote directory: every ROOT file below it, alphabetically", [("h", "dir", 110)])
 case("a remote directory: a tree chained over every file below it", [("t", "dir", 30)], "entries")
+case("a folder in every file of a remote directory (dir/:folder): alphabetically", [("h", "dir_folder", 301)])
+case("a folder in every file of a remote directory: a tree chained over them", [("t", "dir_folder", 20)], "entries")
 case("an environment variable in a URL", [("h", "env", 2)])
 case("a query after the file name", [("h", "query", 1)])
 case("a query before a folder", [("h", "query_folder", 21)])
