@@ -38,8 +38,10 @@ std::string hepdata_table_name(std::string table);
 // with an object per dependent variable and error source next to HEPData's own (nullopt with a warning if it cannot be made)
 std::optional<std::string> hepdata_file(const std::string& recordId, const std::filesystem::path& folder);
 // the local copy of a downloaded HEPData file (a ROOT file of a table or record, or the record's .tar.gz) in <folder>/hepdata/files, made
-// again when the file is newer (nullopt with a warning if it cannot be made)
+// again when the file has another time (nullopt with a warning if it cannot be made)
 std::optional<std::string> hepdata_local_file(const std::string& file, const std::filesystem::path& folder);
+// the downloaded file a copy made or read in this run is of (nullopt for other files)
+std::optional<std::string> hepdata_file_of_copy(const std::string& copy);
 // the local copy of a record (record id) or of a downloaded file, made when missing, in <folder>/hepdata
 std::optional<std::string> hepdata_copy(const std::string& recordOrFile, const std::filesystem::path& folder);
 // srp print hepdata:<record or file>[:<table>]: the data names of the copy per table, with what the record's ROOT file does not hold

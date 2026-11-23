@@ -401,6 +401,9 @@ void remember_failure(const string& key)
   failedCopies.insert(key);
 }
 
+// the copies of downloaded files made or read in this run -> the file
+std::map<string, string> filesOfCopies;
+
 // a string as one word of a shell command
 string shell_quoted(const string& str)
 {
@@ -659,7 +662,11 @@ std::optional<string> hepdata_local_file(const string& given, const std::filesys
   const string file = (folder / "hepdata" / "files" / (source.stem().string() + "-" + std::to_string(std::hash<string>{}(source.string())) + ".root")).string();
   std::error_code timeError;
   const auto sourceTime = std::filesystem::last_write_time(source, timeError);
-  if (std::filesystem::exists(file, ec) && !timeError && std::filesystem::last_write_time(file, timeError) == sourceTime && !timeError) return file;
+  if (std::filesystem::exists(file, ec) && !timeError && std::filesystem::last_write_time(file, timeError) == sourceTime && !timeError) {
+    std::lock_guard lock(failedMutex);
+    filesOfCopies[file] = source.string();
+    return file;
+  }
   if (failed_before(file)) return std::nullopt;
   std::filesystem::create_directories(std::filesystem::path(file).parent_path(), ec);
   if (ec) {
@@ -672,7 +679,16 @@ std::optional<string> hepdata_local_file(const string& given, const std::filesys
     return std::nullopt;
   }
   std::filesystem::last_write_time(file, sourceTime, timeError);
+  std::lock_guard lock(failedMutex);
+  filesOfCopies[file] = source.string();
   return file;
+}
+
+std::optional<string> hepdata_file_of_copy(const string& copy)
+{
+  std::lock_guard lock(failedMutex);
+  const auto found = filesOfCopies.find(copy);
+  return (found != filesOfCopies.end()) ? std::optional(found->second) : std::nullopt;
 }
 
 std::optional<string> hepdata_copy(const string& recordOrFile, const std::filesystem::path& folder)

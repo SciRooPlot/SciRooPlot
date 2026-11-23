@@ -19,7 +19,7 @@ Covers: an error label with characters not allowed in data names; two labels tha
 shifts on one side; a table with two dependent variables of different points; a 2d table of points without bins; 2d tables with an
 asymmetric error source (a 2d graph with asymmetric errors; without HEPData's graph its points are the bins); text bins with a bin
 without value; axis titles of a 2d table; a table name with a colon; a bare ROOT file as download (a mirror); a download that is no ROOT
-file or holds no tables.
+file or holds no tables; a table missing in a record or a downloaded file (named as given, with srp print for its tables).
 """
 
 import array
@@ -267,6 +267,7 @@ write_single([20.0, 10.0, 4.0], [2.0, 1.0, 0.5])
 shutil.copy(os.path.join(served, "record", "ins12345"), p.path("record.tar.gz"))
 originals = {name: content(p.path(name)) for name in ("table1.root", "record.tar.gz")}
 p.pm.AddDataSource("own", "hepdata:" + p.path("table1.root"))
+p.pm.AddDataSource("ownnotable", "hepdata:" + p.path("table1.root") + ":Table 99")
 p.pm.AddDataSource("ownarchive", "hepdata:" + p.path("record.tar.gz") + ":Table 2")
 cwd = os.getcwd()
 os.chdir(os.path.dirname(p.path("table1.root")))
@@ -320,6 +321,9 @@ for i, (what, name, source, cls, values, low, high) in enumerate(expected):
     p.pm.AddPlot(plot)
 plot = S.Plot("missing_table", "hepdata", "1d")
 plot[1].AddData("y1", "notable")
+p.pm.AddPlot(plot)
+plot = S.Plot("missing_table_own", "hepdata", "1d")
+plot[1].AddData("y1", "ownnotable")
 p.pm.AddPlot(plot)
 
 
@@ -379,7 +383,9 @@ for what, text in (
     found = [line for line in lines if text in line]
     check(f"{what}, once", len(found) == 1, f"{len(found)} lines: {lines[:3]}")
 found = run.errors("Subdirectory Table 99 not found")
-check("a table missing in a record points to the listing of the tables of the version read, once", len(found) == 1 and found[0].endswith("(its tables: srp print hepdata:ins12345v3)."), f"{found}")
+check("a table missing in a record points to the listing of the tables of the version read, once", len([f for f in found if f.endswith("(its tables: srp print hepdata:ins12345v3).")]) == 1, f"{found}")
+own = f"in file {p.path('table1.root')} (data source ownnotable) (its tables: srp print hepdata:{p.path('table1.root')})."
+check("a table missing in a downloaded file names that file and points to the listing of its tables, once", len([f for f in found if f.endswith(own)]) == 1 and len(found) == 2, f"{found}")
 infos = run.lines("INFO")
 for what, text in (
     ("tables without bins are named: no error sources", "HEPData record ins12345: Table 4, Table 7 have no bins"),
