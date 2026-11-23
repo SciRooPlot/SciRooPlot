@@ -128,6 +128,12 @@ Config::Config()
     mLogLevelOverride = ParseLogLevel(verbosity);
     if (!mLogLevelOverride) std::cerr << "Ignoring invalid SCIROOPLOT_VERBOSITY '" << verbosity << "' (debug | hint | log | info | warning | error | silent)." << std::endl;
   }
+  // the current project of this process alone (e.g. for a program working beside the user's shells), the selection untouched; an
+  // unknown name selects none rather than falling back to the selected project
+  if (const char* project = gSystem->Getenv("SCIROOPLOT_PROJECT"); project && *project) {
+    mCurrentOverride = (mProjects.count(project)) ? project : "";
+    if (mCurrentOverride->empty()) std::cerr << "SCIROOPLOT_PROJECT names project '" << project << "', which is not registered (srp projects lists them): no project is current." << std::endl;
+  }
   std::atexit([] { Instance().Save(); });
 }
 Config& Config::Instance()
@@ -887,6 +893,7 @@ bool Config::Add(const string& projectName, const string& program, const string&
   properties["program"] = program;
   if (!outputDir.empty()) properties["outdir"] = outputDir;
   mTouchedProjects.insert(projectName);
+  if (mCurrentOverride) return true;  // with SCIROOPLOT_PROJECT set, adding a project leaves the selection alone
   mCurrentProject = projectName;
   mCurrentTouched = true;
   logger::info("Selecting project {}.", projectName);

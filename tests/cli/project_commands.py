@@ -10,6 +10,9 @@ build folder). Registering is safe against srp commands and programs running at 
 project.
 Removing and resetting say which projects they removed; writing plots of a project without an output folder names srp set; a projects.info
 that is a symbolic link is written where it points, the link kept.
+SCIROOPLOT_PROJECT makes a registered project the current one (@current, plot) of that process alone: the selection stays as it is, also
+when the process adds a project; an unknown name makes no project current (an error naming the variable) instead of falling back to the
+selected one.
 Covers: unknown projects, confdir of an unknown project, unset program, confdir ..,
 add with an unset variable: one message, nothing left, program before srp add, concurrent
 srp add, SaveProject keeping changes made meanwhile, rename with in-memory data, srp set while a program saves, rename
@@ -340,6 +343,20 @@ for project, wanted in (("withproj", "srp set withproj outdir <folder>"), ("", "
     code = f"from SciRooPlot import *\npm = PlotManager({project!r})\npm.AddBasePlot(PlotManager.MakeBasePlot('1d'))\np = Plot('p', 'g', '1d')\np[1]['X'].SetRange(0, 1)\np[1]['Y'].SetRange(0, 1)\npm.AddPlot(p)\npm.GeneratePlots('png')"
     out = python(code, config=config_folder(f"no_outdir_{project or 'none'}"))
     check(f"no output folder {'in a project' if project else 'without a project'}: the error names {wanted}", len(out.errors()) == 1 and wanted in out.errors()[0], out.tail())
+# SCIROOPLOT_PROJECT: the current project of one process, the selection untouched
+config = setup()
+os.remove(os.path.join(config, "B", "plots.info"))  # then plot names the project it uses
+before = config_files(config)
+override = {"SCIROOPLOT_PROJECT": "B"}
+check("SCIROOPLOT_PROJECT: @current is that project", run(SRP, "get", "@current", "program", config=config, env=override).stdout.strip() == program("B") and get(config, "@current", "program") == program("A"))
+out = run(PLOT, ".+", ".+", "list", config=config, env=override)
+check("SCIROOPLOT_PROJECT: plot uses that project", "No plots are saved for project B" in out.text, out.tail())
+check("SCIROOPLOT_PROJECT: the configuration is left as it was", config_files(config) == before)
+out = run(SRP, "add", "C", program("C"), os.path.join(PROGRAMS, "C", "out"), config=config, env=override)
+check("SCIROOPLOT_PROJECT: adding a project leaves the selection alone", out.rc == 0 and "C" in project_names(config) and get(config, "@current", "program") == program("A"), out.tail())
+for command in ((SRP, "get", "@current", "program"), (PLOT, ".+", ".+", "list")):
+    out = run(*command, config=config, env={"SCIROOPLOT_PROJECT": "nosuch"})
+    check(f"SCIROOPLOT_PROJECT naming an unknown project: {os.path.basename(command[0])} fails, the variable named, no fallback to the selected project", out.rc == 1 and "SCIROOPLOT_PROJECT names project 'nosuch'" in out.text and program("A") not in out.stdout, out.tail())
 # a projects.info that is a symbolic link: written where it points, the link kept
 config = setup()
 linkTarget = os.path.join(config_folder("projects_info_elsewhere"), "projects.info")

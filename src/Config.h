@@ -86,7 +86,8 @@ class Config
   // names a setting cannot have: the properties of every project and the rows srp projects adds
   inline static const std::set<std::string> kReservedNames{"program", "outdir", "plots"};
 
-  const std::string& CurrentProject() const { return mCurrentProject; }
+  // the selected project, or the one SCIROOPLOT_PROJECT names for this process (empty if that one is not registered)
+  const std::string& CurrentProject() const { return (mCurrentOverride) ? *mCurrentOverride : mCurrentProject; }
   bool ProjectsFileUnreadable() const { return mProjectsUnreadable; }  // projects.info exists but could not be read
 
   bool SetSetting(const std::string& key, const std::string& value);  // as the srp command of its name (false for a bad value, which is reported)
@@ -161,6 +162,7 @@ class Config
 
   std::map<std::string, Project> mProjects;
   std::string mCurrentProject;
+  std::optional<std::string> mCurrentOverride;  // SCIROOPLOT_PROJECT: the current project of this process only, never saved
 };
 
 }  // namespace SciRooPlot
