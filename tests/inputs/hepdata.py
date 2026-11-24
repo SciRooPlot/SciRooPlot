@@ -6,9 +6,9 @@ without bins and of bins that overlap, tables with three independent variables. 
 cache folder (hepdata:<record>v<n> reads version n; without a version the latest one the server tells, asked once per run, and when that
 cannot be found out the newest copy, with a warning), also with srp cache off: the one of the config folder, or the folder SciRooPlot
 inside the folder of srp cache on <folder>, marked as cache
-(CACHEDIR.TAG); a record that does not exist and a malformed record id are reported once and the other inputs are still read.
+(CACHEDIR.TAG); a record that does not exist, a malformed record id and a copy whose folder cannot be made are reported once and the other inputs are still read.
 A downloaded table or record (hepdata:<file>: a ROOT file of one table or of the record, or the record's .tar.gz; relative to the current
-directory) gives the same objects, from a copy in the cache folder that is made again when the file changes (also to one with an older time); the file itself is left as it
+directory; histograms with bins of fixed width too) gives the same objects, from a copy in the cache folder that is made again when the file changes (also to one with an older time); the file itself is left as it
 is, a file that does not exist is reported once.
 srp print hepdata:<record or file>[:<table>] lists every data name of the copy per table (object with its class and the title of its
 values): the objects SciRooPlot made, each with what it holds (the total errors, or the HEPData objects of its error source), apart from
@@ -78,10 +78,11 @@ keep = []
 DOI = "doi:10.17182/hepdata.12345.v3/t{}"
 
 
-def write_table(out, index, values, errors, edges=None, labels=None, variable=1, bins=None, name=None):
+def write_table(out, index, values, errors, edges=None, labels=None, variable=1, bins=None, name=None, fixed=False):
     """dependent variable y<variable> of a 1d table as hepdata.net writes it: errors [(label, symmetric errors or (up, down))] per point;
     edges None: points without bins; a value None: a bin without value (left out of the graph, an empty bin of the histograms); bins
-    [(low, high)] per point where they overlap (the histograms then have the edges of all bins, each point filled at its centre)"""
+    [(low, high)] per point where they overlap (the histograms then have the edges of all bins, each point filled at its centre); fixed:
+    histograms with bins of fixed width (equal edges given), as a file not written by hepdata.net may have"""
     name = name or f"Table {index}"
     (out.GetDirectory(name) or out.mkdir(name)).cd()
     n = len(values)
@@ -94,7 +95,7 @@ def write_table(out, index, values, errors, edges=None, labels=None, variable=1,
     kept = [i for i in range(n) if values[i] is not None]
 
     def hist(name, title, contents):
-        h = ROOT.TH1F(name, DOI.format(index), len(edges) - 1, array.array("d", edges))
+        h = ROOT.TH1F(name, DOI.format(index), len(edges) - 1, edges[0], edges[-1]) if fixed else ROOT.TH1F(name, DOI.format(index), len(edges) - 1, array.array("d", edges))
         h.GetXaxis().SetTitle("p_T [GeV]")
         for i, label in enumerate(labels or []):
             h.GetXaxis().SetBinLabel(i + 1, label)
@@ -270,6 +271,9 @@ def content(path):
 
 
 write_single([20.0, 10.0, 4.0], [2.0, 1.0, 0.5])
+fixedFile = ROOT.TFile(p.path("fixed.root"), "RECREATE")
+write_table(fixedFile, 1, [6.0, 3.0, 1.0], [("stat", [0.6, 0.3, 0.1])], edges=[0, 2, 4, 6], fixed=True)
+fixedFile.Close()
 shutil.copy(os.path.join(served, "record", "ins12345"), p.path("record.tar.gz"))
 originals = {name: content(p.path(name)) for name in ("table1.root", "record.tar.gz")}
 p.pm.AddDataSource("own", "hepdata:" + p.path("table1.root"))
@@ -279,6 +283,7 @@ cwd = os.getcwd()
 os.chdir(os.path.dirname(p.path("table1.root")))
 p.pm.AddDataSource("ownrelative", "hepdata:table1.root")
 os.chdir(cwd)
+p.pm.AddDataSource("ownfixed", "hepdata:" + p.path("fixed.root"))
 p.pm.AddDataSource("ownmissing", ["hepdata:" + p.path("nothing.root"), p.path("local.root")])
 
 # (what, data name, data source, expected class, values, errors below, errors above; 2d: values and errors per bin x, y)
@@ -319,6 +324,7 @@ expected = [
     ("a record downloaded as .tar.gz (hepdata:<file>), restricted to a table", "y1_stat", "ownarchive", "TGraphAsymmErrors", [3, 2], [0.25, 0.5], [0.25, 0.5]),
     ("a downloaded file given relative to the current directory", "y1_stat", "ownrelative", "TH1D", [20, 10, 4], [2, 1, 0.5], None),
     ("a downloaded file that does not exist: the other inputs are read", "h", "ownmissing", "TH1D", [7], [7**0.5], None),
+    ("a downloaded table whose histograms have bins of fixed width: a histogram", "y1_stat", "ownfixed", "TH1D", [6, 3, 1], [0.6, 0.3, 0.1], None),
 ]
 # the labels of the drawn x axis by the data name of a case
 labelled = {"Table 3/y1_stat": ["pp", "PbPb"], "Table 9/y1_stat": ["a", "c"]}
@@ -368,6 +374,10 @@ def check_values(run, label=""):
 
 run = p.plot("hepdata")
 check_values(run)
+fixedIndex = next(i for i, case in enumerate(expected) if case[2] == "ownfixed")
+fixedDrawn = run.objects(f"h{fixedIndex}", "hepdata")
+fixedEdges = [fixedDrawn[0].GetXaxis().GetBinLowEdge(b) for b in range(1, fixedDrawn[0].GetNbinsX() + 2)] if fixedDrawn else None
+check("bins of fixed width: the edges of the table", fixedEdges == [0.0, 2.0, 4.0, 6.0], f"{fixedEdges}")
 downloads = [r for r in requests if r.startswith("/record/ins12345") and "format=root" in r]
 check("the record is downloaded once, in the latest version the server tells", downloads == ["/record/ins12345?format=root&version=3"], f"requests {requests}")
 check("the latest version is asked for once", len([r for r in requests if r.startswith("/record/ins12345?format=json")]) == 1, f"requests {requests}")
@@ -425,6 +435,19 @@ check_values(run, " (cache folder)")
 own = os.path.join(cache, "SciRooPlot")
 check("with srp cache on <folder> the record is downloaded into the folder SciRooPlot inside it", os.path.exists(os.path.join(own, "hepdata", "ins12345v3.root")), f"{os.listdir(cache) if os.path.isdir(cache) else 'no folder'}")
 check("the folder SciRooPlot inside it is marked as cache, nothing else is put into <folder>", os.path.exists(os.path.join(own, "CACHEDIR.TAG")) and os.listdir(cache) == ["SciRooPlot"], f"{os.listdir(cache) if os.path.isdir(cache) else 'no folder'}")
+# a cache folder in which the folder of the copies cannot be made (a file in its place): reported once per record and file
+blocked = p.path("blocked")
+os.makedirs(os.path.join(blocked, "SciRooPlot"))
+open(os.path.join(blocked, "SciRooPlot", "hepdata"), "w").close()
+p.srp("cache", "on", blocked)
+run = p.plot("hepdata")
+p.srp("cache", "off")
+for what, text in (
+    ("a record whose copy cannot be made is reported", "Cannot download HEPData record ins12345: cannot create folder"),
+    ("a downloaded file whose copy cannot be made is reported", f"Cannot convert HEPData file {p.path('table1.root')}: cannot create folder"),
+):
+    found = [line for line in run.lines("WARN") if text in line]
+    check(f"{what}, once", len(found) == 1, f"{len(found)} lines: {[line for line in run.lines('WARN') if 'HEPData' in line][:3]}")
 
 # a downloaded file that changed: its copy is made again
 write_single([40.0, 20.0, 8.0], [4.0, 2.0, 1.0])
