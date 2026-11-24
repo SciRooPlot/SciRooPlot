@@ -300,6 +300,36 @@ class PlotPainter
   template <typename T>
   void DrawItem(item_state_t& state, T data_ptr, std::optional<draw_option_t> optionAlias);
   template <typename T>
+  void ResolveAlias(item_state_t& state, T data_ptr, std::optional<draw_option_t>& alias);
+  template <typename T>
+  std::string TakeAxesLetters(item_state_t& state, T data_ptr);
+  void ApplyTextOptions(item_state_t& state, std::optional<draw_option_t> alias);
+  template <typename T>
+  bool MapDrawing(item_state_t& state, T data_ptr, std::optional<draw_option_t> optionAlias, std::optional<draw_option_t>& alias, const std::string& optionName,
+                  std::string& projection);
+  template <typename T>
+  void PrepareDrawnCopy(item_state_t& state, T& data_ptr, std::optional<draw_option_t> alias);
+  template <typename T>
+  bool FitsFrame(item_state_t& state, T data_ptr, const std::string& optionName, const std::string& projection);
+  template <typename T>
+  void SetColorLevels(item_state_t& state, T data_ptr);
+  static void DrawExec(const std::string& name, const std::string& command);
+  template <typename T>
+  TH1* StatsHistogram(item_state_t& state, T data_ptr, bool& showStats);
+  template <typename T>
+  void NameDrawnData(item_state_t& state, T data_ptr, TH1* statsHist);
+  template <typename T>
+  void KeepAtEveryPaint(item_state_t& state, T data_ptr, bool hasRangeX, bool hasRangeY);
+  template <typename T>
+  bool DrawFillBelow(item_state_t& state, T data_ptr, std::optional<draw_option_t> alias);
+  template <typename T>
+  void ExtendColorRange(item_state_t& state, T data_ptr);
+  template <typename T>
+  bool PaintData(item_state_t& state, T data_ptr, std::optional<draw_option_t> alias, bool projected);
+  void AddLegendRow(item_state_t& state, bool hasFillBelow);
+  template <typename T, typename... Args>
+  bool NotDrawn(item_state_t& state, T data_ptr, Args&&... args);
+  template <typename T>
   void DrawStatsBox(item_state_t& state, T data_ptr, TH1* statsHist);
   template <typename T>
   void DrawPointValues(item_state_t& state, T data_ptr);

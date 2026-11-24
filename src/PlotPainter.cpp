@@ -1673,31 +1673,85 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
 {
   pad_state_t& padState = state.padState;
   auto& data = state.data;
-  auto& padDefaults = padState.padDefaults;
-  auto& pad = padState.pad;
-  auto& pad_ptr = padState.pad_ptr;
-  auto& padSetup = padState.padSetup;
   auto& activeTextFormat = padState.activeTextFormat;
-  auto& hasRefFunc = padState.hasRefFunc;
-  auto& axisHist_ptr = padState.axisHist_ptr;
   auto& padProjection = padState.padProjection;
   auto& drawOption = padState.drawOption;
   auto& dataIndex = padState.dataIndex;
-  auto& mapDrawn = padState.mapDrawn;
-  auto& storedRangeZ = padState.storedRangeZ;
-
   using data_type = std::decay_t<decltype(data_ptr)>;
-  // the drawing option in messages: the alias, else the option as given
-  auto optionName = [&]() { return (optionAlias) ? enum_name(*optionAlias) : data->GetDrawOption().value_or(""); };
-  // data that cannot be drawn: reported, kept until the plot is done, and the next data keeps its number
-  auto notDrawn = [&](auto&&... args) {
-    logger::warning(std::forward<decltype(args)>(args)...);
-    mUndrawn.emplace_back(data_ptr);
-    ++dataIndex;
-    drawOption = "SAME ";
-  };
+  const string optionName = (optionAlias) ? string(enum_name(*optionAlias)) : data->GetDrawOption().value_or("");  // in messages
   optional<draw_option_t> alias = optionAlias;
-  if (optionAlias) {
+  ResolveAlias(state, data_ptr, alias);
+  const string polarGridOption = TakeAxesLetters(state, data_ptr);
+  ApplyTextOptions(state, alias);
+  string projection;
+  if (!MapDrawing(state, data_ptr, optionAlias, alias, optionName, projection)) return;
+  const bool projected = !projection.empty();
+  if (dataIndex == 0) padProjection = projection;
+  PrepareDrawnCopy(state, data_ptr, alias);
+
+  // first data is only used to define the axes
+  if (dataIndex == 0) {
+    if constexpr (is_func<data_type>()) {
+      // the frame of a function comes from the samples it is drawn with
+      if (data->GetNpx()) data_ptr->SetNpx(*data->GetNpx());
+      if constexpr (is_func_2d<data_type>() || is_func_3d<data_type>()) {
+        if (data->GetNpy()) data_ptr->SetNpy(*data->GetNpy());
+      }
+    }
+    SetUpFrame(state, data_ptr, polarGridOption);
+  } else {
+    if (!FitsFrame(state, data_ptr, optionName, projection)) return;
+    // do not draw the colour scale a second time (only types that have one: for graphs 'Z' means no end caps on the error bars)
+    // the 'Z' is removed, not blanked, so that suffixes stay attached to their option (COLZ2 -> COL2)
+    if constexpr (is_2d<data_type>() || is_3d<data_type>()) {
+      drawOption.erase(std::remove_if(drawOption.begin(), drawOption.end(), [](char c) { return c == 'Z' || c == 'z'; }), drawOption.end());
+    }
+
+    ApplyDataStyle(state, data_ptr, alias);
+
+    // data ranges
+    const bool hasRangeX = data->GetMinRangeX() || data->GetMaxRangeX();
+    const bool hasRangeY = data->GetMinRangeY() || data->GetMaxRangeY();
+    DataRanges(state, data_ptr, alias, projected);
+    SetColorLevels(state, data_ptr);
+    if (const string textFormat = data->GetTextFormat().value_or("g"); textFormat != activeTextFormat) {
+      DrawExec("text_format_" + std::to_string(dataIndex), fmt::format("gStyle->SetPaintTextFormat({});", CppQuoted(textFormat)));
+      activeTextFormat = textFormat;
+    }
+
+    // disallow moving around the points of a graph in interactive mode
+    if constexpr (is_graph_1d<data_type>()) {
+      data_ptr->SetEditable(false);
+    }
+    bool showStats{false};
+    TH1* statsHist = StatsHistogram(state, data_ptr, showStats);
+    NameDrawnData(state, data_ptr, statsHist);
+    KeepAtEveryPaint(state, data_ptr, hasRangeX, hasRangeY);
+    const bool hasFillBelow = DrawFillBelow(state, data_ptr, alias);
+    ExtendColorRange(state, data_ptr);
+    if (!PaintData(state, data_ptr, alias, projected)) return;
+    if (showStats) DrawStatsBox(state, data_ptr, statsHist);
+    if (alias == points_text) DrawPointValues(state, data_ptr);
+    AddLegendRow(state, hasFillBelow);
+  }
+  ++dataIndex;
+  drawOption = "SAME ";  // next data should be drawn to same pad
+}
+
+//**************************************************************************************************
+/**
+ * Appends the drawing option of the alias for the type of the data to the option of the pad; an alias the type does not have is
+ * dropped with a warning (ROOT's default is drawn).
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::ResolveAlias(item_state_t& state, T data_ptr, optional<draw_option_t>& alias)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& drawOption = padState.drawOption;
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  if (alias) {
     const std::map<draw_option_t, string>* options{};
     const char* typeName{};
     if constexpr (is_hist_2d<data_type>()) {
@@ -1725,14 +1779,28 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       options = &defaultDrawOptions_Func3d;
       typeName = "3d function";
     }
-    if (auto it = (options) ? options->find(*optionAlias) : decltype(options->end()){}; options && it != options->end()) {
+    if (auto it = (options) ? options->find(*alias) : decltype(options->end()){}; options && it != options->end()) {
       drawOption += it->second;
     } else {
-      Warn(state, "Drawing option {} is not available for {} {}, using the default of ROOT.", enum_name(*optionAlias), (options) ? typeName : data_ptr->ClassName(), DataName(*data));
+      Warn(state, "Drawing option {} is not available for {} {}, using the default of ROOT.", enum_name(*alias), (options) ? typeName : data_ptr->ClassName(), DataName(*data));
       alias.reset();
     }
   }
+}
 
+//**************************************************************************************************
+/**
+ * Removes the letters of a graph's drawing option that would draw axes of its own and returns those of its polar grid.
+ */
+//**************************************************************************************************
+template <typename T>
+string PlotPainter::TakeAxesLetters(item_state_t& state, T data_ptr)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& drawOption = padState.drawOption;
+  auto& dataIndex = padState.dataIndex;
+  using data_type = std::decay_t<decltype(data_ptr)>;
   // TGraph::Draw clears the pad when the option contains an 'A' (new axes) outside of SAME, which would delete the frame
   // (and the frame drawn with it has no axes): the axes are SciRooPlot's; RX and RY mirror the points and let TGraphPainter draw
   // reversed axes in place of the frame's, so in SciRooPlot's frame the points would sit at wrong axis values
@@ -1766,7 +1834,19 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       drawOption = ((dataIndex != 0) ? "SAME " : "") + string(option.Data());
     }
   }
+  return polarGridOption;
+}
 
+//**************************************************************************************************
+/**
+ * Applies the text format and angle of the data to the values written by TEXT.
+ */
+//**************************************************************************************************
+void PlotPainter::ApplyTextOptions(item_state_t& state, optional<draw_option_t> alias)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& drawOption = padState.drawOption;
   // the format of the values written by TEXT (Data::SetTextFormat) is used only when values are written
   if (data->GetTextFormat() && alias != points_text && !TString(drawOption).Contains("TEXT", TString::kIgnoreCase)) {
     Warn(state, "The text format of {} has no effect: it is drawn without values (drawing option text or points_text).", DataName(*data));
@@ -1786,11 +1866,25 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
     }
   }
+}
 
+//**************************************************************************************************
+/**
+ * The map projection a 2d histogram is drawn in (empty without), and the drawing option of a TH2Poly where ROOT has none for
+ * polygon bins (false if the data is not drawn).
+ */
+//**************************************************************************************************
+template <typename T>
+bool PlotPainter::MapDrawing(item_state_t& state, T data_ptr, optional<draw_option_t> optionAlias, optional<draw_option_t>& alias, const string& optionName, string& projection)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& drawOption = padState.drawOption;
+  auto& dataIndex = padState.dataIndex;
+  using data_type = std::decay_t<decltype(data_ptr)>;
   // a 2d histogram drawn as a map: ROOT's projection options select CONT4, which paints in projected coordinates, so data and frame
   // fit together only when they cover the same range (data drawn SAME is projected over its own range into the frame of the first)
-  bool projected{};
-  string projection;  // the projection keyword
   if constexpr (is_hist_2d<data_type>()) {
     TString upper(drawOption);
     upper.ToUpper();
@@ -1798,7 +1892,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     // (a flat colour map in a 3d frame lands at the wrong place, so there it is not drawn at all)
     if (data_ptr->InheritsFrom(TH2Poly::Class()) && !upper.Contains("GL")) {
       if (dataIndex != 0 && pad_ptr->GetView()) {
-        return notDrawn("TH2Poly {} cannot be drawn in the 3d frame of its pad (ROOT draws polygon bins in 3d only with OpenGL). It is not drawn.", DataName(*data));
+        return NotDrawn(state, data_ptr, "TH2Poly {} cannot be drawn in the 3d frame of its pad (ROOT draws polygon bins in 3d only with OpenGL). It is not drawn.", DataName(*data));
       }
       // drawn coloured by the content where ROOT's painter of polygon bins (THistPainter::PaintTH2PolyBins) has no such drawing: in polar
       // coordinates it paints the cell array of TH2 as well (the polygons land unpolarized beside a polar frame); the aliases of boxes,
@@ -1813,7 +1907,7 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
       if (reason) {
         const char* scale = (upper.Contains("Z")) ? "Z" : "";
-        Warn(state, "Drawing option {} is not available for TH2Poly {} ({}), drawing it as col{}.", optionName(), DataName(*data), reason, (*scale) ? "z" : "");
+        Warn(state, "Drawing option {} is not available for TH2Poly {} ({}), drawing it as col{}.", optionName, DataName(*data), reason, (*scale) ? "z" : "");
         drawOption = ((dataIndex != 0) ? "SAME COL" : "COL") + string(scale);
         alias = (*scale) ? colz : col;
         upper = drawOption;
@@ -1822,11 +1916,24 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
     for (const char* keyword : {"AITOFF", "MERCATOR", "SINUSOIDAL", "PARABOLIC", "MOLLWEIDE"}) {
       if (upper.Contains(keyword)) projection = keyword;
     }
-    projected = !projection.empty();
   }
-  if (dataIndex == 0) padProjection = projection;
+  return true;
+}
 
-  // appearances that ROOT has no drawing option for are prepared on the copy that is drawn
+//**************************************************************************************************
+/**
+ * Prepares the appearances that ROOT has no drawing option for on the copy that is drawn.
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::PrepareDrawnCopy(item_state_t& state, T& data_ptr, optional<draw_option_t> alias)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& drawOption = padState.drawOption;
+  auto& dataIndex = padState.dataIndex;
+  using data_type = std::decay_t<decltype(data_ptr)>;
   if constexpr (is_graph_2d<data_type>()) {
     // the points of a 2d graph with errors are drawn with their error bars (as the points of 1d data)
     if ((alias == points || alias == points_col || alias == points_colz) && (data_ptr->InheritsFrom(TGraph2DErrors::Class()) || data_ptr->InheritsFrom(TGraph2DAsymmErrors::Class()))) drawOption += " ERR";
@@ -1872,338 +1979,469 @@ void PlotPainter::DrawItem(item_state_t& state, T data_ptr, optional<draw_option
       }
     }
   }
+}
 
-  // first data is only used to define the axes
-  if (dataIndex == 0) {
-    if constexpr (is_func<data_type>()) {
-      // the frame of a function comes from the samples it is drawn with
-      if (data->GetNpx()) data_ptr->SetNpx(*data->GetNpx());
-      if constexpr (is_func_2d<data_type>() || is_func_3d<data_type>()) {
-        if (data->GetNpy()) data_ptr->SetNpy(*data->GetNpy());
-      }
+//**************************************************************************************************
+/**
+ * Whether data drawn after the first fits the frame of its pad (false if it is not drawn): a polar graph needs a polar grid,
+ * data drawn in 3d a 3d frame and a map projection a frame of the same projection.
+ */
+//**************************************************************************************************
+template <typename T>
+bool PlotPainter::FitsFrame(item_state_t& state, T data_ptr, const string& optionName, const string& projection)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& padProjection = padState.padProjection;
+  auto& drawOption = padState.drawOption;
+  auto& dataIndex = padState.dataIndex;
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  // a polar graph is drawn on the polar grid of a first polar graph, other data in a cartesian frame: ROOT paints a polar graph in a
+  // cartesian frame with a grid of its own over it, and cartesian data on a polar grid in the coordinates of the grid (the reference
+  // function, which the base plots of ratios give every pad, is drawn as before)
+  bool isPolarGraph{};
+  if constexpr (is_graph_1d<data_type>()) isPolarGraph = data_ptr->InheritsFrom(TGraphPolar::Class());
+  const bool isRefFunc = padState.hasRefFunc && dataIndex == 1;
+  if (!isRefFunc && isPolarGraph != (padState.polargram != nullptr)) {
+    if (isPolarGraph) {
+      return NotDrawn(state, data_ptr, "Data {} is a polar graph and needs a polar grid: the data giving the frame of its pad must be a polar graph. It is not drawn.", DataName(*data));
     }
-    SetUpFrame(state, data_ptr, polarGridOption);
-  } else {
-    // a polar graph is drawn on the polar grid of a first polar graph, other data in a cartesian frame: ROOT paints a polar graph in a
-    // cartesian frame with a grid of its own over it, and cartesian data on a polar grid in the coordinates of the grid (the reference
-    // function, which the base plots of ratios give every pad, is drawn as before)
-    bool isPolarGraph{};
-    if constexpr (is_graph_1d<data_type>()) isPolarGraph = data_ptr->InheritsFrom(TGraphPolar::Class());
-    const bool isRefFunc = padState.hasRefFunc && dataIndex == 1;
-    if (!isRefFunc && isPolarGraph != (padState.polargram != nullptr)) {
-      if (isPolarGraph) {
-        return notDrawn("Data {} is a polar graph and needs a polar grid: the data giving the frame of its pad must be a polar graph. It is not drawn.", DataName(*data));
-      }
-      return notDrawn("Data {} cannot be drawn on the polar grid of its pad (the data giving the frame of the pad is a polar graph). It is not drawn.", DataName(*data));
+    return NotDrawn(state, data_ptr, "Data {} cannot be drawn on the polar grid of its pad (the data giving the frame of the pad is a polar graph). It is not drawn.", DataName(*data));
+  }
+  // 1d data in a 3d frame: ROOT paints nothing but a flat frame box around the view
+  if constexpr (!is_2d<data_type>() && !is_3d<data_type>()) {
+    if (!isRefFunc && pad_ptr->GetView() && !IsView3d(drawOption)) {
+      return NotDrawn(state, data_ptr, "Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the data giving the frame of the pad is drawn in 3d). It is not drawn.", DataName(*data), optionName);
     }
-    // 1d data in a 3d frame: ROOT paints nothing but a flat frame box around the view
-    if constexpr (!is_2d<data_type>() && !is_3d<data_type>()) {
-      if (!isRefFunc && pad_ptr->GetView() && !IsView3d(drawOption)) {
-        return notDrawn("Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the data giving the frame of the pad is drawn in 3d). It is not drawn.", DataName(*data), optionName());
-      }
-    }
-    // data drawn in 3d needs the 3d frame of a first data drawn in 3d, flat data a flat frame: ROOT paints a 3d view over a flat map
-    // (its box over the frame) and a flat drawing in a 3d frame not at all or at the wrong place; likewise a map projection needs a
-    // frame of the same projection (flat data in a projected frame, or a map in an unprojected one, is painted in other coordinates)
-    if constexpr (is_2d<data_type>() || is_3d<data_type>()) {
-      bool drawn3d = is_3d<data_type>() || IsView3d(drawOption);
-      if constexpr (is_graph_2d<data_type>()) {
-        bool triangles{}, points{};
-        Paints3dGraph(drawOption, triangles, points);
-        drawn3d |= triangles || points;
-      }
-      if (drawn3d != (pad_ptr->GetView() != nullptr)) {
-        if (drawn3d) {
-          return notDrawn("Data {} is drawn in 3d ({}) and needs a 3d frame: the data giving the frame of the pad drawn in 3d (e.g. lego, surf, triangles or points). It is not drawn.", DataName(*data), optionName());
-        }
-        return notDrawn("Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the data giving the frame of the pad is drawn in 3d). It is not drawn.", DataName(*data), optionName());
-      }
-      if constexpr (is_graph_2d<data_type>()) {
-        // ROOT interpolates a 2d graph (maps, surfaces, triangles) over the Delaunay triangles of its points: points on one line have none
-        bool triangles{}, points{};
-        Paints3dGraph(drawOption, triangles, points);
-        const int32_t n = data_ptr->GetN();
-        const double_t* x = data_ptr->GetX();
-        const double_t* y = data_ptr->GetY();
-        int32_t other = 1;  // a second point, apart from the first
-        while (other < n && x[other] == x[0] && y[other] == y[0])
-          ++other;
-        bool onLine = true;
-        for (int32_t i = other + 1; i < n && onLine; ++i) {
-          const double_t ax = x[other] - x[0], ay = y[other] - y[0], bx = x[i] - x[0], by = y[i] - y[0];
-          onLine = std::abs(ax * by - ay * bx) <= 1e-12 * std::hypot(ax, ay) * std::hypot(bx, by);
-        }
-        if (other < n && !points && onLine) {  // (points at one place are painted as one cell)
-          Warn(state, "The points of 2d graph {} lie on one line: ROOT finds no triangles to interpolate between, nothing is drawn with drawing option {} (points draw them).", DataName(*data), optionName());
-        }
-      }
-      if (projection != padProjection) {
-        auto drawn = [](const string& keyword) { return (keyword.empty()) ? string("without a map projection") : "as a map (" + keyword + ")"; };
-        return notDrawn("Data {} is drawn {} and cannot be drawn in its pad, whose frame is given by data drawn {}. It is not drawn.", DataName(*data), drawn(projection), drawn(padProjection));
-      }
-    }
-    // do not draw the colour scale a second time (only types that have one: for graphs 'Z' means no end caps on the error bars)
-    // the 'Z' is removed, not blanked, so that suffixes stay attached to their option (COLZ2 -> COL2)
-    if constexpr (is_2d<data_type>() || is_3d<data_type>()) {
-      drawOption.erase(std::remove_if(drawOption.begin(), drawOption.end(), [](char c) { return c == 'Z' || c == 'z'; }), drawOption.end());
-    }
-
-    ApplyDataStyle(state, data_ptr, alias);
-
-    // data ranges
-    const bool hasRangeX = data->GetMinRangeX() || data->GetMaxRangeX();
-    const bool hasRangeY = data->GetMinRangeY() || data->GetMaxRangeY();
-    DataRanges(state, data_ptr, alias, projected);
-    // colour levels: the frame, whose colour scale is drawn (and from which COL drawn SAME takes its colours), takes those of the first
-    // map of the pad (a 2d or 3d histogram, a 2d graph or a 2d function), the one it is made from, also fewer than ROOT's 20, so that the
-    // scale shows the levels of the map; levels of later data (e.g. contour lines over a map) are their own, the frame takes them only if they are more
-    if constexpr (!is_2d<data_type>() && !is_3d<data_type>()) {
-      if (data->GetContours() || data->GetNContours()) ReportIgnored(fmt::format("The contours of {}", DataName(*data)), "only 2d and 3d data has colour levels", true);
-    }
-    if constexpr (is_2d<data_type>() || is_hist_3d<data_type>()) {
-      const bool firstMap = !mapDrawn;
-      mapDrawn = true;
-      const auto& contours = data->GetContours();
-      const int32_t nLevels = contours ? static_cast<int32_t>(contours->size()) : data->GetNContours().value_or(0);
-      if (nLevels > 0) {
-        if constexpr (!is_graph_2d<data_type>()) {  // a 2d graph gets them when painted (below)
-          if (contours) {
-            data_ptr->SetContour(nLevels, contours->data());
-          } else {
-            data_ptr->SetContour(nLevels);
-          }
-        }
-        if (firstMap || axisHist_ptr->GetContour() < nLevels) {
-          if (contours) {
-            axisHist_ptr->SetContour(nLevels, contours->data());
-          } else {
-            axisHist_ptr->SetContour(nLevels);
-          }
-        }
-        if constexpr (is_hist_3d<data_type>()) {
-          if (firstMap) {
-            // ROOT colours the boxes of a 3d histogram from the whole palette, linearly in the content (THistPainter::PaintH3Box), and only
-            // the colour scale from the levels: the pad gets a palette with one colour per level, the one the scale shows for it (TPaletteAxis:
-            // level j has colour (j + 0.99) * nColors / nLevels), each repeated 200 times, since a box takes colour nColors * fraction - 1
-            // (with fewer copies the boxes would be one level off)
-            if (contours) logger::warning("Colour levels of {}: the boxes of a 3d histogram are coloured in {} equal steps, not at the levels given.", DataName(*data), nLevels);
-            padSetup += fmt::format(
-              " {{ const Int_t n0 = TColor::GetNumberOfColors(), nb = {}, k = 200; std::vector<Int_t> c(nb * k);"
-              " for (Int_t i = 0; i < nb * k; ++i) c[i] = TColor::GetColorPalette(Int_t((std::min(nb - 1, (i + 1) / k) + 0.99) * n0 / nb));"
-              " gStyle->SetPalette(nb * k, c.data()); }}",
-              nLevels);
-          }
-        }
-      }
-    }
-    auto drawExec = [&](const string& name, const string& command) {
-      TExec* exec = new TExec(name.data(), command.data());
-      exec->SetBit(kCanDelete);
-      exec->Draw();
-    };
-    if (const string textFormat = data->GetTextFormat().value_or("g"); textFormat != activeTextFormat) {
-      drawExec("text_format_" + std::to_string(dataIndex), fmt::format("gStyle->SetPaintTextFormat({});", CppQuoted(textFormat)));
-      activeTextFormat = textFormat;
-    }
-
-    // disallow moving around the points of a graph in interactive mode
-    if constexpr (is_graph_1d<data_type>()) {
-      data_ptr->SetEditable(false);
-    }
-    bool showStats{false};
-    TH1* statsHist{nullptr};  // the drawn histogram, or the one a graph was converted from
-    if constexpr (is_hist<data_type>()) {
-      statsHist = data_ptr;
-    } else if constexpr (is_graph_1d<data_type>()) {
-      if (auto source = mSourceHists.find(data_ptr); source != mSourceHists.end()) {
-        statsHist = source->second.get();
-      }
-    }
-    if (statsHist) {
-      statsHist->SetStats(false);  // also removes a stats box stored with the input, which shows the numbers of the input instead of the drawn histogram
-      showStats = data->GetStatsFormat() && (!data->GetStatsFormat()->empty() || data->GetStatsTitle());
-      if constexpr (is_hist<data_type>()) {
-        if (showStats && str_starts_with(drawOption, "SAME")) drawOption.insert(4, "S");  // ROOT fills a stats box only with SAMES, not with SAME
-      }
-      if (!(data->GetShowOverflowBins() && *data->GetShowOverflowBins())) {
-        // TH2Poly keeps its bins outside the cell array of TH1, whose loop over the global cells would zero the real bins;
-        // its overflow regions are never drawn anyway
-        bool isPoly{false};
-        if constexpr (is_hist_2d<data_type>()) isPoly = data_ptr->InheritsFrom(TH2Poly::Class());
-        if (!isPoly) statsHist->ClearUnderflowAndOverflow();
-      }
-    } else if (data->GetStatsFormat()) {
-      logger::warning("Statistics boxes are available only for histograms, not for {}.", DataName(*data));
-    }
-    // named <number>:<name>[<request>]:<data source>[<projection>], AddPoints data <number>:<name in messages>
-    const auto& projInfo = data->GetProjInfo();
-    const string inputName = (is_user_defined(data->GetDataSource())) ? DataName(*data) : data->GetName() + data->GetDataInfo().GetNameSuffix() + ":" + data->GetDataSource() + ((projInfo) ? projInfo->GetNameSuffix() : "");
-    data_ptr->SetName((std::to_string(dataIndex - hasRefFunc) + ":" + inputName).data());
-    mDataDefinitions[data_ptr] = data;
+  }
+  // data drawn in 3d needs the 3d frame of a first data drawn in 3d, flat data a flat frame: ROOT paints a 3d view over a flat map
+  // (its box over the frame) and a flat drawing in a 3d frame not at all or at the wrong place; likewise a map projection needs a
+  // frame of the same projection (flat data in a projected frame, or a map in an unprojected one, is painted in other coordinates)
+  if constexpr (is_2d<data_type>() || is_3d<data_type>()) {
+    bool drawn3d = is_3d<data_type>() || IsView3d(drawOption);
     if constexpr (is_graph_2d<data_type>()) {
-      // ROOT paints a 2d graph through a histogram it makes when painting and does not store with the graph: it gets the colour levels at every paint
-      const auto& contours = data->GetContours();
-      if (contours ? !contours->empty() : data->GetNContours().value_or(0) > 0) {
-        string levels = (contours) ? fmt::format("{}, std::vector<Double_t>{{", contours->size()) : std::to_string(*data->GetNContours());
-        if (contours) {
-          for (const double_t level : *contours)
-            levels += fmt::format("{}, ", level);
-          levels += "}.data()";
-        }
-        drawExec("levels_" + std::to_string(dataIndex - hasRefFunc),
-                 fmt::format("if (auto* graph = dynamic_cast<TGraph2D*>(gPad->GetPrimitive({}))) graph->GetHistogram()->SetContour({});", CppQuoted(data_ptr->GetName()), levels));
-      }
-    }
-    if constexpr (!is_hist<data_type>()) {
-      if (statsHist) {
-        statsHist->SetName(data_ptr->GetName());  // for <name> and the title line of the statistics box
-        mDataDefinitions[statsHist] = data;
-      }
-    }
-    if constexpr (is_hist<data_type>()) {
-      // an interactive zoom sets its range on all histograms of the pad (and unzooming shows all their bins):
-      // the setup of the pad, which runs at every paint, restores the range of the data
-      string keepRange;
-      if (hasRangeX && !pad_ptr->GetView()) {
-        keepRange += fmt::format(" h->GetXaxis()->SetRange({}, {});", data_ptr->GetXaxis()->GetFirst(), data_ptr->GetXaxis()->GetLast());
-      }
-      if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
-        if (hasRangeY && !pad_ptr->GetView()) {
-          keepRange += fmt::format(" h->GetYaxis()->SetRange({}, {});", data_ptr->GetYaxis()->GetFirst(), data_ptr->GetYaxis()->GetLast());
-        }
-      } else {
-        if (data->GetMinRangeY()) keepRange += fmt::format(" h->SetMinimum({});", *data->GetMinRangeY());
-        if (data->GetMaxRangeY()) keepRange += fmt::format(" h->SetMaximum({});", *data->GetMaxRangeY());
-      }
-      if (!keepRange.empty()) padSetup += HistCommand(data_ptr->GetName(), keepRange);
-    }
-    // a graph drawn with area, hist_clipped or hist_open_clipped and a fill: the line or steps are the outline of the filled area below them
-    bool hasFillBelow{false};
-    if constexpr (is_graph_1d<data_type>()) {
-      // the area of a polar graph is the polygon through its points (in their order), filled on the polar grid as ROOT fills it (F)
-      const bool isPolar = data_ptr->InheritsFrom(TGraphPolar::Class());
-      if (isPolar && alias == area && data_ptr->GetFillStyle() != 0 && data_ptr->GetFillColor() != 0 && data_ptr->GetN() > 0) drawOption += " F";
-      if ((alias == area || alias == hist_clipped || alias == hist_open_clipped) && !isPolar && data_ptr->GetFillStyle() != 0 && data_ptr->GetFillColor() != 0 && data_ptr->GetN() > 0) {
-        // the polygon closed at zero below the points of area (F alone would close it from the last point to the first, LF would draw its
-        // edges down to zero), that of the steps far below the frame (at ROOT's base line once the frame is final): ROOT cuts it at the frame
-        vector<double_t> x(data_ptr->GetX(), data_ptr->GetX() + data_ptr->GetN());
-        vector<double_t> y(data_ptr->GetY(), data_ptr->GetY() + data_ptr->GetN());
-        if (alias != hist_clipped) {  // the steps of hist_clipped already go down there at the outer edges
-          const double_t base = (alias == area) ? 0. : ClippedBase(data_ptr, pad_ptr->GetLogy());
-          x.insert(x.begin(), x.front());
-          y.insert(y.begin(), base);
-          x.push_back(x.back());
-          y.push_back(base);
-        }
-        auto* polygon = new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data());
-        polygon->SetName((string("fill_") + data_ptr->GetName()).data());  // not "<number>:...", so legend rows refer to the line or steps
-        data_ptr->TAttLine::Copy(*polygon);
-        data_ptr->TAttFill::Copy(*polygon);
-        polygon->SetEditable(false);
-        polygon->SetBit(kCanDelete);
-        polygon->Draw("SAME F");
-        hasFillBelow = true;
-      }
-    }
-    // ROOT maps the colours of 2d data drawn on top with the range of the frame, which also draws the colour axis:
-    // at each end without a z range set by the user, that range covers all 2d data of the pad (not only the data the frame is made of)
-    if constexpr (is_hist_2d<data_type>() || is_graph_2d<data_type>() || is_func_2d<data_type>()) {
-      const optional<double_t> userMinZ = MinRange(pad, padDefaults, 'Z');
-      const optional<double_t> userMaxZ = MaxRange(pad, padDefaults, 'Z');
-      bool isEmpty{};
-      if constexpr (is_graph_2d<data_type>()) isEmpty = data_ptr->GetN() == 0;  // not drawn (and ROOT reads its first point)
-      if (!(userMinZ && userMaxZ) && !isEmpty && axisHist_ptr->GetDimension() == 2 && !pad_ptr->GetView()) {
-        double_t minimum{}, maximum{};
-        if constexpr (is_hist_2d<data_type>()) {
-          minimum = data_ptr->GetMinimum();
-          maximum = data_ptr->GetMaximum();
-        } else if constexpr (is_func_2d<data_type>()) {
-          const TH1* samples = data_ptr->GetHistogram();  // the values ROOT paints
-          minimum = samples->GetMinimum();
-          maximum = samples->GetMaximum();
-        } else {
-          minimum = data_ptr->GetZmin();
-          maximum = data_ptr->GetZmax();
-        }
-        if (!userMaxZ && !storedRangeZ.second && maximum > axisHist_ptr->GetMaximum()) axisHist_ptr->SetMaximum(maximum);
-        if (!userMinZ && !storedRangeZ.first && !pad_ptr->GetLogz() && minimum < axisHist_ptr->GetMinimum()) axisHist_ptr->SetMinimum(minimum);
-      }
-    }
-    if constexpr (is_graph_2d<data_type>()) {
-      // the points are painted from an empty histogram of the graph, unless it already has one: then its contents (interpolated e.g.
-      // by SetMinimum above) are painted as well, as colours behind PCOL: the contents are cleared
       bool triangles{}, points{};
       Paints3dGraph(drawOption, triangles, points);
-      if (points && !triangles) data_ptr->GetHistogram()->Reset("ICE");  // not its functions: they hold the triangulation
-      // painted as triangles or points, a 2d graph fills the pad behind the 3d box with the frame fill colour (TView3D::PadRange), also
-      // drawn after other data: everything painted before it would be covered
-      if (triangles || points) pad_ptr->SetFrameFillColor(0);
+      drawn3d |= triangles || points;
     }
-    if (projected) {
-      // ROOT projects the range of a map only when it is painted without SAME (THistPainter::RecalculateRange): drawn SAME, a map
-      // that does not cover the whole sphere is painted over its unprojected range into the projected frame (too small, the frame
-      // showing around it). Added to the pad without SAME (Draw would clear the pad), it takes the projected range of the frame.
-      TString option(drawOption);
-      option.ReplaceAll("SAMES", "").ReplaceAll("SAME", "");
-      data_ptr->SetBit(TH1::kNoTitle);
-      data_ptr->AppendPad(option.Data());
-    } else if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
-      // ROOT reports an empty graph as an error at every paint
-      if (data_ptr->GetN() == 0 && mSourceHists.count(data_ptr)) {
-        // a histogram without filled bins drawn as a graph: nothing to paint, but its legend row and statistics box, as drawn as histogram
-        mNotPainted[{pad_ptr, static_cast<uint16_t>(dataIndex - hasRefFunc)}] = {data_ptr, drawOption};
-        mUndrawn.emplace_back(data_ptr);
-      } else if (data_ptr->GetN() == 0) {
-        // no legend row and no statistics box either, as for other data that is not drawn (TH2Poly in 3d)
-        return notDrawn("Graph {} has no points: it is not drawn.", DataName(*data));
-      } else {
-        if constexpr (is_graph_1d<data_type>()) {
-          // a graph with several sets of y errors draws them as the parts of the option after ';' say, one per set, the first part being
-          // the graph itself (TGraphPainter::PaintGraphMultiErrors): an alias gives each set the error style it gives other graphs
-          auto* multi = dynamic_cast<TGraphMultiErrors*>(data_ptr);
-          if (multi && multi->GetNYErrors() > 0 && alias && drawOption.find(';') == string::npos) {
-            string global, errors;
-            for (char c : drawOption) {
-              const bool errorStyle = (c >= '2' && c <= '5');                                     // boxes and bands
-              const bool both = std::string_view("XxZz[]|> ").find(c) != std::string_view::npos;  // no errors, no end lines, brackets, arrows
-              if (!errorStyle) global += c;
-              if (errorStyle || both) errors += c;
-            }
-            drawOption = global;
-            for (int32_t set = 0; set < multi->GetNYErrors(); ++set)
-              drawOption += ";" + errors;  // one part per set (with fewer, ROOT takes the first part also for the first set)
-          }
-        }
-        data_ptr->Draw(drawOption.data());
+    if (drawn3d != (pad_ptr->GetView() != nullptr)) {
+      if (drawn3d) {
+        return NotDrawn(state, data_ptr, "Data {} is drawn in 3d ({}) and needs a 3d frame: the data giving the frame of the pad drawn in 3d (e.g. lego, surf, triangles or points). It is not drawn.", DataName(*data), optionName);
       }
-    } else {
-      data_ptr->Draw(drawOption.data());
+      return NotDrawn(state, data_ptr, "Data {} is drawn flat ({}) and cannot be drawn in the 3d frame of its pad (the data giving the frame of the pad is drawn in 3d). It is not drawn.", DataName(*data), optionName);
     }
-    if (showStats) DrawStatsBox(state, data_ptr, statsHist);
-    if (alias == points_text) DrawPointValues(state, data_ptr);
+    if constexpr (is_graph_2d<data_type>()) {
+      // ROOT interpolates a 2d graph (maps, surfaces, triangles) over the Delaunay triangles of its points: points on one line have none
+      bool triangles{}, points{};
+      Paints3dGraph(drawOption, triangles, points);
+      const int32_t n = data_ptr->GetN();
+      const double_t* x = data_ptr->GetX();
+      const double_t* y = data_ptr->GetY();
+      int32_t other = 1;  // a second point, apart from the first
+      while (other < n && x[other] == x[0] && y[other] == y[0])
+        ++other;
+      bool onLine = true;
+      for (int32_t i = other + 1; i < n && onLine; ++i) {
+        const double_t ax = x[other] - x[0], ay = y[other] - y[0], bx = x[i] - x[0], by = y[i] - y[0];
+        onLine = std::abs(ax * by - ay * bx) <= 1e-12 * std::hypot(ax, ay) * std::hypot(bx, by);
+      }
+      if (other < n && !points && onLine) {  // (points at one place are painted as one cell)
+        Warn(state, "The points of 2d graph {} lie on one line: ROOT finds no triangles to interpolate between, nothing is drawn with drawing option {} (points draw them).", DataName(*data), optionName);
+      }
+    }
+    if (projection != padProjection) {
+      auto drawn = [](const string& keyword) { return (keyword.empty()) ? string("without a map projection") : "as a map (" + keyword + ")"; };
+      return NotDrawn(state, data_ptr, "Data {} is drawn {} and cannot be drawn in its pad, whose frame is given by data drawn {}. It is not drawn.", DataName(*data), drawn(projection), drawn(padProjection));
+    }
+  }
+  return true;
+}
 
-    // in case a label was specified for the data, add it to corresponding legend
-    const auto& legendBoxVector = pad.GetLegendBoxes();
-    if (legendBoxVector.size() && data->GetLegendLabel() && !data->GetLegendLabel()->empty()) {
-      // by default place legend entries in first legend
-      uint8_t legendID{1u};
-      // explicit user choice overrides this
-      if (data->GetLegendID()) legendID = *data->GetLegendID();
-
-      if (legendID > 0u && legendID <= legendBoxVector.size()) {
-        optional<Plot::Pad::LegendEntry> legendEntry = data->GetLegendEntryIfSet();
-        if (hasFillBelow && !(legendEntry && legendEntry->GetSymbolElements())) {  // the row shows the fill, as for hist and area of histograms
-          if (!legendEntry) legendEntry.emplace();
-          legendEntry->SetSymbolElements("F");
+//**************************************************************************************************
+/**
+ * Sets the colour levels of a map, and those of the frame, whose colour scale is drawn, from the first map of the pad.
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::SetColorLevels(item_state_t& state, T data_ptr)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& padSetup = padState.padSetup;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& mapDrawn = padState.mapDrawn;
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  // colour levels: the frame, whose colour scale is drawn (and from which COL drawn SAME takes its colours), takes those of the first
+  // map of the pad (a 2d or 3d histogram, a 2d graph or a 2d function), the one it is made from, also fewer than ROOT's 20, so that the
+  // scale shows the levels of the map; levels of later data (e.g. contour lines over a map) are their own, the frame takes them only if they are more
+  if constexpr (!is_2d<data_type>() && !is_3d<data_type>()) {
+    if (data->GetContours() || data->GetNContours()) ReportIgnored(fmt::format("The contours of {}", DataName(*data)), "only 2d and 3d data has colour levels", true);
+  }
+  if constexpr (is_2d<data_type>() || is_hist_3d<data_type>()) {
+    const bool firstMap = !mapDrawn;
+    mapDrawn = true;
+    const auto& contours = data->GetContours();
+    const int32_t nLevels = contours ? static_cast<int32_t>(contours->size()) : data->GetNContours().value_or(0);
+    if (nLevels > 0) {
+      if constexpr (!is_graph_2d<data_type>()) {  // a 2d graph gets them when painted (KeepAtEveryPaint)
+        if (contours) {
+          data_ptr->SetContour(nLevels, contours->data());
+        } else {
+          data_ptr->SetContour(nLevels);
         }
-        legendBoxVector[legendID - 1]->AddDataRow(*data->GetLegendLabel(), (dataIndex - hasRefFunc), legendEntry);
-      } else {
-        logger::warning("The legend set for data {} does not exist in its pad (SetLegend counts the legends added by the plot itself, not those of its base plot).", DataName(*data));
+      }
+      if (firstMap || axisHist_ptr->GetContour() < nLevels) {
+        if (contours) {
+          axisHist_ptr->SetContour(nLevels, contours->data());
+        } else {
+          axisHist_ptr->SetContour(nLevels);
+        }
+      }
+      if constexpr (is_hist_3d<data_type>()) {
+        if (firstMap) {
+          // ROOT colours the boxes of a 3d histogram from the whole palette, linearly in the content (THistPainter::PaintH3Box), and only
+          // the colour scale from the levels: the pad gets a palette with one colour per level, the one the scale shows for it (TPaletteAxis:
+          // level j has colour (j + 0.99) * nColors / nLevels), each repeated 200 times, since a box takes colour nColors * fraction - 1
+          // (with fewer copies the boxes would be one level off)
+          if (contours) logger::warning("Colour levels of {}: the boxes of a 3d histogram are coloured in {} equal steps, not at the levels given.", DataName(*data), nLevels);
+          padSetup += fmt::format(
+            " {{ const Int_t n0 = TColor::GetNumberOfColors(), nb = {}, k = 200; std::vector<Int_t> c(nb * k);"
+            " for (Int_t i = 0; i < nb * k; ++i) c[i] = TColor::GetColorPalette(Int_t((std::min(nb - 1, (i + 1) / k) + 0.99) * n0 / nb));"
+            " gStyle->SetPalette(nb * k, c.data()); }}",
+            nLevels);
+        }
       }
     }
   }
-  ++dataIndex;
-  drawOption = "SAME ";  // next data should be drawn to same pad
+}
+
+//**************************************************************************************************
+/**
+ * Draws an interpreter command into the current pad, run at every paint.
+ */
+//**************************************************************************************************
+void PlotPainter::DrawExec(const string& name, const string& command)
+{
+  TExec* exec = new TExec(name.data(), command.data());
+  exec->SetBit(kCanDelete);
+  exec->Draw();
+}
+
+//**************************************************************************************************
+/**
+ * The histogram whose statistics box is drawn (the drawn one, or the one a graph was converted from; null for other data),
+ * with its under- and overflow cleared unless they are shown.
+ */
+//**************************************************************************************************
+template <typename T>
+TH1* PlotPainter::StatsHistogram(item_state_t& state, T data_ptr, bool& showStats)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& drawOption = padState.drawOption;
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  TH1* statsHist{nullptr};  // the drawn histogram, or the one a graph was converted from
+  if constexpr (is_hist<data_type>()) {
+    statsHist = data_ptr;
+  } else if constexpr (is_graph_1d<data_type>()) {
+    if (auto source = mSourceHists.find(data_ptr); source != mSourceHists.end()) {
+      statsHist = source->second.get();
+    }
+  }
+  if (statsHist) {
+    statsHist->SetStats(false);  // also removes a stats box stored with the input, which shows the numbers of the input instead of the drawn histogram
+    showStats = data->GetStatsFormat() && (!data->GetStatsFormat()->empty() || data->GetStatsTitle());
+    if constexpr (is_hist<data_type>()) {
+      if (showStats && str_starts_with(drawOption, "SAME")) drawOption.insert(4, "S");  // ROOT fills a stats box only with SAMES, not with SAME
+    }
+    if (!(data->GetShowOverflowBins() && *data->GetShowOverflowBins())) {
+      // TH2Poly keeps its bins outside the cell array of TH1, whose loop over the global cells would zero the real bins;
+      // its overflow regions are never drawn anyway
+      bool isPoly{false};
+      if constexpr (is_hist_2d<data_type>()) isPoly = data_ptr->InheritsFrom(TH2Poly::Class());
+      if (!isPoly) statsHist->ClearUnderflowAndOverflow();
+    }
+  } else if (data->GetStatsFormat()) {
+    logger::warning("Statistics boxes are available only for histograms, not for {}.", DataName(*data));
+  }
+  return statsHist;
+}
+
+//**************************************************************************************************
+/**
+ * Names the drawn data <number>:<name>[<request>]:<data source>[<projection>] (AddPoints data <number>:<name in messages>),
+ * and the histogram of its statistics box alike.
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::NameDrawnData(item_state_t& state, T data_ptr, TH1* statsHist)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& hasRefFunc = padState.hasRefFunc;
+  auto& dataIndex = padState.dataIndex;
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  // named <number>:<name>[<request>]:<data source>[<projection>], AddPoints data <number>:<name in messages>
+  const auto& projInfo = data->GetProjInfo();
+  const string inputName = (is_user_defined(data->GetDataSource())) ? DataName(*data) : data->GetName() + data->GetDataInfo().GetNameSuffix() + ":" + data->GetDataSource() + ((projInfo) ? projInfo->GetNameSuffix() : "");
+  data_ptr->SetName((std::to_string(dataIndex - hasRefFunc) + ":" + inputName).data());
+  mDataDefinitions[data_ptr] = data;
+  if constexpr (!is_hist<data_type>()) {
+    if (statsHist) {
+      statsHist->SetName(data_ptr->GetName());  // for <name> and the title line of the statistics box
+      mDataDefinitions[statsHist] = data;
+    }
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Adds to the setup of the pad what ROOT forgets between paints: the colour levels of a 2d graph and the ranges of a histogram,
+ * which an interactive zoom sets on all histograms of the pad.
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::KeepAtEveryPaint(item_state_t& state, T data_ptr, bool hasRangeX, bool hasRangeY)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& padSetup = padState.padSetup;
+  auto& hasRefFunc = padState.hasRefFunc;
+  auto& dataIndex = padState.dataIndex;
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  if constexpr (is_graph_2d<data_type>()) {
+    // ROOT paints a 2d graph through a histogram it makes when painting and does not store with the graph: it gets the colour levels at every paint
+    const auto& contours = data->GetContours();
+    if (contours ? !contours->empty() : data->GetNContours().value_or(0) > 0) {
+      string levels = (contours) ? fmt::format("{}, std::vector<Double_t>{{", contours->size()) : std::to_string(*data->GetNContours());
+      if (contours) {
+        for (const double_t level : *contours)
+          levels += fmt::format("{}, ", level);
+        levels += "}.data()";
+      }
+      DrawExec("levels_" + std::to_string(dataIndex - hasRefFunc),
+               fmt::format("if (auto* graph = dynamic_cast<TGraph2D*>(gPad->GetPrimitive({}))) graph->GetHistogram()->SetContour({});", CppQuoted(data_ptr->GetName()), levels));
+    }
+  }
+  if constexpr (is_hist<data_type>()) {
+    // an interactive zoom sets its range on all histograms of the pad (and unzooming shows all their bins):
+    // the setup of the pad, which runs at every paint, restores the range of the data
+    string keepRange;
+    if (hasRangeX && !pad_ptr->GetView()) {
+      keepRange += fmt::format(" h->GetXaxis()->SetRange({}, {});", data_ptr->GetXaxis()->GetFirst(), data_ptr->GetXaxis()->GetLast());
+    }
+    if constexpr (is_hist_2d<data_type>() || is_hist_3d<data_type>()) {
+      if (hasRangeY && !pad_ptr->GetView()) {
+        keepRange += fmt::format(" h->GetYaxis()->SetRange({}, {});", data_ptr->GetYaxis()->GetFirst(), data_ptr->GetYaxis()->GetLast());
+      }
+    } else {
+      if (data->GetMinRangeY()) keepRange += fmt::format(" h->SetMinimum({});", *data->GetMinRangeY());
+      if (data->GetMaxRangeY()) keepRange += fmt::format(" h->SetMaximum({});", *data->GetMaxRangeY());
+    }
+    if (!keepRange.empty()) padSetup += HistCommand(data_ptr->GetName(), keepRange);
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Draws the fill below a graph drawn with area, hist_clipped or hist_open_clipped and a fill, whose line or steps are its outline
+ * (true if drawn).
+ */
+//**************************************************************************************************
+template <typename T>
+bool PlotPainter::DrawFillBelow(item_state_t& state, T data_ptr, optional<draw_option_t> alias)
+{
+  pad_state_t& padState = state.padState;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& drawOption = padState.drawOption;
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  bool hasFillBelow{false};
+  if constexpr (is_graph_1d<data_type>()) {
+    // the area of a polar graph is the polygon through its points (in their order), filled on the polar grid as ROOT fills it (F)
+    const bool isPolar = data_ptr->InheritsFrom(TGraphPolar::Class());
+    if (isPolar && alias == area && data_ptr->GetFillStyle() != 0 && data_ptr->GetFillColor() != 0 && data_ptr->GetN() > 0) drawOption += " F";
+    if ((alias == area || alias == hist_clipped || alias == hist_open_clipped) && !isPolar && data_ptr->GetFillStyle() != 0 && data_ptr->GetFillColor() != 0 && data_ptr->GetN() > 0) {
+      // the polygon closed at zero below the points of area (F alone would close it from the last point to the first, LF would draw its
+      // edges down to zero), that of the steps far below the frame (at ROOT's base line once the frame is final): ROOT cuts it at the frame
+      vector<double_t> x(data_ptr->GetX(), data_ptr->GetX() + data_ptr->GetN());
+      vector<double_t> y(data_ptr->GetY(), data_ptr->GetY() + data_ptr->GetN());
+      if (alias != hist_clipped) {  // the steps of hist_clipped already go down there at the outer edges
+        const double_t base = (alias == area) ? 0. : ClippedBase(data_ptr, pad_ptr->GetLogy());
+        x.insert(x.begin(), x.front());
+        y.insert(y.begin(), base);
+        x.push_back(x.back());
+        y.push_back(base);
+      }
+      auto* polygon = new TGraph(static_cast<int32_t>(x.size()), x.data(), y.data());
+      polygon->SetName((string("fill_") + data_ptr->GetName()).data());  // not "<number>:...", so legend rows refer to the line or steps
+      data_ptr->TAttLine::Copy(*polygon);
+      data_ptr->TAttFill::Copy(*polygon);
+      polygon->SetEditable(false);
+      polygon->SetBit(kCanDelete);
+      polygon->Draw("SAME F");
+      hasFillBelow = true;
+    }
+  }
+  return hasFillBelow;
+}
+
+//**************************************************************************************************
+/**
+ * Widens the colour range of the frame to 2d data drawn on top, at each end without a z range set by the user.
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::ExtendColorRange(item_state_t& state, T data_ptr)
+{
+  pad_state_t& padState = state.padState;
+  auto& padDefaults = padState.padDefaults;
+  auto& pad = padState.pad;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& storedRangeZ = padState.storedRangeZ;
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  // ROOT maps the colours of 2d data drawn on top with the range of the frame, which also draws the colour axis:
+  // at each end without a z range set by the user, that range covers all 2d data of the pad (not only the data the frame is made of)
+  if constexpr (is_hist_2d<data_type>() || is_graph_2d<data_type>() || is_func_2d<data_type>()) {
+    const optional<double_t> userMinZ = MinRange(pad, padDefaults, 'Z');
+    const optional<double_t> userMaxZ = MaxRange(pad, padDefaults, 'Z');
+    bool isEmpty{};
+    if constexpr (is_graph_2d<data_type>()) isEmpty = data_ptr->GetN() == 0;  // not drawn (and ROOT reads its first point)
+    if (!(userMinZ && userMaxZ) && !isEmpty && axisHist_ptr->GetDimension() == 2 && !pad_ptr->GetView()) {
+      double_t minimum{}, maximum{};
+      if constexpr (is_hist_2d<data_type>()) {
+        minimum = data_ptr->GetMinimum();
+        maximum = data_ptr->GetMaximum();
+      } else if constexpr (is_func_2d<data_type>()) {
+        const TH1* samples = data_ptr->GetHistogram();  // the values ROOT paints
+        minimum = samples->GetMinimum();
+        maximum = samples->GetMaximum();
+      } else {
+        minimum = data_ptr->GetZmin();
+        maximum = data_ptr->GetZmax();
+      }
+      if (!userMaxZ && !storedRangeZ.second && maximum > axisHist_ptr->GetMaximum()) axisHist_ptr->SetMaximum(maximum);
+      if (!userMinZ && !storedRangeZ.first && !pad_ptr->GetLogz() && minimum < axisHist_ptr->GetMinimum()) axisHist_ptr->SetMinimum(minimum);
+    }
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Draws the data into its pad (false if it is not drawn).
+ */
+//**************************************************************************************************
+template <typename T>
+bool PlotPainter::PaintData(item_state_t& state, T data_ptr, optional<draw_option_t> alias, bool projected)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& hasRefFunc = padState.hasRefFunc;
+  auto& drawOption = padState.drawOption;
+  auto& dataIndex = padState.dataIndex;
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  if constexpr (is_graph_2d<data_type>()) {
+    // the points are painted from an empty histogram of the graph, unless it already has one: then its contents (interpolated e.g.
+    // by the SetMinimum of ExtendColorRange) are painted as well, as colours behind PCOL: the contents are cleared
+    bool triangles{}, points{};
+    Paints3dGraph(drawOption, triangles, points);
+    if (points && !triangles) data_ptr->GetHistogram()->Reset("ICE");  // not its functions: they hold the triangulation
+    // painted as triangles or points, a 2d graph fills the pad behind the 3d box with the frame fill colour (TView3D::PadRange), also
+    // drawn after other data: everything painted before it would be covered
+    if (triangles || points) pad_ptr->SetFrameFillColor(0);
+  }
+  if (projected) {
+    // ROOT projects the range of a map only when it is painted without SAME (THistPainter::RecalculateRange): drawn SAME, a map
+    // that does not cover the whole sphere is painted over its unprojected range into the projected frame (too small, the frame
+    // showing around it). Added to the pad without SAME (Draw would clear the pad), it takes the projected range of the frame.
+    TString option(drawOption);
+    option.ReplaceAll("SAMES", "").ReplaceAll("SAME", "");
+    data_ptr->SetBit(TH1::kNoTitle);
+    data_ptr->AppendPad(option.Data());
+  } else if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
+    // ROOT reports an empty graph as an error at every paint
+    if (data_ptr->GetN() == 0 && mSourceHists.count(data_ptr)) {
+      // a histogram without filled bins drawn as a graph: nothing to paint, but its legend row and statistics box, as drawn as histogram
+      mNotPainted[{pad_ptr, static_cast<uint16_t>(dataIndex - hasRefFunc)}] = {data_ptr, drawOption};
+      mUndrawn.emplace_back(data_ptr);
+    } else if (data_ptr->GetN() == 0) {
+      // no legend row and no statistics box either, as for other data that is not drawn (TH2Poly in 3d)
+      return NotDrawn(state, data_ptr, "Graph {} has no points: it is not drawn.", DataName(*data));
+    } else {
+      if constexpr (is_graph_1d<data_type>()) {
+        // a graph with several sets of y errors draws them as the parts of the option after ';' say, one per set, the first part being
+        // the graph itself (TGraphPainter::PaintGraphMultiErrors): an alias gives each set the error style it gives other graphs
+        auto* multi = dynamic_cast<TGraphMultiErrors*>(data_ptr);
+        if (multi && multi->GetNYErrors() > 0 && alias && drawOption.find(';') == string::npos) {
+          string global, errors;
+          for (char c : drawOption) {
+            const bool errorStyle = (c >= '2' && c <= '5');                                     // boxes and bands
+            const bool both = std::string_view("XxZz[]|> ").find(c) != std::string_view::npos;  // no errors, no end lines, brackets, arrows
+            if (!errorStyle) global += c;
+            if (errorStyle || both) errors += c;
+          }
+          drawOption = global;
+          for (int32_t set = 0; set < multi->GetNYErrors(); ++set)
+            drawOption += ";" + errors;  // one part per set (with fewer, ROOT takes the first part also for the first set)
+        }
+      }
+      data_ptr->Draw(drawOption.data());
+    }
+  } else {
+    data_ptr->Draw(drawOption.data());
+  }
+  return true;
+}
+
+//**************************************************************************************************
+/**
+ * Adds the row of the data to the legend it is set for, if it has a label.
+ */
+//**************************************************************************************************
+void PlotPainter::AddLegendRow(item_state_t& state, bool hasFillBelow)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& pad = padState.pad;
+  auto& hasRefFunc = padState.hasRefFunc;
+  auto& dataIndex = padState.dataIndex;
+  // in case a label was specified for the data, add it to corresponding legend
+  const auto& legendBoxVector = pad.GetLegendBoxes();
+  if (legendBoxVector.size() && data->GetLegendLabel() && !data->GetLegendLabel()->empty()) {
+    // by default place legend entries in first legend
+    uint8_t legendID{1u};
+    // explicit user choice overrides this
+    if (data->GetLegendID()) legendID = *data->GetLegendID();
+
+    if (legendID > 0u && legendID <= legendBoxVector.size()) {
+      optional<Plot::Pad::LegendEntry> legendEntry = data->GetLegendEntryIfSet();
+      if (hasFillBelow && !(legendEntry && legendEntry->GetSymbolElements())) {  // the row shows the fill, as for hist and area of histograms
+        if (!legendEntry) legendEntry.emplace();
+        legendEntry->SetSymbolElements("F");
+      }
+      legendBoxVector[legendID - 1]->AddDataRow(*data->GetLegendLabel(), (dataIndex - hasRefFunc), legendEntry);
+    } else {
+      logger::warning("The legend set for data {} does not exist in its pad (SetLegend counts the legends added by the plot itself, not those of its base plot).", DataName(*data));
+    }
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Reports data that cannot be drawn: kept until the plot is done, the next data keeps its number. False, for the caller to return.
+ */
+//**************************************************************************************************
+template <typename T, typename... Args>
+bool PlotPainter::NotDrawn(item_state_t& state, T data_ptr, Args&&... args)
+{
+  logger::warning(std::forward<Args>(args)...);
+  mUndrawn.emplace_back(data_ptr);
+  ++state.padState.dataIndex;
+  state.padState.drawOption = "SAME ";
+  return false;
 }
 
 //**************************************************************************************************
