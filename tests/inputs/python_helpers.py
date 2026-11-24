@@ -4,7 +4,7 @@ histo and histo2d fill like numpy.histogram and numpy.histogram2d (bins as a num
 weights with errors from the sum of their squares) from numpy arrays of any numeric type, lists and pandas Series; graph makes a
 TGraphErrors with optional errors; table makes a tree of a dict of arrays, a structured array, a DataFrame or a 2d array with column
 names: numbers and bools keep their type, strings become std::string, columns that cannot be stored are skipped with a warning naming
-the reason. Wrong input raises an exception saying what is wrong (a TypeError for the wrong kind of argument, a ValueError for wrong
+the reason (a type that cannot be stored, a name a branch cannot have or one taken before, several values per row). Wrong input raises an exception saying what is wrong (a TypeError for the wrong kind of argument, a ValueError for wrong
 values). Arrays, lists of numbers and dicts of columns given to AddDataSource directly raise a TypeError naming the helpers; a dict of
 ROOT objects one saying they are given as a list. Handed to
 AddDataSource, a table works with Project1D and Filter (also on strings), a histogram is drawn as filled.
@@ -197,6 +197,11 @@ check("table of a structured array", ROOT.RDataFrame(S.table("s", structured)).S
 check("table of a categorical column", S.table("c", pd.DataFrame({"cat": pd.Categorical(["a", "b", "a"])})).GetEntries() == 3, "")
 tree, printed = captured(lambda: S.table("i", pd.DataFrame({0: [1.0], "x[2]": [1.0], "ok": [2.0], "a/b": [1.0]})))
 check("table: names a branch cannot have are skipped with the reason", tree.GetNbranches() == 2 and "column 'x[2]' is skipped (a branch name cannot be empty or contain / [ ] :)" in printed, printed)
+tree, printed = captured(lambda: S.table("dup", pd.DataFrame([[1.0, 2.0]], columns=[0, "0"])))
+check("table: a column named as one before it is skipped with the reason", tree.GetNbranches() == 1 and "column '0' is skipped (a column of the same name comes first)" in printed, printed)
+pairs = np.zeros(3, dtype=[("x", "f8"), ("v", "f8", (2,))])
+tree, printed = captured(lambda: S.table("pairs", pairs))
+check("table: a column with several values per row is skipped with the reason", tree.GetNbranches() == 1 and "column 'v' is skipped (only one value per row is supported)" in printed, printed)
 check("table of an empty DataFrame", S.table("z", pd.DataFrame({"a": np.array([], dtype=float)})).GetEntries() == 0, "")
 matrix = rng.normal(size=(100, 3))
 tm = S.table("m", matrix, columns=["a", "b", "c"])
