@@ -55,6 +55,11 @@ namespace SciRooPlot
 {
 using util::expand_path;
 
+//**************************************************************************************************
+/**
+ * The name of a verbosity level, as srp verbosity takes it.
+ */
+//**************************************************************************************************
 string Config::LogLevelName(int level)
 {
   switch (level) {
@@ -77,6 +82,11 @@ string Config::LogLevelName(int level)
   }
 }
 
+//**************************************************************************************************
+/**
+ * The verbosity level of a name (nullopt for an unknown one).
+ */
+//**************************************************************************************************
 std::optional<int> Config::ParseLogLevel(const string& name)
 {
   if (name == "silent") return LogLevel::silent;
@@ -89,6 +99,11 @@ std::optional<int> Config::ParseLogLevel(const string& name)
   return std::nullopt;
 }
 
+//**************************************************************************************************
+/**
+ * The name of a colour mode of the terminal output, as srp color takes it.
+ */
+//**************************************************************************************************
 string Config::ColorModeName(int mode)
 {
   switch (mode) {
@@ -103,6 +118,11 @@ string Config::ColorModeName(int mode)
   }
 }
 
+//**************************************************************************************************
+/**
+ * The colour mode of a name (nullopt for an unknown one).
+ */
+//**************************************************************************************************
 std::optional<int> Config::ParseColorMode(const string& name)
 {
   if (name == "bright") return ColorMode::bright;
@@ -110,6 +130,12 @@ std::optional<int> Config::ParseColorMode(const string& name)
   if (name == "off") return ColorMode::off;
   return std::nullopt;
 }
+
+//**************************************************************************************************
+/**
+ * A screen or bitmap scale: a finite positive number (nullopt otherwise).
+ */
+//**************************************************************************************************
 std::optional<double> Config::ParseScale(const string& value)
 {
   try {  // independent of the locale (std::stod follows LC_NUMERIC, which a Python program may set)
@@ -120,6 +146,11 @@ std::optional<double> Config::ParseScale(const string& value)
   return std::nullopt;
 }
 
+//**************************************************************************************************
+/**
+ * Reads the configuration, with the overrides of this process from the environment; it is saved at exit.
+ */
+//**************************************************************************************************
 Config::Config()
 {
   LoadConfig();
@@ -136,21 +167,44 @@ Config::Config()
   }
   std::atexit([] { Instance().Save(); });
 }
+
+//**************************************************************************************************
+/**
+ * The configuration of the process.
+ */
+//**************************************************************************************************
 Config& Config::Instance()
 {
   // never destroyed: a destructor would write the files during static destruction, where a failure can neither be reported nor handled
   static Config* config = new Config();
   return *config;
 }
+
+//**************************************************************************************************
+/**
+ * The configuration of the process, to change it.
+ */
+//**************************************************************************************************
 Config& Config::GetMutable()
 {
   return Instance();
 }
+
+//**************************************************************************************************
+/**
+ * The configuration of the process, to read it.
+ */
+//**************************************************************************************************
 const Config& Config::Get()
 {
   return Instance();
 }
 
+//**************************************************************************************************
+/**
+ * Reads the settings and projects from the config path (SCIROOPLOT_CONFIG_PATH, default ~/.SciRooPlot).
+ */
+//**************************************************************************************************
 void Config::LoadConfig()
 {
   const char* envPath = gSystem->Getenv("SCIROOPLOT_CONFIG_PATH");
@@ -220,7 +274,11 @@ void Config::LoadConfig()
   }
 }
 
-// sets a setting from its value in settings.info (those of the srp commands); nullopt for an unknown key, false for a bad value
+//**************************************************************************************************
+/**
+ * Sets a setting from its value in settings.info (those of the srp commands); nullopt for an unknown key, false for a bad value.
+ */
+//**************************************************************************************************
 std::optional<bool> Config::ApplySetting(const string& key, const string& value)
 {
   if (key == "verbosity") {
@@ -270,17 +328,32 @@ std::optional<bool> Config::ApplySetting(const string& key, const string& value)
   return std::nullopt;
 }
 
-// an exclusive lock of the config path for reading and writing its files: other srp commands and programs wait meanwhile
-// (without the lock file, e.g. in a read-only config path, the files are written unlocked)
+//**************************************************************************************************
+/**
+ * An exclusive lock of the config path for reading and writing its files: other srp commands and programs wait meanwhile (without
+ * the lock file, e.g. in a read-only config path, the files are written unlocked).
+ */
+//**************************************************************************************************
 Config::Lock::Lock(const std::filesystem::path& path) : mFd(open((path / ".lock").c_str(), O_RDWR | O_CREAT | O_CLOEXEC, 0644))
 {
   if (mFd >= 0) flock(mFd, LOCK_EX);
 }
+
+//**************************************************************************************************
+/**
+ * Releases the lock.
+ */
+//**************************************************************************************************
 Config::Lock::~Lock()
 {
   if (mFd >= 0) close(mFd);  // releases the lock
 }
 
+//**************************************************************************************************
+/**
+ * Writes a file of the configuration (false with an error).
+ */
+//**************************************************************************************************
 bool Config::WriteInfoFile(const string& file, const ptree& tree)
 {
   try {
@@ -292,8 +365,12 @@ bool Config::WriteInfoFile(const string& file, const ptree& tree)
   return true;
 }
 
-// the files are read again under the lock and only the settings and projects this process changed are written,
-// so that srp commands and programs running at the same time do not undo each other's changes
+//**************************************************************************************************
+/**
+ * The files are read again under the lock and only the settings and projects this process changed are written, so that srp
+ * commands and programs running at the same time do not undo each other's changes.
+ */
+//**************************************************************************************************
 bool Config::Save()
 {
   const bool settingsChanged = !mChangedSettings.empty() || mRewriteSettings;
@@ -336,13 +413,23 @@ bool Config::Save()
   return savedSettings && savedProjects;
 }
 
-// a projects file that could not be read is never written over (it would lose every project): changes to projects fail until it is fixed
+//**************************************************************************************************
+/**
+ * A projects file that could not be read is never written over (it would lose every project): changes to projects fail until it
+ * is fixed.
+ */
+//**************************************************************************************************
 bool Config::ProjectsReadable() const
 {
   if (mProjectsUnreadable) logger::error("Cannot change projects: {} could not be read. Fix or remove it.", mProjectsFile);
   return !mProjectsUnreadable;
 }
 
+//**************************************************************************************************
+/**
+ * Writes the projects this process changed at once, before the files of a project are changed on disk.
+ */
+//**************************************************************************************************
 bool Config::SaveProjects()
 {
   if (mProjectsUnreadable) return true;  // nothing was changed (ProjectsReadable)
@@ -406,11 +493,21 @@ bool Config::SaveProjects()
   return WriteInfoFile(ProjectsFile(), projectsTree);
 }
 
+//**************************************************************************************************
+/**
+ * Whether a project is registered.
+ */
+//**************************************************************************************************
 bool Config::Exists(const string& projectName) const
 {
   return mProjects.find(projectName) != mProjects.end();
 }
 
+//**************************************************************************************************
+/**
+ * The names of the registered projects.
+ */
+//**************************************************************************************************
 vector<string> Config::ProjectNames() const
 {
   vector<string> names;
@@ -420,6 +517,11 @@ vector<string> Config::ProjectNames() const
   return names;
 }
 
+//**************************************************************************************************
+/**
+ * Srp rename: renames a project and its directory in the config path.
+ */
+//**************************************************************************************************
 bool Config::Rename(const string& projectName, const string& newProjectName)
 {
   if (!ProjectsReadable()) return false;
@@ -520,7 +622,11 @@ bool Config::Rename(const string& projectName, const string& newProjectName)
   return true;
 }
 
-// false if a project could not be removed (as for srp remove)
+//**************************************************************************************************
+/**
+ * False if a project could not be removed (as for srp remove).
+ */
+//**************************************************************************************************
 bool Config::Reset()
 {
   if (!ProjectsReadable()) return false;
@@ -539,6 +645,11 @@ bool Config::Reset()
   return removed.size() == projectNames.size();
 }
 
+//**************************************************************************************************
+/**
+ * Srp clean: removes the projects whose program is gone (false if one could not be removed).
+ */
+//**************************************************************************************************
 bool Config::Clean()
 {
   if (!ProjectsReadable()) return false;
@@ -583,12 +694,22 @@ bool Config::Clean()
   return removed.size() == inactiveProjects.size();
 }
 
+//**************************************************************************************************
+/**
+ * The properties of a project, as stored (unexpanded).
+ */
+//**************************************************************************************************
 std::map<string, string> Config::Properties(const string& projectName) const
 {
   auto it = mProjects.find(projectName);
   return (it != mProjects.end()) ? it->second.mProperties : std::map<string, string>{};
 }
 
+//**************************************************************************************************
+/**
+ * Srp remove: removes a project from the configuration (its code is kept).
+ */
+//**************************************************************************************************
 bool Config::Remove(const string& projectName)
 {
   if (!ProjectsReadable()) return false;
@@ -610,11 +731,13 @@ bool Config::Remove(const string& projectName)
   return true;
 }
 
+//**************************************************************************************************
 /**
  * Removes the projects from the configuration and deletes their directories in the config path; returns the ones removed.
  * The configuration is saved first: if that fails nothing is deleted. A directory that cannot be deleted afterwards
  * keeps its project registered (saved again), so projects.info always matches the directories.
  */
+//**************************************************************************************************
 vector<string> Config::RemoveProjects(const vector<string>& projectNames, const string& nextCurrent)
 {
   std::map<string, Project> removed;
@@ -663,6 +786,11 @@ vector<string> Config::RemoveProjects(const vector<string>& projectNames, const 
   return deleted;
 }
 
+//**************************************************************************************************
+/**
+ * Whether the directory of a project is inside the config path (reported otherwise): only those are changed or deleted.
+ */
+//**************************************************************************************************
 bool Config::CheckProjectDir(const string& projectName) const
 {
   // only the project's directory in the config path (plots.info, dataSources.info, ...), never the user code or the output directory
@@ -676,8 +804,12 @@ bool Config::CheckProjectDir(const string& projectName) const
   return true;
 }
 
-// the entries of a project's directory that SciRooPlot did not write there: with a config path that is a general folder
-// (SCIROOPLOT_CONFIG_PATH=$HOME), a project named like a folder of the user (Documents) is that folder
+//**************************************************************************************************
+/**
+ * The entries of a project's directory that SciRooPlot did not write there: with a config path that is a general folder
+ * (SCIROOPLOT_CONFIG_PATH=$HOME), a project named like a folder of the user (Documents) is that folder.
+ */
+//**************************************************************************************************
 string Config::ForeignEntries(const std::filesystem::path& projectPath)
 {
   string foreign;
@@ -690,6 +822,11 @@ string Config::ForeignEntries(const std::filesystem::path& projectPath)
   return foreign;
 }
 
+//**************************************************************************************************
+/**
+ * Deletes the directory of a project in the config path (false with an error).
+ */
+//**************************************************************************************************
 bool Config::DeleteProjectDir(const string& projectName) const
 {
   if (!CheckProjectDir(projectName)) return false;
@@ -717,6 +854,11 @@ bool Config::DeleteProjectDir(const string& projectName) const
   return true;
 }
 
+//**************************************************************************************************
+/**
+ * Srp select: makes a project the current one.
+ */
+//**************************************************************************************************
 bool Config::Select(const string& projectName)
 {
   if (!ProjectsReadable()) return false;
@@ -733,7 +875,12 @@ bool Config::Select(const string& projectName)
   return true;
 }
 
-// a program can save the definitions of a project before it is registered (its config folder exists then): the error says how to register it
+//**************************************************************************************************
+/**
+ * A program can save the definitions of a project before it is registered (its config folder exists then): the error says how to
+ * register it.
+ */
+//**************************************************************************************************
 void Config::ReportUnknown(const string& projectName) const
 {
   std::error_code ec;
@@ -744,31 +891,55 @@ void Config::ReportUnknown(const string& projectName) const
   }
 }
 
-// empty without a project or without a valid config path (nothing is written into the current directory instead)
+//**************************************************************************************************
+/**
+ * Empty without a project or without a valid config path (nothing is written into the current directory instead).
+ */
+//**************************************************************************************************
 std::filesystem::path Config::ProjectPath(const string& projectName) const
 {
   if (projectName.empty() || mPath.empty()) return {};
   return mPath / projectName;
 }
 
+//**************************************************************************************************
+/**
+ * The file of the plot definitions of a project.
+ */
+//**************************************************************************************************
 string Config::PlotsFile(const string& projectName) const
 {
   if (projectName.empty() || mPath.empty()) return {};
   return mPath / projectName / "plots.info";
 }
 
+//**************************************************************************************************
+/**
+ * The file of the data sources of a project.
+ */
+//**************************************************************************************************
 string Config::DataSourcesFile(const string& projectName) const
 {
   if (projectName.empty() || mPath.empty()) return {};
   return mPath / projectName / "dataSources.info";
 }
 
+//**************************************************************************************************
+/**
+ * The file of the settings a project declares.
+ */
+//**************************************************************************************************
 string Config::SettingsFile(const string& projectName) const
 {
   if (projectName.empty() || mPath.empty()) return {};
   return mPath / projectName / "settings.info";
 }
 
+//**************************************************************************************************
+/**
+ * The settings the program of a project declares: empty if there are none, nullopt for an unreadable file (reported).
+ */
+//**************************************************************************************************
 std::optional<ptree> Config::DeclaredSettings(const string& projectName) const
 {
   ptree settings;
@@ -785,6 +956,11 @@ std::optional<ptree> Config::DeclaredSettings(const string& projectName) const
   return settings;
 }
 
+//**************************************************************************************************
+/**
+ * The declaration of one setting of a project (nullopt if there is none, reported on request).
+ */
+//**************************************************************************************************
 std::optional<ptree> Config::DeclaredSetting(const string& projectName, const string& name, bool report) const
 {
   const auto declared = DeclaredSettings(projectName);
@@ -803,6 +979,11 @@ std::optional<ptree> Config::DeclaredSetting(const string& projectName, const st
   return std::nullopt;
 }
 
+//**************************************************************************************************
+/**
+ * What a declared setting takes when the value is not one of them (empty if it is).
+ */
+//**************************************************************************************************
 string Config::AllowedSettingValues(const ptree& declaration, const string& value)
 {
   vector<string> choices;
@@ -816,6 +997,11 @@ string Config::AllowedSettingValues(const ptree& declaration, const string& valu
   return "";
 }
 
+//**************************************************************************************************
+/**
+ * An integer (nullopt otherwise).
+ */
+//**************************************************************************************************
 std::optional<int> Config::ParseInteger(const string& value)
 {
   try {
@@ -825,6 +1011,11 @@ std::optional<int> Config::ParseInteger(const string& value)
   return std::nullopt;
 }
 
+//**************************************************************************************************
+/**
+ * A finite number, independent of the locale (nullopt otherwise).
+ */
+//**************************************************************************************************
 std::optional<double> Config::ParseNumber(const string& value)
 {
   try {  // independent of the locale, as the scales
@@ -835,7 +1026,11 @@ std::optional<double> Config::ParseNumber(const string& value)
   return std::nullopt;
 }
 
-// a project name without illegal characters
+//**************************************************************************************************
+/**
+ * A project name without illegal characters.
+ */
+//**************************************************************************************************
 bool Config::CheckProjectName(const string& projectName)
 {
   if (auto illegal = find_illegal_name_char(projectName)) {
@@ -845,7 +1040,11 @@ bool Config::CheckProjectName(const string& projectName)
   return true;
 }
 
-// a program or output directory: absolute once ~ and environment variables are expanded
+//**************************************************************************************************
+/**
+ * A program or output directory: absolute once ~ and environment variables are expanded.
+ */
+//**************************************************************************************************
 bool Config::CheckPath(const string& path)
 {
   const auto expandedPath = expand_path(path);
@@ -857,7 +1056,12 @@ bool Config::CheckPath(const string& path)
   return true;
 }
 
-// the program of a project: a path as CheckPath, which may not exist yet (srp init-* registers before creating it), but is no folder
+//**************************************************************************************************
+/**
+ * The program of a project: a path as CheckPath, which may not exist yet (srp init-* registers before creating it), but is no
+ * folder.
+ */
+//**************************************************************************************************
 bool Config::CheckProgram(const string& program)
 {
   if (!CheckPath(program)) return false;
@@ -871,6 +1075,11 @@ bool Config::CheckProgram(const string& program)
   return true;
 }
 
+//**************************************************************************************************
+/**
+ * Srp add: registers a project with its program and output directory.
+ */
+//**************************************************************************************************
 bool Config::Add(const string& projectName, const string& program, const string& outputDir)
 {
   if (!ProjectsReadable()) return false;
@@ -900,6 +1109,11 @@ bool Config::Add(const string& projectName, const string& program, const string&
   return true;
 }
 
+//**************************************************************************************************
+/**
+ * A property of the project (empty if it has none).
+ */
+//**************************************************************************************************
 string Config::Project::Property(const string& property) const
 {
   auto it = mProperties.find(property);
@@ -909,6 +1123,11 @@ string Config::Project::Property(const string& property) const
   return {};
 }
 
+//**************************************************************************************************
+/**
+ * Sets a property of a project (program, outdir), checked as for srp add.
+ */
+//**************************************************************************************************
 bool Config::SetProperty(const string& projectName, const string& property, const string& value)
 {
   if (!ProjectsReadable()) return false;
@@ -964,22 +1183,42 @@ bool Config::SetProperty(const string& projectName, const string& property, cons
   return true;
 }
 
+//**************************************************************************************************
+/**
+ * A property of a project, as stored (empty if it has none).
+ */
+//**************************************************************************************************
 string Config::Property(const string& projectName, const string& property) const
 {
   auto it = mProjects.find(projectName);
   return (it != mProjects.end()) ? it->second.Property(property) : "";
 }
 
+//**************************************************************************************************
+/**
+ * The program of a project, expanded.
+ */
+//**************************************************************************************************
 string Config::Program(const string& projectName) const
 {
   return expand_path(Property(projectName, "program")).value_or("");
 }
 
+//**************************************************************************************************
+/**
+ * The output directory of a project, expanded.
+ */
+//**************************************************************************************************
 string Config::OutputDir(const string& projectName) const
 {
   return expand_path(Property(projectName, "outdir")).value_or("");
 }
 
+//**************************************************************************************************
+/**
+ * Reads the properties of a project, skipping those with an empty or illegal name.
+ */
+//**************************************************************************************************
 Config::Project::Project(const ptree& tree)
 {
   for (const auto& [key, child] : tree) {
@@ -1000,6 +1239,11 @@ Config::Project::Project(const ptree& tree)
   }
 }
 
+//**************************************************************************************************
+/**
+ * The properties of the project to store (empty ones left out).
+ */
+//**************************************************************************************************
 ptree Config::Project::GetTree() const
 {
   ptree tree;
@@ -1011,7 +1255,11 @@ ptree Config::Project::GetTree() const
   return tree;
 }
 
-// sets a setting as the srp command of its name does; a bad value is reported and changes nothing
+//**************************************************************************************************
+/**
+ * Sets a setting as the srp command of its name does; a bad value is reported and changes nothing.
+ */
+//**************************************************************************************************
 bool Config::SetSetting(const string& key, const string& value)
 {
   static const std::map<string, string> hints{{"verbosity", "debug | hint | log | info | warning | error | silent"},
@@ -1030,23 +1278,41 @@ bool Config::SetSetting(const string& key, const string& value)
   return true;
 }
 
+//**************************************************************************************************
+/**
+ * The folder of all local copies (remote files, HEPData records).
+ */
+//**************************************************************************************************
 string Config::CacheFolder() const
 {
   return (mCacheLocation.empty()) ? (mPath / "cache").string() : (std::filesystem::path(mCacheLocation) / "SciRooPlot").string();
 }
 
-// as srp settings shows it: off, or on with the folder of the copies
+//**************************************************************************************************
+/**
+ * As srp settings shows it: off, or on with the folder of the copies.
+ */
+//**************************************************************************************************
 string Config::CacheSettingValue() const
 {
   return (mCacheOn) ? "on (" + CacheFolder() + ")" : "off";
 }
 
-// the settings the logger of the public headers needs, without exposing the configuration itself
+//**************************************************************************************************
+/**
+ * The verbosity of the process, for the logger (the public headers get the settings they need without the configuration itself).
+ */
+//**************************************************************************************************
 int logger::detail::verbosity()
 {
   return Config::Get().Verbosity();
 }
 
+//**************************************************************************************************
+/**
+ * The colour mode of the terminal output, for the logger.
+ */
+//**************************************************************************************************
 int logger::detail::color()
 {
   return Config::Get().Color();

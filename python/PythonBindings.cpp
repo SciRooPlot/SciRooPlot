@@ -229,6 +229,11 @@ struct type_caster<color_t> {
 };
 }  // namespace pybind11::detail
 
+//**************************************************************************************************
+/**
+ * The module SciRooPlot.
+ */
+//**************************************************************************************************
 PYBIND11_MODULE(SciRooPlot, m)
 {
   m.doc() = R"pbdoc(
@@ -276,6 +281,11 @@ PYBIND11_MODULE(SciRooPlot, m)
   export_plot_manager(m);
 }
 
+//**************************************************************************************************
+/**
+ * The logger of C++ as the submodule SciRooPlot.logger.
+ */
+//**************************************************************************************************
 void export_logging(py::module_& m)
 {
   // the functions of the logger namespace of C++: SciRooPlot.logger.info("...")
@@ -289,6 +299,12 @@ void export_logging(py::module_& m)
   loggerModule.def("warning", [](std::string_view s) { logger::warning("{}", s); }, arg("message"));
   loggerModule.def("error", [](std::string_view s) { logger::error("{}", s); }, arg("message"));
 }
+
+//**************************************************************************************************
+/**
+ * The draw options, box placements and coordinate systems as Python enums.
+ */
+//**************************************************************************************************
 void export_draw_options(py::module_& m)
 {
 #define OPT(name, ...) .value(#name, draw_option_t::name)
@@ -302,6 +318,11 @@ void export_draw_options(py::module_& m)
 #undef COORDINATES
 }
 
+//**************************************************************************************************
+/**
+ * ROOT's colours, line, marker and fill styles, palettes and text alignments as module constants.
+ */
+//**************************************************************************************************
 void export_root_constants(py::module_& m)
 {
   gSystem->Load("libGraf");
@@ -316,6 +337,11 @@ void export_root_constants(py::module_& m)
   }
 }
 
+//**************************************************************************************************
+/**
+ * Python interface of PlotManager.
+ */
+//**************************************************************************************************
 void export_plot_manager(py::module_& m)
 {
   py::class_<PlotManager>(m, "PlotManager")
@@ -323,7 +349,8 @@ void export_plot_manager(py::module_& m)
     // one entry point for file names and ROOT objects: separate overloads let pybind11 try to convert a
     // ROOT object into a list of strings first, which fails with a TypeError for objects like TGraph
     .def("AddDataSource", [](PlotManager& self, const string& dataSource, py::object input, bool replace) {
-      // py::handle, not py::object/py::module_: a static py::object gets decref'd at program exit, possibly after Python has already shut down, which crashes. release() leaks it on purpose instead -- fine since it's a permanent singleton.
+      // py::handle, not py::object: a static py::object is released at exit, possibly after Python shut down (a crash);
+      // release() leaks the permanent module on purpose
       static py::handle ROOT = py::module_::import("ROOT").release();
       static py::handle TObjectClass = py::object(ROOT.attr("TObject")).release();
       auto toTObject = [&dataSource](py::handle obj) {
@@ -408,6 +435,11 @@ void export_plot_manager(py::module_& m)
     .def_static("MakeBasePlot", &PlotManager::MakeBasePlot, arg("name") = "1d", py::arg_v("sizes", PanelLayout(), "PanelLayout()"), py::arg_v("shape", BasePlotShape(), "BasePlotShape()"));
 }
 
+//**************************************************************************************************
+/**
+ * Python interface of PanelLayout, its cells and BasePlotShape.
+ */
+//**************************************************************************************************
 void export_panel_layout(py::module_& m)
 {
   py::class_<Panel>(m, "Panel", "One axis frame of a layout, sizes in units of the standard panel.")
@@ -448,9 +480,14 @@ void export_panel_layout(py::module_& m)
     .def("SetRatioHeight", &BasePlotShape::SetRatioHeight, arg("height"), ref_int);
 }
 
-// the setter groups of Plot.h (MarkerSetters, LineSetters, ...) for the classes that have them; through a lambda per setter,
-// so that each class returns itself to Python (a Ratio its own type, not the Data the forwarded setters of Data would give)
-// and no member pointer of a base behind the vptr is called (GCC's vptr sanitizer wrongly reports that as an invalid object)
+//**************************************************************************************************
+/**
+ * The marker setters of Plot.h for the classes that have them. Each setter group (MarkerSetters, LineSetters, ...) goes through
+ * a lambda per setter, so that each class returns itself to Python (a Ratio its own type, not the Data the forwarded setters of
+ * Data would give) and no member pointer of a base behind the vptr is called (GCC's vptr sanitizer wrongly reports that as an
+ * invalid object).
+ */
+//**************************************************************************************************
 template <class Self, class... Options>
 void def_marker_setters(py::class_<Self, Options...>& cls)
 {
@@ -461,6 +498,12 @@ void def_marker_setters(py::class_<Self, Options...>& cls)
     .def("SetMarkerStyle", [](Self& self, int16_t style) -> Self& { return self.SetMarkerStyle(style); }, arg("style"), ref_int)
     .def("SetMarkerSize", [](Self& self, float_t size) -> Self& { return self.SetMarkerSize(size); }, arg("size"), ref_int);
 }
+
+//**************************************************************************************************
+/**
+ * The line setters of Plot.h for the classes that have them (as def_marker_setters).
+ */
+//**************************************************************************************************
 template <class Self, class... Options>
 void def_line_setters(py::class_<Self, Options...>& cls)
 {
@@ -471,6 +514,12 @@ void def_line_setters(py::class_<Self, Options...>& cls)
     .def("SetLineStyle", [](Self& self, int16_t style) -> Self& { return self.SetLineStyle(style); }, arg("style"), ref_int)
     .def("SetLineWidth", [](Self& self, float_t width) -> Self& { return self.SetLineWidth(width); }, arg("width"), ref_int);
 }
+
+//**************************************************************************************************
+/**
+ * The fill setters of Plot.h for the classes that have them (as def_marker_setters).
+ */
+//**************************************************************************************************
 template <class Self, class... Options>
 void def_fill_setters(py::class_<Self, Options...>& cls)
 {
@@ -480,6 +529,12 @@ void def_fill_setters(py::class_<Self, Options...>& cls)
     .def("SetFillStyle", [](Self& self, int16_t style) -> Self& { return self.SetFillStyle(style); }, arg("style"), ref_int)
     .def("SetFillAlpha", [](Self& self, float_t alpha) -> Self& { return self.SetFillAlpha(alpha); }, arg("alpha"), ref_int);
 }
+
+//**************************************************************************************************
+/**
+ * The text setters of Plot.h for the classes that have them (as def_marker_setters).
+ */
+//**************************************************************************************************
 template <class Self, class... Options>
 void def_text_setters(py::class_<Self, Options...>& cls)
 {
@@ -490,6 +545,12 @@ void def_text_setters(py::class_<Self, Options...>& cls)
     .def("SetTextFont", [](Self& self, int16_t font) -> Self& { return self.SetTextFont(font); }, arg("font"), ref_int)
     .def("SetTextSize", [](Self& self, float_t size) -> Self& { return self.SetTextSize(size); }, arg("size"), ref_int);
 }
+
+//**************************************************************************************************
+/**
+ * The border setters of Plot.h for the classes that have them (as def_marker_setters).
+ */
+//**************************************************************************************************
 template <class Self, class... Options>
 void def_border_setters(py::class_<Self, Options...>& cls)
 {
@@ -500,6 +561,12 @@ void def_border_setters(py::class_<Self, Options...>& cls)
     .def("SetBorderStyle", [](Self& self, int16_t style) -> Self& { return self.SetBorderStyle(style); }, arg("style"), ref_int)
     .def("SetBorderWidth", [](Self& self, float_t width) -> Self& { return self.SetBorderWidth(width); }, arg("width"), ref_int);
 }
+
+//**************************************************************************************************
+/**
+ * The position setters of Plot.h for the boxes (as def_marker_setters).
+ */
+//**************************************************************************************************
 template <class Self, class... Options>
 void def_position_setters(py::class_<Self, Options...>& cls)
 {
@@ -511,6 +578,11 @@ void def_position_setters(py::class_<Self, Options...>& cls)
     .def("SetAutoPlacement", [](Self& self, box_placement_t placement) -> Self& { return self.SetAutoPlacement(placement); }, arg("placement") = best_corner, ref_int);
 }
 
+//**************************************************************************************************
+/**
+ * Python interface of Plot.
+ */
+//**************************************************************************************************
 void export_plot(py::module_& m)
 {
   // plot[padID] = pad: Python may still hold references into the old content of the pad (data, boxes, shapes, axes), so it is moved
@@ -547,6 +619,11 @@ void export_plot(py::module_& m)
     .def("SetTransparent", &Plot::SetTransparent, ref_int);
 }
 
+//**************************************************************************************************
+/**
+ * Python interface of Plot::Pad.
+ */
+//**************************************************************************************************
 void export_pad(py::module_& m)
 {
   py::class_<Pad> pad(m, "Pad");
@@ -650,6 +727,12 @@ void export_pad(py::module_& m)
 
 // the setters of Data, which Ratio forwards: through a lambda per setter, so that each class returns itself to Python (and a setter
 // Ratio does not forward, which would return the Data part, does not compile); the modifiers of a Ratio act on numerator, denominator or result
+
+//**************************************************************************************************
+/**
+ * The setters of Data, shared by Data and Ratio so that each returns its own type (as def_marker_setters).
+ */
+//**************************************************************************************************
 template <class Self, class... Options>
 void def_data_setters(py::class_<Self, Options...>& cls)
 {
@@ -735,7 +818,12 @@ void def_data_setters(py::class_<Self, Options...>& cls)
     .def("Entries", overload_cast<uint32_t, uint32_t>(&Self::Entries), arg("entryMin"), arg("entryMax"), ref_int);
 }
 
-// Data from [name, dataSource] or (name, dataSource), [name] alone: denominator of a ratio, which takes the data source of the numerator
+//**************************************************************************************************
+/**
+ * Data from [name, dataSource] or (name, dataSource), [name] alone: denominator of a ratio, which takes the data source of
+ * the numerator.
+ */
+//**************************************************************************************************
 Data data_from_sequence(const py::sequence& nameAndSource)
 {
   const bool allStrings = std::all_of(nameAndSource.begin(), nameAndSource.end(), [](const py::handle& item) { return py::isinstance<py::str>(item); });
@@ -745,6 +833,11 @@ Data data_from_sequence(const py::sequence& nameAndSource)
   return Data(nameAndSource[0].cast<string>(), nameAndSource.size() == 2 ? nameAndSource[1].cast<string>() : string{});
 }
 
+//**************************************************************************************************
+/**
+ * Python interface of Plot::Pad::Data.
+ */
+//**************************************************************************************************
 void export_data(py::module_& m)
 {
   py::class_<Data> data(m, "Data");
@@ -764,6 +857,11 @@ void export_data(py::module_& m)
   py::implicitly_convertible<py::tuple, Data>();
 }
 
+//**************************************************************************************************
+/**
+ * Python interface of Plot::Pad::Ratio.
+ */
+//**************************************************************************************************
 void export_ratio(py::module_& m)
 {
   py::class_<Ratio, Data> ratio(m, "Ratio");
@@ -786,6 +884,11 @@ void export_ratio(py::module_& m)
   m.def("Function", &Function, arg("formula"), arg("label") = nullopt, "A function given by its formula as data, e.g. as numerator or denominator of a ratio.");
 }
 
+//**************************************************************************************************
+/**
+ * Python interface of Plot::Pad::Axis.
+ */
+//**************************************************************************************************
 void export_axis(py::module_& m)
 {
   py::class_<Axis>(m, "Axis")
@@ -827,6 +930,11 @@ void export_axis(py::module_& m)
     .def("SetTickOrientation", &Axis::SetTickOrientation, arg("tickOrientation"), ref_int);
 }
 
+//**************************************************************************************************
+/**
+ * Python interface of Plot::Pad::ImageBox.
+ */
+//**************************************************************************************************
 void export_image_box(py::module_& m)
 {
   py::class_<ImageBox> imageBox(m, "ImageBox");
@@ -837,6 +945,11 @@ void export_image_box(py::module_& m)
   def_position_setters(imageBox);
 }
 
+//**************************************************************************************************
+/**
+ * Python interface of Plot::Pad::TextBox.
+ */
+//**************************************************************************************************
 void export_text_box(py::module_& m)
 {
   py::class_<TextBox> textBox(m, "TextBox");
@@ -857,6 +970,11 @@ void export_text_box(py::module_& m)
     .def("SetLineSpacing", &TextBox::SetLineSpacing, arg("lineSpacing"), ref_int);
 }
 
+//**************************************************************************************************
+/**
+ * Python interface of Plot::Pad::StatsBox.
+ */
+//**************************************************************************************************
 void export_stats_box(py::module_& m)
 {
   py::class_<StatsBox> statsBox(m, "StatsBox");
@@ -875,6 +993,11 @@ void export_stats_box(py::module_& m)
     .def("SetLineSpacing", &StatsBox::SetLineSpacing, arg("lineSpacing"), ref_int);
 }
 
+//**************************************************************************************************
+/**
+ * Python interface of Plot::Pad::LegendBox.
+ */
+//**************************************************************************************************
 void export_legend_box(py::module_& m)
 {
   py::class_<LegendBox> legendBox(m, "LegendBox");
@@ -913,6 +1036,11 @@ void export_legend_box(py::module_& m)
     .def("SetLineSpacing", &LegendBox::SetLineSpacing, arg("lineSpacing"), ref_int);
 }
 
+//**************************************************************************************************
+/**
+ * Python interface of Plot::Pad::LegendEntry.
+ */
+//**************************************************************************************************
 void export_legend_entry(py::module_& m)
 {
   py::class_<LegendEntry> legendEntry(m, "LegendEntry");
@@ -935,6 +1063,11 @@ void export_legend_entry(py::module_& m)
   def_text_setters(legendEntry);
 }
 
+//**************************************************************************************************
+/**
+ * Python interface of Plot::Pad::Shape.
+ */
+//**************************************************************************************************
 void export_shape(py::module_& m)
 {
   py::class_<Shape> shape(m, "Shape", "A line, arrow, region, ellipse or polygon in a pad that is not data (Pad.AddLine, AddArrow, AddRegion, ...).");
@@ -953,6 +1086,11 @@ void export_shape(py::module_& m)
   def_fill_setters(shape);
 }
 
+//**************************************************************************************************
+/**
+ * The helpers for data of the Python world (table(), in-memory ROOT objects from PyROOT).
+ */
+//**************************************************************************************************
 void export_python_data_interfaces(py::module_& m)
 {
   auto bind_owned = [](std::uintptr_t addr, const char* className) {
