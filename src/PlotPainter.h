@@ -538,6 +538,7 @@ class PlotPainter
     int32_t ny{};
     std::vector<uint8_t> blocked;
   };
+  struct occupancy_marker_t;  // the grid of OccupiedCells and how it is marked (PlotPainter.cpp)
   occupancy_t OccupiedCells(TPad* pad);
   bool CoversData(TPad* pad, double_t lowerLeftX, double_t lowerLeftY, double_t width, double_t height);
   bool FindFreeSpace(TPad* pad, const std::array<double_t, 4>& freeArea, double_t width, double_t height, box_placement_t placement, double_t& lowerLeftX, double_t& lowerLeftY, bool& coversData);

@@ -7292,34 +7292,29 @@ void PlotPainter::FindBoxPosition(TPad* pad, double_t width, double_t height, bo
 
 //**************************************************************************************************
 /**
- * The cells of a grid over the pad (10 pixels each, as in TPad::PlaceBox) that are occupied by what is drawn in it, by kind
- * (occupancy_t). Replaces TPad::PlaceBox's view of the pad, which considers all bins of a histogram (also those outside of the visible
- * range), does not clip to the pad (absurd values like huge error bars then take forever and block the whole pad) and samples graphs
- * only coarsely.
+ * The grid of OccupiedCells over a pad, and the cells that what is drawn in it occupies.
  */
 //**************************************************************************************************
-PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
-{
-  const double_t cellSize = 10. * mScale;  // grid cell size in pixels (as in TPad::PlaceBox), scaled so that boxes are placed the same way at any scale
-  // size of the pad in pixels (GetWw and GetWh alone are the size of the whole canvas)
-  const double_t padWidthPixel = PadSizePixel(pad).first;  // no structured binding: captured below
-  const double_t padHeightPixel = PadSizePixel(pad).second;
-  const int32_t nx = static_cast<int32_t>(padWidthPixel / cellSize);
-  const int32_t ny = static_cast<int32_t>(padHeightPixel / cellSize);
-  if (nx <= 0 || ny <= 0) return {};
-  constexpr uint8_t kObject = occupancy_t::kObject, kMap = occupancy_t::kMap, kBox = occupancy_t::kBox, kShape = occupancy_t::kShape;
-  vector<uint8_t> blocked(static_cast<size_t>(nx) * ny, 0u);
+struct PlotPainter::occupancy_marker_t {
+  static constexpr uint8_t kObject = occupancy_t::kObject, kMap = occupancy_t::kMap, kBox = occupancy_t::kBox, kShape = occupancy_t::kShape;
+  TPad* pad;
+  double_t scale;  // of the plot (mScale)
+  double_t cellSize;
+  double_t padWidthPixel;
+  double_t padHeightPixel;
+  int32_t nx;
+  int32_t ny;
+  double_t cellsPerX;  // conversion from pad coordinates to (fractional) grid cells
+  double_t cellsPerY;
+  vector<uint8_t> blocked;
 
-  // conversion from pad coordinates to (fractional) grid cells
-  const double_t cellsPerX = nx / (pad->GetX2() - pad->GetX1());
-  const double_t cellsPerY = ny / (pad->GetY2() - pad->GetY1());
-  auto cellX = [&](double_t x) { return (x - pad->GetX1()) * cellsPerX; };
-  auto cellY = [&](double_t y) { return (y - pad->GetY1()) * cellsPerY; };
+  double_t CellX(double_t x) const { return (x - pad->GetX1()) * cellsPerX; }
+  double_t CellY(double_t y) const { return (y - pad->GetY1()) * cellsPerY; }
   // conversion from user coordinates to pad coordinates (on a log axis values at or below zero are at the frame edge, as ROOT puts them)
-  auto padX = [&](double_t x) { return (!pad->GetLogx() || x > 0.) ? ToPad(x, pad->GetLogx()) : pad->GetUxmin(); };
-  auto padY = [&](double_t y) { return (!pad->GetLogy() || y > 0.) ? ToPad(y, pad->GetLogy()) : pad->GetUymin(); };
-
-  auto setRect = [&](double_t x1, double_t y1, double_t x2, double_t y2, uint8_t value) {  // in cells, inclusive (value: kObject, kMap, kBox or kShape)
+  double_t PadX(double_t x) const { return (!pad->GetLogx() || x > 0.) ? ToPad(x, pad->GetLogx()) : pad->GetUxmin(); }
+  double_t PadY(double_t y) const { return (!pad->GetLogy() || y > 0.) ? ToPad(y, pad->GetLogy()) : pad->GetUymin(); }
+  void SetRect(double_t x1, double_t y1, double_t x2, double_t y2, uint8_t value)  // in cells, inclusive (value: kObject, kMap, kBox or kShape)
+  {
     if (!std::isfinite(x1) || !std::isfinite(y1) || !std::isfinite(x2) || !std::isfinite(y2)) return;
     if (x1 > x2) std::swap(x1, x2);
     if (y1 > y2) std::swap(y1, y2);
@@ -7334,16 +7329,18 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
         blocked[i + static_cast<size_t>(j) * nx] |= value;
       }
     }
-  };
+  }
   // a point, with a marker of that size: ROOT draws 8 pixels per unit of the size, times mScale (ApplyScale, after the placement)
-  auto markPoint = [&](double_t x, double_t y, float_t markerSize = 0.f) {
-    const double_t halfCells = 4. * markerSize * mScale / cellSize;
-    setRect(cellX(x) - halfCells, cellY(y) - halfCells, cellX(x) + halfCells, cellY(y) + halfCells, kObject);
-  };
+  void MarkPoint(double_t x, double_t y, float_t markerSize = 0.f)
+  {
+    const double_t halfCells = 4. * markerSize * scale / cellSize;
+    SetRect(CellX(x) - halfCells, CellY(y) - halfCells, CellX(x) + halfCells, CellY(y) + halfCells, kObject);
+  }
   // a line (in pad coordinates) with the width it is drawn with: a line wider than one pixel (ROOT's width, times mScale) reaches beyond its cell
-  auto markLine = [&](double_t x1, double_t y1, double_t x2, double_t y2, double_t lineWidth = 1., uint8_t value = occupancy_t::kObject) {
-    const double_t halfCells = 0.5 * std::max(lineWidth - 1., 0.) * mScale / cellSize;
-    double_t cx1 = cellX(x1), cy1 = cellY(y1), cx2 = cellX(x2), cy2 = cellY(y2);
+  void MarkLine(double_t x1, double_t y1, double_t x2, double_t y2, double_t lineWidth = 1., uint8_t value = occupancy_t::kObject)
+  {
+    const double_t halfCells = 0.5 * std::max(lineWidth - 1., 0.) * scale / cellSize;
+    double_t cx1 = CellX(x1), cy1 = CellY(y1), cx2 = CellX(x2), cy2 = CellY(y2);
     if (!std::isfinite(cx1) || !std::isfinite(cy1) || !std::isfinite(cx2) || !std::isfinite(cy2)) return;
     // clip the line to the grid (Liang-Barsky) so lines far outside of the pad cost nothing
     double_t t0 = 0., t1 = 1.;
@@ -7364,25 +7361,25 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
     const int32_t nSteps = static_cast<int32_t>(std::ceil(2. * std::max(std::abs(dx), std::abs(dy)) * (t1 - t0))) + 1;
     for (int32_t step = 0; step <= nSteps; ++step) {
       const double_t t = t0 + (t1 - t0) * step / nSteps;
-      setRect(cx1 + t * dx - halfCells, cy1 + t * dy - halfCells, cx1 + t * dx + halfCells, cy1 + t * dy + halfCells, value);
+      SetRect(cx1 + t * dx - halfCells, cy1 + t * dy - halfCells, cx1 + t * dx + halfCells, cy1 + t * dy + halfCells, value);
     }
-  };
-
+  }
   // the ticks across both ends of a vertical error bar (gStyle's end error size in pixels, times mScale)
-  auto markEnds = [&](double_t x, double_t low, double_t high) {
-    const double_t halfCells = 0.5 * gStyle->GetEndErrorSize() * mScale / cellSize;
+  void MarkEnds(double_t x, double_t low, double_t high)
+  {
+    const double_t halfCells = 0.5 * gStyle->GetEndErrorSize() * scale / cellSize;
     for (double_t end : {low, high}) {
-      setRect(cellX(x) - halfCells, cellY(end), cellX(x) + halfCells, cellY(end), kObject);
+      SetRect(CellX(x) - halfCells, CellY(end), CellX(x) + halfCells, CellY(end), kObject);
     }
-  };
-
+  }
   // a filled polygon (pad coordinates): the cells whose centre row crosses its inside (scanline; the outline is marked separately)
-  auto markPolygon = [&](const vector<std::pair<double_t, double_t>>& points, uint8_t value = occupancy_t::kObject) {
+  void MarkPolygon(const vector<std::pair<double_t, double_t>>& points, uint8_t value = occupancy_t::kObject)
+  {
     if (points.size() < 3) return;
     double_t yMin = std::numeric_limits<double_t>::infinity(), yMax = -yMin;
     for (const auto& [x, y] : points) {
-      yMin = std::min(yMin, cellY(y));
-      yMax = std::max(yMax, cellY(y));
+      yMin = std::min(yMin, CellY(y));
+      yMax = std::max(yMax, CellY(y));
     }
     if (!std::isfinite(yMin) || !std::isfinite(yMax)) return;
     vector<double_t> crossings;
@@ -7392,19 +7389,20 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
       for (size_t k = 0; k < points.size(); ++k) {
         const auto& [xa, ya] = points[k];
         const auto& [xb, yb] = points[(k + 1) % points.size()];
-        const double_t ca = cellY(ya), cb = cellY(yb);
-        if ((ca <= yc && yc < cb) || (cb <= yc && yc < ca)) crossings.push_back(cellX(xa) + (yc - ca) / (cb - ca) * (cellX(xb) - cellX(xa)));
+        const double_t ca = CellY(ya), cb = CellY(yb);
+        if ((ca <= yc && yc < cb) || (cb <= yc && yc < ca)) crossings.push_back(CellX(xa) + (yc - ca) / (cb - ca) * (CellX(xb) - CellX(xa)));
       }
       std::sort(crossings.begin(), crossings.end());
       for (size_t k = 0; k + 1 < crossings.size(); k += 2) {
-        setRect(crossings[k], j, crossings[k + 1], j, value);
+        SetRect(crossings[k], j, crossings[k + 1], j, value);
       }
     }
-  };
+  }
   // the part of a band (pad coordinates) from (xa, lowA to highA) to (xb, lowB to highB), column by column: in each column from the lowest to
   // the highest edge within it (at its two sides)
-  auto markBand = [&](double_t xa, double_t lowA, double_t highA, double_t xb, double_t lowB, double_t highB) {
-    const double_t ca = cellX(xa), cb = cellX(xb);
+  void MarkBand(double_t xa, double_t lowA, double_t highA, double_t xb, double_t lowB, double_t highB)
+  {
+    const double_t ca = CellX(xa), cb = CellX(xb);
     if (!std::isfinite(ca) || !std::isfinite(cb)) return;
     const double_t c1 = std::max(std::min(ca, cb), 0.), c2 = std::min(std::max(ca, cb), static_cast<double_t>(nx));
     auto at = [&](double_t c) { return std::clamp((cb == ca) ? 0. : (c - ca) / (cb - ca), 0., 1.); };
@@ -7412,27 +7410,28 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
       const double_t ta = at(c), tb = at(c + 1.);
       const double_t bottom = std::min(lowA + ta * (lowB - lowA), lowA + tb * (lowB - lowA));
       const double_t top = std::max(highA + ta * (highB - highA), highA + tb * (highB - highA));
-      setRect(c, cellY(bottom), c, cellY(top), kObject);
+      SetRect(c, CellY(bottom), c, CellY(top), kObject);
     }
-  };
+  }
   // a filled histogram or curve starts at 0, or at the frame edge if 0 is outside of the frame; on a log axis at the lower frame edge
   // (TGraphPainter::PaintGrapHist and Smooth)
-  auto fillBaseY = [&]() { return (pad->GetLogy()) ? pad->GetUymin() : std::clamp(0., pad->GetUymin(), pad->GetUymax()); };
-
+  double_t FillBaseY() const { return (pad->GetLogy()) ? pad->GetUymin() : std::clamp(0., pad->GetUymin(), pad->GetUymax()); }
   // contour lines of 2d data (CONT1 to CONT3; CONT, CONT0 and CONT4 fill, COL is a map): only the cells a line passes through, i.e. where a
   // level lies between the values at the corners of the cell (widened by half a cell for the width of the lines); the levels are those of
   // the painted histogram (that of a 2d function is made when it is painted); without levels the whole range counts as before
-  auto isLineContour = [pad](TObject* obj) {
+  bool IsLineContour(TObject* obj) const
+  {
     const TString option = str_upper(DrawOption(pad, obj));
     return option.Contains("CONT") && !IsFilledContour(option.Data()) && !option.Contains("COL");
-  };
-  auto markContourLines = [&](TH1* levelsFrom, const std::function<double_t(double_t, double_t)>& valueAt, double_t xMin, double_t yMin, double_t xMax, double_t yMax) {
+  }
+  bool MarkContourLines(TH1* levelsFrom, const std::function<double_t(double_t, double_t)>& valueAt, double_t xMin, double_t yMin, double_t xMax, double_t yMax)
+  {
     const int32_t nLevels = (levelsFrom) ? levelsFrom->GetContour() : 0;
     if (nLevels <= 0) return false;
-    const int32_t i1 = std::max(0, static_cast<int32_t>(std::floor(cellX(padX(xMin)))));
-    const int32_t i2 = std::min(nx - 1, static_cast<int32_t>(std::floor(cellX(padX(xMax)))));
-    const int32_t j1 = std::max(0, static_cast<int32_t>(std::floor(cellY(padY(yMin)))));
-    const int32_t j2 = std::min(ny - 1, static_cast<int32_t>(std::floor(cellY(padY(yMax)))));
+    const int32_t i1 = std::max(0, static_cast<int32_t>(std::floor(CellX(PadX(xMin)))));
+    const int32_t i2 = std::min(nx - 1, static_cast<int32_t>(std::floor(CellX(PadX(xMax)))));
+    const int32_t j1 = std::max(0, static_cast<int32_t>(std::floor(CellY(PadY(yMin)))));
+    const int32_t j2 = std::min(ny - 1, static_cast<int32_t>(std::floor(CellY(PadY(yMax)))));
     if (i1 > i2 || j1 > j2) return true;
     vector<double_t> levels(nLevels);
     for (int32_t k = 0; k < nLevels; ++k)
@@ -7463,15 +7462,15 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
         }
         if (!(low < high)) continue;
         const auto level = std::upper_bound(levels.begin(), levels.end(), low);  // a level above the lowest corner and not above the highest
-        if (level != levels.end() && *level <= high) setRect(i, j, i, j, kMap);
+        if (level != levels.end() && *level <= high) SetRect(i, j, i, j, kMap);
       }
     }
     return true;
-  };
-
-  auto markHist = [&](TH1* hist) {
+  }
+  void MarkHist(TH1* hist)
+  {
     if (hist->GetDimension() == 2 && !pad->GetView()) {
-      if (!dynamic_cast<TH2Poly*>(hist) && isLineContour(hist)) {
+      if (!dynamic_cast<TH2Poly*>(hist) && IsLineContour(hist)) {
         TAxis* xAxis = hist->GetXaxis();
         TAxis* yAxis = hist->GetYaxis();
         auto* map = static_cast<TH2*>(hist);
@@ -7479,13 +7478,13 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
         const double_t xLow = xAxis->GetBinCenter(xAxis->GetFirst()), xHigh = xAxis->GetBinCenter(xAxis->GetLast());
         const double_t yLow = yAxis->GetBinCenter(yAxis->GetFirst()), yHigh = yAxis->GetBinCenter(yAxis->GetLast());
         const auto value = [map, xLow, xHigh, yLow, yHigh](double_t x, double_t y) { return map->Interpolate(std::clamp(x, xLow, xHigh), std::clamp(y, yLow, yHigh)); };
-        if (markContourLines(hist, value, xAxis->GetBinLowEdge(xAxis->GetFirst()), yAxis->GetBinLowEdge(yAxis->GetFirst()), xAxis->GetBinUpEdge(xAxis->GetLast()), yAxis->GetBinUpEdge(yAxis->GetLast()))) return;
+        if (MarkContourLines(hist, value, xAxis->GetBinLowEdge(xAxis->GetFirst()), yAxis->GetBinLowEdge(yAxis->GetFirst()), xAxis->GetBinUpEdge(xAxis->GetLast()), yAxis->GetBinUpEdge(yAxis->GetLast()))) return;
       }
       // maps drawn in the frame (col, box, text, ...): the filled bins of the visible range; ROOT leaves empty bins blank
       if (auto* poly = dynamic_cast<TH2Poly*>(hist)) {
         for (auto* obj : *poly->GetBins()) {
           auto* bin = static_cast<TH2PolyBin*>(obj);
-          if (bin->GetContent() != 0.) setRect(cellX(padX(bin->GetXMin())), cellY(padY(bin->GetYMin())), cellX(padX(bin->GetXMax())), cellY(padY(bin->GetYMax())), kMap);
+          if (bin->GetContent() != 0.) SetRect(CellX(PadX(bin->GetXMin())), CellY(PadY(bin->GetYMin())), CellX(PadX(bin->GetXMax())), CellY(PadY(bin->GetYMax())), kMap);
         }
         return;
       }
@@ -7513,7 +7512,7 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
               const double_t a = a1 + (a2 - a1) * k / steps;
               crown.emplace_back(midX + r1 * halfX * std::cos(a), midY + r1 * halfY * std::sin(a));
             }
-            markPolygon(crown, kMap);
+            MarkPolygon(crown, kMap);
           }
         }
         return;
@@ -7521,7 +7520,7 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
       for (int32_t binX = xAxis->GetFirst(); binX <= xAxis->GetLast(); ++binX) {
         for (int32_t binY = yAxis->GetFirst(); binY <= yAxis->GetLast(); ++binY) {
           if (hist->GetBinContent(binX, binY) == 0.) continue;
-          setRect(cellX(padX(xAxis->GetBinLowEdge(binX))), cellY(padY(yAxis->GetBinLowEdge(binY))), cellX(padX(xAxis->GetBinUpEdge(binX))), cellY(padY(yAxis->GetBinUpEdge(binY))), kMap);
+          SetRect(CellX(PadX(xAxis->GetBinLowEdge(binX))), CellY(PadY(yAxis->GetBinLowEdge(binY))), CellX(PadX(xAxis->GetBinUpEdge(binX))), CellY(PadY(yAxis->GetBinUpEdge(binY))), kMap);
         }
       }
       return;
@@ -7534,14 +7533,14 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
     // bar charts (THistPainter::PaintBar and PaintBarH): boxes from the frame edge to the content, also without fill style
     if (const bool isHorizontal = option.Contains("HBAR"); isHorizontal || option.Contains("BAR")) {
       for (int32_t bin = axis->GetFirst(); bin <= axis->GetLast(); ++bin) {
-        double_t low = (isHorizontal) ? padY(axis->GetBinLowEdge(bin)) : padX(axis->GetBinLowEdge(bin));
-        const double_t up = (isHorizontal) ? padY(axis->GetBinUpEdge(bin)) : padX(axis->GetBinUpEdge(bin));
+        double_t low = (isHorizontal) ? PadY(axis->GetBinLowEdge(bin)) : PadX(axis->GetBinLowEdge(bin));
+        const double_t up = (isHorizontal) ? PadY(axis->GetBinUpEdge(bin)) : PadX(axis->GetBinUpEdge(bin));
         const double_t width = (up - low) * hist->GetBarWidth();
         low += hist->GetBarOffset() * (up - low);
         if (isHorizontal) {
-          setRect(cellX(pad->GetUxmin()), cellY(low), cellX(padX(hist->GetBinContent(bin))), cellY(low + width), kObject);
+          SetRect(CellX(pad->GetUxmin()), CellY(low), CellX(PadX(hist->GetBinContent(bin))), CellY(low + width), kObject);
         } else {
-          setRect(cellX(low), cellY(pad->GetUymin()), cellX(low + width), cellY(padY(hist->GetBinContent(bin))), kObject);
+          SetRect(CellX(low), CellY(pad->GetUymin()), CellX(low + width), CellY(PadY(hist->GetBinContent(bin))), kObject);
         }
       }
       return;
@@ -7565,20 +7564,20 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
       const bool isCurve = option.Contains("C");
       const bool isLineArea = option.Contains("F2");
       if (isCurve || isLineArea) {
-        const double_t base = (isLineArea) ? pad->GetUymin() : fillBaseY();
+        const double_t base = (isLineArea) ? pad->GetUymin() : FillBaseY();
         vector<std::pair<double_t, double_t>> polygon;
         for (int32_t bin = axis->GetFirst(); bin <= axis->GetLast(); ++bin) {
-          polygon.emplace_back(padX(axis->GetBinCenter(bin)), padY(hist->GetBinContent(bin)));
+          polygon.emplace_back(PadX(axis->GetBinCenter(bin)), PadY(hist->GetBinContent(bin)));
         }
         if (!polygon.empty()) {
           polygon.emplace_back(polygon.back().first, base);
           polygon.emplace_back(polygon.front().first, base);
         }
-        markPolygon(polygon);
+        MarkPolygon(polygon);
       } else {
-        const double_t base = fillBaseY();
+        const double_t base = FillBaseY();
         for (int32_t bin = axis->GetFirst(); bin <= axis->GetLast(); ++bin) {
-          setRect(cellX(padX(axis->GetBinLowEdge(bin))), cellY(base), cellX(padX(axis->GetBinUpEdge(bin))), cellY(padY(hist->GetBinContent(bin))), kObject);
+          SetRect(CellX(PadX(axis->GetBinLowEdge(bin))), CellY(base), CellX(PadX(axis->GetBinUpEdge(bin))), CellY(PadY(hist->GetBinContent(bin))), kObject);
         }
       }
     }
@@ -7587,35 +7586,36 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
     for (int32_t bin = axis->GetFirst(); bin <= axis->GetLast(); ++bin) {  // only the visible range
       const double_t content = hist->GetBinContent(bin);
       if (hasErrors && !showEmpty && content == 0.) continue;  // not drawn by ROOT
-      const double_t xLow = padX(axis->GetBinLowEdge(bin));
-      const double_t xUp = padX(axis->GetBinUpEdge(bin));
-      const double_t xCenter = padX(axis->GetBinCenter(bin));
-      const double_t y = padY(content);
-      const double_t low = padY(content - hist->GetBinErrorLow(bin)), high = padY(content + hist->GetBinErrorUp(bin));
+      const double_t xLow = PadX(axis->GetBinLowEdge(bin));
+      const double_t xUp = PadX(axis->GetBinUpEdge(bin));
+      const double_t xCenter = PadX(axis->GetBinCenter(bin));
+      const double_t y = PadY(content);
+      const double_t low = PadY(content - hist->GetBinErrorLow(bin)), high = PadY(content + hist->GetBinErrorUp(bin));
       if (hasLine) {
-        if (previous) markLine(padX(axis->GetBinCenter(previous)), padY(hist->GetBinContent(previous)), xCenter, y, lineWidth);
+        if (previous) MarkLine(PadX(axis->GetBinCenter(previous)), PadY(hist->GetBinContent(previous)), xCenter, y, lineWidth);
       } else if (hasSteps || hasErrors) {
-        markLine(xLow, y, xUp, y, lineWidth);  // the step, or the error bar in x
+        MarkLine(xLow, y, xUp, y, lineWidth);  // the step, or the error bar in x
       }
-      markPoint(xCenter, y, markerSize);
+      MarkPoint(xCenter, y, markerSize);
       if (hasErrorBand && previous) {
         const double_t before = hist->GetBinContent(previous);
-        markBand(padX(axis->GetBinCenter(previous)), padY(before - hist->GetBinErrorLow(previous)), padY(before + hist->GetBinErrorUp(previous)), xCenter, low, high);
+        MarkBand(PadX(axis->GetBinCenter(previous)), PadY(before - hist->GetBinErrorLow(previous)), PadY(before + hist->GetBinErrorUp(previous)), xCenter, low, high);
       }
       previous = bin;
       if (hasErrorBand) {
-        setRect(cellX(xCenter), cellY(low), cellX(xCenter), cellY(high), kObject);
+        SetRect(CellX(xCenter), CellY(low), CellX(xCenter), CellY(high), kObject);
       } else if (hasErrorArea) {
-        setRect(cellX(xLow), cellY(low), cellX(xUp), cellY(high), kObject);
+        SetRect(CellX(xLow), CellY(low), CellX(xUp), CellY(high), kObject);
       } else if (hasErrors) {
-        markLine(xCenter, low, xCenter, high, lineWidth);
-        if (hasEndTicks) markEnds(xCenter, low, high);
+        MarkLine(xCenter, low, xCenter, high, lineWidth);
+        if (hasEndTicks) MarkEnds(xCenter, low, high);
       } else if (hasSteps && bin < axis->GetLast()) {
-        markLine(xUp, y, xUp, padY(hist->GetBinContent(bin + 1)), lineWidth);  // step to the next bin
+        MarkLine(xUp, y, xUp, PadY(hist->GetBinContent(bin + 1)), lineWidth);  // step to the next bin
       }
     }
-  };
-  auto markGraph = [&](TGraph* graph, const TObject* drawn = nullptr) {  // drawn: the object in the pad whose drawing option applies, if not the graph
+  }
+  void MarkGraph(TGraph* graph, const TObject* drawn = nullptr)  // drawn: the object in the pad whose drawing option applies, if not the graph
+  {
     const TString option = SymbolOption(DrawOption(pad, (drawn) ? drawn : graph));
     const bool hasErrorBoxes = option.Contains("2") || option.Contains("5");
     const bool hasErrorBand = option.Contains("3") || option.Contains("4");
@@ -7648,7 +7648,7 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
       const auto [xMin, xMax] = std::minmax_element(graph->GetX(), graph->GetX() + n);
       const double_t halfWidth = 0.5 * (*xMax - *xMin) / n * gStyle->GetBarWidth();
       for (int32_t i = 0; i < n; ++i) {
-        setRect(cellX(padX(graph->GetPointX(i) - halfWidth)), cellY(fillBaseY()), cellX(padX(graph->GetPointX(i) + halfWidth)), cellY(padY(graph->GetPointY(i))), kObject);
+        SetRect(CellX(PadX(graph->GetPointX(i) - halfWidth)), CellY(FillBaseY()), CellX(PadX(graph->GetPointX(i) + halfWidth)), CellY(PadY(graph->GetPointY(i))), kObject);
       }
     }
     if (option.Contains("F") && graph->GetFillColor() != 0 && graph->GetFillStyle() != 0) {
@@ -7656,41 +7656,42 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
       vector<std::pair<double_t, double_t>> polygon;
       polygon.reserve(n);
       for (int32_t i = 0; i < n; ++i) {
-        polygon.emplace_back(padX(graph->GetPointX(i)), padY(graph->GetPointY(i)));
+        polygon.emplace_back(PadX(graph->GetPointX(i)), PadY(graph->GetPointY(i)));
       }
-      markPolygon(polygon);
+      MarkPolygon(polygon);
     }
     for (int32_t i = 0; i < n; ++i) {
       const double_t xUser = graph->GetPointX(i), yUser = graph->GetPointY(i);
-      const double_t x = padX(xUser), y = padY(yUser);
-      markPoint(x, y, markerSize);
-      if (hasLine && i > 0) markLine(padX(graph->GetPointX(i - 1)), padY(graph->GetPointY(i - 1)), x, y, lineWidth);
+      const double_t x = PadX(xUser), y = PadY(yUser);
+      MarkPoint(x, y, markerSize);
+      if (hasLine && i > 0) MarkLine(PadX(graph->GetPointX(i - 1)), PadY(graph->GetPointY(i - 1)), x, y, lineWidth);
       const double_t exLow = errorXlow(i), exHigh = errorXhigh(i);
       const double_t eyLow = errorYlow(i), eyHigh = errorYhigh(i);
       if (hasErrorBoxes) {
-        setRect(cellX(padX(xUser - exLow)), cellY(padY(yUser - eyLow)), cellX(padX(xUser + exHigh)), cellY(padY(yUser + eyHigh)), kObject);
+        SetRect(CellX(PadX(xUser - exLow)), CellY(PadY(yUser - eyLow)), CellX(PadX(xUser + exHigh)), CellY(PadY(yUser + eyHigh)), kObject);
         continue;
       }
-      if (exLow > 0. || exHigh > 0.) markLine(padX(xUser - exLow), y, padX(xUser + exHigh), y, lineWidth);
+      if (exLow > 0. || exHigh > 0.) MarkLine(PadX(xUser - exLow), y, PadX(xUser + exHigh), y, lineWidth);
       if (eyLow > 0. || eyHigh > 0.) {
-        markLine(x, padY(yUser - eyLow), x, padY(yUser + eyHigh), lineWidth);
-        if (hasEndTicks) markEnds(x, padY(yUser - eyLow), padY(yUser + eyHigh));
+        MarkLine(x, PadY(yUser - eyLow), x, PadY(yUser + eyHigh), lineWidth);
+        if (hasEndTicks) MarkEnds(x, PadY(yUser - eyLow), PadY(yUser + eyHigh));
       }
       if (hasErrorBand && i > 0) {
         // the band from the previous point to this one
         const double_t yPrev = graph->GetPointY(i - 1);
-        markBand(padX(graph->GetPointX(i - 1)), padY(yPrev - errorYlow(i - 1)), padY(yPrev + errorYhigh(i - 1)), x, padY(yUser - eyLow), padY(yUser + eyHigh));
+        MarkBand(PadX(graph->GetPointX(i - 1)), PadY(yPrev - errorYlow(i - 1)), PadY(yPrev + errorYhigh(i - 1)), x, PadY(yUser - eyLow), PadY(yUser + eyHigh));
       }
     }
-  };
-  auto markFunc = [&](TF1* func) {
+  }
+  void MarkFunc(TF1* func)
+  {
     if (func->GetNdim() == 2 && !pad->GetView()) {
       // a 2d function drawn into the frame (colours, contours): a map over its range, contour lines where they pass
       double_t xMin{}, yMin{}, xMax{}, yMax{};
       func->GetRange(xMin, yMin, xMax, yMax);
       const auto value = [func](double_t x, double_t y) { return func->Eval(x, y); };
-      if (isLineContour(func) && markContourLines(func->GetHistogram(), value, xMin, yMin, xMax, yMax)) return;
-      setRect(cellX(padX(xMin)), cellY(padY(yMin)), cellX(padX(xMax)), cellY(padY(yMax)), kMap);
+      if (IsLineContour(func) && MarkContourLines(func->GetHistogram(), value, xMin, yMin, xMax, yMax)) return;
+      SetRect(CellX(PadX(xMin)), CellY(PadY(yMin)), CellX(PadX(xMax)), CellY(PadY(yMax)), kMap);
       return;
     }
     if (func->GetNdim() != 1) return;
@@ -7703,153 +7704,183 @@ PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
     double_t xPrev{}, yPrev{};
     for (int32_t i = 0; i < nPoints; ++i) {
       const double_t xUser = xMin + (xMax - xMin) * i / (nPoints - 1);
-      const double_t x = padX(xUser);
-      const double_t y = padY(func->Eval(xUser));
-      if (i > 0) markLine(xPrev, yPrev, x, y, func->GetLineWidth());
+      const double_t x = PadX(xUser);
+      const double_t y = PadY(func->Eval(xUser));
+      if (i > 0) MarkLine(xPrev, yPrev, x, y, func->GetLineWidth());
       if (isFilled) polygon.emplace_back(x, y);
       xPrev = x;
       yPrev = y;
     }
     if (isFilled) {
-      polygon.emplace_back(padX(xMax), fillBaseY());
-      polygon.emplace_back(padX(xMin), fillBaseY());
-      markPolygon(polygon);
-    }
-  };
-
-  for (auto* obj : *pad->GetListOfPrimitives()) {
-    if (obj->InheritsFrom(TFrame::Class())) {
-      // only the area within the frame is considered anyway
-      continue;
-    } else if (auto* pave = dynamic_cast<TPave*>(obj)) {
-      // legends and texts placed before (coordinates in NDC)
-      setRect(pave->GetX1NDC() * nx, pave->GetY1NDC() * ny, pave->GetX2NDC() * nx, pave->GetY2NDC() * ny, kBox);
-    } else if (auto* box = dynamic_cast<TBox*>(obj)) {  // regions (shapes), in axis values like lines and ellipses
-      setRect(cellX(padX(box->GetX1())), cellY(padY(box->GetY1())), cellX(padX(box->GetX2())), cellY(padY(box->GetY2())), kShape);
-    } else if (auto* line = dynamic_cast<TLine*>(obj)) {
-      // lines and arrows
-      if (!line->TestBit(TLine::kLineNDC)) markLine(padX(line->GetX1()), padY(line->GetY1()), padX(line->GetX2()), padY(line->GetY2()), line->GetLineWidth(), kShape);
-    } else if (auto* polyline = dynamic_cast<TPolyLine*>(obj)) {  // polygons (shapes): the outline, and with a fill the inside
-      vector<std::pair<double_t, double_t>> points;
-      for (int32_t i = 0; i < polyline->GetN(); ++i) {
-        points.emplace_back(padX(polyline->GetX()[i]), padY(polyline->GetY()[i]));
-      }
-      for (size_t i = 0; i + 1 < points.size(); ++i) {
-        markLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second, polyline->GetLineWidth(), kShape);
-      }
-      if (polyline->GetFillStyle() != 0 && TString(polyline->GetOption()).Contains("f")) markPolygon(points, kShape);
-    } else if (auto* ellipse = dynamic_cast<TEllipse*>(obj)) {
-      // the outline, and with a fill the inside (as a polygon of the drawn curve)
-      vector<std::pair<double_t, double_t>> points;
-      const double_t phiMin = ellipse->GetPhimin(), phiMax = ellipse->GetPhimax(), theta = ellipse->GetTheta() * TMath::DegToRad();
-      for (int32_t i = 0; i <= 72; ++i) {
-        const double_t phi = (phiMin + (phiMax - phiMin) * i / 72.) * TMath::DegToRad();
-        const double_t dx = ellipse->GetR1() * std::cos(phi), dy = ellipse->GetR2() * std::sin(phi);
-        points.emplace_back(padX(ellipse->GetX1()) + dx * std::cos(theta) - dy * std::sin(theta), padY(ellipse->GetY1()) + dx * std::sin(theta) + dy * std::cos(theta));
-      }
-      for (size_t i = 0; i + 1 < points.size(); ++i) {
-        markLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second, ellipse->GetLineWidth(), kShape);
-      }
-      if (ellipse->GetFillStyle() != 0) markPolygon(points, kShape);
-    } else if (auto* subPad = dynamic_cast<TPad*>(obj); subPad && TString(subPad->GetName()).BeginsWith("ImageBox_")) {
-      // images placed before (position in NDC of this pad)
-      setRect(subPad->GetXlowNDC() * nx, subPad->GetYlowNDC() * ny, (subPad->GetXlowNDC() + subPad->GetWNDC()) * nx, (subPad->GetYlowNDC() + subPad->GetHNDC()) * ny, kBox);
-    } else if (auto* hist = dynamic_cast<TH1*>(obj)) {
-      if (!TString(hist->GetName()).BeginsWith("axis_hist") && !TString(hist->GetName()).Contains("hframe")) markHist(hist);
-    } else if (auto* grid = dynamic_cast<TGraphPolargram*>(obj)) {
-      // the polar grid (TGraphPolargram::PaintPolarDivisions): a disc of radius 1 around the origin of the pad, and the label of each major
-      // division of the angle at radius 1 + offset, aligned so that it reaches away from the disc (FindAlign); the labels are made and
-      // measured as ROOT writes them (fractions of pi in radian mode, else the angle with %5.3g, own labels set with SetPolarLabel unknown)
-      vector<std::pair<double_t, double_t>> disc;
-      for (int32_t i = 0; i < 72; ++i) {
-        const double_t phi = TMath::TwoPi() * i / 72.;
-        disc.emplace_back(std::cos(phi), std::sin(phi));
-      }
-      // the grid is avoided like a shape, but it is no data a box covers
-      markPolygon(disc, kShape);
-      const double_t userPerPixelX = (pad->GetX2() - pad->GetX1()) / padWidthPixel;
-      const double_t userPerPixelY = (pad->GetY2() - pad->GetY1()) / padHeightPixel;
-      const bool ortho = grid->TestBit(TGraphPolargram::kLabelOrtho);
-      auto markLabel = [&](double_t x1, double_t y1, double_t x2, double_t y2) { setRect(cellX(padX(x1)), cellY(padY(y1)), cellX(padX(x2)), cellY(padY(y2)), kShape); };
-      TLatex measure;
-      measure.SetTextFont(grid->GetPolarLabelFont());
-      measure.SetTextSize(grid->GetPolarLabelSize());
-      TIter link(pad->GetListOfPrimitives());  // the option of the grid in the pad: N leaves out the labels
-      while (link() != grid) {
-      }
-      const int32_t nLabels = TString(link.GetOption()).Contains("n", TString::kIgnoreCase) ? 0 : grid->GetNdivPolar() % 100;
-      for (int32_t i = 0; i < nLabels; ++i) {
-        const double_t theta = i * 2 * TMath::Pi() / nLabels;  // as ROOT computes it: the alignment compares it with pi/2, pi and 3 pi/2
-        string label;
-        if (grid->IsRadian()) {
-          const int32_t divisor = std::gcd(2 * i, nLabels);
-          const int32_t num = 2 * i / divisor, den = nLabels / divisor;
-          if (num == 0) {
-            label = "0";
-          } else if (den == 1) {
-            label = (num == 1) ? "#pi" : std::to_string(num) + "#pi";
-          } else {
-            label = "#frac{" + ((num == 1) ? string{} : std::to_string(num)) + "#pi}{" + std::to_string(den) + "}";
-          }
-        } else {
-          label = fmt::format("{:.3g}", grid->GetTMin() + i * (grid->GetTMax() - grid->GetTMin()) / nLabels);
-        }
-        measure.SetTitle(label.data());
-        UInt_t wPixel{}, hPixel{};
-        measure.GetBoundingBox(wPixel, hPixel);
-        const double_t w = wPixel * userPerPixelX, h = hPixel * userPerPixelY;
-        double_t x = (1. + grid->GetPolarOffset()) * std::cos(theta);
-        double_t y = (1. + grid->GetPolarOffset()) * std::sin(theta);
-        double_t x1{}, y1{};
-        if (ortho) {
-          // turned along the radius: a square of the label length around its middle
-          const double_t length = std::max(wPixel, hPixel);
-          x += 0.5 * length * userPerPixelX * std::cos(theta);
-          y += 0.5 * length * userPerPixelY * std::sin(theta);
-          x1 = x - 0.5 * length * userPerPixelX;
-          y1 = y - 0.5 * length * userPerPixelY;
-          markLabel(x1, y1, x1 + length * userPerPixelX, y1 + length * userPerPixelY);
-          continue;
-        }
-        y += (theta >= 3 * TMath::Pi() / 12. && theta < 2 * TMath::Pi() / 3.) ? 0.04 : 0.01;  // ROOT lifts the labels a bit
-        // TGraphPolargram::FindAlign (private): horizontal 1 left, 2 centred, 3 right; vertical 1 bottom, 2 centred, 3 top
-        const double_t pi = TMath::Pi();
-        int32_t align = 12;
-        if (theta > 0. && theta < pi / 2) {
-          align = 11;
-        } else if (theta == pi / 2) {
-          align = 21;
-        } else if (theta > pi / 2 && theta < pi) {
-          align = 31;
-        } else if (theta == pi) {
-          align = 32;
-        } else if (theta > pi && theta < 3 * pi / 2) {
-          align = 33;
-        } else if (theta == 3 * pi / 2) {
-          align = 23;
-        } else if (theta > 3 * pi / 2) {
-          align = 13;
-        }
-        x1 = x - 0.5 * (align / 10 - 1) * w;
-        y1 = y - 0.5 * (align % 10 - 1) * h;
-        markLabel(x1, y1, x1 + w, y1 + h);
-      }
-    } else if (auto* polar = dynamic_cast<TGraphPolar*>(obj)) {
-      // its points in the coordinates of the pad, as painting placed them on the polar grid
-      TGraph painted(polar->GetN(), polar->GetXpol(), polar->GetYpol());
-      CopyStyle(*polar, painted);
-      markGraph(&painted, polar);
-    } else if (auto* graph = dynamic_cast<TGraph*>(obj)) {
-      markGraph(graph);
-    } else if (auto* graph2d = dynamic_cast<TGraph2D*>(obj); graph2d && !pad->GetView() && graph2d->GetN() > 0) {
-      // a 2d graph drawn into the frame (colours, contours): a map over the range of its points
-      setRect(cellX(padX(graph2d->GetXmin())), cellY(padY(graph2d->GetYmin())), cellX(padX(graph2d->GetXmax())), cellY(padY(graph2d->GetYmax())), kMap);
-    } else if (auto* func = dynamic_cast<TF1*>(obj)) {
-      markFunc(func);
+      polygon.emplace_back(PadX(xMax), FillBaseY());
+      polygon.emplace_back(PadX(xMin), FillBaseY());
+      MarkPolygon(polygon);
     }
   }
+  // everything drawn in the pad
+  void MarkPad()
+  {
+    for (auto* obj : *pad->GetListOfPrimitives()) {
+      if (obj->InheritsFrom(TFrame::Class())) {
+        // only the area within the frame is considered anyway
+        continue;
+      } else if (auto* pave = dynamic_cast<TPave*>(obj)) {
+        // legends and texts placed before (coordinates in NDC)
+        SetRect(pave->GetX1NDC() * nx, pave->GetY1NDC() * ny, pave->GetX2NDC() * nx, pave->GetY2NDC() * ny, kBox);
+      } else if (auto* box = dynamic_cast<TBox*>(obj)) {  // regions (shapes), in axis values like lines and ellipses
+        SetRect(CellX(PadX(box->GetX1())), CellY(PadY(box->GetY1())), CellX(PadX(box->GetX2())), CellY(PadY(box->GetY2())), kShape);
+      } else if (auto* line = dynamic_cast<TLine*>(obj)) {
+        // lines and arrows
+        if (!line->TestBit(TLine::kLineNDC)) MarkLine(PadX(line->GetX1()), PadY(line->GetY1()), PadX(line->GetX2()), PadY(line->GetY2()), line->GetLineWidth(), kShape);
+      } else if (auto* polyline = dynamic_cast<TPolyLine*>(obj)) {  // polygons (shapes): the outline, and with a fill the inside
+        vector<std::pair<double_t, double_t>> points;
+        for (int32_t i = 0; i < polyline->GetN(); ++i) {
+          points.emplace_back(PadX(polyline->GetX()[i]), PadY(polyline->GetY()[i]));
+        }
+        for (size_t i = 0; i + 1 < points.size(); ++i) {
+          MarkLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second, polyline->GetLineWidth(), kShape);
+        }
+        if (polyline->GetFillStyle() != 0 && TString(polyline->GetOption()).Contains("f")) MarkPolygon(points, kShape);
+      } else if (auto* ellipse = dynamic_cast<TEllipse*>(obj)) {
+        // the outline, and with a fill the inside (as a polygon of the drawn curve)
+        vector<std::pair<double_t, double_t>> points;
+        const double_t phiMin = ellipse->GetPhimin(), phiMax = ellipse->GetPhimax(), theta = ellipse->GetTheta() * TMath::DegToRad();
+        for (int32_t i = 0; i <= 72; ++i) {
+          const double_t phi = (phiMin + (phiMax - phiMin) * i / 72.) * TMath::DegToRad();
+          const double_t dx = ellipse->GetR1() * std::cos(phi), dy = ellipse->GetR2() * std::sin(phi);
+          points.emplace_back(PadX(ellipse->GetX1()) + dx * std::cos(theta) - dy * std::sin(theta), PadY(ellipse->GetY1()) + dx * std::sin(theta) + dy * std::cos(theta));
+        }
+        for (size_t i = 0; i + 1 < points.size(); ++i) {
+          MarkLine(points[i].first, points[i].second, points[i + 1].first, points[i + 1].second, ellipse->GetLineWidth(), kShape);
+        }
+        if (ellipse->GetFillStyle() != 0) MarkPolygon(points, kShape);
+      } else if (auto* subPad = dynamic_cast<TPad*>(obj); subPad && TString(subPad->GetName()).BeginsWith("ImageBox_")) {
+        // images placed before (position in NDC of this pad)
+        SetRect(subPad->GetXlowNDC() * nx, subPad->GetYlowNDC() * ny, (subPad->GetXlowNDC() + subPad->GetWNDC()) * nx, (subPad->GetYlowNDC() + subPad->GetHNDC()) * ny, kBox);
+      } else if (auto* hist = dynamic_cast<TH1*>(obj)) {
+        if (!TString(hist->GetName()).BeginsWith("axis_hist") && !TString(hist->GetName()).Contains("hframe")) MarkHist(hist);
+      } else if (auto* grid = dynamic_cast<TGraphPolargram*>(obj)) {
+        // the polar grid (TGraphPolargram::PaintPolarDivisions): a disc of radius 1 around the origin of the pad, and the label of each major
+        // division of the angle at radius 1 + offset, aligned so that it reaches away from the disc (FindAlign); the labels are made and
+        // measured as ROOT writes them (fractions of pi in radian mode, else the angle with %5.3g, own labels set with SetPolarLabel unknown)
+        vector<std::pair<double_t, double_t>> disc;
+        for (int32_t i = 0; i < 72; ++i) {
+          const double_t phi = TMath::TwoPi() * i / 72.;
+          disc.emplace_back(std::cos(phi), std::sin(phi));
+        }
+        // the grid is avoided like a shape, but it is no data a box covers
+        MarkPolygon(disc, kShape);
+        MarkPolarLabels(grid);
+      } else if (auto* polar = dynamic_cast<TGraphPolar*>(obj)) {
+        // its points in the coordinates of the pad, as painting placed them on the polar grid
+        TGraph painted(polar->GetN(), polar->GetXpol(), polar->GetYpol());
+        CopyStyle(*polar, painted);
+        MarkGraph(&painted, polar);
+      } else if (auto* graph = dynamic_cast<TGraph*>(obj)) {
+        MarkGraph(graph);
+      } else if (auto* graph2d = dynamic_cast<TGraph2D*>(obj); graph2d && !pad->GetView() && graph2d->GetN() > 0) {
+        // a 2d graph drawn into the frame (colours, contours): a map over the range of its points
+        SetRect(CellX(PadX(graph2d->GetXmin())), CellY(PadY(graph2d->GetYmin())), CellX(PadX(graph2d->GetXmax())), CellY(PadY(graph2d->GetYmax())), kMap);
+      } else if (auto* func = dynamic_cast<TF1*>(obj)) {
+        MarkFunc(func);
+      }
+    }
+  }
+  // the labels of a polar grid (TGraphPolargram::PaintPolarDivisions): at radius 1 + offset, aligned so that each reaches away from the
+  // disc (FindAlign); made and measured as ROOT writes them (fractions of pi in radian mode, else the angle with %5.3g, own labels set with
+  // SetPolarLabel unknown)
+  void MarkPolarLabels(TGraphPolargram* grid)
+  {
+    const double_t userPerPixelX = (pad->GetX2() - pad->GetX1()) / padWidthPixel;
+    const double_t userPerPixelY = (pad->GetY2() - pad->GetY1()) / padHeightPixel;
+    const bool ortho = grid->TestBit(TGraphPolargram::kLabelOrtho);
+    auto markLabel = [&](double_t x1, double_t y1, double_t x2, double_t y2) { SetRect(CellX(PadX(x1)), CellY(PadY(y1)), CellX(PadX(x2)), CellY(PadY(y2)), kShape); };
+    TLatex measure;
+    measure.SetTextFont(grid->GetPolarLabelFont());
+    measure.SetTextSize(grid->GetPolarLabelSize());
+    TIter link(pad->GetListOfPrimitives());  // the option of the grid in the pad: N leaves out the labels
+    while (link() != grid) {
+    }
+    const int32_t nLabels = TString(link.GetOption()).Contains("n", TString::kIgnoreCase) ? 0 : grid->GetNdivPolar() % 100;
+    for (int32_t i = 0; i < nLabels; ++i) {
+      const double_t theta = i * 2 * TMath::Pi() / nLabels;  // as ROOT computes it: the alignment compares it with pi/2, pi and 3 pi/2
+      string label;
+      if (grid->IsRadian()) {
+        const int32_t divisor = std::gcd(2 * i, nLabels);
+        const int32_t num = 2 * i / divisor, den = nLabels / divisor;
+        if (num == 0) {
+          label = "0";
+        } else if (den == 1) {
+          label = (num == 1) ? "#pi" : std::to_string(num) + "#pi";
+        } else {
+          label = "#frac{" + ((num == 1) ? string{} : std::to_string(num)) + "#pi}{" + std::to_string(den) + "}";
+        }
+      } else {
+        label = fmt::format("{:.3g}", grid->GetTMin() + i * (grid->GetTMax() - grid->GetTMin()) / nLabels);
+      }
+      measure.SetTitle(label.data());
+      UInt_t wPixel{}, hPixel{};
+      measure.GetBoundingBox(wPixel, hPixel);
+      const double_t w = wPixel * userPerPixelX, h = hPixel * userPerPixelY;
+      double_t x = (1. + grid->GetPolarOffset()) * std::cos(theta);
+      double_t y = (1. + grid->GetPolarOffset()) * std::sin(theta);
+      double_t x1{}, y1{};
+      if (ortho) {
+        // turned along the radius: a square of the label length around its middle
+        const double_t length = std::max(wPixel, hPixel);
+        x += 0.5 * length * userPerPixelX * std::cos(theta);
+        y += 0.5 * length * userPerPixelY * std::sin(theta);
+        x1 = x - 0.5 * length * userPerPixelX;
+        y1 = y - 0.5 * length * userPerPixelY;
+        markLabel(x1, y1, x1 + length * userPerPixelX, y1 + length * userPerPixelY);
+        continue;
+      }
+      y += (theta >= 3 * TMath::Pi() / 12. && theta < 2 * TMath::Pi() / 3.) ? 0.04 : 0.01;  // ROOT lifts the labels a bit
+      // TGraphPolargram::FindAlign (private): horizontal 1 left, 2 centred, 3 right; vertical 1 bottom, 2 centred, 3 top
+      const double_t pi = TMath::Pi();
+      int32_t align = 12;
+      if (theta > 0. && theta < pi / 2) {
+        align = 11;
+      } else if (theta == pi / 2) {
+        align = 21;
+      } else if (theta > pi / 2 && theta < pi) {
+        align = 31;
+      } else if (theta == pi) {
+        align = 32;
+      } else if (theta > pi && theta < 3 * pi / 2) {
+        align = 33;
+      } else if (theta == 3 * pi / 2) {
+        align = 23;
+      } else if (theta > 3 * pi / 2) {
+        align = 13;
+      }
+      x1 = x - 0.5 * (align / 10 - 1) * w;
+      y1 = y - 0.5 * (align % 10 - 1) * h;
+      markLabel(x1, y1, x1 + w, y1 + h);
+    }
+  }
+};
 
-  return {nx, ny, std::move(blocked)};
+//**************************************************************************************************
+/**
+ * The cells of a grid over the pad (10 pixels each, as in TPad::PlaceBox) that are occupied by what is drawn in it, by kind
+ * (occupancy_t). Replaces TPad::PlaceBox's view of the pad, which considers all bins of a histogram (also those outside of the visible
+ * range), does not clip to the pad (absurd values like huge error bars then take forever and block the whole pad) and samples graphs
+ * only coarsely.
+ */
+//**************************************************************************************************
+PlotPainter::occupancy_t PlotPainter::OccupiedCells(TPad* pad)
+{
+  const double_t cellSize = 10. * mScale;  // grid cell size in pixels (as in TPad::PlaceBox), scaled so that boxes are placed the same way at any scale
+  // size of the pad in pixels (GetWw and GetWh alone are the size of the whole canvas)
+  const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad);
+  const int32_t nx = static_cast<int32_t>(padWidthPixel / cellSize);
+  const int32_t ny = static_cast<int32_t>(padHeightPixel / cellSize);
+  if (nx <= 0 || ny <= 0) return {};
+  occupancy_marker_t marker{pad, mScale, cellSize, padWidthPixel, padHeightPixel, nx, ny, nx / (pad->GetX2() - pad->GetX1()), ny / (pad->GetY2() - pad->GetY1()),
+                            vector<uint8_t>(static_cast<size_t>(nx) * ny, 0u)};
+  marker.MarkPad();
+  return {nx, ny, std::move(marker.blocked)};
 }
 
 //**************************************************************************************************
