@@ -899,7 +899,7 @@ void Plot::Print(const boost::property_tree::ptree& pt, const string& name)
   if (!name.empty()) message = fmt::format("Settings of {}:", name);
   auto print_pt = [&](auto&& self, const auto& node, int indent) -> void {
     for (const auto& child : node) {
-      const std::string pad(indent * 2, ' ');
+      const string pad(indent * 2, ' ');
       if (!message.empty()) message += "\n         ";
       if (!child.second.data().empty()) {
         message += fmt::format("{}- {}: {}", pad, child.first, child.second.data());
@@ -2324,7 +2324,7 @@ Plot::Pad::ImageBox& Plot::Pad::AddImage(box_placement_t placement, const string
  * Add legend box to this pad.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox& Plot::Pad::AddLegend(double_t xPos, double_t yPos, const std::optional<std::string>& title)
+Plot::Pad::LegendBox& Plot::Pad::AddLegend(double_t xPos, double_t yPos, const std::optional<string>& title)
 {
   mLegendBoxes.push_back(std::make_shared<LegendBox>(xPos, yPos, title));
   return *mLegendBoxes.back();
@@ -2335,7 +2335,7 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend(double_t xPos, double_t yPos, const s
  * Add legend box to this pad and automatically find a position for it.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox& Plot::Pad::AddLegend(const std::optional<std::string>& title)
+Plot::Pad::LegendBox& Plot::Pad::AddLegend(const std::optional<string>& title)
 {
   mLegendBoxes.push_back(std::make_shared<LegendBox>(title));
   return *mLegendBoxes.back();
@@ -2346,7 +2346,7 @@ Plot::Pad::LegendBox& Plot::Pad::AddLegend(const std::optional<std::string>& tit
  * Add legend box to this pad and automatically find a position for it (close to the given corner of the frame or the one where it fits best).
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox& Plot::Pad::AddLegend(box_placement_t placement, const std::optional<std::string>& title)
+Plot::Pad::LegendBox& Plot::Pad::AddLegend(box_placement_t placement, const std::optional<string>& title)
 {
   return AddLegend(title).SetAutoPlacement(placement);
 }
@@ -3273,7 +3273,7 @@ auto Plot::Pad::Data::Define(const string& key, const string& value) -> decltype
   }
   return *this;
 }
-auto Plot::Pad::Data::Filter(const std::string& filter) -> decltype(*this)
+auto Plot::Pad::Data::Filter(const string& filter) -> decltype(*this)
 {
   if (is_blank(filter)) logger::throw_invalid_argument("Empty filter expression.");
   if (mDataInfo.filters) {
@@ -3309,24 +3309,24 @@ void Plot::Pad::Data::PutJoins(ptree& tree, const optional<vector<data_info_t::j
   }
   put_in_tree(tree, optional<vector<string>>{strs}, label);
 }
-auto Plot::Pad::Data::Join(const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias, bool keepUnmatched) -> decltype(*this)
+auto Plot::Pad::Data::Join(const join_tree_t& tree, const vector<string>& keys, const string& alias, bool keepUnmatched) -> decltype(*this)
 {
   AddJoin(mDataInfo, mName, tree, keys, alias, "", keepUnmatched);
   return *this;
 }
-auto Plot::Pad::Data::JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias, bool keepUnmatched) -> decltype(*this)
+auto Plot::Pad::Data::JoinByIndex(const join_tree_t& tree, const string& indexColumn, const string& alias, bool keepUnmatched) -> decltype(*this)
 {
   AddJoin(mDataInfo, mName, tree, {}, alias, indexColumn, keepUnmatched);
   return *this;
 }
-void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const std::string& name, const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias,
-                              const std::string& indexColumn, bool keepUnmatched)
+void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const string& name, const join_tree_t& tree, const vector<string>& keys, const string& alias,
+                              const string& indexColumn, bool keepUnmatched)
 {
   // names of columns and aliases are used in expressions
-  auto isIdentifier = [](const std::string& str) {
+  auto isIdentifier = [](const string& str) {
     return !str.empty() && !std::isdigit(static_cast<unsigned char>(str[0])) && std::all_of(str.begin(), str.end(), [](unsigned char c) { return std::isalnum(c) || c == '_'; });
   };
-  if (tree.name.empty() || tree.name.front() == '/' || tree.name.back() == '/' || tree.name.find("//") != std::string::npos) {
+  if (tree.name.empty() || tree.name.front() == '/' || tree.name.back() == '/' || tree.name.find("//") != string::npos) {
     logger::throw_invalid_argument("Cannot join tree '{}' to {}: invalid tree name.", tree.name, name);
   }
   if (auto illegal = find_illegal_name_char(tree.name, true)) {
@@ -3335,7 +3335,7 @@ void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const std::string& name, co
   if (auto illegal = find_illegal_name_char(tree.dataSource.substr(0, tree.dataSource.find(':')))) {  // may be restricted to a folder: dataSource:some/folder
     logger::throw_invalid_argument("Cannot join tree {} to {}: data source '{}' contains illegal character '{}'.", tree.name, name, tree.dataSource, *illegal);
   }
-  if (tree.dataSource.find('|') != std::string::npos) {  // the separator of the joins in a plots file
+  if (tree.dataSource.find('|') != string::npos) {  // the separator of the joins in a plots file
     logger::throw_invalid_argument("Cannot join tree {} to {}: data source '{}' contains illegal character '|'.", tree.name, name, tree.dataSource);
   }
   if (keys.size() > 2) {
@@ -3350,7 +3350,7 @@ void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const std::string& name, co
   // the index column may belong to a tree joined before: column (searched in the tree, then in the joined trees) or alias.column
   if (!indexColumn.empty()) {
     const auto dot = indexColumn.find('.');
-    const bool isColumn = (dot == std::string::npos) ? isIdentifier(indexColumn) : isIdentifier(indexColumn.substr(0, dot)) && isIdentifier(indexColumn.substr(dot + 1));
+    const bool isColumn = (dot == string::npos) ? isIdentifier(indexColumn) : isIdentifier(indexColumn.substr(0, dot)) && isIdentifier(indexColumn.substr(dot + 1));
     if (!isColumn) logger::throw_invalid_argument("Cannot join tree {} to {}: '{}' is neither a column name nor alias.column.", tree.name, name, indexColumn);
   }
   if (keys.size() == 2 && keys[0] == keys[1]) {
@@ -3845,19 +3845,19 @@ auto Plot::Pad::Ratio::Profile2D(data_dim_t x, data_dim_t y, const string& profi
 {
   return SelectInput("Profile2D", [&]() { Data::Profile2D(x, y, profile, weight); });
 }
-auto Plot::Pad::Ratio::Define(const std::string& key, const std::string& value) -> decltype(*this)
+auto Plot::Pad::Ratio::Define(const string& key, const string& value) -> decltype(*this)
 {
   return SelectInput("Define", [&]() { Data::Define(key, value); });
 }
-auto Plot::Pad::Ratio::Filter(const std::string& filter) -> decltype(*this)
+auto Plot::Pad::Ratio::Filter(const string& filter) -> decltype(*this)
 {
   return SelectInput("Filter", [&]() { Data::Filter(filter); });
 }
-auto Plot::Pad::Ratio::Join(const join_tree_t& tree, const std::vector<std::string>& keys, const std::string& alias, bool keepUnmatched) -> decltype(*this)
+auto Plot::Pad::Ratio::Join(const join_tree_t& tree, const vector<string>& keys, const string& alias, bool keepUnmatched) -> decltype(*this)
 {
   return SelectInput("Join", [&]() { Data::Join(tree, keys, alias, keepUnmatched); });
 }
-auto Plot::Pad::Ratio::JoinByIndex(const join_tree_t& tree, const std::string& indexColumn, const std::string& alias, bool keepUnmatched) -> decltype(*this)
+auto Plot::Pad::Ratio::JoinByIndex(const join_tree_t& tree, const string& indexColumn, const string& alias, bool keepUnmatched) -> decltype(*this)
 {
   return SelectInput("JoinByIndex", [&]() { Data::JoinByIndex(tree, indexColumn, alias, keepUnmatched); });
 }
@@ -4643,7 +4643,7 @@ ptree Plot::Pad::StatsBox::GetPropertyTree() const
  * LegendBox constructor.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendBox(double_t xPos, double_t yPos, const std::optional<std::string>& title)
+Plot::Pad::LegendBox::LegendBox(double_t xPos, double_t yPos, const std::optional<string>& title)
   : Box(xPos, yPos), mTitle{title}, mNumColumns{}
 {
 }
@@ -4653,7 +4653,7 @@ Plot::Pad::LegendBox::LegendBox(double_t xPos, double_t yPos, const std::optiona
  * LegendBox constructor with automatic placing.
  */
 //**************************************************************************************************
-Plot::Pad::LegendBox::LegendBox(const std::optional<std::string>& title) : Box(), mTitle{title}, mNumColumns{}
+Plot::Pad::LegendBox::LegendBox(const std::optional<string>& title) : Box(), mTitle{title}, mNumColumns{}
 {
   SetAutoPlacement();
 }

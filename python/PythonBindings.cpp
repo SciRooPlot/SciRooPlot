@@ -135,7 +135,7 @@ struct type_caster<setting_bool_t> {
 
   bool load(handle src, bool)
   {
-    const std::string typeName = Py_TYPE(src.ptr())->tp_name;
+    const string typeName = Py_TYPE(src.ptr())->tp_name;
     if (!PyBool_Check(src.ptr()) && typeName != "numpy.bool" && typeName != "numpy.bool_") return false;
     value.value = PyObject_IsTrue(src.ptr()) == 1;
     return true;
@@ -155,24 +155,24 @@ struct type_caster<Data::data_dim_t> {
     namespace py = pybind11;
     try {
       if (py::isinstance<py::str>(src)) {
-        value = T(src.cast<std::string>());
+        value = T(src.cast<string>());
         return true;
       }
       if (!py::isinstance<py::sequence>(src)) return false;
       auto seq = py::reinterpret_borrow<py::sequence>(src);
       const auto size = seq.size();
       if (size < 1 || size > 3) return false;
-      auto var = seq[0].cast<std::string>();
+      auto var = seq[0].cast<string>();
       if (size == 1) {
         value = T(var);
       } else if (size == 2) {
         try {
           value = T(var, seq[1].cast<int32_t>());
         } catch (const py::cast_error&) {
-          value = T(var, seq[1].cast<std::vector<double_t>>());
+          value = T(var, seq[1].cast<vector<double_t>>());
         }
       } else {
-        value = T(var, seq[1].cast<int32_t>(), seq[2].cast<std::vector<double_t>>());
+        value = T(var, seq[1].cast<int32_t>(), seq[2].cast<vector<double_t>>());
       }
       return true;
     } catch (const py::cast_error&) {
@@ -198,7 +198,7 @@ struct type_caster<color_t> {
     namespace py = pybind11;
     // an invalid hex string or out-of-range components throw (a ValueError with the reason) instead of failing the match
     if (py::isinstance<py::str>(src)) {
-      value = color_t(src.cast<std::string>());
+      value = color_t(src.cast<string>());
       return true;
     }
     try {

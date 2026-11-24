@@ -5361,7 +5361,7 @@ Style_t PlotPainter::ScreenLineStyle(Style_t style) const
  * All other sizes are defined relative to the pad and therefore already scale with the canvas.
  */
 //**************************************************************************************************
-void PlotPainter::ApplyScale(TObject* obj, std::set<TObject*>& done, const std::string& drawOption)
+void PlotPainter::ApplyScale(TObject* obj, std::set<TObject*>& done, const string& drawOption)
 {
   if (!obj || !done.insert(obj).second) return;
   // ROOT moves filled histograms away from the frame by half of the frame line width (integer division) and then also draws their outer
@@ -5671,7 +5671,7 @@ PlotPainter::legend_symbol_t PlotPainter::GetLegendSymbol(TObject* obj, string o
     // (with fewer parts the first is also that of the first set, sets without a part are drawn as error bars); the graph is painted only
     // where a set is drawn as error bars, or where no errors are drawn at all
     const size_t nSets = static_cast<size_t>(multi->GetNYErrors());
-    std::vector<string> parts(nSets + 1);
+    vector<string> parts(nSets + 1);
     string rest = option;
     size_t filled = 0;
     if (static_cast<size_t>(std::count(rest.begin(), rest.end(), ';')) < nSets) parts[filled++] = rest.substr(0, rest.find(';'));
@@ -6166,7 +6166,7 @@ void PlotPainter::AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box
       return part;
     };
     // the parts of the row's data and of the data added with AddSymbolOf, in the order they are drawn
-    std::vector<symbol_part_t> parts;
+    vector<symbol_part_t> parts;
     const auto [data_ptr, drawnWith] = (entry.GetRefDataID()) ? FindDrawn(pad, *entry.GetRefDataID(), entry.GetRefPadID()) : std::pair<TObject*, string>{nullptr, ""};
     if (data_ptr) parts.push_back(symbolPart(*entry.GetRefDataID(), data_ptr, drawnWith, symbolElements));
     for (uint16_t dataID : entry.GetSymbolOf()) {

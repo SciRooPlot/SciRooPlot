@@ -156,7 +156,7 @@ void Config::LoadConfig()
   const char* envPath = gSystem->Getenv("SCIROOPLOT_CONFIG_PATH");
   // a leading ~ is the home folder, also where the shell did not expand it (SCIROOPLOT_CONFIG_PATH='~/cfg'), as in the paths of projects
   // (variables are not expanded: an unset one would be reported by the logger, which needs this configuration)
-  std::string configPath = (envPath) ? envPath : "~/.SciRooPlot";
+  string configPath = (envPath) ? envPath : "~/.SciRooPlot";
   if (configPath == "~" || util::str_starts_with(configPath, "~/")) configPath = expand_path("~").value_or("~") + configPath.substr(1);
   if (configPath.empty()) {
     std::cerr << "SCIROOPLOT_CONFIG_PATH must not be empty." << std::endl;
@@ -406,21 +406,21 @@ bool Config::SaveProjects()
   return WriteInfoFile(ProjectsFile(), projectsTree);
 }
 
-bool Config::Exists(const std::string& projectName) const
+bool Config::Exists(const string& projectName) const
 {
   return mProjects.find(projectName) != mProjects.end();
 }
 
-std::vector<std::string> Config::ProjectNames() const
+vector<string> Config::ProjectNames() const
 {
-  std::vector<std::string> names;
+  vector<string> names;
   names.reserve(mProjects.size());
   for (const auto& [projectName, project] : mProjects)
     names.push_back(projectName);
   return names;
 }
 
-bool Config::Rename(const std::string& projectName, const std::string& newProjectName)
+bool Config::Rename(const string& projectName, const string& newProjectName)
 {
   if (!ProjectsReadable()) return false;
   if (mPath.empty()) {
@@ -751,19 +751,19 @@ std::filesystem::path Config::ProjectPath(const string& projectName) const
   return mPath / projectName;
 }
 
-std::string Config::PlotsFile(const string& projectName) const
+string Config::PlotsFile(const string& projectName) const
 {
   if (projectName.empty() || mPath.empty()) return {};
   return mPath / projectName / "plots.info";
 }
 
-std::string Config::DataSourcesFile(const string& projectName) const
+string Config::DataSourcesFile(const string& projectName) const
 {
   if (projectName.empty() || mPath.empty()) return {};
   return mPath / projectName / "dataSources.info";
 }
 
-std::string Config::SettingsFile(const string& projectName) const
+string Config::SettingsFile(const string& projectName) const
 {
   if (projectName.empty() || mPath.empty()) return {};
   return mPath / projectName / "settings.info";
@@ -994,7 +994,7 @@ Config::Project::Project(const ptree& tree)
       std::cerr << "Ignoring property '" << key << "' with illegal character '" << *illegal << "'." << std::endl;
       continue;
     }
-    if (auto value = child.get_value_optional<std::string>()) {
+    if (auto value = child.get_value_optional<string>()) {
       mProperties[key] = *value;
     }
   }

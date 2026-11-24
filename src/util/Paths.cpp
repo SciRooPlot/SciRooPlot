@@ -102,7 +102,7 @@ std::optional<string> expand_path(const string& path)
   }
   return expandedPath;
 }
-bool make_cache_folder(const std::string& folder, std::error_code& ec)
+bool make_cache_folder(const string& folder, std::error_code& ec)
 {
   std::filesystem::create_directories(folder, ec);
   if (ec) return false;
@@ -114,7 +114,7 @@ bool make_cache_folder(const std::string& folder, std::error_code& ec)
   return !ec;
 }
 
-std::string written_file(const std::string& file, bool warn)
+string written_file(const string& file, bool warn)
 {
   namespace fs = std::filesystem;
   std::error_code ec;

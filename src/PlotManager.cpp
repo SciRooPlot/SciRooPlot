@@ -4603,7 +4603,7 @@ struct PlotManager::join_match_t {
       for (const char* name : names) {
         if (type == name) return f(std::numeric_limits<T>::has_quiet_NaN ? std::numeric_limits<T>::quiet_NaN() : T{}), true;
         if (type == string("ROOT::VecOps::RVec<") + name + ">") return f(ROOT::RVec<T>{}), true;
-        if (type == string("vector<") + name + ">" || type == string("std::vector<") + name + ">") return f(std::vector<T>{}), true;
+        if (type == string("vector<") + name + ">" || type == string("std::vector<") + name + ">") return f(vector<T>{}), true;
       }
       return false;
     };
