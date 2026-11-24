@@ -3,7 +3,7 @@ of the frame and of the data, with the colour levels spread over it; its title i
 warned about (ROOT colours the boxes linearly) and not applied; a log scale on the binned z axis is warned about (ROOT paints the colour
 scale without colours); the settings of 'Z' stay on the binned z axis and do not reach the colour
 scale; the colour scale takes the text colour and alpha of the pad; a 'C' axis in a pad without a 3d histogram is warned about. The look
-set on 'C' (colours, alphas, ticks) is also that of the scale in a ColorScale() cell.
+set on 'C' (colours, alphas, ticks) and colour levels given for the data are also those of the scale in a ColorScale() cell.
 Cases: every 3d histogram kind × a range on 'C' (both ends, minimum, maximum), a title on 'C', a log 'C', a log 'Z', a range and title on 'Z', and the
 named cases.
 Reference: the frame and data read back (minimum, maximum, colour levels, the colour scale's axis title, the z axis: the bins holding
@@ -63,6 +63,12 @@ for name, zLook in (("z_look_cell", True), ("plain_cell", False)):
     if zLook:
         plot[1]["Z"].SetLabelColor(S.kRed).SetTitleColor(S.kBlue).SetAxisColor(S.kGreen).SetTickLength(0.11).SetNumDivisions(203)
     p.pm.AddPlot(plot)
+# colour levels given for the 3d histogram: the scale in a ColorScale() cell has the same levels
+LEVELS = [10.0, 50.0, 100.0, 300.0]
+plot = S.Plot("levels_cell", S.PanelLayout([[S.Panel(), S.ColorScale(1)]]))
+plot.SetGroup("named")
+add_data(plot[1], KINDS[0]).SetDrawOption(S.colz).SetContours(LEVELS)
+p.pm.AddPlot(plot)
 
 run = p.plot()
 check("the plots are made without errors", not run.errors(), " | ".join(run.errors()[:3]))
@@ -86,6 +92,10 @@ def cell_look(name):
 
 zLookCell, plainCell = cell_look("z_look_cell"), cell_look("plain_cell")
 check("the look of 'Z' does not reach the scale in a ColorScale() cell", zLookCell is not None and zLookCell == plainCell, f"{zLookCell}, without it {plainCell}")
+levelsCell = run.pad("levels_cell", "named", 2)
+levelsScale = levelsCell.GetPrimitive("color_scale_pad_2") if levelsCell else None
+cellLevels = [levelsScale.GetContourLevel(k) for k in range(levelsScale.GetContour())] if levelsScale else None
+check("colour levels given for a 3d histogram are those of the scale in a ColorScale() cell", cellLevels == LEVELS, f"{cellLevels}, expected {LEVELS}")
 
 for i, case in enumerate(todo):
     what = describe(case)
