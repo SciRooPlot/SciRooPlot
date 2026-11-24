@@ -7,7 +7,7 @@ numbers (0, -1: ROOT's whole axis, flows included) and in axis units (the bins t
 every route; a THn (also sparse) and a tree are projected onto all three axes as well (a TH3D, in the order given). A profile of a histogram averages the centres of the bins of the profiled axis (a tree the values), its under- and overflow
 only when a selection names them by number: ROOT's ProfileX leaves them out for 0, -1, where ProjectionX counts them. Entries are not compared: ROOT counts them differently per class (a THn all fills, a TH3 projection the effective entries).
 Covers: projected axes named by the axis titles of the input, the projections (ProjectX by bins and in user coordinates, a single bin, the last bin, ProfileX,
-THnSparse with a range), profiles of a THn and THnSparse and of a TH3 onto one axis, the axis titles of projections and profiles of TProfile2D and TProfile3D, and the errors for a profile whose averaged axis is not clear.
+THnSparse with a range), profiles of a THn and THnSparse and of a TH3 onto one axis, the axis titles of projections and profiles of TProfile2D and TProfile3D, and the errors for a profile whose averaged axis is not clear, a dimension the input does not have and a type without projections.
 """
 
 import numpy as np
@@ -117,7 +117,9 @@ hn2 = ROOT.THnD("THn2D", "", 2, axes[:2], lows[:2], highs[:2])
 hp3 = ROOT.TProfile3D("TProfile3D", ";x;y;z", NBINS, LOW, HIGH, NBINS, LOW, HIGH, NBINS, LOW, HIGH)
 for i in range(N):
     hp3.Fill(EVENTS["x"][i], EVENTS["y"][i], EVENTS["z"][i], EVENTS["w"][i])
-for obj in (h3, hn, hs, h2, hp, hn2, hp3):
+graph = ROOT.TGraph(2)  # a type without projections
+graph.SetName("TGraph")
+for obj in (h3, hn, hs, h2, hp, hn2, hp3, graph):
     f.WriteObject(obj, obj.GetName())
 f.Close()
 ROOT.RDF.FromNumpy({k: np.ascontiguousarray(v) for k, v in EVENTS.items()}).Snapshot("tree", p.path("tree.root"))
@@ -198,6 +200,8 @@ UNCLEAR = [
     ("TProfile2D", lambda d: d.Profile(1, [0]), "Cannot average axis 1 of TProfile2D:hists: it is a profile already, Profile(dims) gives the mean of its values"),
     ("TH3D", lambda d: d.Project([0, 1, 2]), "Cannot project TH3D:hists onto three axes: it is a 3d histogram (draw it without Project)"),
     ("THnD", lambda d: d.Profile([0, 1, 2]), "Cannot profile THnD:hists onto 3 axes: a profile keeps one or two axes"),
+    ("THnD", lambda d: d.Project([3]), "Cannot project THnD:hists onto dimension 3: it only has 3 dimensions"),
+    ("TGraph", lambda d: d.Project([0]), "Cannot do projections for type TGraph (TGraph:hists)"),
 ]
 for i, (name, select, _) in enumerate(UNCLEAR):
     plot = S.Plot(f"u{i}", "routes", "2d" if "TH3D" in name else "1d")
