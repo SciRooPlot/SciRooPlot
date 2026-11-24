@@ -4,19 +4,20 @@
   placeholders of the histogram; its clipped steps have the frame of the steps they clip;
 - a graph drawn as a histogram (hist, bars, text ...) has a bin per point holding its value and the mean of its y errors, the bins
   touching where the x errors of neighbouring points meet, an empty bin in a gap between them (for area_smooth, whose curve goes
-  through every bin, the two bins meeting in its middle), else half way between the points (documented rule);
+  through every bin, the two bins meeting in its middle), the edge in the middle of an overlap (with a warning), else half way between the
+  points (documented rule; with a warning when a point lies within the bin of the one before);
 - points_text writes the value of every point that is drawn and of no other: the bins and points inside the frame and the ranges of the
   data, polar graphs at their points on the polar grid;
 - the colours of the 2d data of a flat pad span the values of all of it: the colour axis covers the range each data item has alone (for
   2d graphs with errors the range of their values, which ROOT's frame of such a graph widens by the errors), at each end the user did not
   set (Z SetMinRange or SetMaxRange alone).
-Covers: the smooth curve of a graph with gaps between its x errors dipping to zero in each gap, converted histograms losing their statistics box and placeholders, points_text writing values of points outside the frame and
+Covers: the smooth curve of a graph with gaps between its x errors dipping to zero in each gap, graphs with overlapping x errors and with a point within the bin of the one before, converted histograms losing their statistics box and placeholders, points_text writing values of points outside the frame and
 ranges, and a single value at the wrong place for polar graphs, 2d functions drawn after other data cut at the colour axis of the frame.
 """
 
 import math
 
-from srptest import DATA_KINDS, ROOT, Project, S, add_data, alias_table, cases, check, close, data_objects, describe, drawn_type, finish, graph_values, has_variant, source_of, values_diff
+from srptest import DATA_KINDS, ROOT, Project, S, add_data, alias_table, cases, check, close, data_objects, describe, drawn_type, finish, graph_values, has_variant, own, source_of, values_diff
 
 TABLE = alias_table()
 ONE_D = tuple(k for k, (dim, _, props) in DATA_KINDS.items() if dim == 1 and drawn_type(k) in ("hist1d", "graph") and "polar" not in props)
@@ -118,6 +119,22 @@ for i, case in enumerate(pairs):
         if suffix == "" and userMax is not None:
             plot[1]["Z"].SetMaxRange(userMax)
         p.pm.AddPlot(plot)
+# graphs whose x errors overlap (bins split in the middle) or put a point within the bin of the one before (bins half way between the points)
+OVERLAPS = {"overlapping": ([1.0, 2.0, 3.0], [0.6, 0.6, 0.6]), "inside": ([1.0, 1.2, 3.0], [0.5, 0.1, 0.5])}
+WARNED = {"overlapping": "The x errors of graph overlapping:overlaps overlap", "inside": "The x errors of graph inside:overlaps do not define bin edges"}
+overlapGraphs = {}
+for name, (xs, exs) in OVERLAPS.items():
+    g = own(ROOT.TGraphErrors(len(xs)))
+    g.SetName(name)
+    for j, (x, e) in enumerate(zip(xs, exs)):
+        g.SetPoint(j, x, j + 1.0)
+        g.SetPointError(j, e, 0.1)
+    overlapGraphs[name] = g
+p.pm.AddDataSource("overlaps", list(overlapGraphs.values()))
+for name in OVERLAPS:
+    plot = S.Plot(name, "overlaps", "1d")
+    plot[1].AddData(name, "overlaps").SetDrawOption(S.hist)
+    p.pm.AddPlot(plot)
 run = p.plot()
 
 
@@ -142,19 +159,28 @@ def as_hist(g, alias):
     ex = [(max(g.GetErrorXlow(i), 0.0), max(g.GetErrorXhigh(i), 0.0)) for _, _, i in points]
     ey = [0.5 * (max(g.GetErrorYlow(i), 0.0) + max(g.GetErrorYhigh(i), 0.0)) for _, _, i in points]
     edges, contents, errors = [], [], []
-    if all(lo + hi > 0 for lo, hi in ex) and all(xs[j] + ex[j][1] <= xs[j + 1] - ex[j + 1][0] + 1e-6 * (ex[j][0] + ex[j][1]) for j in range(len(xs) - 1)):
-        for j, (x, (lo, hi)) in enumerate(zip(xs, ex)):
-            if edges and abs(x - lo - edges[-1]) > 1e-6 * (lo + hi) and alias == "area_smooth":
-                edges[-1] = 0.5 * (edges[-1] + x - lo)  # a gap: the bins meet in its middle
-            elif not edges or abs(x - lo - edges[-1]) > 1e-6 * (lo + hi):
-                if edges:  # a gap: an empty bin
-                    contents.append(0.0)
-                    errors.append(0.0)
-                edges.append(x - lo)
-            edges.append(x + hi)
-            contents.append(points[j][1])
-            errors.append(ey[j])
-    else:
+    binned = all(lo + hi > 0 for lo, hi in ex)
+    for j, (x, (lo, hi)) in enumerate(zip(xs, ex) if binned else ()):
+        low, high = x - lo, x + hi
+        if not edges:
+            edges.append(low)
+        elif abs(low - edges[-1]) <= 1e-6 * (lo + hi):
+            pass  # touching the bin before
+        elif low > edges[-1] and alias == "area_smooth":
+            edges[-1] = 0.5 * (edges[-1] + low)  # a gap: the bins meet in its middle
+        elif low > edges[-1]:
+            contents.append(0.0)  # a gap: an empty bin
+            errors.append(0.0)
+            edges.append(low)
+        elif min(0.5 * (low + edges[-1]) - edges[-2], high - 0.5 * (low + edges[-1])) > 1e-6 * (lo + hi):
+            edges[-1] = 0.5 * (low + edges[-1])  # an overlap: the edge in its middle
+        else:
+            binned = False  # within the bin before: no bins from the x errors
+            break
+        edges.append(high)
+        contents.append(points[j][1])
+        errors.append(ey[j])
+    if not binned:
         n = len(xs)
         mids = [0.5 * (a + b) for a, b in zip(xs, xs[1:])]
         edges = [xs[0] - 0.5, xs[0] + 0.5] if n == 1 else [xs[0] - 0.5 * (xs[1] - xs[0]), *mids, xs[-1] + 0.5 * (xs[-1] - xs[-2])]
@@ -257,5 +283,13 @@ for i, case in enumerate(pairs):
     userMin, userMax = USER_Z[case["user"]]
     want = (min(first[0], second[0]) if userMin is None else userMin, max(first[1], second[1]) if userMax is None else userMax)
     check(f"the colour axis covers the values of all 2d data: {what}", close(both[0], want[0], 1e-9) and close(both[1], want[1], 1e-9), f"{both}, expected {want}")
+for name, g in overlapGraphs.items():
+    got = run.drawn(name, "overlaps")
+    obj = got[0][0] if got else None
+    edges, contents, errors = as_hist(g, "hist")
+    axis = obj.GetXaxis() if obj and obj.InheritsFrom("TH1") else None
+    found = ([axis.GetBinLowEdge(b) for b in range(1, axis.GetNbins() + 2)], [obj.GetBinContent(b) for b in range(1, axis.GetNbins() + 1)]) if axis else ([], [])
+    check(f"drawn as the bins of the points: graph {name} drawn as hist", all(len(a) == len(b) and all(close(x, y, 1e-9) for x, y in zip(a, b)) for a, b in zip((edges, contents), found)), f"edges {found[0]}, expected {edges}")
+    check(f"warned about its x errors: graph {name} drawn as hist", run.warnings(WARNED[name]), " | ".join(run.warnings()[:3]))
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
 finish()
