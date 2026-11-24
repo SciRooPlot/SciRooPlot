@@ -3178,7 +3178,8 @@ SETTER_INVALID = {
     "range": [-0.5, 1.5, math.nan],
     "axis": [Char("Q")],
     "format": ["xyz"],
-    "function": ["[0]*x", "gaus", ""],
+    # parameters (of a formula, a predefined function, a lambda), variables of a lambda not indexed or beyond x[2], a lambda of another signature
+    "function": ["[0]*x", "gaus", "", "[](double* x, double* p) { return x[0] * p[0]; }", "[](double* x, double* p) { return 2 * x; }", "[](double* x, double* p) { return x[3]; }", "[](double x) { return x; }"],
     "textFormat": ["%q"],
     "startX": [math.nan],
     "endX": [math.nan],
