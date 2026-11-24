@@ -4665,37 +4665,10 @@ shared_ptr<TFile> PlotManager::OpenInput(const string& fileName) const
 
 //**************************************************************************************************
 /**
- * Join a tree to a chain: its rows are matched with the rows of the chain either by their number, by the values of key columns
- * or by the row number an index column of the chain holds (counted within the joined tree beside each part of the chain).
- * Returns why this is not possible (if so).
+ * Joining a tree to a chain (AttachJoin): the trees joined beside each part of the chain, and the index that gives their rows.
  */
 //**************************************************************************************************
-optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, const vector<tree_input_t>& treeInputs,
-                                         const Plot::Pad::Data::data_info_t::join_t& join, vector<shared_ptr<TChain>>& joinedChains,
-                                         vector<shared_ptr<join_match_t>>& joinMatches, vector<string>& joinedFiles)
-{
-  if (const string treeAlias = split_path(treeName).second; join.GetAlias() == treeAlias) {
-    return fmt::format("the columns of both would be called {}.column, please specify an alias", treeAlias);
-  }
-  map<string, shared_ptr<TFile>> openFiles;  // each file is opened only once for the following checks
-  auto getTree = [&](const string& fileName, const string& treePath) -> TTree* {
-    auto& file = openFiles[fileName];
-    if (!file) file = OpenInput(fileName);
-    if (!file || file->IsZombie()) return nullptr;
-    return file->Get<TTree>(treePath.data());
-  };
-  TTree* firstTree = getTree(treeInputs.front().file, treeInputs.front().treePath);
-  // a branch of the tree with sub-columns (leaflist, split object) named like the alias would make alias.column ambiguous
-  if (auto* branch = (firstTree) ? firstTree->GetBranch(join.GetAlias().data()) : nullptr; branch && (branch->GetNleaves() > 1 || branch->GetListOfBranches()->GetEntries() > 0)) {
-    return fmt::format("{} has a branch {}, please specify a different alias", treeName, join.GetAlias());
-  }
-  // the entries of a tree written in parallel (multi-threaded Snapshot) are not in their original order: ROOT refuses to match them row by row
-  auto reshuffled = [&](const TTree* tree, const string& description) -> optional<string> {
-    if (!join.keys.empty() || !tree || !tree->TestBit(TTree::kEntriesReshuffled)) return nullopt;
-    return fmt::format("the entries of {} were reshuffled when it was written (multi-threaded Snapshot), it can only be joined by key", description);
-  };
-  // joined by an index column only the order of the joined tree matters
-  if (auto error = (join.indexColumn.empty()) ? reshuffled(firstTree, treeName) : nullopt) return error;
+struct PlotManager::join_attach_t {
   // rows of the joined chain within the joined tree beside the chain's current tree: the row number an index column of the chain holds,
   // or the row with the same values of key columns (keys are unique only within one input, e.g. per AO2D DF_ folder; TTreeIndex can only
   // look up values in the whole chain); trees are recognised by file and path, since a multi-threaded RDataFrame rebuilds both chains
@@ -4839,36 +4812,89 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
    private:
     TVirtualIndex* mIndex;
   };
+
+  PlotManager& manager;
+  TChain& chain;
+  const string treeName;
+  const vector<tree_input_t>& treeInputs;
+  const Plot::Pad::Data::data_info_t::join_t& join;
+  vector<shared_ptr<TChain>>& joinedChains;
+  vector<shared_ptr<join_match_t>>& joinMatches;
+  vector<string>& joinedFiles;
+  map<string, shared_ptr<TFile>> openFiles{};  // each file is opened only once for the checks
+  TTree* firstTree{};
+  shared_ptr<TChain> joinedChain{};
+  const TTree* firstJoinedTree{};
+  map<string, string> joinedTreeOf{};    // join by an index column: part of the chain -> its joined tree, each as file|path
+  map<string, Long64_t> rowsOfJoined{};  // joined tree as file|path -> its number of rows
+  bool joinsNoTree{};                    // no row has a match: the columns are defined in every row, no tree is joined (KeepAllUnmatched)
+
+  // joins the tree to the chain; why this is not possible (if so)
+  optional<string> Attach()
+  {
+    firstTree = GetTree(treeInputs.front().file, treeInputs.front().treePath);
+    // a branch of the tree with sub-columns (leaflist, split object) named like the alias would make alias.column ambiguous
+    if (auto* branch = (firstTree) ? firstTree->GetBranch(join.GetAlias().data()) : nullptr; branch && (branch->GetNleaves() > 1 || branch->GetListOfBranches()->GetEntries() > 0)) {
+      return fmt::format("{} has a branch {}, please specify a different alias", treeName, join.GetAlias());
+    }
+    // joined by an index column only the order of the joined tree matters
+    if (auto error = (join.indexColumn.empty()) ? Reshuffled(firstTree, treeName) : nullopt) return error;
+    joinedChain = std::make_shared<TChain>(join.GetAlias().data());
+    if (auto error = CollectJoinedTrees()) return error;
+    optional<string> error;
+    if (!join.indexColumn.empty()) {
+      error = IndexByColumn();
+    } else if (!join.keys.empty()) {
+      error = IndexByKeys();
+    }
+    if (error || joinsNoTree) return error;  // (KeepAllUnmatched joins no tree)
+    chain.AddFriend(joinedChain.get(), join.GetAlias().data());
+    joinedChains.push_back(joinedChain);
+    return nullopt;
+  }
+  TTree* GetTree(const string& fileName, const string& treePath)
+  {
+    auto& file = openFiles[fileName];
+    if (!file) file = manager.OpenInput(fileName);
+    if (!file || file->IsZombie()) return nullptr;
+    return file->Get<TTree>(treePath.data());
+  }
+  // the entries of a tree written in parallel (multi-threaded Snapshot) are not in their original order: ROOT refuses to match them row by row
+  optional<string> Reshuffled(const TTree* tree, const string& description) const
+  {
+    if (!join.keys.empty() || !tree || !tree->TestBit(TTree::kEntriesReshuffled)) return nullopt;
+    return fmt::format("the entries of {} were reshuffled when it was written (multi-threaded Snapshot), it can only be joined by key", description);
+  }
   // the leaf of a top-level column with a single value per row, or of a leaf of a leaflist branch (branch.leaf; null if the tree has
   // none), and whether it holds floating-point values
-  auto columnLeaf = [](const TTree* tree, const string& column) -> TLeaf* {
+  static TLeaf* ColumnLeaf(const TTree* tree, const string& column)
+  {
     auto* branch = (tree) ? const_cast<TTree*>(tree)->GetBranch(column.data()) : nullptr;
     if (branch) return (branch->GetNleaves() == 1) ? static_cast<TLeaf*>(branch->GetListOfLeaves()->At(0)) : nullptr;
     const auto dot = column.find('.');
     auto* leaflist = (tree && dot != string::npos) ? const_cast<TTree*>(tree)->GetBranch(column.substr(0, dot).data()) : nullptr;
     return (leaflist && leaflist->GetListOfBranches()->GetEntries() == 0) ? leaflist->GetLeaf(column.substr(dot + 1).data()) : nullptr;
-  };
-  auto isFloating = [](const TLeaf* leaf) {
+  }
+  static bool IsFloating(const TLeaf* leaf)
+  {
     const string type = leaf->GetTypeName();
     return str_contains(type, "Float") || str_contains(type, "Double") || str_contains(type, "float") || str_contains(type, "double");
-  };
-  auto joinedChain = std::make_shared<TChain>(join.GetAlias().data());
-  const TTree* firstJoinedTree{};
-  map<string, string> joinedTreeOf;    // join by an index column: part of the chain -> its joined tree, each as file|path
-  map<string, Long64_t> rowsOfJoined;  // joined tree as file|path -> its number of rows
+  }
   // RDataFrame names the input of a row file/path: the inputs of the chain by that name, as file|path
   // (a remote file read from its local copy, srp cache, by the path of the copy: the cache folder followed by the path of the url)
-  auto samplesOf = [](const string& part) {
+  static vector<string> SamplesOf(const string& part)
+  {
     const string file = part.substr(0, part.find('|'));
     const string treePath = part.substr(part.find('|') + 1);
     vector<string> samples{file + "/" + treePath};
     if (is_remote(file) && !string(TFile::GetCacheFileDir()).empty()) samples.push_back(TFile::GetCacheFileDir() + string(TUrl(file.data()).GetFile()) + "/" + treePath);
     return samples;
-  };
-  const string matchedColumn = "SRP_MATCHED_" + join.GetAlias();
+  }
   // a join keeping rows without a match to a tree without rows in any input: no row has a match, and the columns of the tree have their
   // values for that in every row (no tree is joined)
-  auto keepAllUnmatched = [&]() -> optional<string> {
+  optional<string> KeepAllUnmatched()
+  {
+    const string matchedColumn = "SRP_MATCHED_" + join.GetAlias();
     auto match = std::make_shared<join_match_t>(join_match_t{join.GetAlias()});
     vector<std::pair<string, string>> columns;  // defined column -> type
     for (auto* leaf : TRangeDynCast<TLeaf>(const_cast<TTree*>(firstJoinedTree)->GetListOfLeaves())) {
@@ -4898,71 +4924,80 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       return node;
     };
     joinMatches.push_back(match);
+    joinsNoTree = true;
     return nullopt;
-  };
-  if (join.dataSource.empty()) {
-    // taken from each input of the tree: the name of the joined tree starts where the name of the tree starts
-    const auto nLevels = std::count(treeName.begin(), treeName.end(), '/') + 1;
-    for (const auto& treeInput : treeInputs) {
-      string basePath = treeInput.treePath;
-      for (int64_t level = 0; level < nLevels; ++level) {
-        basePath = split_path(basePath).first;
-      }
-      const string path = (basePath.empty()) ? join.tree : basePath + "/" + join.tree;
-      auto* joinedTree = getTree(treeInput.file, path);
-      if (!joinedTree) return fmt::format("{}:{} does not exist", treeInput.file, path);
-      if (!firstJoinedTree) firstJoinedTree = joinedTree;
-      if (!join.indexColumn.empty() || !join.keys.empty()) {
-        // an index column or keys give the row within the joined tree of the same input: an empty one is left out (ROOT skips it with a warning)
-        if (auto error = reshuffled(joinedTree, treeInput.file + ":" + path)) return error;
-        if (const Long64_t nRows = joinedTree->GetEntries(); nRows > 0) {
-          joinedChain->AddFile(treeInput.file.data(), nRows, path.data());
-          joinedTreeOf[treeInput.file + "|" + treeInput.treePath] = treeInput.file + "|" + path;
-          rowsOfJoined[treeInput.file + "|" + path] = nRows;
-        }
-        continue;
-      }
-      // without keys the rows of the trees in each input belong together
-      if (join.keys.empty()) {
-        auto* tree = getTree(treeInput.file, treeInput.treePath);
-        const Long64_t nRows = (tree) ? tree->GetEntries() : 0;
-        if (joinedTree->GetEntries() != nRows) return fmt::format("{}:{} has {} rows, {} has {}", treeInput.file, path, joinedTree->GetEntries(), treeInput.treePath, nRows);
-        if (auto error = reshuffled(tree, treeInput.file + ":" + treeInput.treePath)) return error;
-        if (auto error = reshuffled(joinedTree, treeInput.file + ":" + path)) return error;
-      }
-      joinedChain->AddFile(treeInput.file.data(), TTree::kMaxEntries, path.data());
-    }
-  } else {
-    if (!IsDataSourceDefined(join.dataSource)) return fmt::format("data source {} is not defined", join.dataSource);
-    const auto joinedInputs = FindTreeInputs(join.dataSource, join.tree);
-    if (joinedInputs.empty()) return fmt::format("it was not found in data source {}", join.dataSource);
-    for (const auto& joinedInput : joinedInputs) {
-      joinedChain->AddFile(joinedInput.file.data(), TTree::kMaxEntries, joinedInput.treePath.data());
-      joinedFiles.push_back(joinedInput.file);
-    }
-    firstJoinedTree = getTree(joinedInputs.front().file, joinedInputs.front().treePath);
-    if (auto error = reshuffled(firstJoinedTree, join.tree)) return error;
-    // without keys the rows of all inputs are matched in the order of the inputs
-    if (join.keys.empty() && joinedChain->GetEntries() != chain.GetEntries()) {
-      return fmt::format("it has {} rows, {} has {}", joinedChain->GetEntries(), treeName, chain.GetEntries());
-    }
   }
-  if (!join.indexColumn.empty()) {
+  // the joined trees: beside each input of the tree (no data source given), or those of the data source
+  optional<string> CollectJoinedTrees()
+  {
+    if (join.dataSource.empty()) {
+      // taken from each input of the tree: the name of the joined tree starts where the name of the tree starts
+      const auto nLevels = std::count(treeName.begin(), treeName.end(), '/') + 1;
+      for (const auto& treeInput : treeInputs) {
+        string basePath = treeInput.treePath;
+        for (int64_t level = 0; level < nLevels; ++level) {
+          basePath = split_path(basePath).first;
+        }
+        const string path = (basePath.empty()) ? join.tree : basePath + "/" + join.tree;
+        auto* joinedTree = GetTree(treeInput.file, path);
+        if (!joinedTree) return fmt::format("{}:{} does not exist", treeInput.file, path);
+        if (!firstJoinedTree) firstJoinedTree = joinedTree;
+        if (!join.indexColumn.empty() || !join.keys.empty()) {
+          // an index column or keys give the row within the joined tree of the same input: an empty one is left out (ROOT skips it with a warning)
+          if (auto error = Reshuffled(joinedTree, treeInput.file + ":" + path)) return error;
+          if (const Long64_t nRows = joinedTree->GetEntries(); nRows > 0) {
+            joinedChain->AddFile(treeInput.file.data(), nRows, path.data());
+            joinedTreeOf[treeInput.file + "|" + treeInput.treePath] = treeInput.file + "|" + path;
+            rowsOfJoined[treeInput.file + "|" + path] = nRows;
+          }
+          continue;
+        }
+        // without keys the rows of the trees in each input belong together
+        if (join.keys.empty()) {
+          auto* tree = GetTree(treeInput.file, treeInput.treePath);
+          const Long64_t nRows = (tree) ? tree->GetEntries() : 0;
+          if (joinedTree->GetEntries() != nRows) return fmt::format("{}:{} has {} rows, {} has {}", treeInput.file, path, joinedTree->GetEntries(), treeInput.treePath, nRows);
+          if (auto error = Reshuffled(tree, treeInput.file + ":" + treeInput.treePath)) return error;
+          if (auto error = Reshuffled(joinedTree, treeInput.file + ":" + path)) return error;
+        }
+        joinedChain->AddFile(treeInput.file.data(), TTree::kMaxEntries, path.data());
+      }
+    } else {
+      if (!manager.IsDataSourceDefined(join.dataSource)) return fmt::format("data source {} is not defined", join.dataSource);
+      const auto joinedInputs = manager.FindTreeInputs(join.dataSource, join.tree);
+      if (joinedInputs.empty()) return fmt::format("it was not found in data source {}", join.dataSource);
+      for (const auto& joinedInput : joinedInputs) {
+        joinedChain->AddFile(joinedInput.file.data(), TTree::kMaxEntries, joinedInput.treePath.data());
+        joinedFiles.push_back(joinedInput.file);
+      }
+      firstJoinedTree = GetTree(joinedInputs.front().file, joinedInputs.front().treePath);
+      if (auto error = Reshuffled(firstJoinedTree, join.tree)) return error;
+      // without keys the rows of all inputs are matched in the order of the inputs
+      if (join.keys.empty() && joinedChain->GetEntries() != chain.GetEntries()) {
+        return fmt::format("it has {} rows, {} has {}", joinedChain->GetEntries(), treeName, chain.GetEntries());
+      }
+    }
+    return nullopt;
+  }
+  // the index by the row number an index column of the chain (or of a tree joined before) holds
+  optional<string> IndexByColumn()
+  {
+    const string matchedColumn = "SRP_MATCHED_" + join.GetAlias();
     // the index column is one of the tree or of a tree joined before (alias.column, or column if the tree has none of that name):
     // the chain loads its joined trees in the order of the joins, so the row of an earlier one is known when the index is evaluated
     const string treeAlias = split_path(treeName).second;
     // a column whose name has a dot itself (a branch of a split object, event.fIndex) is taken whole
-    const bool wholeName = columnLeaf(firstTree, join.indexColumn) || std::any_of(joinedChains.begin(), joinedChains.end(), [&](const auto& other) { return columnLeaf(other.get(), join.indexColumn); });
+    const bool wholeName = ColumnLeaf(firstTree, join.indexColumn) || std::any_of(joinedChains.begin(), joinedChains.end(), [&](const auto& other) { return ColumnLeaf(other.get(), join.indexColumn); });
     const auto dot = (wholeName) ? string::npos : join.indexColumn.find('.');
     const string qualifier = (dot == string::npos) ? "" : join.indexColumn.substr(0, dot);
     const string column = join.indexColumn.substr((dot == string::npos) ? 0 : dot + 1);
     const TTree* indexTree = (qualifier.empty() || qualifier == treeAlias) ? firstTree : nullptr;
     string indexExpression = column;
     string indexTreeDescription = treeName;
-    if (!indexTree || !columnLeaf(indexTree, column)) {
+    if (!indexTree || !ColumnLeaf(indexTree, column)) {
       vector<string> holders;  // aliases of the joined trees that have the column
       for (const auto& other : joinedChains) {
-        if ((qualifier.empty() || qualifier == other->GetName()) && columnLeaf(other.get(), column)) holders.push_back(other->GetName());
+        if ((qualifier.empty() || qualifier == other->GetName()) && ColumnLeaf(other.get(), column)) holders.push_back(other->GetName());
       }
       const bool isJoinedAlias = std::any_of(joinedChains.begin(), joinedChains.end(), [&](const auto& other) { return qualifier == other->GetName(); });
       // a tree joined before without rows in any input, keeping every row without a match (its columns are defined, alias.column and
@@ -4973,7 +5008,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
         return holders.empty() && std::any_of(match->renames.begin(), match->renames.end(), [&](const auto& rename) { return rename.first == column; });
       });
       if (noRows != joinMatches.end() && !isJoinedAlias) {
-        if (join.keepUnmatched && firstJoinedTree) return keepAllUnmatched();
+        if (join.keepUnmatched && firstJoinedTree) return KeepAllUnmatched();
         return fmt::format("index column {}: {} has no rows in any input of {}, so no row has a match", join.indexColumn, (*noRows)->alias, treeName);
       }
       if (!qualifier.empty() && qualifier != treeAlias && !isJoinedAlias) {
@@ -4989,11 +5024,11 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       indexTree = std::find_if(joinedChains.begin(), joinedChains.end(), [&](const auto& other) { return holders[0] == other->GetName(); })->get();
     }
     // the index column holds a single integer per row
-    auto* leaf = columnLeaf(indexTree, column);
-    if (isFloating(leaf) || leaf->GetLenStatic() > 1 || leaf->GetLeafCount()) {
+    auto* leaf = ColumnLeaf(indexTree, column);
+    if (IsFloating(leaf) || leaf->GetLenStatic() > 1 || leaf->GetLeafCount()) {
       return fmt::format("index column {} of {} is of type {}, but it must hold one integer per row", column, indexTreeDescription, leaf->GetTypeName());
     }
-    if (joinedTreeOf.empty()) return (join.keepUnmatched) ? keepAllUnmatched() : fmt::format("it has no rows in any input of {}", treeName);
+    if (joinedTreeOf.empty()) return (join.keepUnmatched) ? KeepAllUnmatched() : fmt::format("it has no rows in any input of {}", treeName);
     // an index read from a tree joined before that keeps rows without a match is only one if that tree has a match
     const string holder = (indexTree != firstTree) ? indexTreeDescription : "";
     const bool holderKeeps = std::any_of(joinMatches.begin(), joinMatches.end(), [&](const auto& match) { return match->alias == holder; });
@@ -5003,7 +5038,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       // a row has its match if its index is a row of the joined tree beside it (and the tree holding the index has its match)
       auto nRowsOf = std::make_shared<std::unordered_map<string, Long64_t>>();
       for (const auto& [part, joined] : joinedTreeOf) {
-        for (const auto& sample : samplesOf(part)) {
+        for (const auto& sample : SamplesOf(part)) {
           (*nRowsOf)[sample] = rowsOfJoined[joined];
         }
       }
@@ -5023,25 +5058,30 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
       joinMatches.push_back(std::make_shared<join_match_t>(join_match_t{join.GetAlias(), defineMatched}));
     }
     joinedChain->SetTreeIndex(new RowIndex(joinedChain.get(), {indexExpression}, std::move(joinedTreeOf), nullptr, join.keepUnmatched));  // owned by the chain
-  } else if (!join.keys.empty()) {
+    return nullopt;
+  }
+  // the index by the values of key columns
+  optional<string> IndexByKeys()
+  {
+    const string matchedColumn = "SRP_MATCHED_" + join.GetAlias();
     for (const auto& key : join.keys) {
       for (const auto* tree : {static_cast<const TTree*>(firstTree), firstJoinedTree}) {
         // keys are top-level columns with a single value, the join filter addresses the first one as alias.key
-        auto* leaf = columnLeaf(tree, key);
+        auto* leaf = ColumnLeaf(tree, key);
         const string treeDescription = (tree == firstTree) ? treeName : join.tree;
         if (!leaf) return fmt::format("{} has no column {}", treeDescription, key);
         // the values are compared as integers
-        if (isFloating(leaf)) return fmt::format("key column {} of {} is of type {}, but keys must be integers", key, treeDescription, leaf->GetTypeName());
+        if (IsFloating(leaf)) return fmt::format("key column {} of {} is of type {}, but keys must be integers", key, treeDescription, leaf->GetTypeName());
       }
     }
     // a tree of the same data source: its keys are matched within the joined tree beside each input (e.g. per AO2D DF_ folder)
     if (join.dataSource.empty()) {
-      if (joinedTreeOf.empty()) return (join.keepUnmatched) ? keepAllUnmatched() : fmt::format("it has no rows in any input of {}", treeName);
+      if (joinedTreeOf.empty()) return (join.keepUnmatched) ? KeepAllUnmatched() : fmt::format("it has no rows in any input of {}", treeName);
       auto rowsByKey = std::make_shared<rows_by_key_t>();
       for (const auto& [part, joined] : joinedTreeOf) {
         if (rowsByKey->count(joined)) continue;
         const auto bar = joined.find('|');
-        auto* joinedTree = getTree(joined.substr(0, bar), joined.substr(bar + 1));
+        auto* joinedTree = GetTree(joined.substr(0, bar), joined.substr(bar + 1));
         if (!joinedTree) return fmt::format("{} cannot be read", joined.substr(0, bar) + ":" + joined.substr(bar + 1));
         vector<std::unique_ptr<TTreeFormula>> keyFormulas;
         for (const auto& key : join.keys) {
@@ -5063,7 +5103,7 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
         // a row has its match if its keys are in the joined tree beside it
         auto rowsOfSample = std::make_shared<std::unordered_map<string, const map<key_t, Long64_t>*>>();
         for (const auto& [part, joined] : joinedTreeOf) {
-          for (const auto& sample : samplesOf(part)) {
+          for (const auto& sample : SamplesOf(part)) {
             (*rowsOfSample)[sample] = &rowsByKey->at(joined);
           }
         }
@@ -5085,11 +5125,9 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
         joinMatches.push_back(std::make_shared<join_match_t>(join_match_t{alias, defineMatched}));
       }
       joinedChain->SetTreeIndex(new RowIndex(joinedChain.get(), join.keys, std::move(joinedTreeOf), std::move(rowsByKey), join.keepUnmatched));  // owned by the chain
-      chain.AddFriend(joinedChain.get(), join.GetAlias().data());
-      joinedChains.push_back(joinedChain);
       return nullopt;
     }
-    if (join.keepUnmatched && joinedChain->GetEntries() == 0) return keepAllUnmatched();
+    if (join.keepUnmatched && joinedChain->GetEntries() == 0) return KeepAllUnmatched();
     auto index = [&]() {
       auto quiet = ignore_root_messages_below(kFatal);  // duplicates and keys that are too large are reported below
       return std::make_unique<TTreeIndex>(joinedChain.get(), join.keys[0].data(), (join.keys.size() > 1) ? join.keys[1].data() : "0");
@@ -5131,10 +5169,26 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
     } else {
       joinedChain->SetTreeIndex(index.release());  // owned by the chain
     }
+    return nullopt;
   }
-  chain.AddFriend(joinedChain.get(), join.GetAlias().data());
-  joinedChains.push_back(joinedChain);
-  return nullopt;
+};
+
+//**************************************************************************************************
+/**
+ * Join a tree to a chain: its rows are matched with the rows of the chain either by their number, by the values of key columns
+ * or by the row number an index column of the chain holds (counted within the joined tree beside each part of the chain).
+ * Returns why this is not possible (if so).
+ */
+//**************************************************************************************************
+optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, const vector<tree_input_t>& treeInputs,
+                                         const Plot::Pad::Data::data_info_t::join_t& join, vector<shared_ptr<TChain>>& joinedChains,
+                                         vector<shared_ptr<join_match_t>>& joinMatches, vector<string>& joinedFiles)
+{
+  if (const string treeAlias = split_path(treeName).second; join.GetAlias() == treeAlias) {
+    return fmt::format("the columns of both would be called {}.column, please specify an alias", treeAlias);
+  }
+  join_attach_t attach{*this, chain, treeName, treeInputs, join, joinedChains, joinMatches, joinedFiles};
+  return attach.Attach();
 }
 
 //**************************************************************************************************

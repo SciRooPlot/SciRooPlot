@@ -282,6 +282,7 @@ class PlotManager
   void ReadTableData(const std::string& inputFileName, const std::string& name, const std::string& dataSource);
   // how to tell for a join that keeps rows without a match whether a row has one (defined in the implementation)
   struct join_match_t;
+  struct join_attach_t;  // joining a tree to a chain (AttachJoin, PlotManager.cpp)
   void ProcessDataRequests(const std::string& type, const std::string& dataSource, const std::string& name, const std::string& objNameSuffix,
                            const std::function<std::unique_ptr<ROOT::RDataFrame>()>& makeDataFrame, TTree* tree, const std::string& inputsDescription = "",
                            const std::optional<std::vector<Plot::Pad::Data::data_info_t::join_t>>& joins = std::nullopt,
