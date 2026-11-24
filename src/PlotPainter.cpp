@@ -632,247 +632,22 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     auto& pad_ptr = padState.pad_ptr;
     auto& drawData = padState.drawData;
     auto& padSetup = padState.padSetup;
-    auto& hasRefFunc = padState.hasRefFunc;
-    auto& frameSource = padState.frameSource;
     auto& fail = padState.fail;
-    auto& drawOption = padState.drawOption;
     auto& dataIndex = padState.dataIndex;
-
-    // Pad placing
-    array<double_t, 4> padPos = {0., 0., 1., 1.};
-
-    auto xLow = pad.GetXLow();
-    auto yLow = pad.GetYLow();
-    auto xUp = pad.GetXUp();
-    auto yUp = pad.GetYUp();
-
-    const bool valid =
-      xLow && yLow && xUp && yUp &&
-      *xLow >= 0 && *xLow <= 1 &&
-      *xUp >= 0 && *xUp <= 1 &&
-      *yLow >= 0 && *yLow <= 1 &&
-      *yUp >= 0 && *yUp <= 1 &&
-      *xLow < *xUp &&
-      *yLow < *yUp;
-
-    if (!valid) {
-      // a plot with only one pad and no position for it is drawn over the whole plot by design
-      const bool isSinglePad = std::count_if(plot.GetPads().begin(), plot.GetPads().end(), [](const auto& p) { return p.first != 0; }) == 1;
-      if (!isSinglePad || xLow || yLow || xUp || yUp) {
-        logger::warning("Position of pad {} is not defined properly, drawing it over the whole plot.", padID);
-      }
-    } else {
-      padPos = {*xLow, *yLow, *xUp, *yUp};
-    }
-
-    // get the settings for this pad
-    padState.textFont = get_first(pad.GetDefaultTextFont(), padDefaults.GetDefaultTextFont());
-    padState.textSize = get_first(pad.GetDefaultTextSize(), padDefaults.GetDefaultTextSize());
-    padState.textColor = get_first(pad.GetDefaultTextColor(), padDefaults.GetDefaultTextColor());
-    padState.textAlpha = get_first(pad.GetDefaultTextAlpha(), padDefaults.GetDefaultTextAlpha());
-
-    canvas_ptr->cd();
-    string padName = "Pad_" + std::to_string(padID);
-
-    pad_ptr = new TPad(padName.data(), "", padPos[0], padPos[1], padPos[2], padPos[3]);
-
-    // TAttPad drops a margin that leaves no room for the frame with the opposite margin as it is at that moment, without a word: each pair
-    // is checked as a whole and set starting from zero, so that a valid pair does not depend on the order of setting (top 0.9, bottom 0.05)
-    const float_t marginTop = get_first_or(pad_ptr->GetTopMargin(), pad.GetMarginTop(), padDefaults.GetMarginTop());
-    const float_t marginBottom = get_first_or(pad_ptr->GetBottomMargin(), pad.GetMarginBottom(), padDefaults.GetMarginBottom());
-    const float_t marginLeft = get_first_or(pad_ptr->GetLeftMargin(), pad.GetMarginLeft(), padDefaults.GetMarginLeft());
-    const float_t marginRight = get_first_or(pad_ptr->GetRightMargin(), pad.GetMarginRight(), padDefaults.GetMarginRight());
-    if (marginTop + marginBottom < 1.f) {
-      pad_ptr->SetBottomMargin(0.);
-      pad_ptr->SetTopMargin(marginTop);
-      pad_ptr->SetBottomMargin(marginBottom);
-    } else {
-      ReportIgnored(fmt::format("The top and bottom margins of pad {} ({:g} and {:g})", padID, marginTop, marginBottom), "they leave no room for the frame", true);
-    }
-    if (marginLeft + marginRight < 1.f) {
-      pad_ptr->SetLeftMargin(0.);
-      pad_ptr->SetRightMargin(marginRight);
-      pad_ptr->SetLeftMargin(marginLeft);
-    } else {
-      ReportIgnored(fmt::format("The left and right margins of pad {} ({:g} and {:g})", padID, marginLeft, marginRight), "they leave no room for the frame", true);
-    }
-    if (auto padFillColor = get_first(pad.GetFillColor(), padDefaults.GetFillColor())) pad_ptr->SetFillColor(padFillColor->ToIndex());
-    if (auto padFillStyle = get_first(pad.GetFillStyle(), padDefaults.GetFillStyle())) pad_ptr->SetFillStyle(*padFillStyle);
-    if (auto padFillAlpha = get_first(pad.GetFillAlpha(), padDefaults.GetFillAlpha())) pad_ptr->SetFillColor(TColor::GetColorTransparent(pad_ptr->GetFillColor(), *padFillAlpha));
-    if (auto frameFillColor = get_first(pad.GetFrameFillColor(), padDefaults.GetFrameFillColor())) pad_ptr->SetFrameFillColor(frameFillColor->ToIndex());
-    if (auto frameFillStyle = get_first(pad.GetFrameFillStyle(), padDefaults.GetFrameFillStyle())) pad_ptr->SetFrameFillStyle(*frameFillStyle);
-    if (auto frameFillAlpha = get_first(pad.GetFrameFillAlpha(), padDefaults.GetFrameFillAlpha())) pad_ptr->SetFrameFillColor(TColor::GetColorTransparent(pad_ptr->GetFrameFillColor(), *frameFillAlpha));
-    if (auto frameBorderColor = get_first(pad.GetFrameBorderColor(), padDefaults.GetFrameBorderColor())) pad_ptr->SetFrameLineColor(frameBorderColor->ToIndex());
-    if (auto frameBorderAlpha = get_first(pad.GetFrameBorderAlpha(), padDefaults.GetFrameBorderAlpha())) pad_ptr->SetFrameLineColor(TColor::GetColorTransparent(pad_ptr->GetFrameLineColor(), *frameBorderAlpha));
-    if (auto frameBorderStyle = get_first(pad.GetFrameBorderStyle(), padDefaults.GetFrameBorderStyle())) pad_ptr->SetFrameLineStyle(*frameBorderStyle);
-    if (auto frameBorderWidth = get_first(pad.GetFrameBorderWidth(), padDefaults.GetFrameBorderWidth())) pad_ptr->SetFrameLineWidth(*frameBorderWidth);
-
-    // palette, candle ranges and text format are global state that ROOT reads while painting: they are set by TExec primitives,
-    // which run whenever the pad is painted (also when the canvas is read back from a file); the last primitive of the canvas restores
-    // the defaults afterwards (in the web canvas it sets the values for the whole canvas instead)
-    const double_t candleBoxRange = get_first_or(0.5, pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange());
-    const double_t candleWhiskerRange = get_first_or(1., pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange());
-    if (!webCandleRanges && (candleBoxRange != 0.5 || candleWhiskerRange != 1.)) webCandleRanges = {candleBoxRange, candleWhiskerRange};
-    padSetup = fmt::format("gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange({}); TCandle::SetWhiskerRange({});", candleBoxRange, candleWhiskerRange);
-
-    // a colour gradient gets one colour per data item that will actually take a colour from the defaults: the marker, line and fill
-    // lists share one index (a data item taking any of the three moves it on), so all three are as long as the number of such items
-    // (sized each by its own count, a shorter list would wrap around and give the marker and line of one item different shades);
-    // the rule is that of ApplyDataStyle: marker and line colours always have a default list, fill colours only a list or gradient of
-    // the pad or pad 0, or the default colours where SciRooPlot sets the fill style (fillDefaults)
-    const bool hasFillList = pad.GetDefaultFillColors() || pad.GetDefaultFillColorsGradient().rgbEndpoints || padDefaults.GetDefaultFillColorsGradient().rgbEndpoints;
-    const int32_t nTakingColors = static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [&](const auto& data) {
-      const bool takesFill = !data->GetFillColor() && (hasFillList || fillDefaults(pad, *data));
-      return !data->GetKeepInputStyle() && (!data->GetMarkerColor() || !data->GetLineColor() || takesFill);
-    }));
-    // a gradient is generated only if a data item takes colours from it, or if its number of colours is given explicitly
-    // a gradient of pad 0 is turned into colours of this pad: written into pad 0, it would be replaced by the colours sized for the first pad
-    // (it applies where the pad has neither a gradient nor a list of its own)
-    auto gradientColors = [nTakingColors](const auto& own, const auto& inherited, bool ownList) -> optional<vector<color_t>> {
-      const auto& gradient = (own.rgbEndpoints || ownList) ? own : inherited;
-      if (!gradient.rgbEndpoints || (nTakingColors == 0 && !gradient.nColors)) return nullopt;
-      const vector<int16_t> indices = GenerateGradientColors(get_first_or(nTakingColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
-      return vector<color_t>(indices.begin(), indices.end());
-    };
-    if (auto colors = gradientColors(pad.GetDefaultMarkerColorsGradient(), padDefaults.GetDefaultMarkerColorsGradient(), pad.GetDefaultMarkerColors().has_value())) {
-      pad.SetDefaultMarkerColors(*colors);
-    }
-    if (auto colors = gradientColors(pad.GetDefaultLineColorsGradient(), padDefaults.GetDefaultLineColorsGradient(), pad.GetDefaultLineColors().has_value())) {
-      pad.SetDefaultLineColors(*colors);
-    }
-    if (auto colors = gradientColors(pad.GetDefaultFillColorsGradient(), padDefaults.GetDefaultFillColorsGradient(), pad.GetDefaultFillColors().has_value())) {
-      pad.SetDefaultFillColors(*colors);
-    }
-    string paletteCommand;
-    if (pad.GetPaletteGradient().rgbEndpoints) {
-      const auto& gradient = pad.GetPaletteGradient();
-      paletteCommand = GradientPaletteCommand(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
-    } else if (padDefaults.GetPaletteGradient().rgbEndpoints && !pad.GetPalette()) {
-      const auto& gradient = padDefaults.GetPaletteGradient();
-      paletteCommand = GradientPaletteCommand(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
-    } else {
-      // a ROOT palette with the alpha set together with it (the pad's own palette or else that of pad 0)
-      const auto& alpha = (pad.GetPalette()) ? pad.GetPaletteGradient().alpha : padDefaults.GetPaletteGradient().alpha;
-      paletteCommand = fmt::format(" gStyle->SetPalette({}, nullptr, {});", get_first_or(static_cast<int32_t>(kBird), pad.GetPalette(), padDefaults.GetPalette()), get_first_or(1.f, alpha));
-    }
-    padSetup += paletteCommand;
+    MakePad(padState, canvas_ptr.get(), plot);
+    const string paletteCommand = MakePadSetup(padState, webCandleRanges);
     pad_ptr->SetNumber(padID);
     pad_ptr->Draw();
     pad_ptr->cd();
-    drawData.assign(pad.GetData().begin(), pad.GetData().end());  // the data themselves, not copies
-    const bool hasData = !drawData.empty();
     unique_ptr<TH1> emptyFrame;  // frame made from the axis ranges of a pad without data and frame input
-
-    if (pad.GetFrame()) {
-      // the frame input of the pad is drawn only as frame (in front of the data, with the ranges stored with it, like data that defines the frame)
-      const bool dataDefinesFrame = std::any_of(drawData.begin(), drawData.end(), [](const auto& curData) { return curData->GetDefinesFrame(); });
-      if (dataDefinesFrame) {
-        logger::warning("Pad {} has a frame ({}), data marked SetDefinesFrame() does not define it.", padID, DataName(*pad.GetFrame()));
-      }
-      drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Data>(*pad.GetFrame()));
-      drawData[0]->SetDefinesFrame();
-    } else if (hasData) {
-      const size_t frameDataID = FrameDataIndex(drawData, dataBuffer);
-      // make a copy of data that will serve as axis frame and put it in front of data vector
-      if (drawData[frameDataID]->GetType() == "ratio") {
-        drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Ratio>(*std::dynamic_pointer_cast<Plot::Pad::Ratio>(drawData[frameDataID])));
-      } else {
-        drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Data>(*drawData[frameDataID]));
-      }
-      frameSource = drawData[frameDataID + 1].get();
-    } else {
-      // without data and frame input the frame is an empty histogram with one bin spanning the x range (and y range for 2d, if z has a range);
-      // the ranges of the pad are applied to it as to any frame (an Empty() cell of a layout, room for a legend or a text, takes no ranges from pad 0)
-      auto range = [&](char axisLabel) {
-        optional<double_t> min;
-        optional<double_t> max;
-        for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(pad)}) {
-          if (&curPad == &padDefaults && pad.GetIsEmptyCell()) continue;
-          if (curPad.GetAxes().find(axisLabel) == curPad.GetAxes().end()) continue;
-          if (curPad[axisLabel].GetMinRange()) min = curPad[axisLabel].GetMinRange();
-          if (curPad[axisLabel].GetMaxRange()) max = curPad[axisLabel].GetMaxRange();
-        }
-        return (min && max && *min < *max) ? optional<std::pair<double_t, double_t>>{{*min, *max}} : nullopt;
-      };
-      auto rangeX = range('X');
-      auto rangeY = range('Y');
-      if (rangeX && rangeY) {
-        if (range('Z')) {
-          emptyFrame = std::make_unique<TH2D>("frame", "", 1, rangeX->first, rangeX->second, 1, rangeY->first, rangeY->second);
-        } else {
-          emptyFrame = std::make_unique<TH1D>("frame", "", 1, rangeX->first, rangeX->second);
-        }
-        emptyFrame->SetDirectory(nullptr);
-        drawData.push_back(std::make_shared<Plot::Pad::Data>("frame", "EMPTY_FRAME", nullopt));
-      } else if (pad.GetLegendBoxes().empty() && pad.GetTextBoxes().empty() && pad.GetImageBoxes().empty() && !pad.GetIsEmptyCell()) {
-        const string missing = (!rangeX && !rangeY) ? "X or Y" : ((rangeX) ? "Y" : "X");
-        // what the pad has that is drawn only on a frame: its reference function as drawn below (an empty one is none), its shapes
-        const auto refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
-        vector<string> onFrame;
-        if (refFunc && !refFunc->GetName().empty()) onFrame.emplace_back("its reference function");
-        if (!pad.GetShapes().empty()) onFrame.emplace_back("its shapes");
-        const string notDrawn = (onFrame.empty()) ? "" : fmt::format(" ({} {} drawn only on a frame)", join_strings(onFrame, " and "), (onFrame.size() == 1 && refFunc && !refFunc->GetName().empty()) ? "is" : "are");
-        logger::warning("Nothing to be drawn in pad {}: it has no data, no frame and no {} range for an empty frame{}.", padID, missing, notDrawn);
-        continue;
-      }
-    }
-    if (!drawData.empty()) drawData[0]->SetLegendLabel("");  // axis frame should not appear in legend
-
-    if (!drawData.empty()) {
-      // put reference function in data vector right after the axis histogram (also in a pad with only a frame: SetFrame or the empty frame of its ranges)
-      auto refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
-      if (refFunc && !refFunc->GetName().empty()) {  // an empty one: no reference function
-        drawData.insert(drawData.begin() + 1, refFunc);
-        hasRefFunc = true;
-      }
-    }
+    if (!CollectDrawData(padState, emptyFrame)) continue;
 
     for (const auto& data : drawData) {
       if (fail) break;
       // data 0 is the copy of the first data that gives the frame: ROOT's messages about it come again with the data itself
       auto quiet = ignore_root_messages_below(dataIndex ? kUnset : kFatal);
       item_state_t state{padState, data};
-      if (data->GetDrawOption()) {
-        // SAME (also SAMES, SAME0, SAMES0) is SciRooPlot's: the first data of a pad is also drawn as its frame, into the empty pad, where
-        // SAME made ROOT paint a title box (histograms), a garbled picture (SAME0) or an extra copy (graphs); the stats boxes get SAMES anyway.
-        // Removed silently, since all data of a pad is drawn into the same frame as asked; only the own colour range of SAME0 is lost
-        string option = *data->GetDrawOption();
-        string upper = str_upper(option);
-        bool ownRange{};
-        for (size_t pos = upper.find("SAME"); pos != string::npos; pos = upper.find("SAME", pos)) {
-          size_t end = pos + 4;
-          if (end < upper.size() && upper[end] == 'S') ++end;
-          if (end < upper.size() && upper[end] == '0') {
-            ++end;
-            ownRange = true;
-          }
-          upper.erase(pos, end - pos);
-          option.erase(pos, end - pos);
-        }
-        if (ownRange) Warn(state, "Drawing option '{}' of {}: SAME0 is removed, all data of a pad share the colour range of its frame.", *data->GetDrawOption(), DataName(*data));
-        // AXIS and AXIG (axes or grid only) would draw no data and leave the frame drawn from it without labels: the axes are SciRooPlot's
-        // (warned once per data: the frame copy of the first data, index 0, is drawn from the same item again)
-        bool axesOnly{};
-        for (const char* token : {"AXIS", "AXIG"}) {
-          for (size_t pos = upper.find(token); pos != string::npos; pos = upper.find(token, pos)) {
-            upper.erase(pos, 4);
-            option.erase(pos, 4);
-            axesOnly = true;
-          }
-        }
-        if (axesOnly) Warn(state, "Drawing option '{}' of {}: AXIS and AXIG are removed, the axes are drawn by SciRooPlot (a frame without data: Pad::SetFrame).", *data->GetDrawOption(), DataName(*data));
-        // PLC, PMC, PFC: ROOT counts every object drawn with them (TPad::IncrementPaletteColor) and gives each a colour spread over the palette
-        // when it is painted; the frame, a copy of the first data drawn twice, would take colours of its own and shift those of the data
-        if (dataIndex == 0) {
-          for (const char* palette : {"PLC", "PMC", "PFC"}) {
-            for (size_t pos = upper.find(palette); pos != string::npos; pos = upper.find(palette, pos)) {
-              upper.erase(pos, 3);
-              option.erase(pos, 3);
-            }
-          }
-        }
-        drawOption += option;
-      }
+      if (data->GetDrawOption()) AppendDrawOption(state);
 
       // ranges stored with an input are what data marked SetDefinesFrame is there for: they are kept for its copy that draws the frame
       const bool keepStoredRanges = (dataIndex == 0) && data->GetDefinesFrame() && data->GetType() != "ratio";
@@ -918,9 +693,92 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   for (const auto& [padID, pad] : plot.GetPads()) {
     if (padID > 0 && pad.GetColorScaleOf()) DrawColorScaleCell(canvas_ptr.get(), plot, padID);
   }
+  DrawLegendsAndTexts(canvas_ptr.get(), plot);
+  for (size_t i = 0; i < plot.GetCommonTitles().size(); ++i) {
+    DrawCommonTitle(canvas_ptr.get(), plot.GetCommonTitles()[i].first, plot.GetCommonTitles()[i].second, i + 1);
+  }
+
+  CheckFontSizes(canvas_ptr->GetListOfPrimitives());
+  if (mScale != 1. || mOnScreen) {
+    // axes, hatched fill areas, the ends of error bars and the dashes of line styles are painted with the absolute sizes defined in gStyle
+    sUnscaledStyle = style_sizes_t{gStyle->GetLineWidth(), gStyle->GetHatchesLineWidth(), gStyle->GetEndErrorSize(), gStyle->GetGridStyle(), {}};
+    gStyle->SetLineWidth(ScaleLineWidth(gStyle->GetLineWidth()));
+    gStyle->SetHatchesLineWidth(ScaleLineWidth(static_cast<Width_t>(gStyle->GetHatchesLineWidth())));
+    gStyle->SetEndErrorSize(gStyle->GetEndErrorSize() * mScale);
+    // line styles are lists of dash and gap lengths (see TStyle::SetLineStyleString)
+    for (int32_t style = 1; style < 30; ++style) {
+      const string dashes = gStyle->GetLineStyleString(style);
+      sUnscaledStyle->lineStyles.push_back(dashes);
+      string scaledDashes;
+      std::istringstream stream(dashes);
+      for (int32_t length{}; stream >> length;) {
+        scaledDashes += std::to_string(std::lround(length * mScale)) + " ";
+      }
+      if (!scaledDashes.empty()) gStyle->SetLineStyleString(style, scaledDashes.data());
+    }
+    // the X11 backend draws styles 2-4 with fixed dash patterns instead of these strings (the strings at scale 1, but never scaled):
+    // on screen they are drawn with free user-defined styles (the highest ones without a string) that carry the strings of 2-4
+    mScreenDashStyles = {};
+    if (mOnScreen) {
+      size_t next{};
+      for (int32_t style = 29; style > 4 && next < mScreenDashStyles.size(); --style) {
+        if (sUnscaledStyle->lineStyles[style - 1].find_first_not_of(' ') != string::npos) continue;  // unset styles hold blanks
+        mScreenDashStyles[next] = static_cast<Style_t>(style);
+        gStyle->SetLineStyleString(style, gStyle->GetLineStyleString(static_cast<int32_t>(next) + 2));
+        ++next;
+      }
+      gStyle->SetGridStyle(ScreenLineStyle(gStyle->GetGridStyle()));
+    }
+    std::set<TObject*> done;
+    ApplyScale(canvas_ptr.get(), done);
+  }
+  canvas_ptr->cd();
+  const string webOnce = WebOnceCommand();
+  const string webEachPaint = WebEachPaintCommand(canvas_ptr.get());
+  const bool webTitles = std::none_of(padSetups.begin(), padSetups.end(), [](const auto& padSetup) { return str_contains(padSetup.second, "SetOptTitle(0)"); });
+  TExec* webExec = new TExec(
+    "web_canvas",
+    fmt::format("if (gPad->GetCanvas()->IsWeb()) {{ gROOT->ProcessLine(Form(\"{{ auto* w = (TWebCanvas*)%p; w->SetPaletteDelivery(3); if (!w->IsFixedSize()) w->SetCanvasSize({}, {}); }}\", (void*)gPad->GetCanvas()->GetCanvasImp())); gStyle->SetOptTitle({});{}{} }}",
+                static_cast<uint32_t>(canvasWidth), static_cast<uint32_t>(canvasHeight), webTitles ? 1 : 0, webOnce, webEachPaint)
+      .data());
+  webExec->SetBit(kCanDelete);
+  canvas_ptr->GetListOfPrimitives()->AddFirst(webExec);
+  // the colours of the canvas that are not predefined by ROOT are defined by its first primitive, so that a canvas read from a file
+  // in another session paints with them (ROOT itself stores the complete colour list, and only with the first canvas written);
+  // it runs before the setup of any pad, so that the palettes these set take colour indices above them instead of being overwritten
+  std::set<int32_t> customColors;
+  CollectCustomColors(canvas_ptr.get(), customColors);
+  if (!customColors.empty()) {
+    TExec* colorExec = new TExec("define_colors", ColorDefinitionCommand(customColors).data());
+    colorExec->SetBit(kCanDelete);
+    canvas_ptr->GetListOfPrimitives()->AddFirst(colorExec);
+  }
+  // last primitive of the canvas: restores the global settings after the pads were painted (the web canvas gets those of the whole canvas)
+  const string webGlobals = WebGlobalsCommand(webTitles, webTextFormat, webCandleRanges);
+  TExec* resetExec = new TExec(
+    "reset_globals",
+    fmt::format("if (gPad->GetCanvas()->IsWeb()) {{{} }} else {{ gStyle->SetOptTitle(1); gStyle->SetPalette({}); gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange(0.5); TCandle::SetWhiskerRange(1.); }}",
+                webGlobals, static_cast<int32_t>(kBird))
+      .data());
+  resetExec->SetBit(kCanDelete);
+  resetExec->Draw();
+  canvas_ptr->Modified();
+  canvas_ptr->Update();
+  return canvas_ptr;
+}
+
+//**************************************************************************************************
+/**
+ * Draws the legends and texts of the pads, once all pads are drawn: a legend row for data of another pad takes the label and the row
+ * style of that data, unless the row sets its own.
+ */
+//**************************************************************************************************
+void PlotPainter::DrawLegendsAndTexts(TCanvas* canvas, Plot& plot)
+{
+  auto& padDefaults = plot[0];
   for (auto& [padID, pad] : plot.GetPads()) {
     if (padID == 0 || pad.GetColorScaleOf()) continue;  // the boxes of a colour scale cell are not drawn (see above)
-    auto* pad_ptr = dynamic_cast<TPad*>(canvas_ptr->GetPrimitive(("Pad_" + std::to_string(padID)).data()));
+    auto* pad_ptr = dynamic_cast<TPad*>(canvas->GetPrimitive(("Pad_" + std::to_string(padID)).data()));
     uint8_t legendIndex{};
     for (const auto& box : pad.GetLegendBoxes()) {
       ++legendIndex;
@@ -967,45 +825,296 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       }
     }
   }
-  for (size_t i = 0; i < plot.GetCommonTitles().size(); ++i) {
-    DrawCommonTitle(canvas_ptr.get(), plot.GetCommonTitles()[i].first, plot.GetCommonTitles()[i].second, i + 1);
+}
+
+//**************************************************************************************************
+/**
+ * Makes the TPad of a pad at its position, with its margins, fills and frame border, and the default text attributes of the pad.
+ */
+//**************************************************************************************************
+void PlotPainter::MakePad(pad_state_t& padState, TCanvas* canvas, const Plot& plot)
+{
+  Plot::Pad& pad = padState.pad;
+  Plot::Pad& padDefaults = padState.padDefaults;
+  const uint8_t padID = padState.padID;
+  auto& pad_ptr = padState.pad_ptr;
+  array<double_t, 4> padPos = {0., 0., 1., 1.};
+
+  auto xLow = pad.GetXLow();
+  auto yLow = pad.GetYLow();
+  auto xUp = pad.GetXUp();
+  auto yUp = pad.GetYUp();
+
+  const bool valid =
+    xLow && yLow && xUp && yUp &&
+    *xLow >= 0 && *xLow <= 1 &&
+    *xUp >= 0 && *xUp <= 1 &&
+    *yLow >= 0 && *yLow <= 1 &&
+    *yUp >= 0 && *yUp <= 1 &&
+    *xLow < *xUp &&
+    *yLow < *yUp;
+
+  if (!valid) {
+    // a plot with only one pad and no position for it is drawn over the whole plot by design
+    const bool isSinglePad = std::count_if(plot.GetPads().begin(), plot.GetPads().end(), [](const auto& p) { return p.first != 0; }) == 1;
+    if (!isSinglePad || xLow || yLow || xUp || yUp) {
+      logger::warning("Position of pad {} is not defined properly, drawing it over the whole plot.", padID);
+    }
+  } else {
+    padPos = {*xLow, *yLow, *xUp, *yUp};
   }
 
-  CheckFontSizes(canvas_ptr->GetListOfPrimitives());
-  if (mScale != 1. || mOnScreen) {
-    // axes, hatched fill areas, the ends of error bars and the dashes of line styles are painted with the absolute sizes defined in gStyle
-    sUnscaledStyle = style_sizes_t{gStyle->GetLineWidth(), gStyle->GetHatchesLineWidth(), gStyle->GetEndErrorSize(), gStyle->GetGridStyle(), {}};
-    gStyle->SetLineWidth(ScaleLineWidth(gStyle->GetLineWidth()));
-    gStyle->SetHatchesLineWidth(ScaleLineWidth(static_cast<Width_t>(gStyle->GetHatchesLineWidth())));
-    gStyle->SetEndErrorSize(gStyle->GetEndErrorSize() * mScale);
-    // line styles are lists of dash and gap lengths (see TStyle::SetLineStyleString)
-    for (int32_t style = 1; style < 30; ++style) {
-      const string dashes = gStyle->GetLineStyleString(style);
-      sUnscaledStyle->lineStyles.push_back(dashes);
-      string scaledDashes;
-      std::istringstream stream(dashes);
-      for (int32_t length{}; stream >> length;) {
-        scaledDashes += std::to_string(std::lround(length * mScale)) + " ";
-      }
-      if (!scaledDashes.empty()) gStyle->SetLineStyleString(style, scaledDashes.data());
-    }
-    // the X11 backend draws styles 2-4 with fixed dash patterns instead of these strings (the strings at scale 1, but never scaled):
-    // on screen they are drawn with free user-defined styles (the highest ones without a string) that carry the strings of 2-4
-    mScreenDashStyles = {};
-    if (mOnScreen) {
-      size_t next{};
-      for (int32_t style = 29; style > 4 && next < mScreenDashStyles.size(); --style) {
-        if (sUnscaledStyle->lineStyles[style - 1].find_first_not_of(' ') != string::npos) continue;  // unset styles hold blanks
-        mScreenDashStyles[next] = static_cast<Style_t>(style);
-        gStyle->SetLineStyleString(style, gStyle->GetLineStyleString(static_cast<int32_t>(next) + 2));
-        ++next;
-      }
-      gStyle->SetGridStyle(ScreenLineStyle(gStyle->GetGridStyle()));
-    }
-    std::set<TObject*> done;
-    ApplyScale(canvas_ptr.get(), done);
+  // get the settings for this pad
+  padState.textFont = get_first(pad.GetDefaultTextFont(), padDefaults.GetDefaultTextFont());
+  padState.textSize = get_first(pad.GetDefaultTextSize(), padDefaults.GetDefaultTextSize());
+  padState.textColor = get_first(pad.GetDefaultTextColor(), padDefaults.GetDefaultTextColor());
+  padState.textAlpha = get_first(pad.GetDefaultTextAlpha(), padDefaults.GetDefaultTextAlpha());
+
+  canvas->cd();
+  string padName = "Pad_" + std::to_string(padID);
+
+  pad_ptr = new TPad(padName.data(), "", padPos[0], padPos[1], padPos[2], padPos[3]);
+
+  // TAttPad drops a margin that leaves no room for the frame with the opposite margin as it is at that moment, without a word: each pair
+  // is checked as a whole and set starting from zero, so that a valid pair does not depend on the order of setting (top 0.9, bottom 0.05)
+  const float_t marginTop = get_first_or(pad_ptr->GetTopMargin(), pad.GetMarginTop(), padDefaults.GetMarginTop());
+  const float_t marginBottom = get_first_or(pad_ptr->GetBottomMargin(), pad.GetMarginBottom(), padDefaults.GetMarginBottom());
+  const float_t marginLeft = get_first_or(pad_ptr->GetLeftMargin(), pad.GetMarginLeft(), padDefaults.GetMarginLeft());
+  const float_t marginRight = get_first_or(pad_ptr->GetRightMargin(), pad.GetMarginRight(), padDefaults.GetMarginRight());
+  if (marginTop + marginBottom < 1.f) {
+    pad_ptr->SetBottomMargin(0.);
+    pad_ptr->SetTopMargin(marginTop);
+    pad_ptr->SetBottomMargin(marginBottom);
+  } else {
+    ReportIgnored(fmt::format("The top and bottom margins of pad {} ({:g} and {:g})", padID, marginTop, marginBottom), "they leave no room for the frame", true);
   }
-  canvas_ptr->cd();
+  if (marginLeft + marginRight < 1.f) {
+    pad_ptr->SetLeftMargin(0.);
+    pad_ptr->SetRightMargin(marginRight);
+    pad_ptr->SetLeftMargin(marginLeft);
+  } else {
+    ReportIgnored(fmt::format("The left and right margins of pad {} ({:g} and {:g})", padID, marginLeft, marginRight), "they leave no room for the frame", true);
+  }
+  if (auto padFillColor = get_first(pad.GetFillColor(), padDefaults.GetFillColor())) pad_ptr->SetFillColor(padFillColor->ToIndex());
+  if (auto padFillStyle = get_first(pad.GetFillStyle(), padDefaults.GetFillStyle())) pad_ptr->SetFillStyle(*padFillStyle);
+  if (auto padFillAlpha = get_first(pad.GetFillAlpha(), padDefaults.GetFillAlpha())) pad_ptr->SetFillColor(TColor::GetColorTransparent(pad_ptr->GetFillColor(), *padFillAlpha));
+  if (auto frameFillColor = get_first(pad.GetFrameFillColor(), padDefaults.GetFrameFillColor())) pad_ptr->SetFrameFillColor(frameFillColor->ToIndex());
+  if (auto frameFillStyle = get_first(pad.GetFrameFillStyle(), padDefaults.GetFrameFillStyle())) pad_ptr->SetFrameFillStyle(*frameFillStyle);
+  if (auto frameFillAlpha = get_first(pad.GetFrameFillAlpha(), padDefaults.GetFrameFillAlpha())) pad_ptr->SetFrameFillColor(TColor::GetColorTransparent(pad_ptr->GetFrameFillColor(), *frameFillAlpha));
+  if (auto frameBorderColor = get_first(pad.GetFrameBorderColor(), padDefaults.GetFrameBorderColor())) pad_ptr->SetFrameLineColor(frameBorderColor->ToIndex());
+  if (auto frameBorderAlpha = get_first(pad.GetFrameBorderAlpha(), padDefaults.GetFrameBorderAlpha())) pad_ptr->SetFrameLineColor(TColor::GetColorTransparent(pad_ptr->GetFrameLineColor(), *frameBorderAlpha));
+  if (auto frameBorderStyle = get_first(pad.GetFrameBorderStyle(), padDefaults.GetFrameBorderStyle())) pad_ptr->SetFrameLineStyle(*frameBorderStyle);
+  if (auto frameBorderWidth = get_first(pad.GetFrameBorderWidth(), padDefaults.GetFrameBorderWidth())) pad_ptr->SetFrameLineWidth(*frameBorderWidth);
+}
+
+//**************************************************************************************************
+/**
+ * The setup of a pad, run before anything of it is painted: text format, candle ranges and palette (returned), and the default
+ * colours of its gradients.
+ */
+//**************************************************************************************************
+string PlotPainter::MakePadSetup(pad_state_t& padState, optional<std::pair<double_t, double_t>>& webCandleRanges)
+{
+  Plot::Pad& pad = padState.pad;
+  Plot::Pad& padDefaults = padState.padDefaults;
+  const auto& fillDefaults = padState.fillDefaults;
+  auto& padSetup = padState.padSetup;
+  // palette, candle ranges and text format are global state that ROOT reads while painting: they are set by TExec primitives,
+  // which run whenever the pad is painted (also when the canvas is read back from a file); the last primitive of the canvas restores
+  // the defaults afterwards (in the web canvas it sets the values for the whole canvas instead)
+  const double_t candleBoxRange = get_first_or(0.5, pad.GetDefaultCandleBoxRange(), padDefaults.GetDefaultCandleBoxRange());
+  const double_t candleWhiskerRange = get_first_or(1., pad.GetDefaultCandleWhiskerRange(), padDefaults.GetDefaultCandleWhiskerRange());
+  if (!webCandleRanges && (candleBoxRange != 0.5 || candleWhiskerRange != 1.)) webCandleRanges = {candleBoxRange, candleWhiskerRange};
+  padSetup = fmt::format("gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange({}); TCandle::SetWhiskerRange({});", candleBoxRange, candleWhiskerRange);
+
+  // a colour gradient gets one colour per data item that will actually take a colour from the defaults: the marker, line and fill
+  // lists share one index (a data item taking any of the three moves it on), so all three are as long as the number of such items
+  // (sized each by its own count, a shorter list would wrap around and give the marker and line of one item different shades);
+  // the rule is that of ApplyDataStyle: marker and line colours always have a default list, fill colours only a list or gradient of
+  // the pad or pad 0, or the default colours where SciRooPlot sets the fill style (fillDefaults)
+  const bool hasFillList = pad.GetDefaultFillColors() || pad.GetDefaultFillColorsGradient().rgbEndpoints || padDefaults.GetDefaultFillColorsGradient().rgbEndpoints;
+  const int32_t nTakingColors = static_cast<int32_t>(std::count_if(pad.GetData().begin(), pad.GetData().end(), [&](const auto& data) {
+    const bool takesFill = !data->GetFillColor() && (hasFillList || fillDefaults(pad, *data));
+    return !data->GetKeepInputStyle() && (!data->GetMarkerColor() || !data->GetLineColor() || takesFill);
+  }));
+  // a gradient is generated only if a data item takes colours from it, or if its number of colours is given explicitly
+  // a gradient of pad 0 is turned into colours of this pad: written into pad 0, it would be replaced by the colours sized for the first pad
+  // (it applies where the pad has neither a gradient nor a list of its own)
+  auto gradientColors = [nTakingColors](const auto& own, const auto& inherited, bool ownList) -> optional<vector<color_t>> {
+    const auto& gradient = (own.rgbEndpoints || ownList) ? own : inherited;
+    if (!gradient.rgbEndpoints || (nTakingColors == 0 && !gradient.nColors)) return nullopt;
+    const vector<int16_t> indices = GenerateGradientColors(get_first_or(nTakingColors, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
+    return vector<color_t>(indices.begin(), indices.end());
+  };
+  if (auto colors = gradientColors(pad.GetDefaultMarkerColorsGradient(), padDefaults.GetDefaultMarkerColorsGradient(), pad.GetDefaultMarkerColors().has_value())) {
+    pad.SetDefaultMarkerColors(*colors);
+  }
+  if (auto colors = gradientColors(pad.GetDefaultLineColorsGradient(), padDefaults.GetDefaultLineColorsGradient(), pad.GetDefaultLineColors().has_value())) {
+    pad.SetDefaultLineColors(*colors);
+  }
+  if (auto colors = gradientColors(pad.GetDefaultFillColorsGradient(), padDefaults.GetDefaultFillColorsGradient(), pad.GetDefaultFillColors().has_value())) {
+    pad.SetDefaultFillColors(*colors);
+  }
+  string paletteCommand;
+  if (pad.GetPaletteGradient().rgbEndpoints) {
+    const auto& gradient = pad.GetPaletteGradient();
+    paletteCommand = GradientPaletteCommand(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
+  } else if (padDefaults.GetPaletteGradient().rgbEndpoints && !pad.GetPalette()) {
+    const auto& gradient = padDefaults.GetPaletteGradient();
+    paletteCommand = GradientPaletteCommand(get_first_or(255, gradient.nColors), *gradient.rgbEndpoints, get_first_or(1.f, gradient.alpha));
+  } else {
+    // a ROOT palette with the alpha set together with it (the pad's own palette or else that of pad 0)
+    const auto& alpha = (pad.GetPalette()) ? pad.GetPaletteGradient().alpha : padDefaults.GetPaletteGradient().alpha;
+    paletteCommand = fmt::format(" gStyle->SetPalette({}, nullptr, {});", get_first_or(static_cast<int32_t>(kBird), pad.GetPalette(), padDefaults.GetPalette()), get_first_or(1.f, alpha));
+  }
+  padSetup += paletteCommand;
+  return paletteCommand;
+}
+
+//**************************************************************************************************
+/**
+ * The data drawn into a pad: a copy of the data giving the frame (or the frame input, or an empty frame made from the ranges of the
+ * pad), the reference function and the data (false if there is nothing to draw).
+ */
+//**************************************************************************************************
+bool PlotPainter::CollectDrawData(pad_state_t& padState, unique_ptr<TH1>& emptyFrame)
+{
+  Plot::Pad& pad = padState.pad;
+  Plot::Pad& padDefaults = padState.padDefaults;
+  const uint8_t padID = padState.padID;
+  const auto& dataBuffer = padState.dataBuffer;
+  auto& drawData = padState.drawData;
+  auto& hasRefFunc = padState.hasRefFunc;
+  auto& frameSource = padState.frameSource;
+  drawData.assign(pad.GetData().begin(), pad.GetData().end());  // the data themselves, not copies
+  const bool hasData = !drawData.empty();
+
+  if (pad.GetFrame()) {
+    // the frame input of the pad is drawn only as frame (in front of the data, with the ranges stored with it, like data that defines the frame)
+    const bool dataDefinesFrame = std::any_of(drawData.begin(), drawData.end(), [](const auto& curData) { return curData->GetDefinesFrame(); });
+    if (dataDefinesFrame) {
+      logger::warning("Pad {} has a frame ({}), data marked SetDefinesFrame() does not define it.", padID, DataName(*pad.GetFrame()));
+    }
+    drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Data>(*pad.GetFrame()));
+    drawData[0]->SetDefinesFrame();
+  } else if (hasData) {
+    const size_t frameDataID = FrameDataIndex(drawData, dataBuffer);
+    // make a copy of data that will serve as axis frame and put it in front of data vector
+    if (drawData[frameDataID]->GetType() == "ratio") {
+      drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Ratio>(*std::dynamic_pointer_cast<Plot::Pad::Ratio>(drawData[frameDataID])));
+    } else {
+      drawData.insert(drawData.begin(), std::make_shared<Plot::Pad::Data>(*drawData[frameDataID]));
+    }
+    frameSource = drawData[frameDataID + 1].get();
+  } else {
+    // without data and frame input the frame is an empty histogram with one bin spanning the x range (and y range for 2d, if z has a range);
+    // the ranges of the pad are applied to it as to any frame (an Empty() cell of a layout, room for a legend or a text, takes no ranges from pad 0)
+    auto range = [&](char axisLabel) {
+      optional<double_t> min;
+      optional<double_t> max;
+      for (Plot::Pad& curPad : {std::ref(padDefaults), std::ref(pad)}) {
+        if (&curPad == &padDefaults && pad.GetIsEmptyCell()) continue;
+        if (curPad.GetAxes().find(axisLabel) == curPad.GetAxes().end()) continue;
+        if (curPad[axisLabel].GetMinRange()) min = curPad[axisLabel].GetMinRange();
+        if (curPad[axisLabel].GetMaxRange()) max = curPad[axisLabel].GetMaxRange();
+      }
+      return (min && max && *min < *max) ? optional<std::pair<double_t, double_t>>{{*min, *max}} : nullopt;
+    };
+    auto rangeX = range('X');
+    auto rangeY = range('Y');
+    if (rangeX && rangeY) {
+      if (range('Z')) {
+        emptyFrame = std::make_unique<TH2D>("frame", "", 1, rangeX->first, rangeX->second, 1, rangeY->first, rangeY->second);
+      } else {
+        emptyFrame = std::make_unique<TH1D>("frame", "", 1, rangeX->first, rangeX->second);
+      }
+      emptyFrame->SetDirectory(nullptr);
+      drawData.push_back(std::make_shared<Plot::Pad::Data>("frame", "EMPTY_FRAME", nullopt));
+    } else if (pad.GetLegendBoxes().empty() && pad.GetTextBoxes().empty() && pad.GetImageBoxes().empty() && !pad.GetIsEmptyCell()) {
+      const string missing = (!rangeX && !rangeY) ? "X or Y" : ((rangeX) ? "Y" : "X");
+      // what the pad has that is drawn only on a frame: its reference function as drawn below (an empty one is none), its shapes
+      const auto refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
+      vector<string> onFrame;
+      if (refFunc && !refFunc->GetName().empty()) onFrame.emplace_back("its reference function");
+      if (!pad.GetShapes().empty()) onFrame.emplace_back("its shapes");
+      const string notDrawn = (onFrame.empty()) ? "" : fmt::format(" ({} {} drawn only on a frame)", join_strings(onFrame, " and "), (onFrame.size() == 1 && refFunc && !refFunc->GetName().empty()) ? "is" : "are");
+      logger::warning("Nothing to be drawn in pad {}: it has no data, no frame and no {} range for an empty frame{}.", padID, missing, notDrawn);
+      return false;
+    }
+  }
+  if (!drawData.empty()) drawData[0]->SetLegendLabel("");  // axis frame should not appear in legend
+
+  if (!drawData.empty()) {
+    // put reference function in data vector right after the axis histogram (also in a pad with only a frame: SetFrame or the empty frame of its ranges)
+    auto refFunc = (pad.GetRefFunc()) ? pad.GetRefFunc() : padDefaults.GetRefFunc();
+    if (refFunc && !refFunc->GetName().empty()) {  // an empty one: no reference function
+      drawData.insert(drawData.begin() + 1, refFunc);
+      hasRefFunc = true;
+    }
+  }
+  return true;
+}
+
+//**************************************************************************************************
+/**
+ * Appends the drawing option of the data to the option of the pad, without SAME, AXIS and AXIG, and for the frame without PLC, PMC
+ * and PFC.
+ */
+//**************************************************************************************************
+void PlotPainter::AppendDrawOption(item_state_t& state)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& drawOption = padState.drawOption;
+  auto& dataIndex = padState.dataIndex;
+  // SAME (also SAMES, SAME0, SAMES0) is SciRooPlot's: the first data of a pad is also drawn as its frame, into the empty pad, where
+  // SAME made ROOT paint a title box (histograms), a garbled picture (SAME0) or an extra copy (graphs); the stats boxes get SAMES anyway.
+  // Removed silently, since all data of a pad is drawn into the same frame as asked; only the own colour range of SAME0 is lost
+  string option = *data->GetDrawOption();
+  string upper = str_upper(option);
+  bool ownRange{};
+  for (size_t pos = upper.find("SAME"); pos != string::npos; pos = upper.find("SAME", pos)) {
+    size_t end = pos + 4;
+    if (end < upper.size() && upper[end] == 'S') ++end;
+    if (end < upper.size() && upper[end] == '0') {
+      ++end;
+      ownRange = true;
+    }
+    upper.erase(pos, end - pos);
+    option.erase(pos, end - pos);
+  }
+  if (ownRange) Warn(state, "Drawing option '{}' of {}: SAME0 is removed, all data of a pad share the colour range of its frame.", *data->GetDrawOption(), DataName(*data));
+  // AXIS and AXIG (axes or grid only) would draw no data and leave the frame drawn from it without labels: the axes are SciRooPlot's
+  // (warned once per data: the frame copy of the first data, index 0, is drawn from the same item again)
+  bool axesOnly{};
+  for (const char* token : {"AXIS", "AXIG"}) {
+    for (size_t pos = upper.find(token); pos != string::npos; pos = upper.find(token, pos)) {
+      upper.erase(pos, 4);
+      option.erase(pos, 4);
+      axesOnly = true;
+    }
+  }
+  if (axesOnly) Warn(state, "Drawing option '{}' of {}: AXIS and AXIG are removed, the axes are drawn by SciRooPlot (a frame without data: Pad::SetFrame).", *data->GetDrawOption(), DataName(*data));
+  // PLC, PMC, PFC: ROOT counts every object drawn with them (TPad::IncrementPaletteColor) and gives each a colour spread over the palette
+  // when it is painted; the frame, a copy of the first data drawn twice, would take colours of its own and shift those of the data
+  if (dataIndex == 0) {
+    for (const char* palette : {"PLC", "PMC", "PFC"}) {
+      for (size_t pos = upper.find(palette); pos != string::npos; pos = upper.find(palette, pos)) {
+        upper.erase(pos, 3);
+        option.erase(pos, 3);
+      }
+    }
+  }
+  drawOption += option;
+}
+
+//**************************************************************************************************
+/**
+ * What the web canvas adapts once, since the browser (JSROOT) draws some things unlike ROOT.
+ */
+//**************************************************************************************************
+string PlotPainter::WebOnceCommand() const
+{
   // the web canvas (TWebCanvas) paints data in the browser: with its default it sends one palette for the whole canvas, the one left after
   // the last primitive of the canvas; a palette per pad, taken after the primitives of the pad, needs palette delivery 3 set before the pads;
   // it also fits the canvas into the browser window, stretching the plot: a fixed canvas size keeps the plot as painted (set once, so a
@@ -1059,6 +1168,16 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
     }
   }
   webOnce += " }";
+  return webOnce;
+}
+
+//**************************************************************************************************
+/**
+ * What the web canvas adapts at every paint (the browser reports back the options it drew with, and the z range it found).
+ */
+//**************************************************************************************************
+string PlotPainter::WebEachPaintCommand(TCanvas* canvas)
+{
   // and at every paint (the browser reports back the options it drew with, and the z range it found):
   // - it colours the data of a pad by the z range of its frame only if the option of the frame gives it (HMIN, HMAX: JSROOT only),
   //   since the frame of 2d data is an empty histogram, and draws no colour scale for one without it
@@ -1072,7 +1191,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   optional<int32_t> webMaxDigits;
   bool webNegativeLabels{};
   bool webSampledFunctions{};
-  for (auto* padLink = canvas_ptr->GetListOfPrimitives()->FirstLink(); padLink; padLink = padLink->Next()) {
+  for (auto* padLink = canvas->GetListOfPrimitives()->FirstLink(); padLink; padLink = padLink->Next()) {
     auto* pad = dynamic_cast<TPad*>(padLink->GetObject());
     if (!pad) continue;
     for (auto* link = pad->GetListOfPrimitives()->FirstLink(); link && !webSampledFunctions; link = link->Next()) {
@@ -1100,7 +1219,6 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       }
     }
   }
-  const bool webTitles = std::none_of(padSetups.begin(), padSetups.end(), [](const auto& padSetup) { return str_contains(padSetup.second, "SetOptTitle(0)"); });
   if (webMaxDigits) webEachPaint += fmt::format(" gStyle->SetAxisMaxDigits({});", *webMaxDigits + (webNegativeLabels ? 1 : 0));
   if (webSampledFunctions) {
     webEachPaint +=
@@ -1108,23 +1226,16 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       " for (auto* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) if (auto* func = dynamic_cast<TF1*>(link->GetObject());"
       " func && !func->GetFormula() && !TString(link->GetOption()).Contains(\";force_saved\")) link->SetOption(TString(link->GetOption()) + \";force_saved\");";
   }
-  TExec* webExec = new TExec(
-    "web_canvas",
-    fmt::format("if (gPad->GetCanvas()->IsWeb()) {{ gROOT->ProcessLine(Form(\"{{ auto* w = (TWebCanvas*)%p; w->SetPaletteDelivery(3); if (!w->IsFixedSize()) w->SetCanvasSize({}, {}); }}\", (void*)gPad->GetCanvas()->GetCanvasImp())); gStyle->SetOptTitle({});{}{} }}",
-                static_cast<uint32_t>(canvasWidth), static_cast<uint32_t>(canvasHeight), webTitles ? 1 : 0, webOnce, webEachPaint)
-      .data());
-  webExec->SetBit(kCanDelete);
-  canvas_ptr->GetListOfPrimitives()->AddFirst(webExec);
-  // the colours of the canvas that are not predefined by ROOT are defined by its first primitive, so that a canvas read from a file
-  // in another session paints with them (ROOT itself stores the complete colour list, and only with the first canvas written);
-  // it runs before the setup of any pad, so that the palettes these set take colour indices above them instead of being overwritten
-  std::set<int32_t> customColors;
-  CollectCustomColors(canvas_ptr.get(), customColors);
-  if (!customColors.empty()) {
-    TExec* colorExec = new TExec("define_colors", ColorDefinitionCommand(customColors).data());
-    colorExec->SetBit(kCanDelete);
-    canvas_ptr->GetListOfPrimitives()->AddFirst(colorExec);
-  }
+  return webEachPaint;
+}
+
+//**************************************************************************************************
+/**
+ * The global settings the web canvas gets for the whole canvas from its last primitive (gStyle and the palette as they are after it).
+ */
+//**************************************************************************************************
+string PlotPainter::WebGlobalsCommand(bool webTitles, const optional<string>& webTextFormat, const optional<std::pair<double_t, double_t>>& webCandleRanges) const
+{
   // last primitive of the canvas: restores the global settings after the pads were painted; the web canvas instead gets the values for
   // the whole canvas, since it sends gStyle (text format, candle ranges) and the palette of the canvas as they are after this primitive:
   // the palette of the first pad drawing a map (its setup, run in that pad), the first text format and candle ranges set
@@ -1140,16 +1251,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   webGlobals += fmt::format(" gStyle->SetOptTitle({});", webTitles ? 1 : 0);
   const auto [webBoxRange, webWhiskerRange] = webCandleRanges.value_or(std::pair{0.5, 1.});
   webGlobals += fmt::format(" gStyle->SetPaintTextFormat({}); TCandle::SetBoxRange({}); TCandle::SetWhiskerRange({});", CppQuoted(webTextFormat.value_or("g")), webBoxRange, webWhiskerRange);
-  TExec* resetExec = new TExec(
-    "reset_globals",
-    fmt::format("if (gPad->GetCanvas()->IsWeb()) {{{} }} else {{ gStyle->SetOptTitle(1); gStyle->SetPalette({}); gStyle->SetPaintTextFormat(\"g\"); TCandle::SetBoxRange(0.5); TCandle::SetWhiskerRange(1.); }}",
-                webGlobals, static_cast<int32_t>(kBird))
-      .data());
-  resetExec->SetBit(kCanDelete);
-  resetExec->Draw();
-  canvas_ptr->Modified();
-  canvas_ptr->Update();
-  return canvas_ptr;
+  return webGlobals;
 }
 
 //**************************************************************************************************

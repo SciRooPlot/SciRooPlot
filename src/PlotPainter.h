@@ -293,6 +293,14 @@ class PlotPainter
  private:
   struct pad_state_t;   // the locals of GeneratePlot for one pad (PlotPainter.cpp)
   struct item_state_t;  // and those for the data item drawn
+  void MakePad(pad_state_t& padState, TCanvas* canvas, const Plot& plot);
+  std::string MakePadSetup(pad_state_t& padState, std::optional<std::pair<double_t, double_t>>& webCandleRanges);
+  bool CollectDrawData(pad_state_t& padState, std::unique_ptr<TH1>& emptyFrame);
+  void AppendDrawOption(item_state_t& state);
+  void DrawLegendsAndTexts(TCanvas* canvas, Plot& plot);
+  std::string WebOnceCommand() const;
+  std::string WebEachPaintCommand(TCanvas* canvas);
+  std::string WebGlobalsCommand(bool webTitles, const std::optional<std::string>& webTextFormat, const std::optional<std::pair<double_t, double_t>>& webCandleRanges) const;
   void FinishPad(pad_state_t& padState);
   void StyleContentScale(pad_state_t& padState);
   static bool ApplyContentLook(TAxis* zAxis, const Plot::Pad& pad, const Plot::Pad& padDefaults, const std::optional<float_t>& textAlpha, bool withSizes);
