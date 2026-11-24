@@ -29,6 +29,8 @@
 #include <utility>
 #include <vector>
 
+#include "util/Strings.h"
+
 namespace SciRooPlot::util
 {
 std::optional<std::string> expand_path(const std::string& path);
@@ -51,7 +53,7 @@ inline std::string input_file_name(const std::string& filePart)
 inline bool is_root_input(const std::string& filePart)
 {
   const std::string name = input_file_name(filePart);
-  return name.size() >= 5 && name.compare(name.size() - 5, 5, ".root") == 0;
+  return str_ends_with(name, ".root");
 }
 
 // a local file that does not exist (whether a remote file exists shows when it is opened); ec tells why a file could not be checked

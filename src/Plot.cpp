@@ -3326,7 +3326,7 @@ void Plot::Pad::Data::AddJoin(data_info_t& dataInfo, const string& name, const j
   auto isIdentifier = [](const string& str) {
     return !str.empty() && !std::isdigit(static_cast<unsigned char>(str[0])) && std::all_of(str.begin(), str.end(), [](unsigned char c) { return std::isalnum(c) || c == '_'; });
   };
-  if (tree.name.empty() || tree.name.front() == '/' || tree.name.back() == '/' || tree.name.find("//") != string::npos) {
+  if (tree.name.empty() || tree.name.front() == '/' || tree.name.back() == '/' || str_contains(tree.name, "//")) {
     logger::throw_invalid_argument("Cannot join tree '{}' to {}: invalid tree name.", tree.name, name);
   }
   if (auto illegal = find_illegal_name_char(tree.name, true)) {

@@ -28,6 +28,8 @@
 #include <string>
 #include <vector>
 
+#include "util/Strings.h"
+
 // TGrid is deprecated in ROOT 6.40 and removed in 6.42, together with the grid plugin (JAliEn) built on it
 #define SCIROOPLOT_HAS_GRID (ROOT_VERSION_CODE < ROOT_VERSION(6, 42, 0))
 #if SCIROOPLOT_HAS_GRID
@@ -77,7 +79,7 @@ std::string catalogue_path(const std::string& url)
 
 bool is_grid_path(const std::string& path)
 {
-  return path.rfind("alien:", 0) == 0;
+  return str_starts_with(path, "alien:");
 }
 
 bool connect_grid_for(const std::string& path)

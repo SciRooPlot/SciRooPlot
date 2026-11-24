@@ -1100,7 +1100,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
       }
     }
   }
-  const bool webTitles = std::none_of(padSetups.begin(), padSetups.end(), [](const auto& padSetup) { return padSetup.second.find("SetOptTitle(0)") != string::npos; });
+  const bool webTitles = std::none_of(padSetups.begin(), padSetups.end(), [](const auto& padSetup) { return str_contains(padSetup.second, "SetOptTitle(0)"); });
   if (webMaxDigits) webEachPaint += fmt::format(" gStyle->SetAxisMaxDigits({});", *webMaxDigits + (webNegativeLabels ? 1 : 0));
   if (webSampledFunctions) {
     webEachPaint +=

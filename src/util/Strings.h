@@ -58,9 +58,9 @@ inline bool is_blank(std::string_view str)
 {
   return str.find_first_not_of(" \t\n\r") == std::string_view::npos;
 }
-inline bool str_contains(const std::string& str, const std::string& substr)
+inline bool str_contains(std::string_view str, std::string_view substr)
 {
-  return (str.find(substr) != std::string::npos);
+  return str.find(substr) != std::string_view::npos;
 }
 
 inline bool str_contains(const std::string& str, const std::vector<std::string>& substrs)

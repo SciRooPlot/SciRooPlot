@@ -777,7 +777,7 @@ void PlotManager::ForgetBufferedData(const string& dataSource)
   auto isPart = [&](const string& source) { return source == dataSource || str_starts_with(source, dataSource + ":"); };
   // tree requests of other data sources joining a tree of this one: the join is in the name suffix as {...@join=tree|source|keys|alias}
   auto joinsIt = [&](const string& name) {
-    return name.find("join=") != string::npos && (name.find("|" + dataSource + "|") != string::npos || name.find("|" + dataSource + ":") != string::npos);
+    return str_contains(name, "join=") && (str_contains(name, "|" + dataSource + "|") || str_contains(name, "|" + dataSource + ":"));
   };
   for (auto it = mInputTimes.begin(); it != mInputTimes.end();)
     it = isPart(it->first) ? mInputTimes.erase(it) : std::next(it);
@@ -3297,7 +3297,7 @@ void PlotManager::RepairMacro(const string& path)
   set<string> withoutColor;
   std::smatch match;
   for (const auto& line : lines) {
-    if (line.find(" = new ") != string::npos && std::regex_search(line, match, newHist)) withoutColor.insert(match[2]);
+    if (str_contains(line, " = new ") && std::regex_search(line, match, newHist)) withoutColor.insert(match[2]);
   }
   for (const auto& line : lines) {
     const size_t call = line.find("->SetLineColor(");
@@ -3308,7 +3308,7 @@ void PlotManager::RepairMacro(const string& path)
   string madeIndent;
   for (const auto& line : lines) {
     out << line << '\n';
-    if (line.find(" = new ") != string::npos && std::regex_search(line, match, newHist) && withoutColor.count(match[2])) {
+    if (str_contains(line, " = new ") && std::regex_search(line, match, newHist) && withoutColor.count(match[2])) {
       made = match[2];
       madeIndent = indent(line);
     }
@@ -3317,7 +3317,7 @@ void PlotManager::RepairMacro(const string& path)
       out << madeIndent << made << "->SetLineColor(1);\n";
       made.clear();
     }
-    if (line.find("->SetNdivisions(") != string::npos && std::regex_match(line, match, divisions) && std::stoll(match[3]) >= 1000000) {
+    if (str_contains(line, "->SetNdivisions(") && std::regex_match(line, match, divisions) && std::stoll(match[3]) >= 1000000) {
       out << match[1] << match[2] << "->SetMaxDigits(" << std::stoll(match[3]) / 1000000 << ");\n";
     }
   }

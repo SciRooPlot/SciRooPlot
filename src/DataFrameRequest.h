@@ -192,7 +192,7 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
   // (a ';' followed by more code or a statement keyword, e.g. "double b = 2 * pt; return b;") stays a function body.
   auto toRootCode = [this](const std::string& rawCode) {
     const std::string code = Rename(rawCode);
-    if (code.find("return") == std::string::npos) return code;
+    if (!util::str_contains(code, "return")) return code;
     auto isWord = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '_'; };
     int32_t depth{};
     char quote{};  // inside a string or character literal
@@ -278,8 +278,8 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
   mIsIntegerAxis.resize(mDims.size());
   auto isIntegerType = [](std::string type) {
     std::transform(type.begin(), type.end(), type.begin(), [](unsigned char c) { return std::tolower(c); });
-    if (type.find("float") != std::string::npos || type.find("double") != std::string::npos) return false;
-    return type.find("int") != std::string::npos || type.find("long") != std::string::npos || type.find("short") != std::string::npos || type.find("char") != std::string::npos || type.find("bool") != std::string::npos;
+    if (util::str_contains(type, "float") || util::str_contains(type, "double")) return false;
+    return util::str_contains(type, "int") || util::str_contains(type, "long") || util::str_contains(type, "short") || util::str_contains(type, "char") || util::str_contains(type, "bool");
   };
   // a column holding the value of an expression: a scalar is stored as double, so that the actions below can be booked with their types known
   // (ROOT compiles an action booked by column names with its interpreter, which takes about half a second per combination of
@@ -324,14 +324,14 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
     const std::string typeColumn = colName + "_TYPE";
     node = node.Define(typeColumn, toRootCode(expression));
     columnType = node.GetColumnType(typeColumn);
-    const bool isScalar = columnType.find("RVec") == std::string::npos && columnType.find("vector") == std::string::npos && columnType.find("string") == std::string::npos;
+    const bool isScalar = !util::str_contains(columnType, "RVec") && !util::str_contains(columnType, "vector") && !util::str_contains(columnType, "string");
     const std::string code = toRootCode(expression);
     if (!isScalar) {
       node = node.Define(colName, code);
       return false;
     }
     // an expression is cast directly, code with a return (a function body) is called as a lambda
-    node = node.Define(colName, (code.find("return") == std::string::npos) ? fmt::format("static_cast<double>({})", code) : fmt::format("return static_cast<double>([&]() {{ {} }}());", code));
+    node = node.Define(colName, (util::str_contains(code, "return")) ? fmt::format("return static_cast<double>([&]() {{ {} }}());", code) : fmt::format("static_cast<double>({})", code));
     return true;
   };
   // the axis titles are separated by ';', inside a title (an expression that is a function body) ROOT reads it as #;
@@ -353,7 +353,7 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
       logger::error("Illegal expression {} for {}{}.", dataDim.var, mContext, refusal(e));
       return false;
     }
-    if (columnType.find("string") != std::string::npos) {
+    if (util::str_contains(columnType, "string")) {
       logger::error("Expression {} for {} is not numeric.", dataDim.var, mContext);
       return false;
     }
@@ -388,13 +388,13 @@ bool DataFrameRequest<DataInfo>::Prepare(ROOT::RDF::RNode node, const std::vecto
           bookFiniteRange(double_t{});  // scalars of any type are stored as double
         } else {
           // collections (RVec<float> etc.) with jitted code, the finite values as a column of their own
-          const bool isCollection = columnType.find("RVec") != std::string::npos || columnType.find("vector") != std::string::npos;
+          const bool isCollection = util::str_contains(columnType, "RVec") || util::str_contains(columnType, "vector");
           const std::string finiteName = colName + "_FINITE";
           const std::string nonFiniteName = colName + "_NONFINITE";
           // the explicit return is needed, since ROOT takes code containing a return (here the one of the lambda) as a function body;
           // a std::vector (only from a Define: branches are read as RVecs) is copied into an RVecD, since Filter and Map take RVecs only;
           // the lambda parameter has a name no column has (RDataFrame replaces column names in jitted code, also a parameter x by a column x)
-          const bool isStdVector = columnType.find("RVec") == std::string::npos && columnType.find("vector") != std::string::npos;
+          const bool isStdVector = !util::str_contains(columnType, "RVec") && util::str_contains(columnType, "vector");
           const std::string asRVec = (isStdVector) ? fmt::format("ROOT::RVecD({0}.begin(), {0}.end())", colName) : colName;
           auto finiteNode = (isCollection) ? node.Define(finiteName, fmt::format("return ROOT::VecOps::Filter({}, [](double SRP_value) {{ return std::isfinite(SRP_value); }});", asRVec))
                                            : node.Define(finiteName, colName).Filter(fmt::format("std::isfinite({})", finiteName));
