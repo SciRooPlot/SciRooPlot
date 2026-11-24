@@ -64,6 +64,7 @@
 #include <TLegendEntry.h>
 #include <TLine.h>
 #include <TList.h>
+#include <TMultiGraph.h>
 #include <TObjArray.h>
 #include <TObject.h>
 #include <TObjectTable.h>
@@ -2667,6 +2668,24 @@ void PlotPainter::ApplyDataStyle(item_state_t& state, T data_ptr, optional<draw_
     if (keptWithoutFill) data_ptr->SetFillStyle(0);
     if constexpr (is_hist_1d<data_type>() || is_func_1d<data_type>()) {
       if (alias == line || alias == curve) data_ptr->SetFillStyle(0);  // HIST L and HIST C would also fill the histogram, L and C the area below a function
+    }
+    if constexpr (is_hist_2d<data_type>()) {
+      // ROOT paints polygon bins filled, outlined or as markers (L, F, P) with the line, fill and marker of each polygon, not of the
+      // histogram (THistPainter::PaintTH2PolyBins): the polygons of the copy drawn take the look of the data (the outlines over colour
+      // levels, COL L, stay ROOT's thin ones: the legend shows no line there)
+      auto* poly = dynamic_cast<TH2Poly*>(data_ptr);
+      if (poly && !keep && !str_contains(str_upper(drawOption), "COL")) {
+        for (auto* obj : *poly->GetBins()) {
+          TObject* polygon = static_cast<TH2PolyBin*>(obj)->GetPolygon();
+          if (auto* graph = dynamic_cast<TGraph*>(polygon)) {
+            CopyStyle(*poly, *graph);
+          } else if (auto* multiGraph = dynamic_cast<TMultiGraph*>(polygon); multiGraph && multiGraph->GetListOfGraphs()) {
+            for (auto* part : *multiGraph->GetListOfGraphs()) {
+              CopyStyle(*poly, *static_cast<TGraph*>(part));
+            }
+          }
+        }
+      }
     }
   }
 }

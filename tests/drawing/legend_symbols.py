@@ -1,5 +1,5 @@
 """A legend entry shows what is drawn for its data, for every data kind of srptest, with the drawing option aliases of what it is drawn
-as (a 1d TEfficiency as a graph, a 2d one as a histogram), the common ROOT options of 1d histograms and graphs, and a set of styles
+as (a 1d TEfficiency as a graph, a 2d one as a histogram), the common ROOT options of 1d histograms and graphs and those of polygon bins (L, P, F), and a set of styles
 (marker red, line blue and fill green where they differ, so the colour shows which part the legend took).
 Each canvas is printed to SVG without the legend, without the data and with neither (the frame): the styles of the elements drawn for
 the data (fill, stroke, width, dashes, opacity, marker size) must be those drawn for the legend entry, and a line through the points
@@ -9,7 +9,7 @@ fill (F, B) and of multi-error graphs with a raw box or band option (2-5 without
 the others as bars, and TLegend has one line for both), the *H, B and BAR options of histograms, 3d views (shaded, or drawn with the
 box of the view: lego, surf, the boxes and iso surfaces of 3d data, the markers, lines and triangles of 2d graphs), the parts of candles
 and violins, the solid arrowed error bars of asymmetric graphs, line and markers hidden by an opaque band (3L, 3PL, 4C), the outline of
-a hollow HIST E2 box (TLegend takes the fill colour), arrow heads, and the lines of 2d drawings (contours and meshes are many short
+a hollow HIST E2 box (TLegend takes the fill colour), the hairline in the fill colour ROOT draws under the outline of polygon bins (L), arrow heads, and the lines of 2d drawings (contours and meshes are many short
 pieces). Also for data with a NaN value; for empty data the legend rows: a graph without points is not drawn and has no row, a histogram
 without entries keeps its row (also drawn as a graph)."""
 
@@ -28,6 +28,7 @@ ALIASES_2D = ["default", "col", "colz", "box", "lego", "surf", "cont", "cont_col
 ALIASES_GRAPH_2D = ["default", "points", "points_col", "line", "col", "colz", "lego", "surf", "cont", "cont_col", "triangles", "triangles_col"]
 ALIASES_FUNC_2D = ["default", "col", "colz", "lego", "surf", "cont", "cont_col", "cont_fill", "cont_fillz"]
 ALIASES_3D = ["default", "col", "colz", "box", "iso"]
+RAW_POLY = ["L", "P", "F", "LF", "LP"]  # ROOT draws polygon bins filled, outlined or as markers (THistPainter::PaintTH2PolyBins)
 ALIASES_FUNC_3D = ["default", "iso"]
 STYLES = {
     "color": lambda d: d.SetColor(S.kRed + 1),
@@ -75,7 +76,7 @@ def compared(case):
     """the cases whose differences TLegend cannot avoid, or whose ROOT option does not follow its own drawing rules, are left out"""
     kind, option, style = case["kind"], case["option"], case["style"]
     what = drawn_type(kind)
-    if option not in OPTIONS[what] or not has_variant(kind, case["variant"]):
+    if option not in OPTIONS[what] + (RAW_POLY if kind == "hist2poly" else []) or not has_variant(kind, case["variant"]):
         return False
     if what == "graph" and has_errors(kind) and option in ("F", "B", "3L", "3PL", "4C"):
         return False
@@ -92,7 +93,12 @@ def compared(case):
 
 p = Project("legend_symbols")
 p.inputs(VARIANTS)
-todo = cases({"kind": KINDS, "option": list(dict.fromkeys(sum(OPTIONS.values(), []))), "style": list(STYLES), "variant": list(VARIANTS)}, valid=compared, always=lambda c: False)
+todo = cases(
+    {"kind": KINDS, "option": list(dict.fromkeys(sum(OPTIONS.values(), RAW_POLY))), "style": list(STYLES), "variant": list(VARIANTS)},
+    valid=compared,
+    always=lambda c: False,
+    named=[{"kind": "hist2poly", "option": option, "style": "split", "variant": "normal", "why": "polygon bins filled, outlined or as markers"} for option in RAW_POLY],
+)
 for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "legend", "1d" if drawn_type(case["kind"]) in ("hist1d", "graph", "function") else "2d")
     data = add_data(plot[1], case["kind"], source_of(case["variant"]), case["variant"]).SetLegendLabel("entry")
@@ -239,6 +245,8 @@ def legend_check(i, case):
         onlyPlot = set()  # coloured by the palette: the entry has no symbol
     if case["option"] == "points_arrows":
         onlyPlot = set()  # the arrow heads cannot be drawn by TLegend
+    if case["kind"] == "hist2poly" and "L" in case["option"]:  # the hairline under the outline of polygon bins (a hollow fill area)
+        onlyPlot = {s for s in onlyPlot if not (dict(s[1:]).get("fill") == "none" and "stroke-width" not in dict(s[1:]))}
     detail = "; ".join([*(f"only in the plot: {show(s)}" for s in sorted(onlyPlot)), *(f"only in the legend: {show(s)}" for s in sorted(onlyLegend)), *([problem] if problem else [])])
     return f"legend symbol shows the drawn data: {what}", not detail, detail
 
