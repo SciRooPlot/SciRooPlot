@@ -35,6 +35,11 @@ using std::vector;
 using namespace SciRooPlot;
 namespace po = boost::program_options;
 
+//**************************************************************************************************
+/**
+ * plot: generates the plots of the current project that match the given group and name in the given mode.
+ */
+//**************************************************************************************************
 int main(int argc, char* argv[])
 {
   const string project = Config::Get().CurrentProject();

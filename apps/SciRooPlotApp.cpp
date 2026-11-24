@@ -79,24 +79,20 @@ using std::vector;
 
 using namespace SciRooPlot;
 namespace po = boost::program_options;
-bool PrintRootFileContents(const string& inputPath);
+
 // the settings changed by srp <setting> <value>, in the order srp settings shows them
 constexpr const char* kSettings[] = {"verbosity", "color", "plotmode", "matchmode", "matchcase", "screenscale", "bitmapscale", "cache"};
-string SettingValue(const string& setting)
-{
-  const Config& config = Config::Get();
-  if (setting == "verbosity") return Config::LogLevelName(config.VerbositySetting());
-  if (setting == "color") return Config::ColorModeName(config.Color());
-  if (setting == "plotmode") return config.PlotMode();
-  if (setting == "matchmode") return config.MatchContains() ? "contains" : "exact";
-  if (setting == "matchcase") return config.MatchCaseInsensitive() ? "insensitive" : "sensitive";
-  if (setting == "screenscale") return fmt::format("{}", config.ScreenScale());
-  if (setting == "cache") return config.CacheSettingValue();
-  return fmt::format("{}", config.BitmapScale());
-}
-int RunCommand(const string& command, const string& project, const string& property, const string& setting);
-std::unique_ptr<TApplication> OpenWindowApplication(const string& command);
 
+int run_command(const string& command, const string& project, const string& property, const string& setting);
+string setting_value(const string& setting);
+bool print_root_file_contents(const string& inputPath);
+std::unique_ptr<TApplication> open_window_application(const string& command);
+
+//**************************************************************************************************
+/**
+ * srp: reads the command and its arguments, then runs it.
+ */
+//**************************************************************************************************
 int main(int argc, char* argv[])
 {
   string command;
@@ -172,7 +168,7 @@ int main(int argc, char* argv[])
   }
   // the commands too: an unreadable or looping config folder makes the file system calls throw
   try {
-    return RunCommand(command, project, property, setting);
+    return run_command(command, project, property, setting);
   } catch (std::exception& e) {
     logger::error(R"(Exception "{}", exiting.)", e.what());
     return 1;
@@ -182,7 +178,12 @@ int main(int argc, char* argv[])
   }
 }
 
-int RunCommand(const string& command, const string& project, const string& property, const string& setting)
+//**************************************************************************************************
+/**
+ * Runs an srp command (0 on success, 1 with an error reported).
+ */
+//**************************************************************************************************
+int run_command(const string& command, const string& project, const string& property, const string& setting)
 {
   // help, info, projects and settings: headings, then names and their explanations in two columns
   bool firstHeading = true;
@@ -287,7 +288,7 @@ int RunCommand(const string& command, const string& project, const string& prope
       return 1;
     }
     gROOT->SetWebDisplay("off");  // the classic browser, as the plots are shown in classic canvases (closing it ends the program)
-    auto app = OpenWindowApplication("open");
+    auto app = open_window_application("open");
     if (!app) return 1;
     TBrowser* browser = new TBrowser("TBrowser", file, "SciRooPlot", 1200, 1000);
     if (auto* rb = dynamic_cast<TRootBrowser*>(browser->GetBrowserImp())) {
@@ -309,7 +310,7 @@ int RunCommand(const string& command, const string& project, const string& prope
     }
     std::unique_ptr<TApplication> app;
     if (fileName.empty()) {
-      app = OpenWindowApplication("colorwheel");
+      app = open_window_application("colorwheel");
       if (!app) return 1;
     } else {
       gROOT->SetBatch(true);
@@ -345,19 +346,19 @@ int RunCommand(const string& command, const string& project, const string& prope
     if (!util::print_hepdata(project, Config::Get().CacheFolder())) return 1;
   } else if (command == "print") {
     const auto fileName = util::expand_path(project);  // as in the inputs of data sources
-    if (!fileName || !PrintRootFileContents(*fileName)) return 1;
+    if (!fileName || !print_root_file_contents(*fileName)) return 1;
   } else if (command == "settings") {
     // named as the srp commands that change them
     const auto row = rows(15);
     heading("Settings");
     for (const char* setting : kSettings) {
-      row(setting, SettingValue(setting));
+      row(setting, setting_value(setting));
     }
     row("current project", Config::Get().CurrentProject().empty() ? "none" : Config::Get().CurrentProject());
   } else if (std::find(std::begin(kSettings), std::end(kSettings), command) != std::end(kSettings)) {
     // without a value: the current one
     if (project.empty()) {
-      std::cout << SettingValue(command) << std::endl;
+      std::cout << setting_value(command) << std::endl;
       return 0;
     }
     // srp cache on <folder>: the folder is the argument after on
@@ -565,7 +566,30 @@ int RunCommand(const string& command, const string& project, const string& prope
   return Config::GetMutable().Save() ? 0 : 1;
 }
 
-bool PrintRootFileContents(const string& inputPath)
+//**************************************************************************************************
+/**
+ * The current value of a setting of kSettings, as srp settings shows it.
+ */
+//**************************************************************************************************
+string setting_value(const string& setting)
+{
+  const Config& config = Config::Get();
+  if (setting == "verbosity") return Config::LogLevelName(config.VerbositySetting());
+  if (setting == "color") return Config::ColorModeName(config.Color());
+  if (setting == "plotmode") return config.PlotMode();
+  if (setting == "matchmode") return config.MatchContains() ? "contains" : "exact";
+  if (setting == "matchcase") return config.MatchCaseInsensitive() ? "insensitive" : "sensitive";
+  if (setting == "screenscale") return fmt::format("{}", config.ScreenScale());
+  if (setting == "cache") return config.CacheSettingValue();
+  return fmt::format("{}", config.BitmapScale());
+}
+
+//**************************************************************************************************
+/**
+ * srp print <file>[:<path>]: the contents of a ROOT file (false with an error).
+ */
+//**************************************************************************************************
+bool print_root_file_contents(const string& inputPath)
 {
   // split after the .root ending, as the inputs of data sources
   const auto fileAndPath = util::split_input_path(inputPath);
@@ -805,9 +829,13 @@ bool PrintRootFileContents(const string& inputPath)
   return true;
 }
 
-// the application for a command that opens a window, or null (reported) without a graphical display: ROOT then falls back to batch
-// mode after its own errors, and the application would run forever without a window to close
-std::unique_ptr<TApplication> OpenWindowApplication(const string& command)
+//**************************************************************************************************
+/**
+ * The application for a command that opens a window, or null (reported) without a graphical display: ROOT then falls back to batch
+ * mode after its own errors, and the application would run forever without a window to close.
+ */
+//**************************************************************************************************
+std::unique_ptr<TApplication> open_window_application(const string& command)
 {
   gROOT->SetBatch(false);
   std::unique_ptr<TApplication> app;
