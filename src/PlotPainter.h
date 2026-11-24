@@ -363,6 +363,27 @@ class PlotPainter
   void DropStoredFunctions(item_state_t& state, ObjT* ptr, const char* reason);
   template <typename PtrT>
   void ApplyModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad::Data::modify_t& m);
+  void IgnoreModifier(item_state_t& state, const TObject* obj, const std::string& setting, const std::string& reason);
+  void WarnUnsupported(item_state_t& state, const TObject* obj, bool requested, const char* what);
+  static void MultiplyFactor(std::optional<double_t>& product, const std::optional<double_t>& factor);
+  template <typename PtrT>
+  void ScaleDataAxis(item_state_t& state, PtrT ptr, int16_t axisIndex, const std::optional<double_t>& factor);
+  template <typename PtrT>
+  void RebinHist(item_state_t& state, PtrT ptr, const Plot::Pad::Data::modify_t& m);
+  template <typename PtrT>
+  void RebinToEdges(item_state_t& state, PtrT ptr, const Plot::Pad::Data::modify_t& m);
+  template <typename PtrT>
+  bool DivideByBinWidth(item_state_t& state, PtrT ptr, const Plot::Pad::Data::modify_t& m);
+  template <typename PtrT>
+  void SmoothHist(item_state_t& state, PtrT ptr, const Plot::Pad::Data::modify_t& m);
+  template <typename PtrT>
+  void NormalizeHist(item_state_t& state, PtrT& ptr, const Plot::Pad::Data::modify_t& m, bool isDensity);
+  template <typename PtrT>
+  void ApplyGraphModifiers(item_state_t& state, PtrT ptr, const Plot::Pad::Data::modify_t& m);
+  template <typename PtrT>
+  void ApplyGraph2DModifiers(item_state_t& state, PtrT ptr, const Plot::Pad::Data::modify_t& m);
+  template <typename PtrT>
+  void ApplyFuncModifiers(item_state_t& state, PtrT& ptr, const Plot::Pad::Data::modify_t& m);
   template <typename ObjT>
   void RemoveInvalid(item_state_t& state, ObjT* ptr, const std::string& name, bool checkFloatRange = true);
   bool PrepareOperand(item_state_t& state, data_ptr_t& operand, const Plot::Pad::Data::modify_t& operandModify, const std::string& name);
