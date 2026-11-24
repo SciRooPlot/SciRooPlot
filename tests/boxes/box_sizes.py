@@ -8,7 +8,7 @@ the box and its pad as show mode does (legend 1 of pad 1), and are printed only 
 wholly outside of its pad is reported as a warning (also at the default verbosity); a text size not fitting its font is warned about naming
 the plot and the box or axis as show mode does (text 2, legend 1; the axis of an HBAR frame as the user set it). A legend title growing past
 the width of the rows widens the box step by step, with a margin on its right as on its left.
-Cases: legends (one column, two columns, a title wider than the rows), texts and statistics boxes × a font sized relative to the pad (42) or in pixels (43) × plain
+Cases: legends (one column, two columns, a title wider than the rows), texts and statistics boxes (also with the under- and overflow cells of a 2d histogram) × a font sized relative to the pad (42) or in pixels (43) × plain
 text, TLatex with drawn parts (#sqrt, #frac), unicode, three rows × a wide, square and tall canvas × bitmapscale 1, 2 and 3; at every
 bitmapscale a box is at the same place (scaled), also a legend placed by SciRooPlot.
 Reference: the png of the plot: the box's outline (drawn red) and its rows (black) found by their colour.
@@ -29,14 +29,16 @@ CONTENTS = {
 }
 CANVASES = {"wide": (1000, 600), "square": (600, 600), "tall": (600, 1000)}
 FONTS = {42: 0.04, 43: 24.0}
-BOXES = ("legend", "legend_columns", "legend_auto", "legend_title", "text", "stats")  # legend_auto: placed by SciRooPlot; legend_title: a title wider than its rows
+BOXES = ("legend", "legend_columns", "legend_auto", "legend_title", "text", "stats", "stats_cells")  # legend_auto: placed by SciRooPlot; legend_title: a title wider than its rows; stats_cells: the under- and overflows of a 2d histogram ("a | b | c")
 SCALES = (1, 2, 3)
 
 
 def valid(case):
     if case["box"] == "legend_title":
         return case["content"] in ("plain", "rows") and case["canvas"] == "wide"  # rows narrower than the title, the box clear of the frame
-    return case["box"] != "stats" or case["content"] == "plain"  # a statistics box shows its values
+    if case["box"] == "stats_cells":
+        return case["content"] == "plain" and case["canvas"] == "wide"  # the wide box clear of the data and the frame
+    return not case["box"].startswith("stats") or case["content"] == "plain"  # a statistics box shows its values
 
 
 todo = cases({"box": list(BOXES), "font": list(FONTS), "content": list(CONTENTS), "canvas": list(CANVASES)}, valid, always=lambda c: c["content"] == "plain" or c["canvas"] == "tall")
@@ -46,19 +48,24 @@ h = ROOT.TH1D("h", "", 20, 0.0, 10.0)
 for b in range(1, 21):
     h.SetBinContent(b, 0.05)
     h.SetBinError(b, 0.01)
-p.source("s", {"h": h})
+h2 = ROOT.TH2D("h2", "", 10, 0.0, 10.0, 10, 0.0, 10.0)
+for bx in (0, 9, 10, 11):  # drawn right of the box (BOX draws no fill under it); under- and overflows with long numbers: the cells are the widest lines
+    for by in range(12):
+        h2.SetBinContent(bx, by, 123456.7 * (bx + by))
+p.source("s", {"h": h, "h2": h2})
 for i, case in enumerate(todo):
     plot = S.Plot(f"b{i}", "sizes", "1d")
     plot.SetDimensions(*CANVASES[case["canvas"]])
     pad = plot[1]
     rows = CONTENTS[case["content"]]
-    data = pad.AddData("h", "s", rows[0]).SetColor(ROOT.kBlue)
+    data = pad.AddData("h2", "s").SetDrawOption("BOX").SetShowOverflowBins() if case["box"] == "stats_cells" else pad.AddData("h", "s", rows[0])  # the flows: long numbers in every cell
+    data.SetColor(ROOT.kBlue)
     pad["Y"].SetRange(0.0, 1.0)
     font, size = case["font"], FONTS[case["font"]]
-    if case["box"] == "stats":
+    if case["box"].startswith("stats"):
         box = S.StatsBox()
         box.SetPosition(0.2, 0.9)
-        data.SetShowStats("emr").SetStatsBox(box)
+        (data.SetShowStats("eou", "cells") if case["box"] == "stats_cells" else data.SetShowStats("emr")).SetStatsBox(box)  # with a title: five rows, no cell line (drawn in the border colour) through the middle one
     elif case["box"] == "text":
         box = pad.AddText(0.2, 0.9, rows)
     else:
@@ -69,7 +76,7 @@ for i, case in enumerate(todo):
         if case["box"] == "legend_columns":
             box.SetNumColumns(2)
     box.SetPadCoordinates().SetText(font, size, ROOT.kBlack).SetBorder(ROOT.kSolid, 1, ROOT.kRed)
-    if case["box"] == "stats":
+    if case["box"].startswith("stats"):
         data.SetStatsBox(box)
     p.pm.AddPlot(plot)
 
@@ -181,7 +188,7 @@ for i, case in enumerate(todo):
         if case["box"] == "legend_title":  # a title wider than the rows: as much room on its right as on its left
             check(f"{where}: a title wider than the rows keeps a margin on its right", gaps[1] >= gaps[0], f"gaps left, right {gaps[:2]}")
         # no more room than a margin: on each side at most the height of a row (the content height divided by the rows)
-        nRows = len(CONTENTS[case["content"]]) + (case["box"] == "legend_title") if case["box"] in ("text", "legend", "legend_auto", "legend_title") else 3 if case["box"] == "legend_columns" else 4
+        nRows = len(CONTENTS[case["content"]]) + (case["box"] == "legend_title") if case["box"] in ("text", "legend", "legend_auto", "legend_title") else 3 if case["box"] == "legend_columns" else 5 if case["box"] == "stats_cells" else 4
         rowHeight = (cBottom - cTop + 1) / nRows
         check(f"{where}: the box leaves no more room around its rows than a margin", max(gaps) <= 1.6 * rowHeight + 2 * scale, f"gaps left, right, top, bottom {gaps} for rows of {rowHeight:.0f} pixels")
 
