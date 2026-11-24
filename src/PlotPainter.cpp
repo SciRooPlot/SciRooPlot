@@ -2937,63 +2937,17 @@ template <typename T>
 void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& polarGridOption)
 {
   pad_state_t& padState = state.padState;
-  auto& data = state.data;
-  auto& padDefaults = padState.padDefaults;
   auto& pad = padState.pad;
   auto& padID = padState.padID;
   auto& pad_ptr = padState.pad_ptr;
-  auto& padSetup = padState.padSetup;
   auto& axisHist_ptr = padState.axisHist_ptr;
   auto& polarFrame = padState.polarFrame;
   auto& polargram = padState.polargram;
-  auto& polarAxisHist = padState.polarAxisHist;
-  auto& padProjection = padState.padProjection;
   auto& contentFrame = padState.contentFrame;
   auto& hbarFrame = padState.hbarFrame;
   auto& drawOption = padState.drawOption;
-  auto& storedRangeZ = padState.storedRangeZ;
-  auto& frameFuncRange = padState.frameFuncRange;
-
   using data_type = std::decay_t<decltype(data_ptr)>;
-
-  // a function that defines the frame has no frame to span: it is drawn over its own range, narrowed or widened by the range the
-  // user gave with SetRangeX / SetRangeY; a formula from the plot definition has no range of its own (only ROOT's default 0 to 1):
-  // it spans the range of the pad axis where it has none of its own
-  if constexpr (is_func_1d<data_type>() || is_func_2d<data_type>()) {
-    auto [rangeMinX, rangeMaxX] = FuncRange(state, 'x', data_ptr->GetXmin(), data_ptr->GetXmax(), data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
-    // the frame is the function sampled over its range: a pad range inside it is sampled alone, so the frame ends exactly there
-    // (not at the edges of the sampled bins) and the automatic y range (1d) or colour scale (2d) is that of the visible part;
-    // a pad range beyond the function widens the frame later, as for any data (a formula without a range of its own spans it).
-    // On a log axis a function crossing zero is sampled from the first of its sample edges above zero, where the frame starts
-    // (see below): the drawn function is sampled there as well
-    const bool isFormula = (data->GetDataSource() == kUserFunctions);
-    auto padRange = [&](char padLabel, double_t& min, double_t& max, int32_t nSamples, const optional<double_t>& dataMin, const optional<double_t>& dataMax) {
-      const optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
-      const optional<double_t> userMax = MaxRange(pad, padDefaults, padLabel);
-      const bool log = IsLog(pad, padDefaults, padLabel).value_or(false);
-      const double_t newMin = (userMin && ((isFormula && !dataMin) || (*userMin > min && *userMin < max))) ? *userMin : min;
-      const double_t newMax = (userMax && ((isFormula && !dataMax) || (*userMax < max && *userMax > min))) ? *userMax : max;
-      if (newMin < newMax) std::tie(min, max) = std::make_pair(newMin, newMax);
-      if (log && min <= 0. && max > 0. && nSamples > 0) {
-        const double_t width = (max - min) / nSamples;  // the bin edges of TAxis
-        int32_t edge = 1;
-        while (min + edge * width <= 0.)
-          ++edge;
-        min += edge * width;
-      }
-    };
-    padRange('X', rangeMinX, rangeMaxX, data_ptr->GetNpx(), data->GetMinRangeX(), data->GetMaxRangeX());
-    if constexpr (is_func_2d<data_type>()) {
-      auto [rangeMinY, rangeMaxY] = FuncRange(state, 'y', data_ptr->GetYmin(), data_ptr->GetYmax(), data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
-      padRange('Y', rangeMinY, rangeMaxY, data_ptr->GetNpy(), data->GetMinRangeY(), data->GetMaxRangeY());
-      data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
-      frameFuncRange = {rangeMinX, rangeMaxX, rangeMinY, rangeMaxY};
-    } else {
-      std::tie(rangeMinX, rangeMaxX) = FiniteRange(state, data_ptr, rangeMinX, rangeMaxX, true);
-      data_ptr->SetRange(rangeMinX, rangeMaxX);
-      frameFuncRange = {rangeMinX, rangeMaxX, 0., 0.};
-    }
-  }
+  if constexpr (is_func_1d<data_type>() || is_func_2d<data_type>()) FrameOfFunction(state, data_ptr);
   // points with a positive value (x, y, value; for 1d graphs the ends of the x error bars and the value), needed for a log scale:
   // graphs keep them, since their axis frame is an empty histogram (and drawing it below deletes the graph); the smallest value
   // shown in the frame's ranges is taken once those are set
@@ -3040,25 +2994,150 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
     }
   }
   if constexpr (is_2d<data_type>()) polarFrame = IsFlatPolar(drawOption);
-  if (polarFrame) {
-    // the disc is round only in a square frame: the margins of the longer side grow, both by the same amount
-    const auto [padWidth, padHeight] = PadSizePixel(pad_ptr);
-    const double_t frameWidth = padWidth * (1. - pad_ptr->GetLeftMargin() - pad_ptr->GetRightMargin());
-    const double_t frameHeight = padHeight * (1. - pad_ptr->GetTopMargin() - pad_ptr->GetBottomMargin());
-    if (frameWidth > frameHeight) {
-      const double_t extra = 0.5 * (frameWidth - frameHeight) / padWidth;
-      pad_ptr->SetLeftMargin(pad_ptr->GetLeftMargin() + extra);
-      pad_ptr->SetRightMargin(pad_ptr->GetRightMargin() + extra);
-    } else {
-      const double_t extra = 0.5 * (frameHeight - frameWidth) / padHeight;
-      pad_ptr->SetTopMargin(pad_ptr->GetTopMargin() + extra);
-      pad_ptr->SetBottomMargin(pad_ptr->GetBottomMargin() + extra);
-    }
-    // the cartesian axes and the frame box measure nothing on the disc: option A leaves out the axes (the radial axis follows the data),
-    // the box ROOT paints in any case (THistPainter::PaintFrame) has no line
-    drawOption += " A";
-    pad_ptr->SetFrameLineWidth(0);
+  if (polarFrame) MakePolarFrame(state);
+  MakePolargram(state, data_ptr, polarGridOption);
+  if constexpr (is_hist_3d<data_type>()) {
+    // the colour boxes of a TH3 fill the pad behind the 3d box with the frame fill colour (TView3D::PadRange), but in the colour
+    // last used for the colour scale when that colour is not 0 (walls in the colour of the palette maximum)
+    if (IsColorBoxes3d(drawOption)) pad_ptr->SetFrameFillColor(0);
   }
+  if constexpr (is_func_1d<data_type>()) SpanConstantFunction(state, data_ptr);
+  if (!polargram) TakeFrameHistogram(state, data_ptr);
+  const string drawOptAxis = FrameOption(state, data_ptr);
+  if (!polargram) {
+    // drawn without SAME: the pad is cleared, which deletes a graph drawn above (a later graph at its address is another one)
+    if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
+      if (data_ptr->TestBit(kCanDelete)) DropRecords(data_ptr);
+    }
+    axisHist_ptr->Draw((drawOption + drawOptAxis).data());
+    axisHist_ptr->Draw((drawOption + "SAME AXIG").data());
+  }
+  const int32_t frameDim = axisHist_ptr->GetDimension();
+  if constexpr (is_hist_3d<data_type>()) contentFrame = true;
+  hbarFrame = IsHBarFrame(pad_ptr, axisHist_ptr);
+
+  // a user range beyond the axes of the frame histogram widens the frame
+  if (!pad_ptr->GetView() && !polargram) WidenFrame(state, drawOptAxis);
+  axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
+  // the web canvas (TWebCanvas) drops the minimum and maximum of a 1d histogram with entries drawn with AXIS once the browser reports
+  // the drawn ranges (ROOT bug), but keeps the y range the browser drew for one without entries; the frame of 2d data is emptied anyway
+  if (axisHist_ptr->GetDimension() == 1) axisHist_ptr->SetEntries(0);
+  axisHist_ptr->SetStats(false);
+  axisHist_ptr->SetTitle("");
+  axisHist_ptr->SetBit(TH1::kNoTitle);
+
+  // apply axis settings
+  if (frameDim != 3 && pad.GetAxes().count('C')) {
+    ReportIgnored(fmt::format("The C axis of pad {}", padID), "it is the content of a 3d histogram (for other data the Y or Z axis is the value axis)");
+  }
+  // the binned axes first: the positive minimum for a log value axis is taken from the bins in their range (with HBAR the value axis is the pad's X)
+  for (auto axisLabel : (hbarFrame) ? array<char, 3>{'Y', 'X', 'Z'} : array<char, 3>{'X', 'Y', 'Z'}) {
+    ApplyAxisSettings<data_type>(padState, axisLabel, graphPositivePoints, polyPositiveBins, graphPositiveMinimumX);
+  }
+
+  if (polargram) ApplyPolargramAxes(state);
+  if (frameDim > 1) EmptyMapFrame<data_type>(state, graphRangeZ, graphStoredZ);
+  pad_ptr->Update();
+}
+
+//**************************************************************************************************
+/**
+ * The range a function giving the frame is drawn over: its own, narrowed or widened by the ranges of the data and the pad.
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::FrameOfFunction(item_state_t& state, T data_ptr)
+{
+  pad_state_t& padState = state.padState;
+  auto& data = state.data;
+  auto& padDefaults = padState.padDefaults;
+  auto& pad = padState.pad;
+  auto& frameFuncRange = padState.frameFuncRange;
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  // a function that defines the frame has no frame to span: it is drawn over its own range, narrowed or widened by the range the
+  // user gave with SetRangeX / SetRangeY; a formula from the plot definition has no range of its own (only ROOT's default 0 to 1):
+  // it spans the range of the pad axis where it has none of its own
+  if constexpr (is_func_1d<data_type>() || is_func_2d<data_type>()) {
+    auto [rangeMinX, rangeMaxX] = FuncRange(state, 'x', data_ptr->GetXmin(), data_ptr->GetXmax(), data_ptr->GetXmin(), data_ptr->GetXmax(), data->GetMinRangeX(), data->GetMaxRangeX());
+    // the frame is the function sampled over its range: a pad range inside it is sampled alone, so the frame ends exactly there
+    // (not at the edges of the sampled bins) and the automatic y range (1d) or colour scale (2d) is that of the visible part;
+    // a pad range beyond the function widens the frame later, as for any data (a formula without a range of its own spans it).
+    // On a log axis a function crossing zero is sampled from the first of its sample edges above zero, where the frame starts
+    // (see below): the drawn function is sampled there as well
+    const bool isFormula = (data->GetDataSource() == kUserFunctions);
+    auto padRange = [&](char padLabel, double_t& min, double_t& max, int32_t nSamples, const optional<double_t>& dataMin, const optional<double_t>& dataMax) {
+      const optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
+      const optional<double_t> userMax = MaxRange(pad, padDefaults, padLabel);
+      const bool log = IsLog(pad, padDefaults, padLabel).value_or(false);
+      const double_t newMin = (userMin && ((isFormula && !dataMin) || (*userMin > min && *userMin < max))) ? *userMin : min;
+      const double_t newMax = (userMax && ((isFormula && !dataMax) || (*userMax < max && *userMax > min))) ? *userMax : max;
+      if (newMin < newMax) std::tie(min, max) = std::make_pair(newMin, newMax);
+      if (log && min <= 0. && max > 0. && nSamples > 0) {
+        const double_t width = (max - min) / nSamples;  // the bin edges of TAxis
+        int32_t edge = 1;
+        while (min + edge * width <= 0.)
+          ++edge;
+        min += edge * width;
+      }
+    };
+    padRange('X', rangeMinX, rangeMaxX, data_ptr->GetNpx(), data->GetMinRangeX(), data->GetMaxRangeX());
+    if constexpr (is_func_2d<data_type>()) {
+      auto [rangeMinY, rangeMaxY] = FuncRange(state, 'y', data_ptr->GetYmin(), data_ptr->GetYmax(), data_ptr->GetYmin(), data_ptr->GetYmax(), data->GetMinRangeY(), data->GetMaxRangeY());
+      padRange('Y', rangeMinY, rangeMaxY, data_ptr->GetNpy(), data->GetMinRangeY(), data->GetMaxRangeY());
+      data_ptr->SetRange(rangeMinX, rangeMinY, rangeMaxX, rangeMaxY);
+      frameFuncRange = {rangeMinX, rangeMaxX, rangeMinY, rangeMaxY};
+    } else {
+      std::tie(rangeMinX, rangeMaxX) = FiniteRange(state, data_ptr, rangeMinX, rangeMaxX, true);
+      data_ptr->SetRange(rangeMinX, rangeMaxX);
+      frameFuncRange = {rangeMinX, rangeMaxX, 0., 0.};
+    }
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Makes the frame of a flat polar map square, so that its disc is round, without cartesian axes.
+ */
+//**************************************************************************************************
+void PlotPainter::MakePolarFrame(item_state_t& state)
+{
+  pad_state_t& padState = state.padState;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& drawOption = padState.drawOption;
+  // the disc is round only in a square frame: the margins of the longer side grow, both by the same amount
+  const auto [padWidth, padHeight] = PadSizePixel(pad_ptr);
+  const double_t frameWidth = padWidth * (1. - pad_ptr->GetLeftMargin() - pad_ptr->GetRightMargin());
+  const double_t frameHeight = padHeight * (1. - pad_ptr->GetTopMargin() - pad_ptr->GetBottomMargin());
+  if (frameWidth > frameHeight) {
+    const double_t extra = 0.5 * (frameWidth - frameHeight) / padWidth;
+    pad_ptr->SetLeftMargin(pad_ptr->GetLeftMargin() + extra);
+    pad_ptr->SetRightMargin(pad_ptr->GetRightMargin() + extra);
+  } else {
+    const double_t extra = 0.5 * (frameHeight - frameWidth) / padHeight;
+    pad_ptr->SetTopMargin(pad_ptr->GetTopMargin() + extra);
+    pad_ptr->SetBottomMargin(pad_ptr->GetBottomMargin() + extra);
+  }
+  // the cartesian axes and the frame box measure nothing on the disc: option A leaves out the axes (the radial axis follows the data),
+  // the box ROOT paints in any case (THistPainter::PaintFrame) has no line
+  drawOption += " A";
+  pad_ptr->SetFrameLineWidth(0);
+}
+
+//**************************************************************************************************
+/**
+ * Makes the polar grid of a pad from the polar graph giving its frame (as ROOT makes it from the first polar graph painted).
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::MakePolargram(item_state_t& state, T data_ptr, const string& polarGridOption)
+{
+  pad_state_t& padState = state.padState;
+  auto& padSetup = padState.padSetup;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& polargram = padState.polargram;
+  auto& polarAxisHist = padState.polarAxisHist;
+  auto& drawOption = padState.drawOption;
+  using data_type = std::decay_t<decltype(data_ptr)>;
   // a polar graph is drawn into a polar grid (TGraphPolargram) that ROOT makes from the points of the first polar graph painted
   // in a pad and that the later ones use (TGraphPainter::PaintGraphPolar): here it is made from the frame data instead of a
   // cartesian frame, and takes the ranges and labels of the axes below; the histogram of the graph only holds those axis settings.
@@ -3079,95 +3158,140 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
       padSetup += " gStyle->SetOptTitle(0);";  // otherwise each polar graph paints its title as a box at the top
     }
   }
-  if constexpr (is_hist_3d<data_type>()) {
-    // the colour boxes of a TH3 fill the pad behind the 3d box with the frame fill colour (TView3D::PadRange), but in the colour
-    // last used for the colour scale when that colour is not 0 (walls in the colour of the palette maximum)
-    if (IsColorBoxes3d(drawOption)) pad_ptr->SetFrameFillColor(0);
+}
+
+//**************************************************************************************************
+/**
+ * The range ROOT gives a constant function, for a constant function stored as values (equal up to rounding noise).
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::SpanConstantFunction(item_state_t& state, T data_ptr)
+{
+  pad_state_t& padState = state.padState;
+  auto& pad_ptr = padState.pad_ptr;
+  // a constant function stored as values (compiled code) has samples equal up to rounding noise: ROOT spans the noise (3 ± 4e-14)
+  // instead of the range it gives a constant (THistPainter::PaintInitH: 0 to twice the value, plus its margin), which is set here
+  const TH1* samples = data_ptr->GetHistogram();
+  const double_t lo = samples->GetMinimum();
+  const double_t hi = samples->GetMaximum();
+  const bool logY = pad_ptr->GetLogy();
+  if (!logY && lo != hi && hi - lo <= 1e-9 * std::max(std::abs(lo), std::abs(hi)) && data_ptr->GetMinimumStored() == -1111 && data_ptr->GetMaximumStored() == -1111) {
+    const double_t value = 0.5 * (lo + hi);
+    const double_t yMin = (value > 0.) ? 0. : 2. * value;
+    const double_t yMax = (value > 0.) ? 2. * value : 0.;
+    data_ptr->SetMinimum(yMin);
+    data_ptr->SetMaximum(yMax + 0.05 * (yMax - yMin));  // ROOT's margin above (yMARGIN)
   }
-  if constexpr (is_func_1d<data_type>()) {
-    // a constant function stored as values (compiled code) has samples equal up to rounding noise: ROOT spans the noise (3 ± 4e-14)
-    // instead of the range it gives a constant (THistPainter::PaintInitH: 0 to twice the value, plus its margin), which is set here
-    const TH1* samples = data_ptr->GetHistogram();
-    const double_t lo = samples->GetMinimum();
-    const double_t hi = samples->GetMaximum();
-    const bool logY = pad_ptr->GetLogy();
-    if (!logY && lo != hi && hi - lo <= 1e-9 * std::max(std::abs(lo), std::abs(hi)) && data_ptr->GetMinimumStored() == -1111 && data_ptr->GetMaximumStored() == -1111) {
-      const double_t value = 0.5 * (lo + hi);
-      const double_t yMin = (value > 0.) ? 0. : 2. * value;
-      const double_t yMax = (value > 0.) ? 2. * value : 0.;
-      data_ptr->SetMinimum(yMin);
-      data_ptr->SetMaximum(yMax + 0.05 * (yMax - yMin));  // ROOT's margin above (yMARGIN)
-    }
+}
+
+//**************************************************************************************************
+/**
+ * The y range of a graph giving the frame from the points shown in the x range of the pad (ROOT takes it from all points).
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::RangeOfShownPoints(item_state_t& state, T data_ptr)
+{
+  pad_state_t& padState = state.padState;
+  auto& padDefaults = padState.padDefaults;
+  auto& pad = padState.pad;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  // ROOT's y range of a graph (TGraph::GetHistogram) comes from all its points: with an x range of the pad, or on log x, it is
+  // taken from the points drawn (their x errors reaching into the range, on log x above zero), as for histograms and functions,
+  // by ROOT for those points alone
+  static thread_local std::pair<double_t, double_t> shownX;
+  const optional<double_t> userMin = MinRange(pad, padDefaults, 'X');
+  const optional<double_t> userMax = MaxRange(pad, padDefaults, 'X');
+  const bool logX = IsLog(pad, padDefaults, 'X').value_or(false);
+  shownX = {userMin.value_or(-std::numeric_limits<double_t>::infinity()), userMax.value_or(std::numeric_limits<double_t>::infinity())};
+  if (logX) shownX.first = std::max(shownX.first, std::numeric_limits<double_t>::min());
+  static const auto isShown = [](const TGraph* graph, int32_t i) {
+    const double_t x = graph->GetPointX(i);
+    return x + std::max(graph->GetErrorXhigh(i), 0.) >= shownX.first && x - std::max(graph->GetErrorXlow(i), 0.) <= shownX.second;
+  };
+  int32_t nShown = 0;
+  for (int32_t i = 0; i < data_ptr->GetN() && (userMin || userMax || logX); ++i) {
+    if (isShown(data_ptr, i)) ++nShown;
   }
-  if (!polargram) {
-    data_ptr->Draw(drawOption.data());
-    if constexpr (is_hist<data_type>()) {
-      axisHist_ptr = data_ptr;
+  if (nShown > 0 && nShown < data_ptr->GetN()) {
+    std::unique_ptr<TGraph> shown;
+    if (auto* multi = dynamic_cast<TGraphMultiErrors*>(data_ptr)) {
+      // a TGraphMultiErrors cannot be cut that way (ROOT's Sort leaves its y errors in place, Set crashes on a clone): made anew
+      auto* subset = new TGraphMultiErrors(nShown, multi->GetNYErrors());
+      shown.reset(subset);
+      for (int32_t i = 0, n = 0; i < multi->GetN(); ++i) {
+        if (!isShown(multi, i)) continue;
+        subset->SetPoint(n, multi->GetPointX(i), multi->GetPointY(i));
+        subset->SetPointEX(n, multi->GetErrorXlow(i), multi->GetErrorXhigh(i));
+        for (int32_t e = 0; e < multi->GetNYErrors(); ++e)
+          subset->SetPointEY(n, e, multi->GetEYlow(e)[i], multi->GetEYhigh(e)[i]);
+        ++n;
+      }
+      subset->SetSumErrorsMode(multi->GetSumErrorsMode());
+      if (multi->GetMinimum() != -1111) subset->SetMinimum(multi->GetMinimum());  // a range stored with the graph
+      if (multi->GetMaximum() != -1111) subset->SetMaximum(multi->GetMaximum());
     } else {
-      axisHist_ptr = static_cast<TH1*>(data_ptr->GetHistogram()->Clone());
-      axisHist_ptr->SetDirectory(nullptr);
-      axisHist_ptr->SetBit(kCanDelete);
-      if constexpr (is_graph_1d<data_type>()) {
-        // ROOT's y range of a graph (TGraph::GetHistogram) comes from all its points: with an x range of the pad, or on log x, it is
-        // taken from the points drawn (their x errors reaching into the range, on log x above zero), as for histograms and functions,
-        // by ROOT for those points alone
-        static thread_local std::pair<double_t, double_t> shownX;
-        const optional<double_t> userMin = MinRange(pad, padDefaults, 'X');
-        const optional<double_t> userMax = MaxRange(pad, padDefaults, 'X');
-        const bool logX = IsLog(pad, padDefaults, 'X').value_or(false);
-        shownX = {userMin.value_or(-std::numeric_limits<double_t>::infinity()), userMax.value_or(std::numeric_limits<double_t>::infinity())};
-        if (logX) shownX.first = std::max(shownX.first, std::numeric_limits<double_t>::min());
-        static const auto isShown = [](const TGraph* graph, int32_t i) {
-          const double_t x = graph->GetPointX(i);
-          return x + std::max(graph->GetErrorXhigh(i), 0.) >= shownX.first && x - std::max(graph->GetErrorXlow(i), 0.) <= shownX.second;
-        };
-        int32_t nShown = 0;
-        for (int32_t i = 0; i < data_ptr->GetN() && (userMin || userMax || logX); ++i) {
-          if (isShown(data_ptr, i)) ++nShown;
-        }
-        if (nShown > 0 && nShown < data_ptr->GetN()) {
-          std::unique_ptr<TGraph> shown;
-          if (auto* multi = dynamic_cast<TGraphMultiErrors*>(data_ptr)) {
-            // a TGraphMultiErrors cannot be cut that way (ROOT's Sort leaves its y errors in place, Set crashes on a clone): made anew
-            auto* subset = new TGraphMultiErrors(nShown, multi->GetNYErrors());
-            shown.reset(subset);
-            for (int32_t i = 0, n = 0; i < multi->GetN(); ++i) {
-              if (!isShown(multi, i)) continue;
-              subset->SetPoint(n, multi->GetPointX(i), multi->GetPointY(i));
-              subset->SetPointEX(n, multi->GetErrorXlow(i), multi->GetErrorXhigh(i));
-              for (int32_t e = 0; e < multi->GetNYErrors(); ++e)
-                subset->SetPointEY(n, e, multi->GetEYlow(e)[i], multi->GetEYhigh(e)[i]);
-              ++n;
-            }
-            subset->SetSumErrorsMode(multi->GetSumErrorsMode());
-            if (multi->GetMinimum() != -1111) subset->SetMinimum(multi->GetMinimum());  // a range stored with the graph
-            if (multi->GetMaximum() != -1111) subset->SetMaximum(multi->GetMaximum());
-          } else {
-            // the points shown first (ROOT sorts with SwapPoints of each graph class, which keeps their errors), the others cut off
-            shown.reset(static_cast<TGraph*>(data_ptr->Clone()));
-            shown->Sort([](const TGraph* graph, int32_t i, int32_t j) -> Bool_t { return isShown(graph, i) < isShown(graph, j); });
-            shown->Set(nShown);
-            shown->SetBit(TGraph::kResetHisto);  // the histogram cloned with the points would be kept
-          }
-          axisHist_ptr->SetMinimum(shown->GetHistogram()->GetMinimum());
-          axisHist_ptr->SetMaximum(shown->GetHistogram()->GetMaximum());
-        }
+      // the points shown first (ROOT sorts with SwapPoints of each graph class, which keeps their errors), the others cut off
+      shown.reset(static_cast<TGraph*>(data_ptr->Clone()));
+      shown->Sort([](const TGraph* graph, int32_t i, int32_t j) -> Bool_t { return isShown(graph, i) < isShown(graph, j); });
+      shown->Set(nShown);
+      shown->SetBit(TGraph::kResetHisto);  // the histogram cloned with the points would be kept
+    }
+    axisHist_ptr->SetMinimum(shown->GetHistogram()->GetMinimum());
+    axisHist_ptr->SetMaximum(shown->GetHistogram()->GetMaximum());
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Draws the data giving the frame and takes its histogram as the frame (for a graph or function a copy of its histogram).
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::TakeFrameHistogram(item_state_t& state, T data_ptr)
+{
+  pad_state_t& padState = state.padState;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& drawOption = padState.drawOption;
+  using data_type = std::decay_t<decltype(data_ptr)>;
+  data_ptr->Draw(drawOption.data());
+  if constexpr (is_hist<data_type>()) {
+    axisHist_ptr = data_ptr;
+  } else {
+    axisHist_ptr = static_cast<TH1*>(data_ptr->GetHistogram()->Clone());
+    axisHist_ptr->SetDirectory(nullptr);
+    axisHist_ptr->SetBit(kCanDelete);
+    if constexpr (is_graph_1d<data_type>()) RangeOfShownPoints(state, data_ptr);
+    if constexpr (is_graph_2d<data_type>()) {
+      // the histogram of a 2d graph holds its Delaunay triangulation, which the frame does not use (see FrameOption) and which a
+      // macro cannot save (the line ROOT writes for it does not compile)
+      TList* functions = axisHist_ptr->GetListOfFunctions();
+      vector<TObject*> triangulations;
+      for (TObject* function : *functions) {
+        if (function->InheritsFrom("TGraphDelaunay2D") || function->InheritsFrom("TGraphDelaunay")) triangulations.push_back(function);
       }
-      if constexpr (is_graph_2d<data_type>()) {
-        // the histogram of a 2d graph holds its Delaunay triangulation, which the frame does not use (see below) and which a
-        // macro cannot save (the line ROOT writes for it does not compile)
-        TList* functions = axisHist_ptr->GetListOfFunctions();
-        vector<TObject*> triangulations;
-        for (TObject* function : *functions) {
-          if (function->InheritsFrom("TGraphDelaunay2D") || function->InheritsFrom("TGraphDelaunay")) triangulations.push_back(function);
-        }
-        for (TObject* triangulation : triangulations) {
-          functions->Remove(triangulation);
-          delete triangulation;
-        }
+      for (TObject* triangulation : triangulations) {
+        functions->Remove(triangulation);
+        delete triangulation;
       }
     }
   }
+}
+
+//**************************************************************************************************
+/**
+ * The option the frame histogram is drawn with (the drawing option of the data, changed where the empty frame would paint
+ * something), and whether AXIS is appended.
+ */
+//**************************************************************************************************
+template <typename T>
+string PlotPainter::FrameOption(item_state_t& state, T data_ptr)
+{
+  pad_state_t& padState = state.padState;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& drawOption = padState.drawOption;
+  using data_type = std::decay_t<decltype(data_ptr)>;
   string drawOptAxis = "AXIS";
   pad_ptr->Update();
   if constexpr (is_graph_2d<data_type>()) {
@@ -3202,233 +3326,261 @@ void PlotPainter::SetUpFrame(item_state_t& state, T data_ptr, const string& pola
   if (pad_ptr->GetView() || is_hist_2d<data_type>() || isColored2d) {
     drawOptAxis = "";
   }
-  if (!polargram) {
-    // drawn without SAME: the pad is cleared, which deletes a graph drawn above (a later graph at its address is another one)
-    if constexpr (is_graph_1d<data_type>() || is_graph_2d<data_type>()) {
-      if (data_ptr->TestBit(kCanDelete)) DropRecords(data_ptr);
+  return drawOptAxis;
+}
+
+//**************************************************************************************************
+/**
+ * Replaces the frame by one with extended axes where a user range reaches beyond them (ROOT shows at most the axis of a histogram).
+ */
+//**************************************************************************************************
+void PlotPainter::WidenFrame(item_state_t& state, const string& drawOptAxis)
+{
+  pad_state_t& padState = state.padState;
+  auto& padDefaults = padState.padDefaults;
+  auto& pad = padState.pad;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& hbarFrame = padState.hbarFrame;
+  auto& drawOption = padState.drawOption;
+  const int32_t frameDim = axisHist_ptr->GetDimension();
+  for (auto axisLabel : {'X', 'Y'}) {  // the axis of the frame histogram
+    if (axisLabel == 'Y' && frameDim == 1) continue;
+    const char padLabel = HBarAxis(axisLabel, hbarFrame);  // where it is drawn
+    const char valueLabel = (hbarFrame) ? 'X' : 'Y';       // the pad axis of the contents of a 1d frame
+    const TAxis* axis = (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis();
+    optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
+    // an axis without positive range loses its log scale (ApplyAxisSettings): a lower range at or below zero applies to it again
+    if (!userMin && axis->GetXmax() <= 0.) {
+      for (const auto* axisSettings : AxisSettings(pad, padDefaults, padLabel)) {
+        if (axisSettings->GetMinRange()) userMin = axisSettings->GetMinRange();
+      }
     }
+    optional<double_t> userMax = MaxRange(pad, padDefaults, padLabel);
+    const optional<bool> logY = IsLog(pad, padDefaults, valueLabel);
+    const optional<double_t> rangeMin = userMin, rangeMax = userMax;  // the user's range, before the reset below
+    constexpr double_t relTol = 1e-12;
+    // a log axis shows the bins from the first positive edge on: a positive minimum below it is beyond the shown axis as well
+    // (ExtendFrameAxis drops the bins up to it), whether the bins start at 0.5, 0 or -0.5
+    const optional<bool> logAxis = IsLog(pad, padDefaults, padLabel);
+    double_t shownMin = axis->GetXmin();
+    if (logAxis.value_or(false) && shownMin <= 0. && userMin && *userMin > 0. && !axis->GetLabels()) {
+      int32_t bin = 1;
+      while (bin <= axis->GetNbins() && axis->GetBinLowEdge(bin) <= 0.)
+        ++bin;
+      shownMin = axis->GetBinLowEdge(bin);
+    }
+    if (userMin && !(*userMin < shownMin && !TMath::AreEqualRel(*userMin, shownMin, relTol))) userMin.reset();
+    if (userMax && !(*userMax > axis->GetXmax() && !TMath::AreEqualRel(*userMax, axis->GetXmax(), relTol))) userMax.reset();
+    if (!userMin && !userMax) continue;
+    // the y range of a 1d frame is taken from the pad below, and ROOT computes it differently for a log scale (margins in decades):
+    // the scale is applied first, so the extended frame keeps the log range (one extra paint, only for extended frames with log y)
+    if (frameDim == 1 && logY.value_or(false) && !((hbarFrame) ? pad_ptr->GetLogx() : pad_ptr->GetLogy()) && axisHist_ptr->GetMaximum() > 0.) {
+      (hbarFrame) ? pad_ptr->SetLogx(true) : pad_ptr->SetLogy(true);
+      pad_ptr->Update();
+    }
+    TH1* extended = ExtendFrameAxis(axisHist_ptr, axisLabel, userMin, userMax, rangeMin, rangeMax);
+    // the added empty bins must not change the automatic range of the dependent axis: keep the one of the original frame for each end not stored
+    // (for 1d the range ROOT determined when drawing it, for 2d the extremes of the contents, which define the colour scale, EmptyMapFrame)
+    const bool automaticMin = axisHist_ptr->GetMinimumStored() == -1111;
+    const bool automaticMax = axisHist_ptr->GetMaximumStored() == -1111;
+    if (frameDim > 1) {
+      if (automaticMin) extended->SetMinimum(axisHist_ptr->GetMinimum());
+      if (automaticMax) extended->SetMaximum(axisHist_ptr->GetMaximum());
+    } else if (hbarFrame) {
+      if (automaticMin) extended->SetMinimum(FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx()));
+      if (automaticMax) extended->SetMaximum(FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx()));
+    } else {
+      if (automaticMin) extended->SetMinimum(FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()));
+      if (automaticMax) extended->SetMaximum(FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy()));
+    }
+    TList* primitives = pad_ptr->GetListOfPrimitives();
+    while (primitives->Remove(axisHist_ptr)) {
+    }
+    delete axisHist_ptr;
+    axisHist_ptr = extended;
+    axisHist_ptr->Draw(drawOption.data());
     axisHist_ptr->Draw((drawOption + drawOptAxis).data());
     axisHist_ptr->Draw((drawOption + "SAME AXIG").data());
   }
+}
+
+//**************************************************************************************************
+/**
+ * Sets the polar grid as the axes of the pad set it: x is the angle, y the radius.
+ */
+//**************************************************************************************************
+void PlotPainter::ApplyPolargramAxes(item_state_t& state)
+{
+  pad_state_t& padState = state.padState;
+  auto& padDefaults = padState.padDefaults;
+  auto& pad = padState.pad;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& polargram = padState.polargram;
+  // the polar grid as the axes of the pad set it: x is the angle, y the radius; ranges and divisions only where the user set them
+  // (otherwise ROOT's from the points), labels as those of the axes
+  optional<double_t> minAngle, maxAngle, minRadius, maxRadius;
+  optional<int32_t> divAngle, divRadius;
+  for (auto [axisLabel, min, max, div] : {std::make_tuple('X', &minAngle, &maxAngle, &divAngle), std::make_tuple('Y', &minRadius, &maxRadius, &divRadius)}) {
+    for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
+      if (axis->GetMinRange()) *min = axis->GetMinRange();
+      if (axis->GetMaxRange()) *max = axis->GetMaxRange();
+      if (axis->GetNumDivisions()) *div = axis->GetNumDivisions();
+    }
+  }
+  if (minAngle || maxAngle) {
+    // the labels in units of pi assume a full turn (TGraphPolargram::PaintPolarDivisions): kept for one, values otherwise
+    const double_t tMin = minAngle.value_or(polargram->GetTMin());
+    const double_t tMax = maxAngle.value_or(polargram->GetTMax());
+    if (tMin == 0. && TMath::AreEqualRel(tMax, TMath::TwoPi(), 1e-9)) {
+      polargram->ChangeRangePolar(tMin, tMax);
+    } else {
+      polargram->SetRangePolar(tMin, tMax);
+    }
+  }
+  if (minRadius || maxRadius) polargram->SetRangeRadial(minRadius.value_or(polargram->GetRMin()), maxRadius.value_or(polargram->GetRMax()));
+  if (divAngle) polargram->SetNdivPolar(*divAngle);
+  // the radius runs over half of the pad: half of ROOT's divisions of an axis spanning it (8 are crowded with the label size of the axes)
+  polargram->SetNdivRadial(divRadius.value_or(505));
+  const TAxis* angle = axisHist_ptr->GetXaxis();
+  const TAxis* radius = axisHist_ptr->GetYaxis();
+  polargram->SetPolarLabelFont(angle->GetLabelFont());
+  polargram->SetPolarLabelSize(angle->GetLabelSize());
+  polargram->SetPolarLabelColor(angle->GetLabelColor());
+  polargram->SetRadialLabelFont(radius->GetLabelFont());
+  polargram->SetRadialLabelSize(radius->GetLabelSize());
+  polargram->SetRadialLabelColor(radius->GetLabelColor());
+  polargram->SetLineColor(radius->GetAxisColor());
+}
+
+//**************************************************************************************************
+/**
+ * Reads the C axis of a pad whose frame is a 3d histogram: range (into min and max), title and log; true if a range is set.
+ */
+//**************************************************************************************************
+bool PlotPainter::ReadContentAxis(item_state_t& state, double_t& min, double_t& max)
+{
+  pad_state_t& padState = state.padState;
+  auto& padDefaults = padState.padDefaults;
+  auto& pad = padState.pad;
+  auto& padID = padState.padID;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  bool contentRange{};
+  // the content of a 3d histogram is the C axis: its range is the minimum and maximum, which give the colours (and the sizes) of the
+  // boxes, also of the data drawn later (it takes them from the frame); its title is the part of the z title after ';' (ROOT's place
+  // for the title of the colour scale of a 3d histogram)
+  optional<string> title;
+  bool isLog{};
+  for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
+    const auto& content = *contentSettings;
+    if (content.GetMinRange()) min = *content.GetMinRange();
+    if (content.GetMaxRange()) max = *content.GetMaxRange();
+    contentRange = contentRange || content.GetMinRange() || content.GetMaxRange();
+    if (content.GetTitle()) title = content.GetTitle();
+    if (content.GetLog()) isLog = *content.GetLog();
+    if (content.GetGrid() || content.GetOppositeTicks() || content.GetTimeFormat() || content.GetLabelAngle()) {
+      ReportIgnored("A grid, opposite ticks, time format or label angle of the C axis", "the colour scale of a 3d histogram has none of them");
+    }
+    if (content.GetRoomAboveMax() || content.GetRoomBelowMin()) {
+      ReportIgnored("Room above or below the C axis", "the boxes of a 3d histogram are coloured over the range of the C axis, which leaves no room");
+    }
+    if (content.GetNumDivisions() || content.GetMaxDigits()) {
+      ReportIgnored("The divisions or max digits of the C axis", "ROOT takes them for the colour scale of a 3d histogram from its Z axis", true);
+    }
+  }
+  if (isLog) ReportIgnored(fmt::format("The log scale of the C axis of pad {}", padID), "ROOT colours the boxes of a 3d histogram linearly");
+  if (title) {
+    DropEmptyGroups(*title);
+    TAxis* zAxis = axisHist_ptr->GetZaxis();
+    TString zTitle = zAxis->GetTitle();
+    if (zTitle.Index(";") >= 0) zTitle.Remove(zTitle.Index(";"));  // a title of the scale stored with the input is replaced
+    if (zTitle.IsNull()) zTitle = " ";                             // ROOT reads the part after ';' only behind a z title
+    zAxis->SetTitle((zTitle + ";" + title->data()).Data());
+  }
+  // ROOT makes the colour scale of a 3d histogram once, with the look of the z axis at that time (ApplyAxisSettings came
+  // later): it is made again at the next paint
+  TList* functions = axisHist_ptr->GetListOfFunctions();
+  if (TObject* palette = functions->FindObject("palette")) {
+    functions->Remove(palette);
+    delete palette;
+  }
+  return contentRange;
+}
+
+//**************************************************************************************************
+/**
+ * Empties the frame of 2d and 3d data, which owns the colour axis, keeping the range of the contents.
+ */
+//**************************************************************************************************
+template <typename T>
+void PlotPainter::EmptyMapFrame(item_state_t& state, const std::pair<double_t, double_t>& graphRangeZ, const std::pair<double_t, double_t>& graphStoredZ)
+{
+  pad_state_t& padState = state.padState;
+  auto& padDefaults = padState.padDefaults;
+  auto& pad = padState.pad;
+  auto& padID = padState.padID;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& padProjection = padState.padProjection;
+  auto& drawOption = padState.drawOption;
+  auto& storedRangeZ = padState.storedRangeZ;
+  using data_type = std::decay_t<T>;
   const int32_t frameDim = axisHist_ptr->GetDimension();
-  if constexpr (is_hist_3d<data_type>()) contentFrame = true;
-  hbarFrame = IsHBarFrame(pad_ptr, axisHist_ptr);
-
-  // a user range beyond the axes of the frame histogram needs a wider frame, since ROOT shows at most the axis of a histogram:
-  // the frame is replaced by a histogram with extended axes (changing the axis alone would break the bin storage of the histogram)
-  if (!pad_ptr->GetView() && !polargram) {
-    for (auto axisLabel : {'X', 'Y'}) {  // the axis of the frame histogram
-      if (axisLabel == 'Y' && frameDim == 1) continue;
-      const char padLabel = HBarAxis(axisLabel, hbarFrame);  // where it is drawn
-      const char valueLabel = (hbarFrame) ? 'X' : 'Y';       // the pad axis of the contents of a 1d frame
-      const TAxis* axis = (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis();
-      optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
-      // an axis without positive range loses its log scale (ApplyAxisSettings): a lower range at or below zero applies to it again
-      if (!userMin && axis->GetXmax() <= 0.) {
-        for (const auto* axisSettings : AxisSettings(pad, padDefaults, padLabel)) {
-          if (axisSettings->GetMinRange()) userMin = axisSettings->GetMinRange();
-        }
-      }
-      optional<double_t> userMax = MaxRange(pad, padDefaults, padLabel);
-      const optional<bool> logY = IsLog(pad, padDefaults, valueLabel);
-      const optional<double_t> rangeMin = userMin, rangeMax = userMax;  // the user's range, before the reset below
-      constexpr double_t relTol = 1e-12;
-      // a log axis shows the bins from the first positive edge on: a positive minimum below it is beyond the shown axis as well
-      // (ExtendFrameAxis drops the bins up to it), whether the bins start at 0.5, 0 or -0.5
-      const optional<bool> logAxis = IsLog(pad, padDefaults, padLabel);
-      double_t shownMin = axis->GetXmin();
-      if (logAxis.value_or(false) && shownMin <= 0. && userMin && *userMin > 0. && !axis->GetLabels()) {
-        int32_t bin = 1;
-        while (bin <= axis->GetNbins() && axis->GetBinLowEdge(bin) <= 0.)
-          ++bin;
-        shownMin = axis->GetBinLowEdge(bin);
-      }
-      if (userMin && !(*userMin < shownMin && !TMath::AreEqualRel(*userMin, shownMin, relTol))) userMin.reset();
-      if (userMax && !(*userMax > axis->GetXmax() && !TMath::AreEqualRel(*userMax, axis->GetXmax(), relTol))) userMax.reset();
-      if (!userMin && !userMax) continue;
-      // the y range of a 1d frame is taken from the pad below, and ROOT computes it differently for a log scale (margins in decades):
-      // the scale is applied first, so the extended frame keeps the log range (one extra paint, only for extended frames with log y)
-      if (frameDim == 1 && logY.value_or(false) && !((hbarFrame) ? pad_ptr->GetLogx() : pad_ptr->GetLogy()) && axisHist_ptr->GetMaximum() > 0.) {
-        (hbarFrame) ? pad_ptr->SetLogx(true) : pad_ptr->SetLogy(true);
-        pad_ptr->Update();
-      }
-      TH1* extended = ExtendFrameAxis(axisHist_ptr, axisLabel, userMin, userMax, rangeMin, rangeMax);
-      // the added empty bins must not change the automatic range of the dependent axis: keep the one of the original frame for each end not stored
-      // (for 1d the range ROOT determined when drawing it, for 2d the extremes of the contents, which define the colour scale below)
-      const bool automaticMin = axisHist_ptr->GetMinimumStored() == -1111;
-      const bool automaticMax = axisHist_ptr->GetMaximumStored() == -1111;
-      if (frameDim > 1) {
-        if (automaticMin) extended->SetMinimum(axisHist_ptr->GetMinimum());
-        if (automaticMax) extended->SetMaximum(axisHist_ptr->GetMaximum());
-      } else if (hbarFrame) {
-        if (automaticMin) extended->SetMinimum(FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx()));
-        if (automaticMax) extended->SetMaximum(FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx()));
-      } else {
-        if (automaticMin) extended->SetMinimum(FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()));
-        if (automaticMax) extended->SetMaximum(FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy()));
-      }
-      TList* primitives = pad_ptr->GetListOfPrimitives();
-      while (primitives->Remove(axisHist_ptr)) {
-      }
-      delete axisHist_ptr;
-      axisHist_ptr = extended;
-      axisHist_ptr->Draw(drawOption.data());
-      axisHist_ptr->Draw((drawOption + drawOptAxis).data());
-      axisHist_ptr->Draw((drawOption + "SAME AXIG").data());
+  // reset the axis histogram which owns the z axis, while keeping default range defined by the data
+  double_t min = axisHist_ptr->GetMinimum();
+  double_t max = axisHist_ptr->GetMaximum();
+  if constexpr (is_hist_2d<data_type>() || is_func_2d<data_type>()) storedRangeZ = {axisHist_ptr->GetMinimumStored() != -1111, axisHist_ptr->GetMaximumStored() != -1111};
+  // ROOT draws a log z axis of a histogram without a positive minimum from min(1, 0.001 * maximum) (THistPainter::PaintInit),
+  // but for data drawn SAME on a frame with a stored minimum of zero it leaves out the bins of the lowest contents.
+  // This floor is ROOT's default on purpose, not a choice of SciRooPlot: the smallest positive content could be used instead, but it
+  // can lie arbitrarily many decades below the maximum and then stretches the colour scale; a plot that needs more sets the Z range.
+  if constexpr (is_graph_2d<data_type>()) {
+    // the interpolated histogram of a graph can stay below its highest point (and above its lowest one): the z range includes the
+    // points (with their errors), as ROOT's own range of the graph (TGraph2D::GetHistogram), unless the user set that end
+    const optional<double_t> userMinZ = MinRange(pad, padDefaults, 'Z');
+    const optional<double_t> userMaxZ = MaxRange(pad, padDefaults, 'Z');
+    // a minimum or maximum stored with the graph defining the frame is kept like a range set by the user
+    storedRangeZ = {graphStoredZ.first != -1111, graphStoredZ.second != -1111};
+    if (!userMinZ) min = (storedRangeZ.first) ? graphStoredZ.first : std::min(min, graphRangeZ.first);
+    if (!userMaxZ) max = (storedRangeZ.second) ? graphStoredZ.second : std::max(max, graphRangeZ.second);
+  }
+  const bool contentRange = (frameDim == 3) && ReadContentAxis(state, min, max);
+  if (pad_ptr->GetLogz() && min <= 0. && max > 0.) min = std::min(1., 0.001 * max);
+  // contents of one value (a flat map, a ratio of a map by itself): ROOT widens the range by 10 % of the value for the colour scale,
+  // but data drawn on a frame with equal ends gets the lowest colour; the ends not set by the user are widened the same way here
+  // (contents of zero only stay as they are: COL leaves such cells empty)
+  bool widened = false;
+  if (min == max && min != 0.) {
+    const double_t widening = 0.1 * std::abs(min);
+    const char valueLabel = (frameDim == 3) ? 'C' : 'Z';
+    if (!MinRange(pad, padDefaults, valueLabel) && !storedRangeZ.first) {
+      min -= widening;
+      widened = true;
+    }
+    if (!MaxRange(pad, padDefaults, valueLabel) && !storedRangeZ.second) {
+      max += widening;
+      widened = true;
     }
   }
-  axisHist_ptr->SetName(string("axis_hist_pad_" + std::to_string(padID)).data());
-  // the web canvas (TWebCanvas) drops the minimum and maximum of a 1d histogram with entries drawn with AXIS once the browser reports
-  // the drawn ranges (ROOT bug), but keeps the y range the browser drew for one without entries; the frame of 2d data is emptied anyway
-  if (axisHist_ptr->GetDimension() == 1) axisHist_ptr->SetEntries(0);
-  axisHist_ptr->SetStats(false);
-  axisHist_ptr->SetTitle("");
-  axisHist_ptr->SetBit(TH1::kNoTitle);
-
-  // apply axis settings
-  if (frameDim != 3 && pad.GetAxes().count('C')) {
-    ReportIgnored(fmt::format("The C axis of pad {}", padID), "it is the content of a 3d histogram (for other data the Y or Z axis is the value axis)");
+  axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
+  axisHist_ptr->SetMinimum(min);
+  axisHist_ptr->SetMaximum(max);
+  // the colour levels of the scale were computed for the range of the contents when the frame was drawn (ROOT does not compute
+  // them again for the boxes of a 3d histogram)
+  if ((contentRange || widened) && !axisHist_ptr->TestBit(TH1::kUserContour)) axisHist_ptr->SetContour(axisHist_ptr->GetContour());
+  axisHist_ptr->SetMarkerSize(0);
+  axisHist_ptr->SetLineWidth(0);
+  axisHist_ptr->SetFillStyle(0);
+  if (!padProjection.empty() && TString(drawOption).Contains("Z", TString::kIgnoreCase) && !TString(drawOption).Contains("COL", TString::kIgnoreCase)) {  // with COL, ROOT makes one
+    // ROOT reads the Z of a projection but its CONT4 painting never paints the colour scale: a copy of the frame drawn as COLZ
+    // makes it, with the range and contours of the frame; its cells are moved beyond the pad, so it paints none (on a linear scale
+    // ROOT paints empty cells when the minimum is negative, on a log scale cells below the minimum)
+    auto* scale = static_cast<TH1*>(axisHist_ptr->Clone(fmt::format("color_scale_pad_{}", padID).data()));
+    scale->SetDirectory(nullptr);
+    scale->SetBit(kCanDelete);
+    scale->GetXaxis()->Set(scale->GetNbinsX(), 1e300, 2e300);
+    scale->Draw("COLZ SAME");
   }
-  // the binned axes first: the positive minimum for a log value axis is taken from the bins in their range (with HBAR the value axis is the pad's X)
-  for (auto axisLabel : (hbarFrame) ? array<char, 3>{'Y', 'X', 'Z'} : array<char, 3>{'X', 'Y', 'Z'}) {
-    ApplyAxisSettings<data_type>(padState, axisLabel, graphPositivePoints, polyPositiveBins, graphPositiveMinimumX);
-  }
-
-  if (polargram) {
-    // the polar grid as the axes of the pad set it: x is the angle, y the radius; ranges and divisions only where the user set them
-    // (otherwise ROOT's from the points), labels as those of the axes
-    optional<double_t> minAngle, maxAngle, minRadius, maxRadius;
-    optional<int32_t> divAngle, divRadius;
-    for (auto [axisLabel, min, max, div] : {std::make_tuple('X', &minAngle, &maxAngle, &divAngle), std::make_tuple('Y', &minRadius, &maxRadius, &divRadius)}) {
-      for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
-        if (axis->GetMinRange()) *min = axis->GetMinRange();
-        if (axis->GetMaxRange()) *max = axis->GetMaxRange();
-        if (axis->GetNumDivisions()) *div = axis->GetNumDivisions();
-      }
-    }
-    if (minAngle || maxAngle) {
-      // the labels in units of pi assume a full turn (TGraphPolargram::PaintPolarDivisions): kept for one, values otherwise
-      const double_t tMin = minAngle.value_or(polargram->GetTMin());
-      const double_t tMax = maxAngle.value_or(polargram->GetTMax());
-      if (tMin == 0. && TMath::AreEqualRel(tMax, TMath::TwoPi(), 1e-9)) {
-        polargram->ChangeRangePolar(tMin, tMax);
-      } else {
-        polargram->SetRangePolar(tMin, tMax);
-      }
-    }
-    if (minRadius || maxRadius) polargram->SetRangeRadial(minRadius.value_or(polargram->GetRMin()), maxRadius.value_or(polargram->GetRMax()));
-    if (divAngle) polargram->SetNdivPolar(*divAngle);
-    // the radius runs over half of the pad: half of ROOT's divisions of an axis spanning it (8 are crowded with the label size of the axes)
-    polargram->SetNdivRadial(divRadius.value_or(505));
-    const TAxis* angle = axisHist_ptr->GetXaxis();
-    const TAxis* radius = axisHist_ptr->GetYaxis();
-    polargram->SetPolarLabelFont(angle->GetLabelFont());
-    polargram->SetPolarLabelSize(angle->GetLabelSize());
-    polargram->SetPolarLabelColor(angle->GetLabelColor());
-    polargram->SetRadialLabelFont(radius->GetLabelFont());
-    polargram->SetRadialLabelSize(radius->GetLabelSize());
-    polargram->SetRadialLabelColor(radius->GetLabelColor());
-    polargram->SetLineColor(radius->GetAxisColor());
-  }
-
-  if (frameDim > 1) {
-    // reset the axis histogram which owns the z axis, while keeping default range defined by the data
-    double_t min = axisHist_ptr->GetMinimum();
-    double_t max = axisHist_ptr->GetMaximum();
-    if constexpr (is_hist_2d<data_type>() || is_func_2d<data_type>()) storedRangeZ = {axisHist_ptr->GetMinimumStored() != -1111, axisHist_ptr->GetMaximumStored() != -1111};
-    // ROOT draws a log z axis of a histogram without a positive minimum from min(1, 0.001 * maximum) (THistPainter::PaintInit),
-    // but for data drawn SAME on a frame with a stored minimum of zero it leaves out the bins of the lowest contents.
-    // This floor is ROOT's default on purpose, not a choice of SciRooPlot: the smallest positive content could be used instead, but it
-    // can lie arbitrarily many decades below the maximum and then stretches the colour scale; a plot that needs more sets the Z range.
-    if constexpr (is_graph_2d<data_type>()) {
-      // the interpolated histogram of a graph can stay below its highest point (and above its lowest one): the z range includes the
-      // points (with their errors), as ROOT's own range of the graph (TGraph2D::GetHistogram), unless the user set that end
-      const optional<double_t> userMinZ = MinRange(pad, padDefaults, 'Z');
-      const optional<double_t> userMaxZ = MaxRange(pad, padDefaults, 'Z');
-      // a minimum or maximum stored with the graph defining the frame is kept like a range set by the user
-      storedRangeZ = {graphStoredZ.first != -1111, graphStoredZ.second != -1111};
-      if (!userMinZ) min = (storedRangeZ.first) ? graphStoredZ.first : std::min(min, graphRangeZ.first);
-      if (!userMaxZ) max = (storedRangeZ.second) ? graphStoredZ.second : std::max(max, graphRangeZ.second);
-    }
-    bool contentRange{};
-    if (frameDim == 3) {
-      // the content of a 3d histogram is the C axis: its range is the minimum and maximum, which give the colours (and the sizes) of the
-      // boxes, also of the data drawn later (it takes them from the frame); its title is the part of the z title after ';' (ROOT's place
-      // for the title of the colour scale of a 3d histogram)
-      optional<string> title;
-      bool isLog{};
-      for (const auto* contentSettings : AxisSettings(pad, padDefaults, 'C')) {
-        const auto& content = *contentSettings;
-        if (content.GetMinRange()) min = *content.GetMinRange();
-        if (content.GetMaxRange()) max = *content.GetMaxRange();
-        contentRange = contentRange || content.GetMinRange() || content.GetMaxRange();
-        if (content.GetTitle()) title = content.GetTitle();
-        if (content.GetLog()) isLog = *content.GetLog();
-        if (content.GetGrid() || content.GetOppositeTicks() || content.GetTimeFormat() || content.GetLabelAngle()) {
-          ReportIgnored("A grid, opposite ticks, time format or label angle of the C axis", "the colour scale of a 3d histogram has none of them");
-        }
-        if (content.GetRoomAboveMax() || content.GetRoomBelowMin()) {
-          ReportIgnored("Room above or below the C axis", "the boxes of a 3d histogram are coloured over the range of the C axis, which leaves no room");
-        }
-        if (content.GetNumDivisions() || content.GetMaxDigits()) {
-          ReportIgnored("The divisions or max digits of the C axis", "ROOT takes them for the colour scale of a 3d histogram from its Z axis", true);
-        }
-      }
-      if (isLog) ReportIgnored(fmt::format("The log scale of the C axis of pad {}", padID), "ROOT colours the boxes of a 3d histogram linearly");
-      if (title) {
-        DropEmptyGroups(*title);
-        TAxis* zAxis = axisHist_ptr->GetZaxis();
-        TString zTitle = zAxis->GetTitle();
-        if (zTitle.Index(";") >= 0) zTitle.Remove(zTitle.Index(";"));  // a title of the scale stored with the input is replaced
-        if (zTitle.IsNull()) zTitle = " ";                             // ROOT reads the part after ';' only behind a z title
-        zAxis->SetTitle((zTitle + ";" + title->data()).Data());
-      }
-      // ROOT makes the colour scale of a 3d histogram once, with the look of the z axis at that time (the axis settings above came
-      // later): it is made again at the next paint
-      TList* functions = axisHist_ptr->GetListOfFunctions();
-      if (TObject* palette = functions->FindObject("palette")) {
-        functions->Remove(palette);
-        delete palette;
-      }
-    }
-    if (pad_ptr->GetLogz() && min <= 0. && max > 0.) min = std::min(1., 0.001 * max);
-    // contents of one value (a flat map, a ratio of a map by itself): ROOT widens the range by 10 % of the value for the colour scale,
-    // but data drawn on a frame with equal ends gets the lowest colour; the ends not set by the user are widened the same way here
-    // (contents of zero only stay as they are: COL leaves such cells empty)
-    bool widened = false;
-    if (min == max && min != 0.) {
-      const double_t widening = 0.1 * std::abs(min);
-      const char valueLabel = (frameDim == 3) ? 'C' : 'Z';
-      if (!MinRange(pad, padDefaults, valueLabel) && !storedRangeZ.first) {
-        min -= widening;
-        widened = true;
-      }
-      if (!MaxRange(pad, padDefaults, valueLabel) && !storedRangeZ.second) {
-        max += widening;
-        widened = true;
-      }
-    }
-    axisHist_ptr->Reset("ICE");  // reset integral, contents and errors
-    axisHist_ptr->SetMinimum(min);
-    axisHist_ptr->SetMaximum(max);
-    // the colour levels of the scale were computed for the range of the contents when the frame was drawn (ROOT does not compute
-    // them again for the boxes of a 3d histogram)
-    if ((contentRange || widened) && !axisHist_ptr->TestBit(TH1::kUserContour)) axisHist_ptr->SetContour(axisHist_ptr->GetContour());
-    axisHist_ptr->SetMarkerSize(0);
-    axisHist_ptr->SetLineWidth(0);
-    axisHist_ptr->SetFillStyle(0);
-    if (!padProjection.empty() && TString(drawOption).Contains("Z", TString::kIgnoreCase) && !TString(drawOption).Contains("COL", TString::kIgnoreCase)) {  // with COL, ROOT makes one
-      // ROOT reads the Z of a projection but its CONT4 painting never paints the colour scale: a copy of the frame drawn as COLZ
-      // makes it, with the range and contours of the frame; its cells are moved beyond the pad, so it paints none (on a linear scale
-      // ROOT paints empty cells when the minimum is negative, on a log scale cells below the minimum)
-      auto* scale = static_cast<TH1*>(axisHist_ptr->Clone(fmt::format("color_scale_pad_{}", padID).data()));
-      scale->SetDirectory(nullptr);
-      scale->SetBit(kCanDelete);
-      scale->GetXaxis()->Set(scale->GetNbinsX(), 1e300, 2e300);
-      scale->Draw("COLZ SAME");
-    }
-  }
-  pad_ptr->Update();
 }
 
 //**************************************************************************************************

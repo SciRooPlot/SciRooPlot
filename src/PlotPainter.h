@@ -340,6 +340,24 @@ class PlotPainter
   template <typename T>
   void SetUpFrame(item_state_t& state, T data_ptr, const std::string& polarGridOption);
   template <typename T>
+  void FrameOfFunction(item_state_t& state, T data_ptr);
+  void MakePolarFrame(item_state_t& state);
+  template <typename T>
+  void MakePolargram(item_state_t& state, T data_ptr, const std::string& polarGridOption);
+  template <typename T>
+  void SpanConstantFunction(item_state_t& state, T data_ptr);
+  template <typename T>
+  void RangeOfShownPoints(item_state_t& state, T data_ptr);
+  template <typename T>
+  void TakeFrameHistogram(item_state_t& state, T data_ptr);
+  template <typename T>
+  std::string FrameOption(item_state_t& state, T data_ptr);
+  void WidenFrame(item_state_t& state, const std::string& drawOptAxis);
+  void ApplyPolargramAxes(item_state_t& state);
+  bool ReadContentAxis(item_state_t& state, double_t& min, double_t& max);
+  template <typename T>
+  void EmptyMapFrame(item_state_t& state, const std::pair<double_t, double_t>& graphRangeZ, const std::pair<double_t, double_t>& graphStoredZ);
+  template <typename T>
   void ApplyAxisSettings(pad_state_t& padState, char axisLabel, const std::optional<std::vector<std::array<double_t, 3>>>& graphPositivePoints,
                          const std::optional<std::vector<std::array<double_t, 5>>>& polyPositiveBins, const std::optional<double_t>& graphPositiveMinimumX);
   static void Paints3dGraph(const std::string& option, bool& triangles, bool& points);
