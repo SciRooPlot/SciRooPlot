@@ -262,20 +262,20 @@ PanelLayout& PanelLayout::SetCommonTitles(bool common)
  * The arrangement of the layout read into a grid, and the space between its columns and rows.
  */
 //**************************************************************************************************
-struct PanelLayout::Grid {
-  struct Cell {
+struct PanelLayout::grid_t {
+  struct cell_t {
     const Panel* panel;
     size_t row;  // first row and column of its block
     size_t col;
   };
   // space between neighbouring columns and rows: the part belonging to the first pad, the part belonging to the second one,
   // and whether the two panels share the axis between them
-  struct Separation {
+  struct separation_t {
     double_t first{};
     double_t second{};
     bool shared{};
   };
-  vector<Cell> cells;             // in reading order: cell i is pad padOf[i]
+  vector<cell_t> cells;           // in reading order: cell i is pad padOf[i]
   vector<vector<int32_t>> owner;  // [row][column]: the cell covering the position (-1: free)
   vector<int8_t> gapAfterColumn;  // gap between column c and c + 1: 1 or 0, -1 while only spanned over
   vector<bool> gapAfterRow;       // gap between row r and r + 1
@@ -285,8 +285,8 @@ struct PanelLayout::Grid {
   // filled by ApplyGeometry
   vector<bool> colOwnScale;  // a column whose panels have a colour scale
   vector<bool> colScale;     // a column of ColorScale() cells
-  vector<Separation> colSep;
-  vector<Separation> rowSep;
+  vector<separation_t> colSep;
+  vector<separation_t> rowSep;
 };
 
 //**************************************************************************************************
@@ -296,7 +296,7 @@ struct PanelLayout::Grid {
 //**************************************************************************************************
 void PanelLayout::ApplyTo(Plot& plot) const
 {
-  Grid grid = ReadGrid();
+  grid_t grid = ReadGrid();
   ApplyGeometry(plot, grid);
   ApplyLook(plot, grid);
   ApplySharing(plot, grid);
@@ -307,11 +307,11 @@ void PanelLayout::ApplyTo(Plot& plot) const
  * Reads the arrangement into a grid and numbers the pads.
  */
 //**************************************************************************************************
-PanelLayout::Grid PanelLayout::ReadGrid() const
+PanelLayout::grid_t PanelLayout::ReadGrid() const
 {
   // read the arrangement into a grid: every listed cell (one pad) covers a block of grid positions, starting at the first
   // position of its row that no cell spanning down from a row above covers; rows containing only gaps separate grid rows
-  Grid grid;
+  grid_t grid;
   auto& cells = grid.cells;
   auto& owner = grid.owner;
   auto& gapAfterColumn = grid.gapAfterColumn;
@@ -411,9 +411,9 @@ PanelLayout::Grid PanelLayout::ReadGrid() const
  * fraction is computed, so that neighbouring panels line up exactly.
  */
 //**************************************************************************************************
-void PanelLayout::ApplyGeometry(Plot& plot, Grid& grid) const
+void PanelLayout::ApplyGeometry(Plot& plot, grid_t& grid) const
 {
-  using Separation = Grid::Separation;
+  using separation_t = grid_t::separation_t;
   const auto& cells = grid.cells;
   const auto& owner = grid.owner;
   const auto& padOf = grid.padOf;
@@ -492,18 +492,18 @@ void PanelLayout::ApplyGeometry(Plot& plot, Grid& grid) const
   }
   auto touching = [this](double_t spacing) {
     const double_t half = (spacing < 0. ? mPanelSpacing : spacing) / 2.;
-    return Separation{half, half, true};
+    return separation_t{half, half, true};
   };
   for (size_t c = 0; c + 1 < nCols; ++c) {
     if (gapAfterColumn[c] == 1) {
-      colSep[c] = Separation{colOwnScale[c] ? mColorScaleMargin : mMarginRight, mMarginLeft, false};
+      colSep[c] = separation_t{colOwnScale[c] ? mColorScaleMargin : mMarginRight, mMarginLeft, false};
     } else if (colScale[c + 1]) {
       // the cell of a colour scale holds its room: it starts at the frames on its left, after the own scale of a panel there
-      colSep[c] = Separation{colOwnScale[c] ? mColorScaleMargin : 0., 0., false};
+      colSep[c] = separation_t{colOwnScale[c] ? mColorScaleMargin : 0., 0., false};
     } else if (colScale[c]) {
-      colSep[c] = Separation{0., mMarginLeft, false};
+      colSep[c] = separation_t{0., mMarginLeft, false};
     } else if (colOwnScale[c]) {
-      colSep[c] = Separation{mColorScaleMargin, mMarginLeft, false};
+      colSep[c] = separation_t{mColorScaleMargin, mMarginLeft, false};
     } else {
       colSep[c] = touching(colSpacing[c]);
     }
@@ -512,12 +512,12 @@ void PanelLayout::ApplyGeometry(Plot& plot, Grid& grid) const
     }
   }
   for (size_t r = 0; r + 1 < nRows; ++r) {
-    rowSep[r] = gapAfterRow[r] ? Separation{mMarginBottom, mMarginTop, false} : touching(rowSpacing[r]);
+    rowSep[r] = gapAfterRow[r] ? separation_t{mMarginBottom, mMarginTop, false} : touching(rowSpacing[r]);
     if (gapAfterRow[r] && rowSpacing[r] >= 0.) logger::throw_invalid_argument("Layout: SpacingAbove in row {}: a gap lies above it, the space is for touching panels.", r + 2);
   }
 
   // edges of the axis frames and boundaries between the pads, rounded to pixels (x from the left, y from the top)
-  auto edges = [](double_t lowMargin, const vector<double_t>& sizes, const vector<Separation>& separations, double_t highMargin,
+  auto edges = [](double_t lowMargin, const vector<double_t>& sizes, const vector<separation_t>& separations, double_t highMargin,
                   vector<double_t>& low, vector<double_t>& high, vector<double_t>& boundary) {
     double_t pos = lowMargin;
     for (size_t i = 0; i < sizes.size(); ++i) {
@@ -539,13 +539,13 @@ void PanelLayout::ApplyGeometry(Plot& plot, Grid& grid) const
   plot.SetDimensions(static_cast<int32_t>(canvasWidth), static_cast<int32_t>(canvasHeight), true);
 
   // one pad per cell except holes, numbered in reading order
-  struct Neighbours {
+  struct neighbors_t {
     bool panel{};  // a panel touches this side
     bool empty{};  // an empty cell touches this side
     bool scale{};  // a ColorScale() cell touches this side
   };
-  auto neighbours = [&](size_t r0, size_t r1, size_t c0, size_t c1) {  // the cells covering the given block of positions
-    Neighbours side;
+  auto neighbors = [&](size_t r0, size_t r1, size_t c0, size_t c1) {  // the cells covering the given block of positions
+    neighbors_t side;
     for (size_t r = r0; r <= r1; ++r) {
       for (size_t c = c0; c <= c1; ++c) {
         const Panel* other = cells[owner[r][c]].panel;
@@ -562,10 +562,10 @@ void PanelLayout::ApplyGeometry(Plot& plot, Grid& grid) const
     const uint8_t padID = padOf[i];
     const size_t r1 = r0 + cell->mRows - 1;
     const size_t c1 = c0 + cell->mColumns - 1;
-    const Neighbours left = (c0 > 0) ? neighbours(r0, r1, c0 - 1, c0 - 1) : Neighbours{};
-    const Neighbours right = (c1 + 1 < nCols) ? neighbours(r0, r1, c1 + 1, c1 + 1) : Neighbours{};
-    const Neighbours above = (r0 > 0) ? neighbours(r0 - 1, r0 - 1, c0, c1) : Neighbours{};
-    const Neighbours below = (r1 + 1 < nRows) ? neighbours(r1 + 1, r1 + 1, c0, c1) : Neighbours{};
+    const neighbors_t left = (c0 > 0) ? neighbors(r0, r1, c0 - 1, c0 - 1) : neighbors_t{};
+    const neighbors_t right = (c1 + 1 < nCols) ? neighbors(r0, r1, c1 + 1, c1 + 1) : neighbors_t{};
+    const neighbors_t above = (r0 > 0) ? neighbors(r0 - 1, r0 - 1, c0, c1) : neighbors_t{};
+    const neighbors_t below = (r1 + 1 < nRows) ? neighbors(r1 + 1, r1 + 1, c0, c1) : neighbors_t{};
     // a pad reaches to the canvas edge on the outside and to the boundary towards its neighbours; next to empty cells only
     // a panel keeps the margin for its labels, and an empty cell gets what the labels of the panels around it do not need
     double_t x0{}, x1{}, y0{}, y1{};
@@ -692,7 +692,7 @@ void PanelLayout::ApplyGeometry(Plot& plot, Grid& grid) const
  * Applies the look of the shipped plots to the defaults of the plot (pad 0).
  */
 //**************************************************************************************************
-void PanelLayout::ApplyLook(Plot& plot, const Grid& grid) const
+void PanelLayout::ApplyLook(Plot& plot, const grid_t& grid) const
 {
   const auto& colOwnScale = grid.colOwnScale;
   const auto& colScale = grid.colScale;
@@ -719,7 +719,7 @@ void PanelLayout::ApplyLook(Plot& plot, const Grid& grid) const
  * Shares the axes of touching panels and groups the panels showing a common title.
  */
 //**************************************************************************************************
-void PanelLayout::ApplySharing(Plot& plot, const Grid& grid) const
+void PanelLayout::ApplySharing(Plot& plot, const grid_t& grid) const
 {
   const auto& cells = grid.cells;
   const auto& owner = grid.owner;

@@ -2001,7 +2001,7 @@ Plot::Pad::Data& Plot::Pad::GetData(uint16_t dataID)
     logger::throw_out_of_range("Data with ID {} is not defined: only data already added to the pad can be accessed.", dataID);
   }
   // modifiers of a ratio reached again act on the ratio itself, as when it was added (C++ reaches it as Data, whose modifiers are not virtual)
-  if (auto* ratio = dynamic_cast<Ratio*>(mData[dataID - 1].get())) ratio->mModMode = Ratio::Mode::Res;
+  if (auto* ratio = dynamic_cast<Ratio*>(mData[dataID - 1].get())) ratio->mModMode = Ratio::modified_t::result;
   return *mData[dataID - 1];
 }
 
@@ -2201,7 +2201,7 @@ Plot::Pad::Ratio& Plot::Pad::AddRatio(const Ratio& ratio, const optional<string>
   mData.push_back(std::make_shared<Ratio>(ratio));
   auto& added = *std::dynamic_pointer_cast<Ratio>(mData.back());
   if (label) added.mLegend.label = label;
-  added.mModMode = Ratio::Mode::Res;  // further modifiers act on the ratio, independent of the selection the ratio object ended with
+  added.mModMode = Ratio::modified_t::result;  // further modifiers act on the ratio, independent of the selection the ratio object ended with
   return added;
 }
 
@@ -3708,12 +3708,12 @@ auto Plot::Pad::Ratio::SetCorrelated(bool correlated) -> decltype(*this)
 //**************************************************************************************************
 auto Plot::Pad::Ratio::Numer() -> decltype(*this)
 {
-  mModMode = Mode::Num;
+  mModMode = modified_t::numer;
   return *this;
 }
 auto Plot::Pad::Ratio::Denom() -> decltype(*this)
 {
-  mModMode = Mode::Den;
+  mModMode = modified_t::denom;
   return *this;
 }
 //**************************************************************************************************
@@ -3725,17 +3725,17 @@ auto Plot::Pad::Ratio::Denom() -> decltype(*this)
 template <typename Select>
 auto Plot::Pad::Ratio::SelectInput(const char* call, Select select) -> decltype(*this)
 {
-  if (mModMode == Mode::Res) {
+  if (mModMode == modified_t::result) {
     logger::warning("Ratio {}: {}() selects input data, it cannot act on the ratio itself; interpreted as Numer().{}(). Write Numer(), Denom() or Both() explicitly.",
                     GetName(), call, call);
-    mModMode = Mode::Num;
+    mModMode = modified_t::numer;
   }
-  if (mModMode != Mode::Den) select();
-  if (mModMode == Mode::Den || mModMode == Mode::Both) {
+  if (mModMode != modified_t::denom) select();
+  if (mModMode == modified_t::denom || mModMode == modified_t::both) {
     // the selection of the denominator is made by Data on the swapped in denominator, as the modifiers (FORWARD_MODIFIER)
     SwapDenominator(true);
     auto swapBack = util::make_scope_guard([this]() { SwapDenominator(true); });
-    Quietly(mModMode == Mode::Both, select);  // with Both() the arguments were checked for the numerator already
+    Quietly(mModMode == modified_t::both, select);  // with Both() the arguments were checked for the numerator already
   }
   return *this;
 }
@@ -3751,18 +3751,18 @@ void Plot::Pad::Ratio::SwapDenominator(bool selection)
 }
 auto Plot::Pad::Ratio::Both() -> decltype(*this)
 {
-  mModMode = Mode::Both;
+  mModMode = modified_t::both;
   return *this;
 }
 auto Plot::Pad::Ratio::Result() -> decltype(*this)
 {
-  mModMode = Mode::Res;
+  mModMode = modified_t::result;
   return *this;
 }
 std::shared_ptr<Plot::Pad::Data> Plot::Pad::Ratio::Clone() const
 {
   auto clone = std::make_shared<Ratio>(*this);
-  clone->mModMode = Mode::Res;
+  clone->mModMode = modified_t::result;
   return clone;
 }
 auto Plot::Pad::Ratio::Project(const vector<uint8_t>& dims, const vector<tuple<uint8_t, double_t, double_t>>& ranges, optional<bool> isUserCoord) -> decltype(*this)

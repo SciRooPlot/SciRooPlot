@@ -430,14 +430,14 @@ class PlotPainter
   void ReportOutsideFrame(TPad* pad) const;
   void HintAlikeData(TPad* pad) const;
   // the outline of a fill symbol: the line of the data (as TLegend draws it), none, or thin and solid in the line colour (boxes)
-  enum class Outline { line,
-                       none,
-                       thin };
-  struct LegendSymbol {
+  enum class outline_t { line,
+                         none,
+                         thin };
+  struct legend_symbol_t {
     std::string elements;
-    Outline outline = Outline::line;
+    outline_t outline = outline_t::line;
   };
-  static LegendSymbol GetLegendSymbol(TObject* obj, std::string option);
+  static legend_symbol_t GetLegendSymbol(TObject* obj, std::string option);
   // parts of a drawing option that contain the letters of markers, lines, fills and error bars but draw nothing of that kind
   static constexpr std::array<const char*, 7> kNonSymbolTokens{"SAME", "TEXT", "PFC", "PLC", "PMC", "X0", "]["};
   static std::string SymbolOption(const std::string& option);
@@ -537,14 +537,14 @@ class PlotPainter
   std::unordered_map<const TObject*, std::pair<double_t, double_t>> mGraphFrameRangeX;
   // x and y range of the flat frame a 2d graph is drawn in: its <maximum> and <minimum> take the z of the points inside
   std::unordered_map<const TObject*, std::array<double_t, 4>> mGraph2DFrameRange;
-  struct StyleSizes {
+  struct style_sizes_t {
     Width_t lineWidth;
     int32_t hatchesLineWidth;
     float_t endErrorSize;
     Style_t gridStyle;
     std::vector<std::string> lineStyles;
   };
-  static inline std::optional<StyleSizes> sUnscaledStyle;  // absolute sizes in gStyle before the scale of the last plot was applied
+  static inline std::optional<style_sizes_t> sUnscaledStyle;  // absolute sizes in gStyle before the scale of the last plot was applied
 };
 }  // end namespace SciRooPlot
 #endif  // SRC_PLOTPAINTER_H_

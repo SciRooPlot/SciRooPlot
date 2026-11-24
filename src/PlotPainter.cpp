@@ -974,7 +974,7 @@ unique_ptr<TCanvas> PlotPainter::GeneratePlot(Plot& plot, const data_buffer_t& d
   CheckFontSizes(canvas_ptr->GetListOfPrimitives());
   if (mScale != 1. || mOnScreen) {
     // axes, hatched fill areas, the ends of error bars and the dashes of line styles are painted with the absolute sizes defined in gStyle
-    sUnscaledStyle = StyleSizes{gStyle->GetLineWidth(), gStyle->GetHatchesLineWidth(), gStyle->GetEndErrorSize(), gStyle->GetGridStyle(), {}};
+    sUnscaledStyle = style_sizes_t{gStyle->GetLineWidth(), gStyle->GetHatchesLineWidth(), gStyle->GetEndErrorSize(), gStyle->GetGridStyle(), {}};
     gStyle->SetLineWidth(ScaleLineWidth(gStyle->GetLineWidth()));
     gStyle->SetHatchesLineWidth(ScaleLineWidth(static_cast<Width_t>(gStyle->GetHatchesLineWidth())));
     gStyle->SetEndErrorSize(gStyle->GetEndErrorSize() * mScale);
@@ -5590,7 +5590,7 @@ bool PlotPainter::HasErrors(const TObject* obj, bool countErrors, bool xErrors)
  * 2d drawings coloured by the palette have no symbol, surfaces their mesh lines)
  */
 //**************************************************************************************************
-PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string option)
+PlotPainter::legend_symbol_t PlotPainter::GetLegendSymbol(TObject* obj, string option)
 {
   option = SymbolOption(option);
   auto takeToken = [&option](const string& token) {
@@ -5609,15 +5609,15 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
   const string E = (hasLine) ? "E" : "";
   // a fill area (a hollow one is outlined thin in the fill colour, as the symbol of TLegend) and a box (a hollow one in the line colour);
   // hollow ones are not outlined with line width 0
-  auto area = [&](Outline outline) -> LegendSymbol {
-    if (!hasFill) return (hasLine) ? LegendSymbol{"F", Outline::none} : LegendSymbol{};
+  auto area = [&](outline_t outline) -> legend_symbol_t {
+    if (!hasFill) return (hasLine) ? legend_symbol_t{"F", outline_t::none} : legend_symbol_t{};
     return {"F", outline};
   };
-  auto box = [&](Outline outline = Outline::none) -> LegendSymbol {
-    if (!hasFill) return (hasLine) ? LegendSymbol{"F", Outline::thin} : LegendSymbol{};
+  auto box = [&](outline_t outline = outline_t::none) -> legend_symbol_t {
+    if (!hasFill) return (hasLine) ? legend_symbol_t{"F", outline_t::thin} : legend_symbol_t{};
     return {"F", outline};
   };
-  auto join = [](LegendSymbol symbol, const string& more) {
+  auto join = [](legend_symbol_t symbol, const string& more) {
     symbol.elements += more;
     return symbol;
   };
@@ -5634,33 +5634,33 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
     }
     if (isGraph2D) {
       if (str_contains(option, "TRIW") || str_contains(option, "LINE")) return {L};  // a wire mesh, a line through the points
-      if (str_contains(option, "TRI")) return area(Outline::line);                   // triangles in the fill colour, edged in the line colour
+      if (str_contains(option, "TRI")) return area(outline_t::line);                 // triangles in the fill colour, edged in the line colour
       if (has('P')) return {"P"};
     }
-    if (isFunction2D) return (takeToken("FC") && hasFill) ? LegendSymbol{"F", Outline::none} : LegendSymbol{L};
+    if (isFunction2D) return (takeToken("FC") && hasFill) ? legend_symbol_t{"F", outline_t::none} : legend_symbol_t{L};
     if (obj->InheritsFrom(TH2Poly::Class()) && !str_contains(option, "LEGO") && !str_contains(option, "SURF")) {
       // ROOT draws polygon bins only filled, outlined or as markers (THistPainter::PaintTH2PolyBins), not as boxes or contours
-      LegendSymbol symbol = (has('F') && hasFill) ? LegendSymbol{"F", Outline::none} : LegendSymbol{};
+      legend_symbol_t symbol = (has('F') && hasFill) ? legend_symbol_t{"F", outline_t::none} : legend_symbol_t{};
       if (has('L')) symbol.elements += L;
       if (has('P')) symbol.elements += "P";
       return symbol;
     }
-    if (str_contains(option, "CANDLE") || str_contains(option, "VIOLIN")) return (hasFill) ? area(Outline::line) : LegendSymbol{L};
+    if (str_contains(option, "CANDLE") || str_contains(option, "VIOLIN")) return (hasFill) ? area(outline_t::line) : legend_symbol_t{L};
     if (str_contains(option, "BOX")) return box();
     if (str_contains(option, "CONT") || str_contains(option, "SURF")) return {L};  // contour lines, mesh
-    return (hasFill) ? area(Outline::line) : LegendSymbol{L};
+    return (hasFill) ? area(outline_t::line) : legend_symbol_t{L};
   }
   if (obj->InheritsFrom(TF1::Class())) {
     // a function is drawn with markers at its sampling points with P, otherwise as a curve that a fill colours down to zero
     if (has('P')) return {"P"};
-    return (hasFill) ? area(Outline::line) : LegendSymbol{L};
+    return (hasFill) ? area(outline_t::line) : legend_symbol_t{L};
   }
   // the symbol of a graph painted without its errors (TGraphPainter::PaintGraphSimple) with the letters of an option
   auto simpleGraph = [&](const string& letters) {
     auto in = [&letters](char c) { return letters.find(c) != string::npos; };
     const bool lineDrawn = in('L') || in('C');
-    LegendSymbol symbol;
-    if (in('F')) symbol = area((lineDrawn) ? Outline::line : Outline::none);
+    legend_symbol_t symbol;
+    if (in('F')) symbol = area((lineDrawn) ? outline_t::line : outline_t::none);
     if (in('B')) symbol = join(box(), symbol.elements);
     if (in('P') || in('*')) symbol.elements += "P";
     if (lineDrawn) symbol.elements += L;
@@ -5686,7 +5686,7 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
       for (size_t pos = global.find(ignored); pos != string::npos; pos = global.find(ignored))
         global.erase(pos, 2);
     }
-    LegendSymbol symbol;
+    legend_symbol_t symbol;
     bool anyErrors = false, graphPainted = false, allBoxesOrBands = true;
     for (size_t set = 1; set <= nSets; ++set) {
       const string& part = parts[set];
@@ -5697,7 +5697,7 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
       if (in(part, "X")) continue;  // this set is not drawn
       anyErrors = true;
       if (band || boxes) {
-        if (!str_contains(symbol.elements, "F")) symbol = join((band) ? area(Outline::none) : box((in(part, "5")) ? Outline::thin : Outline::none), symbol.elements);
+        if (!str_contains(symbol.elements, "F")) symbol = join((band) ? area(outline_t::none) : box((in(part, "5")) ? outline_t::thin : outline_t::none), symbol.elements);
       } else if (!str_contains(symbol.elements, "E")) {
         symbol.elements += E;
       }
@@ -5719,17 +5719,17 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
     // a polar graph draws its error bars only with E (TGraphPainter::PaintGraphPolar)
     const bool hasErrors = HasErrors(graph) && (has('E') || !graph->InheritsFrom(TGraphPolar::Class()));
     const bool lineDrawn = has('L') || has('C');
-    LegendSymbol symbol;
+    legend_symbol_t symbol;
     if (str_contains(option, "[]")) {  // brackets at the ends of the x and y errors
       if (HasErrors(graph, false, true)) symbol.elements = E;
       return symbol;
     }
     if (has('2') || has('3') || has('4') || has('5')) {  // error boxes and bands, drawn only with errors
-      if (hasErrors) symbol = (has('3') || has('4')) ? area(Outline::none) : box((has('5')) ? Outline::thin : Outline::none);
+      if (hasErrors) symbol = (has('3') || has('4')) ? area(outline_t::none) : box((has('5')) ? outline_t::thin : outline_t::none);
     } else if (hasErrors && !has('X')) {
       symbol.elements = E;
     }
-    if (has('F')) symbol = join(area((lineDrawn) ? Outline::line : Outline::none), symbol.elements);
+    if (has('F')) symbol = join(area((lineDrawn) ? outline_t::line : outline_t::none), symbol.elements);
     if (has('B')) symbol = join(box(), symbol.elements);
     // ROOT paints line and markers before the error band (TGraphPainter::PaintGraphErrors): an opaque band hides them
     const TColor* fillColor = (hasFill) ? gROOT->GetColor(fill->GetFillColor()) : nullptr;
@@ -5755,16 +5755,16 @@ PlotPainter::LegendSymbol PlotPainter::GetLegendSymbol(TObject* obj, string opti
     const bool errorsAsked = has('E') || (!noErrors && (hist->GetSumw2N() > 0 || hist->InheritsFrom(TProfile::Class())));
     if (errorsAsked && nonZeroErrors) {  // markers with the errors (no line, also with L or C), markers of size 0 are skipped
       const string P = (marker && marker->GetMarkerSize() > 0) ? "P" : "";
-      LegendSymbol symbol{E + P};
-      if (errorType >= '3' && errorType <= '6') symbol = join(area(Outline::none), P);                  // fill areas
-      if (errorType == '2') symbol = join(box(), P);                                                    // boxes
-      if (noErrors) symbol = (hasFill) ? join(area(Outline::line), symbol.elements) : join(symbol, L);  // the steps are painted over the errors
+      legend_symbol_t symbol{E + P};
+      if (errorType >= '3' && errorType <= '6') symbol = join(area(outline_t::none), P);                  // fill areas
+      if (errorType == '2') symbol = join(box(), P);                                                      // boxes
+      if (noErrors) symbol = (hasFill) ? join(area(outline_t::line), symbol.elements) : join(symbol, L);  // the steps are painted over the errors
       return symbol;
     }
     const bool drawnAsSteps = errorsAsked && !markers && !lineDrawn;
     if (!drawnAsSteps && markers && !lineDrawn && !has('B') && !has('F')) return {"P"};  // markers only
     if (has('B')) return box();                                                          // bars
-    LegendSymbol symbol = (hasFill) ? area(Outline::line) : LegendSymbol{L};             // steps, lines or curves (HIST L and C fill the histogram if it has a fill colour)
+    legend_symbol_t symbol = (hasFill) ? area(outline_t::line) : legend_symbol_t{L};     // steps, lines or curves (HIST L and C fill the histogram if it has a fill colour)
     if (markers) symbol.elements += "P";
     return symbol;
   }
@@ -6134,7 +6134,7 @@ void PlotPainter::AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box
     TAttLine lineAttr;
     TAttFill fillAttr;
     // the symbol a drawn data gives the row (elements: those set for the row, else what the data draws) in the look of the data
-    struct SymbolPart {
+    struct symbol_part_t {
       uint16_t dataID;
       string elements;
       TAttMarker marker;
@@ -6142,8 +6142,8 @@ void PlotPainter::AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box
       TAttFill fill;
     };
     auto symbolPart = [](uint16_t dataID, TObject* data_ptr, const string& drawnWith, const string& elements) {
-      const LegendSymbol drawn = GetLegendSymbol(data_ptr, drawnWith);
-      SymbolPart part{dataID, str_upper((elements.empty()) ? drawn.elements : elements), {}, {}, {}};
+      const legend_symbol_t drawn = GetLegendSymbol(data_ptr, drawnWith);
+      symbol_part_t part{dataID, str_upper((elements.empty()) ? drawn.elements : elements), {}, {}, {}};
       if (auto ptr = dynamic_cast<TAttMarker*>(data_ptr)) ptr->Copy(part.marker);
       if (auto ptr = dynamic_cast<TAttLine*>(data_ptr)) ptr->Copy(part.line);
       if (auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(part.fill);
@@ -6156,17 +6156,17 @@ void PlotPainter::AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box
       const bool hollow = part.fill.GetFillStyle() == 0 || part.fill.GetFillColor() == 0;
       // the outline TLegend draws around a fill symbol without line
       if (str_contains(part.elements, "F") && !str_contains(part.elements, "L")) {
-        if (drawn.outline == Outline::thin && part.line.GetLineWidth() > 0) {  // outlined thin and solid in the line colour
+        if (drawn.outline == outline_t::thin && part.line.GetLineWidth() > 0) {  // outlined thin and solid in the line colour
           part.line.SetLineWidth(1);
           part.line.SetLineStyle(kSolid);
           if (hollow) part.fill.SetFillColor(part.line.GetLineColor());
         }
-        if (drawn.outline == Outline::none || part.line.GetLineWidth() <= 0) part.line.SetLineColor(TColor::GetColorTransparent(part.line.GetLineColor(), 0.f));
+        if (drawn.outline == outline_t::none || part.line.GetLineWidth() <= 0) part.line.SetLineColor(TColor::GetColorTransparent(part.line.GetLineColor(), 0.f));
       }
       return part;
     };
     // the parts of the row's data and of the data added with AddSymbolOf, in the order they are drawn
-    std::vector<SymbolPart> parts;
+    std::vector<symbol_part_t> parts;
     const auto [data_ptr, drawnWith] = (entry.GetRefDataID()) ? FindDrawn(pad, *entry.GetRefDataID(), entry.GetRefPadID()) : std::pair<TObject*, string>{nullptr, ""};
     if (data_ptr) parts.push_back(symbolPart(*entry.GetRefDataID(), data_ptr, drawnWith, symbolElements));
     for (uint16_t dataID : entry.GetSymbolOf()) {
@@ -6177,14 +6177,14 @@ void PlotPainter::AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box
       }
       parts.push_back(symbolPart(dataID, other_ptr, otherDrawnWith, ""));
     }
-    std::stable_sort(parts.begin(), parts.end(), [](const SymbolPart& a, const SymbolPart& b) { return a.dataID < b.dataID; });
+    std::stable_sort(parts.begin(), parts.end(), [](const symbol_part_t& a, const symbol_part_t& b) { return a.dataID < b.dataID; });
     if (!parts.empty()) {
       // each element in the look of the data giving it, the one drawn later where two give the same (as in the plot); the line of the row
       // is that of the L element, without one the outline of the fill (TLegend draws no error bar with a fill), else that of the error bars
       symbolElements.clear();
-      const SymbolPart* lineFrom = nullptr;
-      const SymbolPart* outlineFrom = nullptr;
-      const SymbolPart* errorsFrom = nullptr;
+      const symbol_part_t* lineFrom = nullptr;
+      const symbol_part_t* outlineFrom = nullptr;
+      const symbol_part_t* errorsFrom = nullptr;
       for (const auto& part : parts) {
         for (char element : part.elements) {
           if (!str_contains(symbolElements, string(1, element))) symbolElements += element;
@@ -6197,7 +6197,7 @@ void PlotPainter::AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box
           if (element == 'E') errorsFrom = &part;
         }
       }
-      if (const SymbolPart* from = (lineFrom) ? lineFrom : ((outlineFrom) ? outlineFrom : errorsFrom)) from->line.Copy(lineAttr);
+      if (const symbol_part_t* from = (lineFrom) ? lineFrom : ((outlineFrom) ? outlineFrom : errorsFrom)) from->line.Copy(lineAttr);
     }
     curEntry = legend->AddEntry(static_cast<TObject*>(nullptr), label.data(), symbolElements.data());
 
@@ -6309,11 +6309,11 @@ TPave* PlotPainter::GenerateBox(variant<shared_ptr<Plot::Pad::LegendBox>, shared
     const double_t textHeightPixel = TextHeightPixel(textFont, textSize, pad);  // lines with sub- or superscripts are higher
     double_t lineHeightPixel = textHeightPixel;
 
-    struct LineExtent {
+    struct line_extent_t {
       double_t over;
       double_t under;
     };
-    vector<LineExtent> lineExtents;  // legend rows: how far they reach above and below their baseline
+    vector<line_extent_t> lineExtents;  // legend rows: how far they reach above and below their baseline
     uint16_t lineID{};
     for (auto& line : lines) {
       auto lineTextFont = textFont;

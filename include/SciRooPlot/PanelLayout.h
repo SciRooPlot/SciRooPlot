@@ -137,12 +137,12 @@ class PanelLayout
  private:
   friend class Panel;
   friend class Plot;
-  struct Grid;  // the arrangement read into a grid (PanelLayout.cpp)
+  struct grid_t;  // the arrangement read into a grid (PanelLayout.cpp)
   void ApplyTo(Plot& plot) const;
-  Grid ReadGrid() const;                                  // the cells, their pads and the gaps between them
-  void ApplyGeometry(Plot& plot, Grid& grid) const;       // canvas size, pad positions and the lengths in every pad
-  void ApplyLook(Plot& plot, const Grid& grid) const;     // the look of the shipped plots on pad 0
-  void ApplySharing(Plot& plot, const Grid& grid) const;  // shared axes and common titles of touching panels
+  grid_t ReadGrid() const;                                  // the cells, their pads and the gaps between them
+  void ApplyGeometry(Plot& plot, grid_t& grid) const;       // canvas size, pad positions and the lengths in every pad
+  void ApplyLook(Plot& plot, const grid_t& grid) const;     // the look of the shipped plots on pad 0
+  void ApplySharing(Plot& plot, const grid_t& grid) const;  // shared axes and common titles of touching panels
   // false (reported) for negative (or zero) values (value: what is set, in messages)
   static bool ValidLength(const char* setter, double_t pixel, bool zeroAllowed, const char* value = "length");
   static bool ValidOffset(const char* setter, double_t pixel);  // false (reported) for NaN and infinity (negative is fine)
