@@ -78,23 +78,23 @@ using LegendEntry = Pad::LegendEntry;
 using Shape = Pad::Shape;
 constexpr auto ref_int = py::return_value_policy::reference_internal;
 
-void exportLogging(py::module_& m);
-void exportDrawOptions(py::module_& m);
-void exportRootConstants(py::module_& m);
-void exportPythonDataInterfaces(py::module_& m);
-void exportPlotManager(py::module_& m);
-void exportPanelLayout(py::module_& m);
-void exportPlot(py::module_& m);
-void exportPad(py::module_& m);
-void exportAxis(py::module_& m);
-void exportData(py::module_& m);
-void exportRatio(py::module_& m);
-void exportTextBox(py::module_& m);
-void exportImageBox(py::module_& m);
-void exportStatsBox(py::module_& m);
-void exportLegendBox(py::module_& m);
-void exportLegendEntry(py::module_& m);
-void exportShape(py::module_& m);
+void export_logging(py::module_& m);
+void export_draw_options(py::module_& m);
+void export_root_constants(py::module_& m);
+void export_python_data_interfaces(py::module_& m);
+void export_plot_manager(py::module_& m);
+void export_panel_layout(py::module_& m);
+void export_plot(py::module_& m);
+void export_pad(py::module_& m);
+void export_axis(py::module_& m);
+void export_data(py::module_& m);
+void export_ratio(py::module_& m);
+void export_text_box(py::module_& m);
+void export_image_box(py::module_& m);
+void export_stats_box(py::module_& m);
+void export_legend_box(py::module_& m);
+void export_legend_entry(py::module_& m);
+void export_shape(py::module_& m);
 
 // a Python integer of any size, also a numpy one (anything with __index__ but bool), for the integer settings
 struct setting_int_t {
@@ -257,26 +257,26 @@ PYBIND11_MODULE(SciRooPlot, m)
   path.insert(0, SCIROOPLOT_ROOT_PYTHON_DIR);
 
   // a class is registered before the classes whose signatures use it, so they show its Python name
-  exportLogging(m);
-  exportDrawOptions(m);
-  exportRootConstants(m);
-  exportPythonDataInterfaces(m);
-  exportLegendEntry(m);
-  exportLegendBox(m);
-  exportTextBox(m);
-  exportImageBox(m);
-  exportStatsBox(m);
-  exportShape(m);
-  exportData(m);
-  exportRatio(m);
-  exportAxis(m);
-  exportPad(m);
-  exportPanelLayout(m);
-  exportPlot(m);
-  exportPlotManager(m);
+  export_logging(m);
+  export_draw_options(m);
+  export_root_constants(m);
+  export_python_data_interfaces(m);
+  export_legend_entry(m);
+  export_legend_box(m);
+  export_text_box(m);
+  export_image_box(m);
+  export_stats_box(m);
+  export_shape(m);
+  export_data(m);
+  export_ratio(m);
+  export_axis(m);
+  export_pad(m);
+  export_panel_layout(m);
+  export_plot(m);
+  export_plot_manager(m);
 }
 
-void exportLogging(py::module_& m)
+void export_logging(py::module_& m)
 {
   // the functions of the logger namespace of C++: SciRooPlot.logger.info("...")
   auto loggerModule = m.def_submodule("logger", "messages in the style of SciRooPlot, shown depending on the verbosity (print: always)");
@@ -289,7 +289,7 @@ void exportLogging(py::module_& m)
   loggerModule.def("warning", [](std::string_view s) { logger::warning("{}", s); }, arg("message"));
   loggerModule.def("error", [](std::string_view s) { logger::error("{}", s); }, arg("message"));
 }
-void exportDrawOptions(py::module_& m)
+void export_draw_options(py::module_& m)
 {
 #define OPT(name, ...) .value(#name, draw_option_t::name)
   py::enum_<draw_option_t>(m, "draw_option_t") DRAW_OPTIONS.export_values();
@@ -302,7 +302,7 @@ void exportDrawOptions(py::module_& m)
 #undef COORDINATES
 }
 
-void exportRootConstants(py::module_& m)
+void export_root_constants(py::module_& m)
 {
   gSystem->Load("libGraf");
   for (auto enumName : {"EColor", "ELineStyle", "EMarkerStyle", "EFillStyle", "EColorPalette", "ETextAlign"}) {
@@ -316,7 +316,7 @@ void exportRootConstants(py::module_& m)
   }
 }
 
-void exportPlotManager(py::module_& m)
+void export_plot_manager(py::module_& m)
 {
   py::class_<PlotManager>(m, "PlotManager")
     .def(py::init<const string&>(), arg("projectName") = "")
@@ -408,7 +408,7 @@ void exportPlotManager(py::module_& m)
     .def_static("MakeBasePlot", &PlotManager::MakeBasePlot, arg("name") = "1d", py::arg_v("sizes", PanelLayout(), "PanelLayout()"), py::arg_v("shape", BasePlotShape(), "BasePlotShape()"));
 }
 
-void exportPanelLayout(py::module_& m)
+void export_panel_layout(py::module_& m)
 {
   py::class_<Panel>(m, "Panel", "One axis frame of a layout, sizes in units of the standard panel.")
     .def(py::init<double_t, double_t>(), arg("width") = 1., arg("height") = 1.)
@@ -452,7 +452,7 @@ void exportPanelLayout(py::module_& m)
 // so that each class returns itself to Python (a Ratio its own type, not the Data the forwarded setters of Data would give)
 // and no member pointer of a base behind the vptr is called (GCC's vptr sanitizer wrongly reports that as an invalid object)
 template <class Self, class... Options>
-void defMarkerSetters(py::class_<Self, Options...>& cls)
+void def_marker_setters(py::class_<Self, Options...>& cls)
 {
   cls
     .def("SetMarker", [](Self& self, int16_t style, float_t size, color_t color, float_t alpha) -> Self& { return self.SetMarker(style, size, color, alpha); }, arg("style"), arg("size"), arg("color"), arg("alpha") = 1.f, ref_int)
@@ -462,7 +462,7 @@ void defMarkerSetters(py::class_<Self, Options...>& cls)
     .def("SetMarkerSize", [](Self& self, float_t size) -> Self& { return self.SetMarkerSize(size); }, arg("size"), ref_int);
 }
 template <class Self, class... Options>
-void defLineSetters(py::class_<Self, Options...>& cls)
+void def_line_setters(py::class_<Self, Options...>& cls)
 {
   cls
     .def("SetLine", [](Self& self, int16_t style, float_t width, color_t color, float_t alpha) -> Self& { return self.SetLine(style, width, color, alpha); }, arg("style"), arg("width"), arg("color"), arg("alpha") = 1.f, ref_int)
@@ -472,7 +472,7 @@ void defLineSetters(py::class_<Self, Options...>& cls)
     .def("SetLineWidth", [](Self& self, float_t width) -> Self& { return self.SetLineWidth(width); }, arg("width"), ref_int);
 }
 template <class Self, class... Options>
-void defFillSetters(py::class_<Self, Options...>& cls)
+void def_fill_setters(py::class_<Self, Options...>& cls)
 {
   cls
     .def("SetFill", [](Self& self, int16_t style, color_t color, float_t alpha) -> Self& { return self.SetFill(style, color, alpha); }, arg("style"), arg("color"), arg("alpha") = 1.f, ref_int)
@@ -481,7 +481,7 @@ void defFillSetters(py::class_<Self, Options...>& cls)
     .def("SetFillAlpha", [](Self& self, float_t alpha) -> Self& { return self.SetFillAlpha(alpha); }, arg("alpha"), ref_int);
 }
 template <class Self, class... Options>
-void defTextSetters(py::class_<Self, Options...>& cls)
+void def_text_setters(py::class_<Self, Options...>& cls)
 {
   cls
     .def("SetText", [](Self& self, int16_t font, float_t size, color_t color, float_t alpha) -> Self& { return self.SetText(font, size, color, alpha); }, arg("font"), arg("size"), arg("color"), arg("alpha") = 1.f, ref_int)
@@ -491,7 +491,7 @@ void defTextSetters(py::class_<Self, Options...>& cls)
     .def("SetTextSize", [](Self& self, float_t size) -> Self& { return self.SetTextSize(size); }, arg("size"), ref_int);
 }
 template <class Self, class... Options>
-void defBorderSetters(py::class_<Self, Options...>& cls)
+void def_border_setters(py::class_<Self, Options...>& cls)
 {
   cls
     .def("SetBorder", [](Self& self, int16_t style, float_t width, color_t color, float_t alpha) -> Self& { return self.SetBorder(style, width, color, alpha); }, arg("style"), arg("width"), arg("color"), arg("alpha") = 1.f, ref_int)
@@ -501,7 +501,7 @@ void defBorderSetters(py::class_<Self, Options...>& cls)
     .def("SetBorderWidth", [](Self& self, float_t width) -> Self& { return self.SetBorderWidth(width); }, arg("width"), ref_int);
 }
 template <class Self, class... Options>
-void defPositionSetters(py::class_<Self, Options...>& cls)
+void def_position_setters(py::class_<Self, Options...>& cls)
 {
   cls
     .def("SetPosition", [](Self& self, double_t x, double_t y) -> Self& { return self.SetPosition(x, y); }, arg("x"), arg("y"), ref_int)
@@ -511,7 +511,7 @@ void defPositionSetters(py::class_<Self, Options...>& cls)
     .def("SetAutoPlacement", [](Self& self, box_placement_t placement) -> Self& { return self.SetAutoPlacement(placement); }, arg("placement") = best_corner, ref_int);
 }
 
-void exportPlot(py::module_& m)
+void export_plot(py::module_& m)
 {
   // plot[padID] = pad: Python may still hold references into the old content of the pad (data, boxes, shapes, axes), so it is moved
   // out instead of overwritten and kept as long as the plot (such references stay valid, they no longer belong to the plot)
@@ -542,12 +542,12 @@ void exportPlot(py::module_& m)
     .def("SetHeight", &Plot::SetHeight, arg("height"), ref_int)
     .def("SetFixAspectRatio", &Plot::SetFixAspectRatio, arg("fixAspectRatio") = true, ref_int)
     .def("ShareAxis", &Plot::ShareAxis, arg("axis"), arg("pads"), ref_int);
-  defFillSetters(plot);
+  def_fill_setters(plot);
   plot
     .def("SetTransparent", &Plot::SetTransparent, ref_int);
 }
 
-void exportPad(py::module_& m)
+void export_pad(py::module_& m)
 {
   py::class_<Pad> pad(m, "Pad");
   pad
@@ -596,7 +596,7 @@ void exportPad(py::module_& m)
     .def("SetDefaultCandleWhiskerRange", &Pad::SetDefaultCandleWhiskerRange, arg("range"), ref_int)
     .def("SetDefaultBoxCoordinates", &Pad::SetDefaultBoxCoordinates, arg("coordinates"), ref_int)
     .def("SetDefaultShapeCoordinates", &Pad::SetDefaultShapeCoordinates, arg("coordinates"), ref_int);
-  defFillSetters(pad);
+  def_fill_setters(pad);
   pad
     .def("SetTransparent", &Pad::SetTransparent, ref_int)
     .def("SetFrameFill", &Pad::SetFrameFill, arg("style"), arg("color"), arg("alpha") = 1.f, ref_int)
@@ -651,7 +651,7 @@ void exportPad(py::module_& m)
 // the setters of Data, which Ratio forwards: through a lambda per setter, so that each class returns itself to Python (and a setter
 // Ratio does not forward, which would return the Data part, does not compile); the modifiers of a Ratio act on numerator, denominator or result
 template <class Self, class... Options>
-void defDataSetters(py::class_<Self, Options...>& cls)
+void def_data_setters(py::class_<Self, Options...>& cls)
 {
   using data_dims_t = vector<Data::data_dim_t>;
   using ranges_t = vector<tuple<uint8_t, double_t, double_t>>;
@@ -681,9 +681,9 @@ void defDataSetters(py::class_<Self, Options...>& cls)
     .def("SetStatsBox", [](Self& self, const StatsBox& statsBox) -> Self& { return self.SetStatsBox(statsBox); }, arg("statsBox"), ref_int)
     .def("SetColor", [](Self& self, color_t color) -> Self& { return self.SetColor(color); }, arg("color"), ref_int)
     .def("SetAlpha", [](Self& self, float_t alpha) -> Self& { return self.SetAlpha(alpha); }, arg("alpha"), ref_int);
-  defMarkerSetters(cls);
-  defLineSetters(cls);
-  defFillSetters(cls);
+  def_marker_setters(cls);
+  def_line_setters(cls);
+  def_fill_setters(cls);
   cls
     .def("SetDefinesFrame", [](Self& self, bool define) -> Self& { return self.SetDefinesFrame(define); }, arg("define") = true, ref_int)
     .def("SetKeepInputStyle", [](Self& self, bool keep) -> Self& { return self.SetKeepInputStyle(keep); }, arg("keep") = true, ref_int)
@@ -736,7 +736,7 @@ void defDataSetters(py::class_<Self, Options...>& cls)
 }
 
 // Data from [name, dataSource] or (name, dataSource), [name] alone: denominator of a ratio, which takes the data source of the numerator
-Data dataFromSequence(const py::sequence& nameAndSource)
+Data data_from_sequence(const py::sequence& nameAndSource)
 {
   const bool allStrings = std::all_of(nameAndSource.begin(), nameAndSource.end(), [](const py::handle& item) { return py::isinstance<py::str>(item); });
   if (nameAndSource.size() == 0 || nameAndSource.size() > 2 || !allStrings) {
@@ -745,26 +745,26 @@ Data dataFromSequence(const py::sequence& nameAndSource)
   return Data(nameAndSource[0].cast<string>(), nameAndSource.size() == 2 ? nameAndSource[1].cast<string>() : string{});
 }
 
-void exportData(py::module_& m)
+void export_data(py::module_& m)
 {
   py::class_<Data> data(m, "Data");
   data
     .def(py::init<>())
     .def(py::init<const string&, const string&, const optional<string>&>(), arg("name"), arg("dataSource") = "", arg("label") = nullopt)
     .def(py::init<const Data&>(), arg("other"))  // a copy, as in C++
-    .def(py::init([](const py::list& nameAndSource) { return dataFromSequence(nameAndSource); }), arg("nameAndSource"))
-    .def(py::init([](const py::tuple& nameAndSource) { return dataFromSequence(nameAndSource); }), arg("nameAndSource"))
+    .def(py::init([](const py::list& nameAndSource) { return data_from_sequence(nameAndSource); }), arg("nameAndSource"))
+    .def(py::init([](const py::tuple& nameAndSource) { return data_from_sequence(nameAndSource); }), arg("nameAndSource"))
     .def("__call__", [](const Data& self, const string& name, const optional<string>& dataSource) { return self(name, dataSource); }, arg("name"), arg("dataSource") = nullopt)
     .def("Print", &Data::Print)
     .def("GetDataSource", &Data::GetDataSource);
-  defDataSetters(data);
+  def_data_setters(data);
   data.def("Scatter", overload_cast<const string&, const string&, const string&>(&Data::Scatter), arg("x"), arg("y"), arg("z"), ref_int);  // a 2d graph (cannot be divided)
   // [name, dataSource] lists and (name, dataSource) tuples can be passed wherever data is expected, e.g. AddRatio(("h", "data"), ("h", "mc"))
   py::implicitly_convertible<py::list, Data>();
   py::implicitly_convertible<py::tuple, Data>();
 }
 
-void exportRatio(py::module_& m)
+void export_ratio(py::module_& m)
 {
   py::class_<Ratio, Data> ratio(m, "Ratio");
   ratio
@@ -777,7 +777,7 @@ void exportRatio(py::module_& m)
     .def("Denom", &Ratio::Denom, ref_int)
     .def("Both", &Ratio::Both, ref_int)
     .def("Result", &Ratio::Result, ref_int);
-  defDataSetters(ratio);
+  def_data_setters(ratio);
   // only here, after Ratio is registered
   py::class_<Data>(m.attr("Data")).def("AsRatio", &Data::AsRatio, ref_int);
   // functions and points (AddPoints) given in the plot definition as data, e.g. in a ratio
@@ -786,7 +786,7 @@ void exportRatio(py::module_& m)
   m.def("Function", &Function, arg("formula"), arg("label") = nullopt, "A function given by its formula as data, e.g. as numerator or denominator of a ratio.");
 }
 
-void exportAxis(py::module_& m)
+void export_axis(py::module_& m)
 {
   py::class_<Axis>(m, "Axis")
     .def("Print", &Axis::Print)
@@ -827,17 +827,17 @@ void exportAxis(py::module_& m)
     .def("SetTickOrientation", &Axis::SetTickOrientation, arg("tickOrientation"), ref_int);
 }
 
-void exportImageBox(py::module_& m)
+void export_image_box(py::module_& m)
 {
   py::class_<ImageBox> imageBox(m, "ImageBox");
   imageBox
     .def("Print", &ImageBox::Print)
     .def("SetWidth", &ImageBox::SetWidth, arg("width"), ref_int)
     .def("SetHeight", &ImageBox::SetHeight, arg("height"), ref_int);
-  defPositionSetters(imageBox);
+  def_position_setters(imageBox);
 }
 
-void exportTextBox(py::module_& m)
+void export_text_box(py::module_& m)
 {
   py::class_<TextBox> textBox(m, "TextBox");
   textBox
@@ -846,10 +846,10 @@ void exportTextBox(py::module_& m)
     .def("SetText", overload_cast<const vector<string>&>(&TextBox::SetText), arg("lines"), ref_int)
     .def("SetTextAlign", &TextBox::SetTextAlign, arg("align"), ref_int)
     .def("SetSize", &TextBox::SetSize, arg("width"), arg("height"), ref_int);
-  defPositionSetters(textBox);
-  defBorderSetters(textBox);
-  defTextSetters(textBox);
-  defFillSetters(textBox);
+  def_position_setters(textBox);
+  def_border_setters(textBox);
+  def_text_setters(textBox);
+  def_fill_setters(textBox);
   textBox
     .def("SetTransparent", &TextBox::SetTransparent, ref_int)
     .def("SetNoBox", &TextBox::SetNoBox, ref_int)
@@ -857,17 +857,17 @@ void exportTextBox(py::module_& m)
     .def("SetLineSpacing", &TextBox::SetLineSpacing, arg("lineSpacing"), ref_int);
 }
 
-void exportStatsBox(py::module_& m)
+void export_stats_box(py::module_& m)
 {
   py::class_<StatsBox> statsBox(m, "StatsBox");
   statsBox
     .def(py::init<>())
     .def("Print", &StatsBox::Print)
     .def("SetSize", &StatsBox::SetSize, arg("width"), arg("height"), ref_int);
-  defPositionSetters(statsBox);
-  defBorderSetters(statsBox);
-  defTextSetters(statsBox);
-  defFillSetters(statsBox);
+  def_position_setters(statsBox);
+  def_border_setters(statsBox);
+  def_text_setters(statsBox);
+  def_fill_setters(statsBox);
   statsBox
     .def("SetTransparent", &StatsBox::SetTransparent, ref_int)
     .def("SetNoBox", &StatsBox::SetNoBox, ref_int)
@@ -875,7 +875,7 @@ void exportStatsBox(py::module_& m)
     .def("SetLineSpacing", &StatsBox::SetLineSpacing, arg("lineSpacing"), ref_int);
 }
 
-void exportLegendBox(py::module_& m)
+void export_legend_box(py::module_& m)
 {
   py::class_<LegendBox> legendBox(m, "LegendBox");
   legendBox
@@ -902,10 +902,10 @@ void exportLegendBox(py::module_& m)
     .def("SetDefaultFillStyle", &LegendBox::SetDefaultFillStyle, arg("style"), ref_int)
     .def("SetSymbolColScale", &LegendBox::SetSymbolColScale, arg("scale"), ref_int)
     .def("SetSize", &LegendBox::SetSize, arg("width"), arg("height"), ref_int);
-  defPositionSetters(legendBox);
-  defBorderSetters(legendBox);
-  defTextSetters(legendBox);
-  defFillSetters(legendBox);
+  def_position_setters(legendBox);
+  def_border_setters(legendBox);
+  def_text_setters(legendBox);
+  def_fill_setters(legendBox);
   legendBox
     .def("SetTransparent", &LegendBox::SetTransparent, ref_int)
     .def("SetNoBox", &LegendBox::SetNoBox, ref_int)
@@ -913,7 +913,7 @@ void exportLegendBox(py::module_& m)
     .def("SetLineSpacing", &LegendBox::SetLineSpacing, arg("lineSpacing"), ref_int);
 }
 
-void exportLegendEntry(py::module_& m)
+void export_legend_entry(py::module_& m)
 {
   py::class_<LegendEntry> legendEntry(m, "LegendEntry");
   legendEntry
@@ -929,13 +929,13 @@ void exportLegendEntry(py::module_& m)
     .def("AfterData", &LegendEntry::AfterData, arg("dataID"), ref_int)
     .def("SetColor", &LegendEntry::SetColor, arg("color"), ref_int)
     .def("SetAlpha", &LegendEntry::SetAlpha, arg("alpha"), ref_int);
-  defMarkerSetters(legendEntry);
-  defLineSetters(legendEntry);
-  defFillSetters(legendEntry);
-  defTextSetters(legendEntry);
+  def_marker_setters(legendEntry);
+  def_line_setters(legendEntry);
+  def_fill_setters(legendEntry);
+  def_text_setters(legendEntry);
 }
 
-void exportShape(py::module_& m)
+void export_shape(py::module_& m)
 {
   py::class_<Shape> shape(m, "Shape", "A line, arrow, region, ellipse or polygon in a pad that is not data (Pad.AddLine, AddArrow, AddRegion, ...).");
   shape
@@ -949,11 +949,11 @@ void exportShape(py::module_& m)
     .def("SetArrowSize", &Shape::SetArrowSize, arg("size"), ref_int)
     .def("SetArc", &Shape::SetArc, arg("phiMin"), arg("phiMax"), ref_int)
     .def("SetRotation", &Shape::SetRotation, arg("theta"), ref_int);
-  defLineSetters(shape);
-  defFillSetters(shape);
+  def_line_setters(shape);
+  def_fill_setters(shape);
 }
 
-void exportPythonDataInterfaces(py::module_& m)
+void export_python_data_interfaces(py::module_& m)
 {
   auto bind_owned = [](std::uintptr_t addr, const char* className) {
     py::module_ ROOT = py::module_::import("ROOT");
