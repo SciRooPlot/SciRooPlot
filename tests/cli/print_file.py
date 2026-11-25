@@ -7,7 +7,8 @@ points and ranges of graphs, formula and range of functions, entries of trees), 
 ROOT file and a path not in the file fail with exit status 1 and one error. srp open without a file, with a missing file or one that is
 no ROOT file, and srp open and srp colorwheel without a graphical display (X11 only) end with exit status 1 and one error. srp
 colorwheel <file> writes an image file without ROOT's messages, and refuses a name that is no image file. File names may hold ~ and
-environment variables, as the inputs of data sources.
+environment variables, as the inputs of data sources. srp print <table file> gives the data name of a table, its rows and delimiter
+and each column with the type the reader gives it; a table that cannot be read fails with exit status 1 and one error.
 Covers: details of every data kind alone, stack and multigraph members, file below a folder with ':', several cycles of a name, map values, srp open and colorwheel
 without a file or display, colorwheel into a file."""
 
@@ -166,7 +167,7 @@ for start in (":d", ":d/h"):
     out = run(SRP, "print", hidden + start)
     check(f"srp print {start[1:]} of a directory hidden by a newer key of data: the directory", out.rc == 0 and listing(out.stdout)[0] == {"d/h": "TH1D"}, out.tail())
 
-text = os.path.join(folder, "notes.txt")
+text = os.path.join(folder, "notes.log")
 with open(text, "w") as fh:
     fh.write("no ROOT file\n")
 for target, reason in ((os.path.join(folder, "nosuch.root"), "Could not find file"), (text, "Cannot read"), (path + ":nosuch", "Path not found"), (path + ":dir/nosuch", "Path not found")):
@@ -198,6 +199,20 @@ if sys.platform.startswith("linux"):  # X11: without DISPLAY there is no display
         except subprocess.TimeoutExpired:
             ok, detail = False, "still running after a minute"
         check(f"srp {args[0]} without a graphical display: exit 1, one error saying so", ok, detail)
+
+# a table file: its data name, rows and delimiter, each column with the type it is read as (integers stay integers, a column of integers
+# with a decimal further down is floating point, text is text); a table that cannot be read fails with one error
+table = os.path.join(folder, "spectrum.csv")
+with open(table, "w") as fh:
+    fh.write("pt;n;label\n1;3;low\n2;5;mid\n3.5;7;high\n")
+out = run(SRP, "print", table)
+want = ["- [table] spectrum: 3 rows, separated by ';'", "  -> pt (double)", "  -> n (Long64_t)", "  -> label (std::string)"]
+check("srp print of a table: data name, rows, delimiter and the type each column is read as", out.rc == 0 and out.stdout.splitlines() == want, out.tail())
+broken = os.path.join(folder, "broken.csv")
+with open(broken, "w") as fh:
+    fh.write("a,b\n1,2\n3\n")
+out = run(SRP, "print", broken)
+check("srp print of a table that cannot be read: exit 1, one error", out.rc == 1 and len(out.errors()) == 1 and "Cannot read table" in out.errors()[0], out.tail())
 
 # a ~ and environment variables in the file name, as in the inputs of data sources
 out = run(SRP, "print", "${SRP_TESTS_PRINT_DIR}/" + os.path.basename(path), env={"SRP_TESTS_PRINT_DIR": os.path.dirname(path)})

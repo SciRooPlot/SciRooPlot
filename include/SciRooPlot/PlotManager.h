@@ -226,7 +226,6 @@ class PlotManager
   std::optional<std::pair<int32_t, int32_t>> mBrowsePosition;  // the top left corner of the browsing window
   int32_t mWindowOffsetY{};
   std::optional<bool> mHasDisplay;  // a graphical display is available (required for modes "show", "spread" and "macro"), determined by the first GeneratePlots in such a mode
-  const std::vector<std::string> mTableFileEndings = {".csv", ".dat", ".txt", ".tsv", ".tab"};
 
   std::unordered_map<std::string, std::unordered_map<std::string, std::unique_ptr<TObject>>> mDataBuffer;
   std::unordered_map<std::string, std::unordered_map<std::string, std::vector<Plot::Pad::Data::data_info_t>>> mDataInfoBuffer;

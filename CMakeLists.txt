@@ -202,6 +202,7 @@ add_library(SciRooPlot SHARED
   src/util/Paths.cpp
   src/util/Grid.cpp
   src/util/HepData.cpp
+  src/util/Tables.cpp
   include/SciRooPlot/Plot.h
   include/SciRooPlot/PlotManager.h
   include/SciRooPlot/PanelLayout.h

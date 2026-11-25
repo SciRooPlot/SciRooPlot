@@ -20,6 +20,8 @@
 #include "SciRooPlot/Plot.h"
 #include "SciRooPlot/PlotManager.h"
 
+#include <ROOT/RCsvDS.hxx>
+#include <ROOT/RDataFrame.hxx>
 #include <TApplication.h>
 #include <TBranch.h>
 #include <TBrowser.h>
@@ -72,6 +74,7 @@
 #include "util/RootContainers.h"
 #include "util/ScopeGuard.h"
 #include "util/Strings.h"
+#include "util/Tables.h"
 
 using boost::property_tree::ptree;
 using std::string;
@@ -86,6 +89,7 @@ constexpr const char* kSettings[] = {"verbosity", "color", "plotmode", "matchmod
 int run_command(const string& command, const string& project, const string& property, const string& setting);
 string setting_value(const string& setting);
 bool print_root_file_contents(const string& inputPath);
+bool print_table_contents(const string& fileName);
 std::unique_ptr<TApplication> open_window_application(const string& command);
 
 //**************************************************************************************************
@@ -253,6 +257,7 @@ int run_command(const string& command, const string& project, const string& prop
     heading("Utilities");
     row("srp print <file>[:<path>]", "objects in a ROOT file (below a path), one object with details");
     row("srp print hepdata:<record>[:<table>]", "data names of a HEPData record (or downloaded file)");
+    row("srp print <table file>", "data name, rows and column types of a table");
     row("srp open <file>", "open a ROOT file in a TBrowser");
     row("srp colorwheel [<file>]", "ROOT's colours with their names");
     heading("Environment");
@@ -344,6 +349,9 @@ int run_command(const string& command, const string& project, const string& prop
     app->Run();
   } else if (command == "print" && util::is_hepdata_input(project)) {
     if (!util::print_hepdata(project, Config::Get().CacheFolder())) return 1;
+  } else if (command == "print" && util::str_ends_with(project, util::kTableFileEndings)) {
+    const auto fileName = util::expand_path(project);
+    if (!fileName || !print_table_contents(*fileName)) return 1;
   } else if (command == "print") {
     const auto fileName = util::expand_path(project);  // as in the inputs of data sources
     if (!fileName || !print_root_file_contents(*fileName)) return 1;
@@ -582,6 +590,32 @@ string setting_value(const string& setting)
   if (setting == "screenscale") return fmt::format("{}", config.ScreenScale());
   if (setting == "cache") return config.CacheSettingValue();
   return fmt::format("{}", config.BitmapScale());
+}
+
+//**************************************************************************************************
+/**
+ * srp print <table file>: the data name of a table, its rows, delimiter and each column with the type the reader of the data sources
+ * gives it (false with an error).
+ */
+//**************************************************************************************************
+bool print_table_contents(const string& fileName)
+{
+  std::error_code existsError;
+  if (!std::filesystem::exists(fileName, existsError)) {
+    logger::error("Could not find file {}.", fileName);
+    return false;
+  }
+  const auto options = util::table_options(fileName);
+  if (!options) return false;
+  ROOT::RDataFrame table = ROOT::RDF::FromCSV(fileName, *options);
+  const auto nRows = *table.Count();
+  const char delimiter = options->fDelimiter;
+  const string delimiterName = (delimiter == '\t') ? "tabs" : ((delimiter == ' ') ? "spaces" : fmt::format("'{}'", delimiter));
+  logger::print("- [table] {}: {} rows, separated by {}", std::filesystem::path(fileName).stem().string(), nRows, delimiterName);
+  const ROOT::RDF::RCsvDS columns(fileName, *options);  // in the order of the file
+  for (const auto& column : columns.GetColumnNames())
+    logger::print("  -> {} ({})", column, columns.GetTypeName(column));
+  return true;
 }
 
 //**************************************************************************************************
