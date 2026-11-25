@@ -3661,6 +3661,7 @@ Plot::Pad::Ratio::Ratio(const ptree& dataTree) : Data(dataTree)
     mDenomName = dataTree.get<string>("denom_name");
     mDenomDataSource = dataTree.get<string>("denom_data_source");
     mCorrelated = get_from_tree<bool>(dataTree, "is_correlated").value_or(false);
+    Plot::ReadNamed(dataTree, mErrors, "ratio_errors");
   } catch (const std::exception& e) {
     logger::throw_invalid_argument("Could not construct ratio from ptree: {}", e.what());
   }
@@ -3683,6 +3684,7 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
   dataTree.put("denom_name", mDenomName);
   dataTree.put("denom_data_source", mDenomDataSource);
   dataTree.put("is_correlated", mCorrelated);
+  Plot::PutNamed(dataTree, mErrors, "ratio_errors");
   PutModify(dataTree, mNumModify, "numer_");
   PutModify(dataTree, mDenomModify, "denom_");
 
@@ -3699,6 +3701,17 @@ ptree Plot::Pad::Ratio::GetPropertyTree() const
 auto Plot::Pad::Ratio::SetCorrelated(bool correlated) -> decltype(*this)
 {
   mCorrelated = correlated;
+  return *this;
+}
+//**************************************************************************************************
+/**
+ * Whose errors the ratio carries: both (propagated, the default), only those of the numerator or of the denominator (the other side
+ * divides as exact values).
+ */
+//**************************************************************************************************
+auto Plot::Pad::Ratio::SetErrors(ratio_errors_t errors) -> decltype(*this)
+{
+  mErrors = errors;
   return *this;
 }
 //**************************************************************************************************

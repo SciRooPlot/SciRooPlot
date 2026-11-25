@@ -1,5 +1,6 @@
-"""Every numerator kind divided by every denominator kind, in every variant, with uncorrelated and binomial (SetCorrelated) errors, gives
-the ratio plain ROOT gives, or is reported with an error and loses only its plot. The numerator and denominator are the data as drawn
+"""Every numerator kind divided by every denominator kind, in every variant, with uncorrelated and binomial (SetCorrelated) errors, and
+with the errors of one side only (SetErrors: the other side divides as exact values, as if its errors were zero; binomial errors are
+then ignored with a warning), gives the ratio plain ROOT gives, or is reported with an error and loses only its plot. The numerator and denominator are the data as drawn
 without the division (profiles as the histograms of their means, TEfficiency as the graph or 2d histogram ROOT makes of it, THn projected).
 Histograms by histograms of the same binning: TH1::Divide (TH2Poly only by the same polygons). Otherwise the division is that of the points
 (the bin centres of a 1d histogram, with its errors): a denominator at other positions is interpolated with a cubic spline (TSpline3) of its
@@ -27,6 +28,7 @@ from srptest import (
     Func,
     Project,
     S,
+    as_divided,
     base_of,
     cases,
     check,
@@ -55,9 +57,9 @@ p.inputs(set(NUM_VARIANTS) | set(DEN_VARIANTS))
 inputs = {variant: data_objects(variant) for variant in set(NUM_VARIANTS) | set(DEN_VARIANTS)}
 KINDS = list(DATA_KINDS)
 todo = cases(
-    {"num": KINDS, "den": KINDS, "num_variant": list(NUM_VARIANTS), "den_variant": list(DEN_VARIANTS), "correlated": [False, True]},
+    {"num": KINDS, "den": KINDS, "num_variant": list(NUM_VARIANTS), "den_variant": list(DEN_VARIANTS), "correlated": [False, True], "errors": ["both", "numer", "denom"]},
     valid=lambda c: has_variant(c["num"], c["num_variant"]) and has_variant(c["den"], c["den_variant"]) and "normal" in (c["num_variant"], c["den_variant"]),
-    always=lambda c: c["num_variant"] == c["den_variant"] == "normal" and not c["correlated"],
+    always=lambda c: c["num_variant"] == c["den_variant"] == "normal" and not c["correlated"] and c["errors"] == "both",
     named=[
         {"num": "function", "den": "graph_errors", "num_variant": "normal", "den_variant": "normal", "correlated": False, "why": "a function numerator by a denominator with errors"},
         {"num": "graph_multi", "den": "graph", "num_variant": "nan", "den_variant": "normal", "correlated": False, "why": "graph points removed with their errors"},
@@ -78,6 +80,10 @@ todo = cases(
         {"num": "function", "den": "function", "num_variant": "normal", "den_variant": "normal", "correlated": False, "why": "one error for two formulas"},
         {"num": "graph_multi", "den": "graph_errors", "num_variant": "normal", "den_variant": "unsorted", "correlated": False, "why": "sorting a TGraphMultiErrors"},
         {"num": "hist", "den": "graph_multi", "num_variant": "normal", "den_variant": "unsorted", "correlated": False, "why": "sorting a TGraphMultiErrors"},
+        {"num": "hist", "den": "hist", "num_variant": "normal", "den_variant": "normal", "correlated": False, "errors": "numer", "why": "data over simulation with the data errors"},
+        {"num": "graph_asymm", "den": "hist_var", "num_variant": "normal", "den_variant": "normal", "correlated": False, "errors": "numer", "why": "asymmetric numerator errors only"},
+        {"num": "graph_multi", "den": "graph_errors", "num_variant": "normal", "den_variant": "normal", "correlated": False, "errors": "denom", "why": "denominator errors only"},
+        {"num": "hist", "den": "hist", "num_variant": "normal", "den_variant": "normal", "correlated": True, "errors": "numer", "why": "binomial errors ignored"},
     ],
 )
 
@@ -97,6 +103,8 @@ for i, case in enumerate(todo):
     ratio = plot[1].AddRatio(ratio_input(case["num"], f"n{i}", case["num_variant"]), ratio_input(case["den"], f"d{i}", case["den_variant"]))
     if case["correlated"]:
         ratio.SetCorrelated()
+    if case.get("errors", "both") != "both":
+        ratio.SetErrors(getattr(S, case["errors"] + "_errors"))
     p.pm.AddPlot(plot)
 # a function numerator whose range holds none of the points of the denominator: an error saying so (not an unsupported division)
 outside = ROOT.TF1("outside", "2*x", -5.0, -4.0)
@@ -146,9 +154,29 @@ def stand_in(kind, variant):
 expectedWarnings, expectedErrors = [], []
 for kind, variant in bases:
     if variant in ("nan", "inf"):
-        expectedWarnings.append((f" {kind}:{bases[(kind, variant)]} has", "NaN or infinite"))
+        expectedWarnings.append((f" {message_name(kind, variant, bases[(kind, variant)])} has", "NaN or infinite"))
     if stand_in(kind, variant) is not None:
         expectedWarnings.append((f"Graph {kind}:{bases[(kind, variant)]} ", "has no points: it is not drawn"))
+
+
+def without_errors(obj):
+    """a copy that divides as exact values: no y errors (a profile as its means)"""
+    if obj.InheritsFrom("TF1"):
+        return obj
+    copy = as_divided(obj) if obj.InheritsFrom("TH1") else obj.Clone(f"{obj.GetName()}_c")
+    if copy.InheritsFrom("TH1"):
+        for b in range(copy.GetNcells()):
+            copy.SetBinError(b, 0.0)
+        return copy
+    if copy.InheritsFrom("TGraphMultiErrors"):
+        for e in range(copy.GetNYErrors()):
+            for i in range(copy.GetN()):
+                copy.SetPointEY(i, e, 0.0, 0.0)
+    for errors in (copy.GetEY(), copy.GetEYlow(), copy.GetEYhigh()):
+        if errors:
+            for i in range(copy.GetN()):
+                errors[i] = 0.0
+    return copy
 
 
 def compare(i, case):
@@ -167,9 +195,15 @@ def compare(i, case):
     caseWarnings = []
     for k in ("num", "den"):  # each input reported by its name before the division
         if case[f"{k}_variant"] in ("nan", "inf") and not DATA_KINDS[case[k]][1].startswith("TF"):
-            caseWarnings.append((f" {case[k]}:{k[0]}{i} has", "NaN or infinite"))
+            caseWarnings.append((f" {message_name(case[k], case[f'{k}_variant'], f'{k[0]}{i}')} has", "NaN or infinite"))
     profiles = [k for k in ("num", "den") if any(base.InheritsFrom(c) for base in ([numObj] if k == "num" else [denObj]) for c in ("TProfile", "TProfile2D", "TProfile3D"))]
     binomial = case["correlated"]
+    errors = case.get("errors", "both")
+    if errors != "both":
+        numObj, denObj = (without_errors(numObj), denObj) if errors == "denom" else (numObj, without_errors(denObj))
+    if binomial and errors != "both":
+        binomial = False
+        caseWarnings.append((f"SetCorrelated of ratio {message_name(case['num'], case['num_variant'], f'n{i}')} / {message_name(case['den'], case['den_variant'], f'd{i}')} ", "binomial errors need the errors of numerator and denominator"))
     if binomial and profiles:
         binomial = False
         # a ratio is named by its numerator and denominator

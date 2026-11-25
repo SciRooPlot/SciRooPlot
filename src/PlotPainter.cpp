@@ -5220,8 +5220,29 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
   if (data->GetType() == "ratio") {
     auto data_as_ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
     bool binomialErrors = data_as_ratio->GetCorrelated();
+    // whose errors the ratio carries: the other side divides as exact values
+    const ratio_errors_t ratioErrors = data_as_ratio->GetErrors().value_or(both_errors);
+    auto dropErrors = [](auto* ptr) {
+      using operand_type = std::remove_pointer_t<decltype(ptr)>;
+      if constexpr (std::is_base_of_v<TH1, operand_type>) {
+        for (int32_t bin = 0; bin < ptr->GetNcells(); ++bin)
+          ptr->SetBinError(bin, 0.);
+      } else if constexpr (std::is_base_of_v<TGraph, operand_type>) {
+        if (auto multi = dynamic_cast<TGraphMultiErrors*>(ptr)) {
+          for (int32_t set = 0; set < multi->GetNYErrors(); ++set) {
+            for (int32_t i = 0; i < multi->GetN(); ++i)
+              multi->SetPointEY(i, set, 0., 0.);
+          }
+        }
+        for (Double_t* errors : {ptr->GetEY(), ptr->GetEYlow(), ptr->GetEYhigh()}) {
+          if (errors) std::fill(errors, errors + ptr->GetN(), 0.);
+        }
+      }
+    };
     auto processDenominator = [&](auto&& denom_data_ptr) {
       using denom_data_type = std::decay_t<decltype(denom_data_ptr)>;
+      if (ratioErrors == numer_errors) dropErrors(denom_data_ptr);
+      if (ratioErrors == denom_errors) dropErrors(data_ptr);
       if constexpr (is_func<denom_data_type>()) {
         // a formula of the plot definition has no range of its own (only ROOT's default [0, 1]): it divides the whole numerator
         if (data_as_ratio->GetDenomDataSource() == kUserFunctions) {
@@ -5288,6 +5309,10 @@ void PlotPainter::ProcessData(item_state_t& state, T&& data_ptr)
 
     if (optional<data_ptr_t> rawDenomData = DenominatorClone(*data_as_ratio, dataBuffer)) {
       const bool denominatorMeans = PrepareOperand(state, *rawDenomData, data_as_ratio->GetDenomModify(), DataName(data_as_ratio->GetDenomName(), data_as_ratio->GetDenomDataSource()));
+      if (binomialErrors && ratioErrors != both_errors) {
+        ReportIgnored(state, fmt::format("SetCorrelated of ratio {}", DataName(*data)), "binomial errors need the errors of numerator and denominator (SetErrors)");
+        binomialErrors = false;
+      }
       if (binomialErrors && (numeratorMeans || denominatorMeans)) {
         ReportIgnored(state, fmt::format("SetCorrelated of ratio {}", DataName(*data)), "binomial errors are not defined for the mean values of a profile");
         binomialErrors = false;

@@ -202,6 +202,27 @@ struct enum_names<coordinates_t> {
   };
 };
 
+// whose errors a ratio carries: both propagated (the default; binomial with Ratio::SetCorrelated), only those of the numerator (e.g. data
+// over simulation, the simulation's uncertainty shown as its own ratio band) or only those of the denominator
+#define RATIO_ERRORS        \
+  RATIO_ERROR(both_errors)  \
+  RATIO_ERROR(numer_errors) \
+  RATIO_ERROR(denom_errors)
+enum ratio_errors_t : uint8_t {
+#define RATIO_ERROR(name) name,
+  RATIO_ERRORS
+#undef RATIO_ERROR
+};
+template <>
+struct enum_names<ratio_errors_t> {
+  static constexpr const char* what = "choice of ratio errors";
+  static constexpr const char* names[] = {
+#define RATIO_ERROR(name) #name,
+    RATIO_ERRORS
+#undef RATIO_ERROR
+  };
+};
+
 class PanelLayout;
 
 // a shared pointer whose copy is a copy of the object (by its Clone, if it has one: a Ratio stays a Ratio), so that a copied pad owns its parts
@@ -1322,6 +1343,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   void Print() const { Plot::Print(GetPropertyTree(), "Ratio"); }
 
   Ratio& SetCorrelated(bool correlated = true);
+  Ratio& SetErrors(ratio_errors_t errors);  // whose errors the ratio carries (default both_errors)
 
 #define FORWARD_TO_DATA(METHOD)                \
   template <typename... Args>                  \
@@ -1477,6 +1499,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   const auto& GetDenomDataSource() const { return mDenomDataSource; }
   const auto& GetDenomName() const { return mDenomName; }
   const bool& GetCorrelated() const { return mCorrelated; }
+  const auto& GetErrors() const { return mErrors; }
   const auto& GetDenomDataInfo() const { return mDenomDataInfo; }
   const auto& GetDenomProjInfo() const { return mDenomProjInfo; }
   const auto& GetNumModify() const { return mNumModify; }
@@ -1495,6 +1518,7 @@ class Plot::Pad::Ratio : public Plot::Pad::Data
   std::string mDenomName;
   std::string mDenomDataSource;
   bool mCorrelated{};
+  std::optional<ratio_errors_t> mErrors;
   data_info_t mDenomDataInfo;
   std::optional<proj_info_t> mDenomProjInfo;
 };

@@ -317,6 +317,9 @@ void export_draw_options(py::module_& m)
 #define COORDINATES(name) .value(#name, coordinates_t::name)
   py::enum_<coordinates_t>(m, "coordinates_t") COORDINATE_SYSTEMS.export_values();
 #undef COORDINATES
+#define RATIO_ERROR(name) .value(#name, ratio_errors_t::name)
+  py::enum_<ratio_errors_t>(m, "ratio_errors_t") RATIO_ERRORS.export_values();
+#undef RATIO_ERROR
 }
 
 //**************************************************************************************************
@@ -872,6 +875,7 @@ void export_ratio(py::module_& m)
     .def(py::init<const string&, const string&, const string&, const string&, const optional<string>&>(), arg("numeratorName"), arg("numeratorDataSource"), arg("denominatorName"), arg("denominatorDataSource"), arg("label") = nullopt)
     .def("Print", &Ratio::Print)
     .def("SetCorrelated", &Ratio::SetCorrelated, arg("correlated") = true, ref_int)
+    .def("SetErrors", &Ratio::SetErrors, arg("errors"), ref_int)
     .def("Numer", &Ratio::Numer, ref_int)
     .def("Denom", &Ratio::Denom, ref_int)
     .def("Both", &Ratio::Both, ref_int)

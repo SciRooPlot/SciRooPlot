@@ -2130,6 +2130,7 @@
   #v(0.6em)
   #api-section("Ratio-specific", (
     [`SetCorrelated(correlated = true)`], [Treat numerator/denominator as correlated (e.g. one is a sub-sample of the other) -- applies binomial error propagation.],
+    [`SetErrors(numer_errors)`], [Only the errors of the numerator (or `denom_errors`); `both_errors` is the default.],
     [`Numer()` / `Denom()` / `Both()`], [Following modifiers act on the numerator, the denominator, or both, before dividing. Data selection (`Project*`, `Define`, `Filter`, ...) follows the same mode.],
     [`Result()`], [Following modifiers act on the ratio itself (default). Data selection cannot act on the ratio: it is interpreted as `Numer()` with a warning.],
     [`AsRatio()`], [Called on data obtained via `pad(n)` / `GetData(n)`: access it as `Ratio`, e.g. `pad(2).AsRatio().SetCorrelated()`.],

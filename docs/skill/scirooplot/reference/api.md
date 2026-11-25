@@ -279,6 +279,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `Ratio(const Data& numerator, const Data& denominator)` — inputs from numerator and denominator, appearance from numerator; a denominator without data source takes the numerator's
 - `Ratio(const std::string& numeratorName, const std::string& numeratorDataSource, const std::string& denominatorName, const std::string& denominatorDataSource, const std::optional<std::string>& label = {})`
 - `Ratio& SetCorrelated(bool correlated = true)`
+- `Ratio& SetErrors(ratio_errors_t errors)` — whose errors the ratio carries (default both_errors)
 - `Ratio& Numer()` — following modifiers act on the numerator, before the division
 - `Ratio& Denom()` — following modifiers act on the denominator, before the division
 - `Ratio& Both()` — following modifiers act on numerator and denominator, before the division

@@ -1027,6 +1027,7 @@ try { const t = localStorage.getItem("theme"); if (t === "light" || t === "dark"
       <tr><td><code>.ProjectX(lo, hi)</code> <code>.ProjectY</code> <code>.ProfileX</code></td><td>from 2D histograms; <code>lo</code>, <code>hi</code> are bin numbers, axis values with a third argument <code data-py="True" data-cpp="true">True</code></td></tr>
       <tr><td><code>AddRatio(num, den)</code> + <code>Numer()</code> <code>Denom()</code> <code>Both()</code></td><td>modifiers for the inputs</td></tr>
       <tr><td><code>.SetCorrelated()</code></td><td>binomial errors (efficiencies)</td></tr>
+      <tr><td><code>.SetErrors(numer_errors)</code></td><td>errors of one side only (data / simulation)</td></tr>
       <tr><td><code>AddFunction("2*exp(-x)", "label")</code></td><td>formula</td></tr></table></section>
     <section><h4>Modifiers, in this order</h4><p class="chain">ScaleX/Y/Z › RebinX/Y/Z › DivideBinWidth › Smooth › Normalize › Cumulative › NormalizeToMaximum, Scale › SetRangeX/Y</p>
       <p><code>Density()</code> = DivideBinWidth + Normalize · <code data-py="Normalize(False, lo, hi)" data-cpp="Normalize(false, lo, hi)">Normalize(False, lo, hi)</code> in a range</p></section>
@@ -1491,7 +1492,7 @@ pm.AddPlot(plot);` },
   { title: "A ratio panel", img: "img/tour/ratio.png", alt: "Spectrum with a ratio panel of data over simulation below",
     text: `<p>Switch the base plot to <code>"1d_ratio"</code>: it has a second pad below the first. <code>AddRatio</code> divides data by simulation bin by bin, with error propagation. Settings on <code>plot[0]</code> apply to all pads, so both x axes stay identical.</p>
 <p class="basics"><b>Why a ratio?</b>On a log scale a 20 % difference is barely visible. The <button class="term" data-term="ratio">ratio panel</button> shows it directly: the data rise above the simulation above 2 GeV/<i>c</i>.</p>
-<p class="expert-only">Different binnings are divided via spline interpolation; <code>.SetCorrelated()</code> gives binomial errors for sub-samples. Modifiers act on <code>Numer()</code>, <code>Denom()</code> or <code>Both()</code>.</p>`,
+<p class="expert-only">Different binnings are divided via spline interpolation; <code>.SetCorrelated()</code> gives binomial errors for sub-samples, <code>.SetErrors(numer_errors)</code> only the errors of the numerator (data over simulation, the simulation's uncertainty as its own band: <code>AddRatio(mc, mc).SetErrors(numer_errors)</code>). Modifiers act on <code>Numer()</code>, <code>Denom()</code> or <code>Both()</code>.</p>`,
     py: `+ plot = Plot("ratio", "tour", "1d_ratio")
 plot[1].AddData("ptSpec", "data", "data").SetMarker(kFullCircle, 1.0, kBlack)
 plot[1].AddData("ptSpec", "mc", "simulation").SetDrawOption(hist_open).SetLine(kDotted, 3.0, kMagenta + 2)
