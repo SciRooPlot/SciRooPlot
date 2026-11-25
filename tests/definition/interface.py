@@ -3,11 +3,13 @@
 Every public method of the headers (as the API reference lists them, generated from the headers) has a Python binding of the same name
 and parameter names, unless the reference marks it C++ only, and every binding is such a method. Operators are compared by their number
 of parameters (Python cannot name them). The default values are the same (an empty optional, list or text {} of C++ is None, [] or '' of Python;
-objects made by a constructor are not compared). The differences by design are listed below with their reason.
+objects made by a constructor are not compared). The differences by design are listed below with their reason. The message functions of
+the C++ logger (Logger.h) are those of Python's SciRooPlot.logger.
 Covers: the differences by design between the C++ and the Python interface (listed below).
 """
 
 import math
+import os
 
 import re
 
@@ -86,4 +88,9 @@ for cls, method, params, only, defaults in cppInterface:
         if cppDefault and a is None:
             continue
         S.check(f"{cls}::{method}: default of {name} the same", same(a, b), f"C++ {cppDefault}, Python {pyDefault}")
+# the message functions of the C++ logger (those taking a format or none) and of SciRooPlot.logger
+with open(os.path.join(S.SOURCE, "include", "SciRooPlot", "Logger.h"), encoding="utf-8") as f:
+    cppLogger = set(re.findall(r"^inline void (\w+)\((?:std::string_view fmt_str, Args&&\.\.\. args)?\)", f.read(), re.M))
+pyLogger = {name for name in dir(S.S.logger) if not name.startswith("_")}
+S.check("the message functions of the C++ logger are those of Python's SciRooPlot.logger", cppLogger == pyLogger and len(cppLogger) > 5, f"C++ only {sorted(cppLogger - pyLogger)}, Python only {sorted(pyLogger - cppLogger)}")
 S.finish()

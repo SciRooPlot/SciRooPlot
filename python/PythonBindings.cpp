@@ -295,6 +295,7 @@ void export_logging(py::module_& m)
   loggerModule.def("print_separator", []() { logger::print_separator(); });
   loggerModule.def("info", [](std::string_view s) { logger::info("{}", s); }, arg("message"));
   loggerModule.def("log", [](std::string_view s) { logger::log("{}", s); }, arg("message"));
+  loggerModule.def("hint", [](std::string_view s) { logger::hint("{}", s); }, arg("message"));
   loggerModule.def("debug", [](std::string_view s) { logger::debug("{}", s); }, arg("message"));
   loggerModule.def("warning", [](std::string_view s) { logger::warning("{}", s); }, arg("message"));
   loggerModule.def("error", [](std::string_view s) { logger::error("{}", s); }, arg("message"));
