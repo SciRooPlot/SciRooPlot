@@ -91,6 +91,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | A polar graph drawn with `bars`, `band`, `band_smooth`, `boxes`, `boxes_nomarkers` or `brackets` painted nothing or cartesian rectangles over the grid; a log x or y axis of its pad garbled it | Drawn with its default option, with a warning; the log scale is ignored with a warning | behaviour | Nothing. |
 | A box in user coordinates in a pad with a 3d view was placed by ROOT's internal coordinates of the view | Placed in frame coordinates, with a warning | behaviour | Give its position in frame or pad coordinates. |
 | 1d data in a pad whose frame is drawn in 3d was not drawn, without a message (its legend row stayed) | Not drawn, with a warning; the data after it keeps its number | behaviour | Nothing. |
+| The colour scale of a 3d histogram took its divisions and max digits from the binned z axis ('C' settings ignored with a warning); with a log z axis it had no colours (with a warning) | Those of 'C'; with a log z axis it stays linear with its colours (ROOT colours the boxes linearly); in `Plots.root` it is drawn by an empty 2d histogram `content_scale_pad_<n>` | behaviour | Nothing. |
 
 ### Input validation
 

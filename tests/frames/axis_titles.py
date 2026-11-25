@@ -107,8 +107,12 @@ def gaps(name, group, scalePad, lowestPad=None):
     left = runs(dark[top:bottom, canvasX(pad, 0.0) : canvasX(pad, pad.GetLeftMargin()) - 12].any(axis=0))  # title, labels (left of the ticks)
     yGap = left[1][0] - left[0][1] - 1 if len(left) >= 2 else None  # the title is the outermost run, the labels (digit by digit) follow
     scale = run.pad(name, group, scalePad)
+    # the scale of the frame, of a 3d histogram (drawn by its own histogram) or of a colour scale cell
     frame = scale.GetPrimitive(f"axis_hist_pad_{scalePad}") or next((o for o in scale.GetListOfPrimitives() if o.InheritsFrom("TH1")), None)
     palette = frame.GetListOfFunctions().FindObject("palette") if frame else None
+    content = scale.GetPrimitive(f"content_scale_pad_{scalePad}")
+    if not palette and content:
+        palette = content.GetListOfFunctions().FindObject("palette")
     if not palette:
         palette = next((o for o in scale.GetListOfPrimitives() if o.InheritsFrom("TPaletteAxis")), None)
     if not palette:

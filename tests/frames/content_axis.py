@@ -1,20 +1,21 @@
 """The 'C' axis of a pad is the content of a 3d histogram (its z axis is binned): a range on it (both ends, or one) is the minimum and maximum
 of the frame and of the data, with the colour levels spread over it; its title is the title of the colour scale; a log scale on it is
-warned about (ROOT colours the boxes linearly) and not applied; a log scale on the binned z axis is warned about (ROOT paints the colour
-scale without colours); the settings of 'Z' stay on the binned z axis and do not reach the colour
-scale; the colour scale takes the text colour and alpha of the pad; a 'C' axis in a pad without a 3d histogram is warned about. The look
-set on 'C' (colours, alphas, ticks) and colour levels given for the data are also those of the scale in a ColorScale() cell.
-Cases: every 3d histogram kind × a range on 'C' (both ends, minimum, maximum), a title on 'C', a log 'C', a log 'Z', a range and title on 'Z', and the
-named cases.
-Reference: the frame and data read back (minimum, maximum, colour levels, the colour scale's axis title, the z axis: the bins holding
-the range).
+warned about (ROOT colours the boxes linearly) and not applied; with a log scale on the binned z axis the colour scale stays linear, with
+its colours; the settings of 'Z' (also its divisions) stay on the binned z axis and do not reach the colour scale, the divisions of 'C'
+are those of the colour scale; the colour scale takes the text colour and alpha of the pad; a 'C' axis in a pad without a 3d histogram
+is warned about. The look set on 'C' (colours, alphas, ticks) and colour levels given for the data are also those of the scale in a
+ColorScale() cell.
+Cases: every 3d histogram kind × a range on 'C' (both ends, minimum, maximum), a title on 'C', a log 'C', a log 'Z', a range and title on 'Z',
+divisions on 'C' and 'Z', and the named cases.
+Reference: the frame, data and colour scale read back (minimum, maximum, colour levels, the colour scale's axis title and divisions, the
+z axis: the bins holding the range and its divisions).
 Covers: the content axis of 3d histograms.
 """
 
 from srptest import DATA_3D, DATA_KINDS, Project, S, add_data, cases, check, close, data_objects, describe, finish, rgba
 
 KINDS = tuple(k for k in DATA_3D if "binned" in DATA_KINDS[k][2])
-SETTINGS = {"range": (5.0, 400.0), "min_only": (50.0, None), "max_only": (None, 300.0), "title": None, "log": None, "log_z": None, "z_axis": None, "pad_text": None}
+SETTINGS = {"range": (5.0, 400.0), "min_only": (50.0, None), "max_only": (None, 300.0), "title": None, "log": None, "log_z": None, "z_axis": None, "pad_text": None, "divisions": None}
 todo = cases({"kind": list(KINDS), "setting": list(SETTINGS)}, always=lambda c: True)
 
 p = Project("content_axis")
@@ -41,6 +42,9 @@ for i, case in enumerate(todo):
         pad["Z"].SetLog()
     elif setting == "pad_text":
         pad.SetDefaultTextColor(S.kRed).SetDefaultTextAlpha(0.3)
+    elif setting == "divisions":
+        pad["C"].SetNumDivisions(4)
+        pad["Z"].SetNumDivisions(503)
     else:
         pad["Z"].SetRange(2.0, 8.0).SetTitle("binned z").SetLabelSize(0.06)
     p.pm.AddPlot(plot)
@@ -49,7 +53,7 @@ plot[1].AddData("hist2d", "inputs")
 plot[1]["C"].SetRange(1.0, 2.0)
 p.pm.AddPlot(plot)
 
-# the look of 'C' in a ColorScale() cell (that of the scale in the pad is painted afresh from the z axis when read back: not compared)
+# the look of 'C' in a ColorScale() cell
 plot = S.Plot("look_cell", S.PanelLayout([[S.Panel(), S.ColorScale(1)]]))
 plot.SetGroup("named")
 add_data(plot[1], KINDS[0]).SetDrawOption(S.colz)
@@ -106,7 +110,11 @@ for i, case in enumerate(todo):
         continue
     data = drawn[0]
     setting = case["setting"]
-    palette = frame.GetListOfFunctions().FindObject("palette")
+    padObj = run.pad(f"c{i}", "content")
+    scaleHist = padObj.GetPrimitive("content_scale_pad_1") if padObj else None
+    palette = scaleHist.GetListOfFunctions().FindObject("palette") if scaleHist else None
+    if setting != "log":
+        check(f"{what}: the colour scale is drawn, the frame has none", bool(palette) and not frame.GetListOfFunctions().FindObject("palette"), f"scale {bool(palette)}")
     if setting in ("range", "min_only", "max_only"):
         lo, hi = SETTINGS[setting]
         for label, obj in (("frame", frame), ("data", data)):
@@ -120,11 +128,17 @@ for i, case in enumerate(todo):
         title = palette.GetAxis().GetTitle() if palette else frame.GetZaxis().GetTitle()
         check(f"{what}: the title of the colour scale", "content title" in title and (palette is None or palette.GetAxis().GetTitle() == "content title"), f"{title!r}")
     elif setting == "log":
-        padObj = run.pad(f"c{i}", "content")
         check(f"{what}: a log scale warned about, not applied", not padObj.GetLogz() and any("The log scale of the C axis of pad 1 is ignored" in m for m in run.messages(f"c{i}", "content")), " | ".join(run.messages(f"c{i}", "content")))
     elif setting == "log_z":
-        said = [m for m in run.messages(f"c{i}", "content") if "draws a 3d histogram with a log z axis: ROOT then paints its colour scale without colours" in m]
-        check(f"{what}: a log binned z axis warned about (its colour scale has no colours)", len(said) == 1, " | ".join(run.messages(f"c{i}", "content")))
+        padObj.cd()
+        linear = bool(palette) and padObj.GetLogz() and palette.GetLog() == 0
+        n = scaleHist.GetContour() if scaleHist else 0
+        levels = [scaleHist.GetContourLevel(k) for k in range(n)]
+        spread = n > 1 and all(close(b - a, levels[1] - levels[0], 1e-6) for a, b in zip(levels, levels[1:]))
+        check(f"{what}: with a log binned z axis the colour scale stays linear (levels spread linearly)", linear and spread, f"log {palette.GetLog() if palette else None}, levels {levels[:3]}")
+    elif setting == "divisions":
+        scaleDivisions = scaleHist.GetZaxis().GetNdivisions() % 1000000 if scaleHist else None
+        check(f"{what}: the divisions of 'C' on the colour scale, those of 'Z' on the binned z axis", scaleDivisions == 4 and frame.GetZaxis().GetNdivisions() % 1000000 == 503, f"scale {scaleDivisions}, z {frame.GetZaxis().GetNdivisions() % 1000000}")
     elif setting == "pad_text":
         scale = palette.GetAxis() if palette else None  # (a TGaxis: its title in the text attributes)
         colours = {"labels": rgba(scale.GetLabelColor()), "title": rgba(scale.GetTextColor())} if scale else {}

@@ -1145,7 +1145,7 @@ string PlotPainter::WebOnceCommand() const
     R"code( TPRegexp x0("(^|\\s)X0(\\s|$)"); if (hist->GetDimension() == 1 && x0.Match(option)) { x0.Substitute(option, " ", "g");)code"
     R"code( TPRegexp("(^|\\s)(E[0-6]?)(\\s|$)").Substitute(option, "$1$2X0$3"); link->SetOption(option); })code"
     R"code( TPRegexp same("(^|\\s)SAME(\\s|$)"); if (hist->GetDimension() == 2 && hist->TestBit(TH1::kUserContour) && same.Match(option)) { same.Substitute(option, "$1SAME0$2"); link->SetOption(option); })code"
-    " if (!(TString(hist->GetName()).BeginsWith(\"axis_hist_pad_\") || TString(hist->GetName()).BeginsWith(\"color_scale_pad_\"))) continue;"
+    " if (!(TString(hist->GetName()).BeginsWith(\"axis_hist_pad_\") || TString(hist->GetName()).BeginsWith(\"color_scale_pad_\") || TString(hist->GetName()).BeginsWith(\"content_scale_pad_\"))) continue;"
     " if (const Int_t n = hist->GetXaxis()->GetNdivisions(); n > 1000) hist->GetXaxis()->SetNdivisions(n % 1000000 - n % 100 + Int_t(std::max(1, n % 100) * pad->GetAbsWNDC()), kTRUE);"
     " if (hist->GetDimension() != 2) continue; if (option.Contains(\"AXIG\") || option.Contains(\"AXIS\")) { option.ReplaceAll(\"Z\", \"\"); link->SetOption(option); }"
     " if (auto* palette = dynamic_cast<TPaletteAxis*>(hist->GetListOfFunctions()->FindObject(\"palette\"))) palette->GetAxis()->SetNdivisions(hist->GetZaxis()->GetNdivisions() % 1000000); } }";
@@ -1626,9 +1626,10 @@ bool PlotPainter::ApplyContentLook(TAxis* zAxis, const Plot::Pad& pad, const Plo
 //**************************************************************************************************
 /**
  * The z title and colour scale of a frame that is a 3d histogram: the binned z axis has a title of its own; the colour scale shows the
- * contents (the C axis). ROOT makes the scale of a 3d histogram once, with the look of the z axis at that time: it is made again with the
- * look of the scale (the texts of the pad and the defaults of a layout, then the settings of C; nothing of Z) and its title placed by the
- * content labels, then the z axis gets its own look back (the scale keeps its copy)
+ * contents (the C axis). ROOT paints the scale of a 3d histogram with the look and the divisions of its z axis, which is also the binned z
+ * axis of the box: the frame is drawn without scale, and an empty 2d histogram with the range and colour levels of the contents draws it,
+ * with the look of the scale (the texts of the pad and the defaults of a layout, then the settings of C; nothing of Z) and its title placed
+ * by the content labels
  */
 //**************************************************************************************************
 void PlotPainter::StyleContentScale(pad_state_t& padState)
@@ -1643,54 +1644,73 @@ void PlotPainter::StyleContentScale(pad_state_t& padState)
 
   TAxis* zAxis = axisHist_ptr->GetZaxis();
   PlaceZTitle(pad_ptr, zAxis, {{zAxis->GetBinLowEdge(zAxis->GetFirst()), zAxis->GetBinUpEdge(zAxis->GetLast()), false}});
-  TList* functions = axisHist_ptr->GetListOfFunctions();
-  if (TObject* palette = functions->FindObject("palette")) {
-    if (pad_ptr->GetLogz()) {
-      logger::warning("Pad {} draws a 3d histogram with a log z axis: ROOT then paints its colour scale without colours (a ColorScale() cell shows them).", pad_ptr->GetNumber());
+  if (!axisHist_ptr->GetListOfFunctions()->FindObject("palette")) return;
+  // the frame and its copy for the axes keep no scale
+  struct place_t {
+    double_t X1, X2, Y1, Y2;
+  };
+  optional<place_t> place;
+  if (auto* framePalette = dynamic_cast<TPave*>(axisHist_ptr->GetListOfFunctions()->FindObject("palette"))) {
+    place = place_t{framePalette->GetX1NDC(), framePalette->GetX2NDC(), framePalette->GetY1NDC(), framePalette->GetY2NDC()};
+  }
+  for (auto* link = pad_ptr->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+    auto* frame = dynamic_cast<TH3*>(link->GetObject());
+    if (!frame || !TString(frame->GetName()).BeginsWith("axis_hist_pad_")) continue;
+    TString option = link->GetOption();
+    option.ToUpper();
+    option.ReplaceAll("Z", "");
+    link->SetOption(option);
+    TList* functions = frame->GetListOfFunctions();
+    delete functions->Remove(functions->FindObject("palette"));
+  }
+  auto* scale = new TH2D(fmt::format("content_scale_pad_{}", pad_ptr->GetNumber()).data(), "", 1, 0., 1., 1, 0., 1.);
+  scale->SetDirectory(nullptr);
+  scale->SetStats(false);
+  scale->SetBit(kCanDelete);
+  scale->SetMinimum(axisHist_ptr->GetMinimum());
+  scale->SetMaximum(axisHist_ptr->GetMaximum());
+  // the levels given for the frame, else as many spread linearly over the contents (ROOT colours the boxes of a 3d histogram linearly,
+  // also with a log z axis, which is the binned one)
+  const int32_t nLevels = axisHist_ptr->GetContour();
+  vector<double_t> levels(nLevels);
+  for (int32_t i = 0; i < nLevels; ++i) {
+    levels[i] = (axisHist_ptr->TestBit(TH1::kUserContour)) ? axisHist_ptr->GetContourLevel(i)
+                                                           : scale->GetMinimum() + i * (scale->GetMaximum() - scale->GetMinimum()) / nLevels;
+  }
+  scale->SetContour(nLevels, levels.data());
+  TAxis* scaleAxis = scale->GetZaxis();
+  TString title = zAxis->GetTitle();  // ROOT's place for the title of the colour scale of a 3d histogram: after ';'
+  scaleAxis->SetTitle((title.Index(";") >= 0) ? title(title.Index(";") + 1, title.Length()).Data() : "");
+  scaleAxis->ResetAttAxis("Z");  // ROOT's look of a z axis (gStyle), the title next to the labels
+  scaleAxis->SetTitleOffset(0.f);
+  if (textFont) {
+    scaleAxis->SetTitleFont(*textFont);
+    scaleAxis->SetLabelFont(*textFont);
+  }
+  if (textColor) {
+    scaleAxis->SetTitleColor(textColor->ToIndex());
+    scaleAxis->SetLabelColor(textColor->ToIndex());
+  }
+  if (textSize) scaleAxis->SetLabelSize(*textSize);
+  if (auto titleSize = LayoutValue(pad, padDefaults, &Plot::Pad::layout_values_t::titleSize)) scaleAxis->SetTitleSize(*titleSize);
+  if (auto titleOffset = LayoutValue(pad, padDefaults, &Plot::Pad::layout_values_t::titleOffsetZ)) scaleAxis->SetTitleOffset(*titleOffset);
+  bool ownTitleOffset = scaleAxis->GetTitleOffset() != 0.f;  // a fixed distance from the layout
+  if (ApplyContentLook(scaleAxis, pad, padDefaults, padState.textAlpha, true)) ownTitleOffset = true;
+  if (!ownTitleOffset) PlaceZTitle(pad_ptr, scaleAxis, {{scale->GetMinimum(), scale->GetMaximum(), false}});
+  // only the scale (FUNC: none of the histogram); as a lego, since ROOT deletes the 3d view when it paints a flat 2d histogram
+  scale->Draw("LEGO FUNC Z SAME");
+  pad_ptr->Modified();
+  pad_ptr->Update();
+  // at the place of the scale ROOT made for the frame; linear, as ROOT colours the boxes (also on a log z axis, the binned one)
+  if (auto* palette = static_cast<TPave*>(scale->GetListOfFunctions()->FindObject("palette"))) {
+    if (place) {
+      palette->SetX1NDC(place->X1);
+      palette->SetX2NDC(place->X2);
+      palette->SetY1NDC(place->Y1);
+      palette->SetY2NDC(place->Y2);
+      palette->ConvertNDCtoPad();
     }
-    TAttAxis zLook;
-    zAxis->TAttAxis::Copy(zLook);
-    // the bits of the look are kept apart from TAttAxis: they are given back with it
-    constexpr std::array lookBits{TAxis::kCenterTitle, TAxis::kCenterLabels, TAxis::kNoExponent, TAxis::kMoreLogLabels, TAxis::kTickPlus, TAxis::kTickMinus};
-    std::array<bool, lookBits.size()> zBits{};
-    for (size_t i = 0; i < lookBits.size(); ++i)
-      zBits[i] = zAxis->TestBit(lookBits[i]);
-    zAxis->ResetAttAxis("Z");  // ROOT's look of a z axis (gStyle), the title next to the labels
-    zAxis->SetTitleOffset(0.f);
-    if (textFont) {
-      zAxis->SetTitleFont(*textFont);
-      zAxis->SetLabelFont(*textFont);
-    }
-    if (textColor) {
-      zAxis->SetTitleColor(textColor->ToIndex());
-      zAxis->SetLabelColor(textColor->ToIndex());
-    }
-    if (textSize) zAxis->SetLabelSize(*textSize);
-    if (auto titleSize = LayoutValue(pad, padDefaults, &Plot::Pad::layout_values_t::titleSize)) zAxis->SetTitleSize(*titleSize);
-    if (auto titleOffset = LayoutValue(pad, padDefaults, &Plot::Pad::layout_values_t::titleOffsetZ)) zAxis->SetTitleOffset(*titleOffset);
-    bool ownTitleOffset = zAxis->GetTitleOffset() != 0.f;  // a fixed distance from the layout
-    if (ApplyContentLook(zAxis, pad, padDefaults, padState.textAlpha, true)) ownTitleOffset = true;
-    if (!ownTitleOffset) {
-      // TPaletteAxis reads the divisions (with the max digits, which decide the power of ten taken out of the labels) from the z axis at
-      // every paint, i.e. those given back below: the labels are measured with them
-      TAttAxis made;
-      zAxis->TAttAxis::Copy(made);
-      const Int_t painted = zLook.GetNdivisions();
-      zAxis->SetNdivisions(std::abs(painted) % 1000000, painted > 0);
-      if (std::abs(painted) / 1000000 > 0) zAxis->SetMaxDigits(std::abs(painted) / 1000000);
-      PlaceZTitle(pad_ptr, zAxis, {{axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), false}});
-      const float_t offset = zAxis->GetTitleOffset();
-      made.Copy(*zAxis);
-      zAxis->SetTitleOffset(offset);
-    }
-    functions->Remove(palette);
-    delete palette;
-    pad_ptr->Modified();
-    pad_ptr->Update();
-    zLook.Copy(*zAxis);
-    for (size_t i = 0; i < lookBits.size(); ++i)
-      zAxis->SetBit(lookBits[i], zBits[i]);
-    pad_ptr->Modified();
+    palette->Execute("SetLog", "1");
   }
 }
 
@@ -3585,9 +3605,6 @@ bool PlotPainter::ReadContentAxis(item_state_t& state, double_t& min, double_t& 
     }
     if (content.GetRoomAboveMax() || content.GetRoomBelowMin()) {
       ReportIgnored("Room above or below the C axis", "the boxes of a 3d histogram are coloured over the range of the C axis, which leaves no room");
-    }
-    if (content.GetNumDivisions() || content.GetMaxDigits()) {
-      ReportIgnored("The divisions or max digits of the C axis", "ROOT takes them for the colour scale of a 3d histogram from its Z axis", true);
     }
   }
   if (isLog) ReportIgnored(fmt::format("The log scale of the C axis of pad {}", padID), "ROOT colours the boxes of a 3d histogram linearly");

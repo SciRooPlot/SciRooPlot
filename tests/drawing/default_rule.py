@@ -1,6 +1,6 @@
 """Data without a drawing option follows one rule, the same for histograms and graphs: data with a fill is drawn as hist (graphs as area),
 data with a marker style or size set, with errors (any non-zero error, as plain ROOT gives them: the square roots of the contents of a
-histogram filled without weights count) or a graph of a single point as points, other data (all errors zero) as hist (graphs as line); 2d data and 3d histograms as colz (the colour scale on the frame); other functions with ROOT's default; a polar graph with a fill as area filled on its polar grid.
+histogram filled without weights count) or a graph of a single point as points, other data (all errors zero) as hist (graphs as line); 2d data and 3d histograms as colz (the colour scale on the frame, for 3d histograms drawn by a histogram of its own); other functions with ROOT's default; a polar graph with a fill as area filled on its polar grid.
 The fill of the input counts only when its style is kept (SetKeepInputStyle), and the fill ROOT gives every TEfficiency is not a fill.
 Covers: ROOT's default fill of a TEfficiency.
 """
@@ -98,9 +98,10 @@ for i, case in enumerate(todo):
     if alias == "area" and not polar:  # the line through the points, filled below by the polygon closed at zero
         fill = next((o for o, _ in run.links(f"c{i}", "rule") if o.GetName() == f"fill_{obj.GetName()}"), None)
         check(f"area filled down to zero: {what}", bool(fill) and fill.GetN() == obj.GetN() + 2 and close(fill.GetPointY(0), 0.0) and close(fill.GetPointY(fill.GetN() - 1), 0.0), obj.ClassName())
-    if alias == "colz":
+    if alias == "colz":  # a 3d histogram: by a histogram of its own (its frame is the binned box)
         frame = run.frame_option(f"c{i}", "rule") or ""
-        check(f"colour scale on the frame: {what}", frame.split()[0].endswith("Z") if frame else False, f"frame '{frame}'")
+        scaleOwn = drawn_type(case["kind"]) == "hist3d" and any(o.GetName() == "content_scale_pad_1" and "Z" in opt for o, opt in run.links(f"c{i}", "rule"))
+        check(f"colour scale drawn: {what}", scaleOwn or (frame.split()[0].endswith("Z") if frame else False), f"frame '{frame}'")
 check("no warnings", not run.warnings(), " | ".join(run.warnings()[:5]))
 check("no errors", not run.errors(), " | ".join(run.errors()[:5]))
 finish()
