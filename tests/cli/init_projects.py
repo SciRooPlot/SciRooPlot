@@ -2,7 +2,8 @@
 run, without warnings: plot makes its plots without warnings or errors. They refuse, with a message and without registering or creating anything, an
 existing project name (whose program stays where it is), an existing folder, @current, a name that is no project name and a missing name.
 C++ projects need cmake and a compiler (left out without them); the examples run in the full test only (they plot every example), also
-in every mode writing files, without warnings (but the one that pdf files lack images with ROOT before 6.42, and mode html refused there).
+in every mode writing files, without warnings (but the one that pdf files lack images with ROOT before 6.42, and mode html refused there;
+in json the one that the tracking maps' second palette is not in the file: JSROOT colours all maps of a file with one palette).
 Covers: init over an existing project from another folder."""
 
 import os
@@ -34,9 +35,11 @@ for i, case in enumerate(todo):
             if mode == "html" and not ROOT_642:
                 check(f"mode html refused with ROOT before 6.42: {what}", made.rc != 0 and len(made.errors()) == 1 and "needs ROOT 6.42" in made.errors()[0], made.tail())
                 continue
-            expected = 1 if mode == "pdf" and not ROOT_642 else 0
-            said = [w for w in made.warnings() if not (expected and "Images are missing in the pdf files" in w)]
-            check(f"the example in mode {mode}: no warnings or errors{' but the one about images in pdf' if expected else ''}: {what}", made.rc == 0 and not said and len(made.warnings()) == expected and not made.errors(), made.tail())
+            # said once each: images in pdf files before ROOT 6.42, the second palette of the tracking maps in json (JSROOT takes one)
+            known = {"pdf": "Images are missing in the pdf files", "json": "a json file holds one palette"}.get(mode) if mode != "pdf" or not ROOT_642 else None
+            expected = 1 if known else 0
+            said = [w for w in made.warnings() if not (known and known in w)]
+            check(f"the example in mode {mode}: no warnings or errors{f' but the one saying {known!r}' if known else ''}: {what}", made.rc == 0 and not said and len(made.warnings()) == expected and not made.errors(), made.tail())
 
     # refusals: nothing registered, nothing created, the existing project unchanged
     other = config_folder(f"cwd{i}_other")
