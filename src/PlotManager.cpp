@@ -273,7 +273,7 @@ bool PlotManager::SavePlotsToRootFile()
 {
   if (!mCanvasRegistry.empty()) {
     if (!CreateOutputDirectory()) return false;
-    const string filePath = mOutputDirectory + "/" + mPlotsRootFile;
+    const string filePath = OutputFolder() + "/" + mPlotsRootFile;
     const string tmpPath = util::temporary_file(filePath);
     TFile outputFile(tmpPath.data(), "RECREATE");
     if (outputFile.IsZombie()) {
@@ -376,7 +376,7 @@ bool PlotManager::SaveDataToRootFile(const set<std::pair<string, string>>& keys)
   });
   if (!anyData) return true;
   if (!CreateOutputDirectory()) return false;
-  const string filePath = mOutputDirectory + "/" + mDataRootFile;
+  const string filePath = OutputFolder() + "/" + mDataRootFile;
   const string tmpPath = util::temporary_file(filePath);
   TFile outputFile(tmpPath.data(), "RECREATE");
   if (outputFile.IsZombie()) {
@@ -464,11 +464,11 @@ bool PlotManager::ReplaceOutputFile(const string& tmpPath, const string& filePat
 //**************************************************************************************************
 bool PlotManager::CreateOutputDirectory() const
 {
-  if (mOutputDirectory.empty()) {
+  if (OutputFolder().empty()) {
     logger::error("No output directory was specified: set one with {}.", (mProjectName.empty()) ? "SetOutputDirectory" : fmt::format("srp set {} outdir <folder> (or SetOutputDirectory in the program)", mProjectName));
     return false;
   }
-  std::filesystem::path outputDir = std::filesystem::path(mOutputDirectory).lexically_normal();
+  std::filesystem::path outputDir = std::filesystem::path(OutputFolder()).lexically_normal();
   if (!outputDir.has_filename()) outputDir = outputDir.parent_path();  // strip trailing slash
   std::error_code ec;
   if (!std::filesystem::exists(outputDir.parent_path(), ec)) {
@@ -481,6 +481,18 @@ bool PlotManager::CreateOutputDirectory() const
     return false;
   }
   return true;
+}
+
+//**************************************************************************************************
+/**
+ * The folder the files are written to: SCIROOPLOT_OUTDIR of the process if set (a check that must not overwrite the user's files),
+ * else the output directory (stored with the project or set by the program).
+ */
+//**************************************************************************************************
+const string& PlotManager::OutputFolder() const
+{
+  const auto& processFolder = Config::Get().OutputDirOverride();
+  return (processFolder) ? *processFolder : mOutputDirectory;
 }
 
 //**************************************************************************************************
@@ -1675,7 +1687,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   const bool isInteractiveMode = (mode == "show" || mode == "spread");
   const bool needsDisplay = isInteractiveMode || mode == "macro";
   // said once for all plots (a program plotting in memory has no project directory unless it sets one); print writes nothing
-  if (!isInteractiveMode && mode != "print" && mOutputDirectory.empty()) {
+  if (!isInteractiveMode && mode != "print" && OutputFolder().empty()) {
     // in a project (the plot command) the folder is set with srp, in a program with SetOutputDirectory
     const string how = (mProjectName.empty()) ? "SetOutputDirectory" : fmt::format("srp set {} outdir <folder> (or SetOutputDirectory in the program)", mProjectName);
     logger::error("No output directory was specified: set one with {} before writing plots in mode '{}'.", how, mode);
@@ -1918,7 +1930,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
         commonGroup->erase(std::mismatch(commonGroup->begin(), commonGroup->end(), parts.begin(), parts.end()).first, commonGroup->end());
       }
       if (commonGroup) {
-        string folder = mOutputDirectory;
+        string folder = OutputFolder();
         for (size_t i = 0; i + 1 < commonGroup->size(); ++i)
           folder += "/" + (*commonGroup)[i];
         mGifName = folder + "/" + (commonGroup->empty() ? string("animation") : commonGroup->back()) + ".gif";
@@ -1996,7 +2008,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
       mGifPendingFrame.reset();
       logger::log("Saved gif {}.", mGifName);
     } else if (mWroteFile) {
-      logger::log("The files are in {} (a folder per group).", mOutputDirectory);
+      logger::log("The files are in {} (a folder per group).", OutputFolder());
     }
     bool saved = true;
     if (mode == "file") {
@@ -2984,7 +2996,7 @@ bool PlotManager::WriteOutput(Plot& fullPlot, const string& mode, const shared_p
   if (isMacroMode) fileName = sanitize(fileName);
 
   // create output folders and files
-  string folderName = mOutputDirectory + "/" + fullPlot.GetGroup();
+  string folderName = OutputFolder() + "/" + fullPlot.GetGroup();
   string fullName = folderName + "/" + fileName + fileEnding;
   // names that would give the same file, as the sanitised macro names (eff-pi and eff_pi) or names differing only in case on a
   // case-insensitive file system (Eff and eff, the default of macOS): the later plot gets a number, so it does not replace the earlier one

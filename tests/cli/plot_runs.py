@@ -6,6 +6,7 @@ run as it was (it is written at the end of a run); a Plots.root that is a symbol
 a link to a file not written yet, through another link).
 The UserData.root of a project is replaced only when the program saves the project, and the files a process writes the in-memory inputs
 to are gone when it ends (also those of a process ended by a signal, once another one writes in-memory inputs).
+SCIROOPLOT_OUTDIR sends the files of one process to another folder, the output folder of the project and its stored path untouched.
 Covers: two runs at once, a write of Plots.root cut short, Ctrl-C during a long run, a Plots.root linked elsewhere, in-memory inputs."""
 
 import os
@@ -31,6 +32,15 @@ for i in range(N):
 first = p.plot("g", "p0")  # registers and selects the project
 check("the project plots", not first.errors() and first.canvas("p0", "g"), " | ".join(first.errors()[:3]))
 out = p.path("out")
+# SCIROOPLOT_OUTDIR: the files of one process go to that folder, the output folder of the project and its stored path stay as they were
+elsewhere = config_folder("outdir_of_process")
+moved = p.plot("g", "p1", mode="png", env={"SCIROOPLOT_OUTDIR": elsewhere})
+storedOut = p.srp("get", "runs", "outdir").stdout.strip()
+check(
+    "SCIROOPLOT_OUTDIR: the pictures written there, none in the output folder of the project, its stored path unchanged",
+    moved.rc == 0 and os.path.isfile(os.path.join(elsewhere, "g", "p1.png")) and not os.path.exists(os.path.join(out, "g", "p1.png")) and storedOut == out,
+    f"stored {storedOut} | {moved.log[-300:]}",
+)
 
 
 def start(name, mode):

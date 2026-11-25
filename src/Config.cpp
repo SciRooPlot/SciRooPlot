@@ -165,6 +165,12 @@ Config::Config()
     mCurrentOverride = (mProjects.count(project)) ? project : "";
     if (mCurrentOverride->empty()) std::cerr << "SCIROOPLOT_PROJECT names project '" << project << "', which is not registered (srp projects lists them): no project is current." << std::endl;
   }
+  // the folder this process writes its files to (e.g. a check that must not overwrite the user's output), the stored ones untouched
+  if (const char* outdir = gSystem->Getenv("SCIROOPLOT_OUTDIR"); outdir && *outdir) {
+    if (auto expanded = expand_path(outdir); expanded && !expanded->empty()) {
+      mOutputDirOverride = std::filesystem::absolute(*expanded).lexically_normal().string();
+    }
+  }
   std::atexit([] { Instance().Save(); });
 }
 

@@ -189,6 +189,7 @@ class PlotManager
   const std::string mUserDataFile;
   std::map<std::string, std::shared_ptr<TCanvas>> mCanvasRegistry;
   std::string mOutputDirectory;
+  const std::string& OutputFolder() const;  // where the files go: SCIROOPLOT_OUTDIR of the process, else mOutputDirectory
   std::vector<Plot> mPlots;
   std::vector<Plot> mBasePlots;
   boost::property_tree::ptree mSettings;                       // declared with Setting, in their order
