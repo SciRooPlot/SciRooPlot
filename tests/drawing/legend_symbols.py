@@ -8,10 +8,11 @@ Not compared, since TLegend cannot draw them or ROOT's option does not follow it
 fill (F, B) and of multi-error graphs with a raw box or band option (2-5 without ';': ROOT draws only the first set as boxes or band,
 the others as bars, and TLegend has one line for both), the *H, B and BAR options of histograms, 3d views (shaded, or drawn with the
 box of the view: lego, surf, the boxes and iso surfaces of 3d data, the markers, lines and triangles of 2d graphs), the parts of candles
-and violins, the solid arrowed error bars of asymmetric graphs, line and markers hidden by an opaque band (3L, 3PL, 4C), the outline of
-a hollow HIST E2 box (TLegend takes the fill colour), the hairline in the fill colour ROOT draws under the outline of polygon bins (L), arrow heads, and the lines of 2d drawings (contours and meshes are many short
+and violins, line and markers hidden by an opaque band (3L, 3PL, 4C), the outline of
+a hollow HIST E2 box (TLegend takes the fill colour), the arrow heads of bars of width 0, the hairline in the fill colour ROOT draws under the outline of polygon bins (L), and the lines of 2d drawings (contours and meshes are many short
 pieces). Also for data with a NaN value; for empty data the legend rows: a graph without points is not drawn and has no row, a histogram
-without entries keeps its row (also drawn as a graph)."""
+without entries keeps its row (also drawn as a graph).
+Error bars of 1d data end in the legend as in the plot: with end caps, with arrow heads or plain."""
 
 import collections
 import hashlib
@@ -65,7 +66,6 @@ VIEWS_3D = {
     "hist3d": ("box", "iso"),
     "function3d": ("default", "iso"),
 }
-ASYMMETRIC = ("TGraphAsymmErrors", "TGraphBentErrors", "TGraphMultiErrors", "TEfficiency")  # graphs drawn with asymmetric errors
 
 
 def has_errors(kind):
@@ -82,11 +82,11 @@ def compared(case):
         return False
     if kind == "graph_multi" and option in ("2", "3", "4", "5"):  # ROOT draws the first set of errors as boxes or a band, the others as bars
         return False
+    if option == "points_arrows" and "lw0" in style:  # ROOT draws the arrow heads without the bars: TLegend draws them only with a bar
+        return False
     if what == "hist1d" and option in ("*H", "B", "BAR"):
         return False
     if option in VIEWS_3D.get(what, ()) or option in ("candle", "violin"):
-        return False
-    if DATA_KINDS[kind][1] in ASYMMETRIC and option == "points_arrows" and "dashed" in style:
         return False
     return not (what == "hist1d" and has_errors(kind) and option == "HIST E2" and style == "hollow_split")
 
@@ -97,7 +97,19 @@ todo = cases(
     {"kind": KINDS, "option": list(dict.fromkeys(sum(OPTIONS.values(), RAW_POLY))), "style": list(STYLES), "variant": list(VARIANTS)},
     valid=compared,
     always=lambda c: False,
-    named=[{"kind": "hist2poly", "option": option, "style": "split", "variant": "normal", "why": "polygon bins filled, outlined or as markers"} for option in RAW_POLY],
+    named=[{"kind": "hist2poly", "option": option, "style": "split", "variant": "normal", "why": "polygon bins filled, outlined or as markers"} for option in RAW_POLY]
+    + [
+        {"kind": kind, "option": option, "style": "solid_lw1", "variant": "normal", "why": f"error bars ending {ends}"}
+        for kind, option, ends in [
+            ("hist", "points_endcaps", "in caps"),
+            ("hist", "E1", "in caps"),
+            ("hist", "points", "plain"),
+            ("graph_errors", "P", "in caps"),
+            ("graph_errors", "points", "plain"),
+            ("graph_asymm", "points_arrows", "in arrow heads"),
+            ("graph_errors", "points_xerr_endcaps", "in caps"),
+        ]
+    ],
 )
 for i, case in enumerate(todo):
     plot = S.Plot(f"c{i}", "legend", "1d" if drawn_type(case["kind"]) in ("hist1d", "graph", "function") else "2d")
@@ -211,6 +223,26 @@ def is_frame(obj):
     return not obj.InheritsFrom("TLegend") and not re.match(r"(fill_)?\d+:", obj.GetName())
 
 
+def ends(found):
+    """how the error bars end: end caps (a short horizontal stroke centred at an end of a vertical bar), arrow heads (two strokes from one
+    point, filled or not) or plain"""
+    bars, ticks, arrows = [], [], False
+    for key in found:
+        d = re.search(r'(?:^|\s)d="([^"]*)"', key[1])
+        for sub in re.findall(r"M[^M]*", d.group(1) if d else ""):
+            sub = sub.replace(" ", "")
+            if m := re.fullmatch(r"M(-?[\d.]+),(-?[\d.]+)v(-?[\d.]+)", sub):
+                x, y, dy = map(float, m.groups())
+                bars.append((x, y, y + dy))
+            elif m := re.fullmatch(r"M(-?[\d.]+),(-?[\d.]+)h(-?[\d.]+)", sub):
+                x, y, dx = map(float, m.groups())
+                if abs(dx) < 7:
+                    ticks.append((x + dx / 2, y))
+            arrows |= bool(re.fullmatch(r"M[-\d.]+,[-\d.]+l-?[\d.]+,-?[\d.]+l-?[\d.]+,-?[\d.]+z?", sub))
+    caps = any(abs(tx - x) < 0.6 and min(abs(ty - y1), abs(ty - y2)) < 0.6 for tx, ty in ticks for x, y1, y2 in bars)
+    return "arrow heads" if arrows else ("end caps" if caps else "plain ends")
+
+
 def show(style):
     return style[0] + " " + " ".join(f"{k}={v}" for k, v in style[1:])
 
@@ -243,8 +275,8 @@ def legend_check(i, case):
     colours = {dict(s[1:]).get("fill") for s in onlyPlot} | {dict(s[1:]).get("stroke") for s in onlyPlot}
     if option == "" and not onlyLegend and len(colours) >= 5:
         onlyPlot = set()  # coloured by the palette: the entry has no symbol
-    if case["option"] == "points_arrows":
-        onlyPlot = set()  # the arrow heads cannot be drawn by TLegend
+    if drawn_type(case["kind"]) in ("hist1d", "graph") and "e" in option and ends(dataElements) != ends(legendElements):
+        problem = f"the plot draws error bars with {ends(dataElements)}, the legend with {ends(legendElements)}"
     if case["kind"] == "hist2poly" and "L" in case["option"]:  # the hairline under the outline of polygon bins (a hollow fill area)
         onlyPlot = {s for s in onlyPlot if not (dict(s[1:]).get("fill") == "none" and "stroke-width" not in dict(s[1:]))}
     detail = "; ".join([*(f"only in the plot: {show(s)}" for s in sorted(onlyPlot)), *(f"only in the legend: {show(s)}" for s in sorted(onlyLegend)), *([problem] if problem else [])])

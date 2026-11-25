@@ -6787,10 +6787,24 @@ void PlotPainter::AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box
       TAttMarker marker;
       TAttLine line;
       TAttFill fill;
+      TObject* data;
+      string ends;  // how the error bars end: "caps", ">" or "|>" (arrows), empty for plain bars
     };
     auto symbolPart = [](uint16_t dataID, TObject* data_ptr, const string& drawnWith, const string& elements) {
       const legend_symbol_t drawn = GetLegendSymbol(data_ptr, drawnWith);
-      symbol_part_t part{dataID, str_upper((elements.empty()) ? drawn.elements : elements), {}, {}, {}};
+      symbol_part_t part{dataID, str_upper((elements.empty()) ? drawn.elements : elements), {}, {}, {}, data_ptr, {}};
+      // end caps of 1d histograms with E1, of graphs drawn with bars unless Z; arrows of graphs with > or |>
+      const string option = str_upper(drawnWith);
+      if (auto hist = dynamic_cast<TH1*>(data_ptr); hist && hist->GetDimension() == 1 && str_contains(option, "E1")) {
+        part.ends = "caps";
+      } else if (data_ptr->InheritsFrom(TGraph::Class())) {
+        if (str_contains(option, "|>"))
+          part.ends = "|>";
+        else if (str_contains(option, ">"))
+          part.ends = ">";
+        else if (!str_contains(option, "Z") && !str_contains(option, "[]") && !str_contains(option, "||"))
+          part.ends = "caps";
+      }
       if (auto ptr = dynamic_cast<TAttMarker*>(data_ptr)) ptr->Copy(part.marker);
       if (auto ptr = dynamic_cast<TAttLine*>(data_ptr)) ptr->Copy(part.line);
       if (auto ptr = dynamic_cast<TAttFill*>(data_ptr)) ptr->Copy(part.fill);
@@ -6825,13 +6839,13 @@ void PlotPainter::AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box
       parts.push_back(symbolPart(dataID, other_ptr, otherDrawnWith, ""));
     }
     std::stable_sort(parts.begin(), parts.end(), [](const symbol_part_t& a, const symbol_part_t& b) { return a.dataID < b.dataID; });
+    const symbol_part_t* errorsFrom = nullptr;
     if (!parts.empty()) {
       // each element in the look of the data giving it, the one drawn later where two give the same (as in the plot); the line of the row
       // is that of the L element, without one the outline of the fill (TLegend draws no error bar with a fill), else that of the error bars
       symbolElements.clear();
       const symbol_part_t* lineFrom = nullptr;
       const symbol_part_t* outlineFrom = nullptr;
-      const symbol_part_t* errorsFrom = nullptr;
       for (const auto& part : parts) {
         for (char element : part.elements) {
           if (!str_contains(symbolElements, string(1, element))) symbolElements += element;
@@ -6881,6 +6895,28 @@ void PlotPainter::AddLegendRows(TLegend* legend, const Plot::Pad::LegendBox& box
       const auto [font, size] = EntryText(entry, textFont, textSize, pad);
       curEntry->SetTextFont(font);
       curEntry->SetTextSize(size);
+    }
+    // TLegend draws end caps and arrows on the error bar only for a row with a graph as object (and '>'/'|>' in its option), and takes
+    // the line, marker and fill of that object: a graph with the look of the row, kept with the data, a single point far outside any frame
+    TList* functions = nullptr;  // the ends are set only for 1d histograms and graphs
+    if (errorsFrom && !errorsFrom->ends.empty() && str_contains(symbolElements, "E")) {
+      auto hist = dynamic_cast<TH1*>(errorsFrom->data);
+      functions = (hist) ? hist->GetListOfFunctions() : static_cast<TGraph*>(errorsFrom->data)->GetListOfFunctions();
+    }
+    if (functions) {
+      auto* symbol = new TGraph(1);
+      symbol->SetPoint(0, 1e30, 1e30);
+      symbol->SetName("legend_symbol");
+      curEntry->TAttLine::Copy(*symbol);
+      curEntry->TAttMarker::Copy(*symbol);
+      curEntry->TAttFill::Copy(*symbol);
+      if (errorsFrom->ends == "|>" && !str_contains(symbolElements, "F")) {  // ROOT fills the arrow heads with the fill colour of the data
+        symbol->SetFillColor(errorsFrom->fill.GetFillColor());
+        symbol->SetFillStyle(kFSolid);
+      }
+      functions->Add(symbol, "");
+      curEntry->SetObject(symbol);
+      if (errorsFrom->ends != "caps") curEntry->SetOption((symbolElements + errorsFrom->ends).data());
     }
   }
 }
