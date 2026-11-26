@@ -15,6 +15,7 @@ Types: `std::optional<T>` arguments can be left out (Python: `None`); `std::vect
 - `void AddDataSource(const std::string& dataSource, TObject* input, bool replace = false)`
 - `void SaveDataSources(const std::optional<std::string>& file = {})`
 - `void LoadDataSources(const std::optional<std::string>& file = {}, bool replace = false)`
+- `std::vector<std::string> ExpandInputs(const std::string& dataSource)`
 - `void AddPlot(Plot plot)`
 - `void AddBasePlot(Plot basePlot)`
 - `static Plot MakeBasePlot(const std::string& name = "1d", const PanelLayout& sizes = PanelLayout(), const BasePlotShape& shape = BasePlotShape())`

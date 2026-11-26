@@ -9,6 +9,8 @@ no ROOT file, and srp open and srp colorwheel without a graphical display (X11 o
 colorwheel <file> writes an image file without ROOT's messages, and refuses a name that is no image file. File names may hold ~ and
 environment variables, as the inputs of data sources. srp print <table file> gives the data name of a table, its rows and delimiter
 and each column with the type the reader gives it; a table that cannot be read fails with exit status 1 and one error.
+srp print <data source>[:<path>] (a data source of the current project, unless a file of that name exists) lists its objects as the reader
+sees them, with where they are in the inputs; a path names a folder or one object (details as for a file); the inputs only at debug.
 Covers: details of every data kind alone, stack and multigraph members, file below a folder with ':', several cycles of a name, map values, srp open and colorwheel
 without a file or display, colorwheel into a file."""
 
@@ -17,7 +19,7 @@ import subprocess
 import sys
 
 import numpy as np
-from srptest import ROOT, SRP, check, config_folder, data_objects, finish, own, run
+from srptest import ROOT, SRP, check, config_folder, data_objects, finish, own, python, run
 
 folder = config_folder("files")
 special = config_folder("run_2026-11-04T10:00")
@@ -239,4 +241,47 @@ for start in ("", ":dir"):
     found, _ = listing(out.stdout)
     want = {k: v for k, v in expected.items() if not start or k.startswith("dir/")}
     check(f"srp print of a remote file{start or ''}", out.rc == 0 and found == want, out.tail())
+
+# a data source of the current project (not an existing file): its inputs as the reader expands them, each object once with where it is
+# (a tree chained over the inputs, other data read from the first input holding it), tables by their data name; a path names a folder
+# or one object (its details, a chained tree with its entries in all); the inputs themselves only at verbosity debug
+sourceFolder = config_folder("source_files")
+for i in range(3):
+    rf = ROOT.TFile(os.path.join(sourceFolder, f"run{i}.root"), "RECREATE")
+    t = ROOT.TTree("events", "")
+    v = np.zeros(1)
+    t.Branch("v", v, "v/D")
+    for k in range(10 * (i + 1)):
+        v[0] = k
+        t.Fill()
+    t.Write()
+    if i < 2:
+        ROOT.TH1D("hA", "A", 10, 0.0, 1.0).Write()
+    if i == 0:
+        rf.mkdir("dir").cd()
+        ROOT.TH1D("hB", "", 5, 0.0, 1.0).Write()
+    rf.Close()
+with open(os.path.join(sourceFolder, "spec.csv"), "w") as fh:
+    fh.write("a,b\n1,2\n")
+sourceConfig = config_folder("source_config")
+program = os.path.join(sourceFolder, "define.py")
+with open(program, "w") as fh:
+    fh.write(f"from SciRooPlot import PlotManager\npm = PlotManager('sources')\npm.AddDataSource('src', ['{sourceFolder}/run*.root', '{sourceFolder}/spec.csv'])\npm.SaveProject()\n")
+setUp = [run(SRP, "add", "sources", program, os.path.join(sourceFolder, "out"), config=sourceConfig), python(open(program).read(), config=sourceConfig), run(SRP, "select", "sources", config=sourceConfig)]
+check("srp print of a data source: project set up", all(o.rc == 0 for o in setUp), " | ".join(o.tail() for o in setUp))
+out = run(SRP, "print", "src", config=sourceConfig, cwd=sourceFolder)
+want = ["data source src: 4 inputs", "- [TTree] events (chained over 3 inputs)", "- [TH1D] hA (in 2 of 3 inputs: read from the first)", "dir/", "- [TH1D] hB (in 1 of 3 inputs)", "- [table] spec"]
+check("srp print of a data source: each object once, where it is in the inputs, tables by name", out.rc == 0 and [line.strip("| ").strip() for line in out.stdout.splitlines()] == want, out.tail())
+out = run(SRP, "print", "src:events", config=sourceConfig)
+check("srp print of a tree in a data source: its details and its entries chained over the inputs", out.rc == 0 and "- [TTree] events" in out.stdout and "chained over 3 inputs: 60 entries in all" in out.stdout, out.tail())
+out = run(SRP, "print", "src:dir", config=sourceConfig)
+check("srp print of a folder of a data source", out.rc == 0 and "- [TH1D] hB (in 1 of 3 inputs)" in out.stdout and "hA" not in out.stdout, out.tail())
+out = run(SRP, "print", "src:nothing", config=sourceConfig)
+check("srp print of a path a data source does not have: exit 1, one error", out.rc == 1 and len(out.errors()) == 1 and "Path not found in data source src" in out.errors()[0], out.tail())
+out = run(SRP, "print", "src", config=sourceConfig, env={"SCIROOPLOT_VERBOSITY": "debug"})
+check("srp print of a data source: the inputs only at verbosity debug", "run1.root" in out.stdout + out.stderr and "run1.root" not in run(SRP, "print", "src", config=sourceConfig).stdout, out.tail())
+with open(os.path.join(sourceFolder, "src"), "w") as fh:
+    fh.write("not a ROOT file\n")
+out = run(SRP, "print", "src", config=sourceConfig, cwd=sourceFolder)
+check("srp print: an existing file of the name of a data source is printed as a file", out.rc == 1 and "Cannot read" in " ".join(out.errors()), out.tail())
 finish()

@@ -26,6 +26,7 @@
 #include <TBranch.h>
 #include <TBrowser.h>
 #include <TCanvas.h>
+#include <TChain.h>
 #include <TClass.h>
 #include <TColorWheel.h>
 #include <TDataType.h>
@@ -90,6 +91,10 @@ int run_command(const string& command, const string& project, const string& prop
 string setting_value(const string& setting);
 bool print_root_file_contents(const string& inputPath);
 bool print_table_contents(const string& fileName);
+bool print_data_source(const string& dataSource, const string& path);
+bool is_data_source_of(const string& project, const string& dataSource);
+TObject* find_in_file(TObject* root, const string& path);
+void walk_contents(TObject* object, const string& path, const std::function<void(const string&, const string&, TObject*)>& onObject);
 std::unique_ptr<TApplication> open_window_application(const string& command);
 
 //**************************************************************************************************
@@ -258,6 +263,7 @@ int run_command(const string& command, const string& project, const string& prop
     row("srp print <file>[:<path>]", "objects in a ROOT file (below a path), one object with details");
     row("srp print hepdata:<record>[:<table>]", "data names of a HEPData record (or downloaded file)");
     row("srp print <table file>", "data name, rows and column types of a table");
+    row("srp print <data source>[:<path>]", "objects of a data source of the current project as read");
     row("srp open <file>", "open a ROOT file in a TBrowser");
     row("srp colorwheel [<file>]", "ROOT's colours with their names");
     heading("Environment");
@@ -354,7 +360,15 @@ int run_command(const string& command, const string& project, const string& prop
     if (!fileName || !print_table_contents(*fileName)) return 1;
   } else if (command == "print") {
     const auto fileName = util::expand_path(project);  // as in the inputs of data sources
-    if (!fileName || !print_root_file_contents(*fileName)) return 1;
+    // a data source of the current project, unless a file of that name exists
+    const string sourceName = project.substr(0, project.find(':'));
+    std::error_code existsError;
+    const bool isFile = fileName && !util::split_input_path(*fileName)[0].empty() && std::filesystem::is_regular_file(util::split_input_path(*fileName)[0], existsError);
+    if (!isFile && !Config::Get().CurrentProject().empty() && is_data_source_of(Config::Get().CurrentProject(), sourceName)) {
+      if (!print_data_source(sourceName, (project.find(':') == string::npos) ? "" : project.substr(project.find(':') + 1))) return 1;
+    } else if (!fileName || !print_root_file_contents(*fileName)) {
+      return 1;
+    }
   } else if (command == "settings") {
     // named as the srp commands that change them
     const auto row = rows(15);
@@ -620,6 +634,207 @@ bool print_table_contents(const string& fileName)
 
 //**************************************************************************************************
 /**
+ * The object at a path below a file, directory or collection, found as the reader does: the latest directory, folder or collection of a
+ * name (a newer key of the name holding data does not hide it), the value of a map under its key (null if there is none).
+ */
+//**************************************************************************************************
+TObject* find_in_file(TObject* root, const string& path)
+{
+  TObject* current = root;
+  size_t pos = 0;
+  while (current && pos < path.size()) {
+    auto next = path.find('/', pos);
+    auto part = path.substr(pos, next == string::npos ? string::npos : next - pos);
+
+    if (auto* directory = dynamic_cast<TDirectory*>(current)) {
+      TKey* key = util::find_container_key(directory, part);
+      TClass* keyClass = (key) ? util::readable_class(key) : nullptr;
+      if (!keyClass) return nullptr;
+      current = (keyClass->InheritsFrom(TDirectory::Class())) ? static_cast<TObject*>(util::open_directory(directory, key)) : key->ReadObj();
+    } else if (util::is_container(current->IsA())) {
+      TObject* found{};
+      util::for_each_item(current, [&](const string& name, TObject* item) {
+        if (name == part) found = item;
+        return found != nullptr;
+      });
+      current = found;
+    } else {
+      return nullptr;
+    }
+    pos = next == string::npos ? path.size() : next + 1;
+  }
+  return current;
+}
+
+//**************************************************************************************************
+/**
+ * The objects below a file, directory or collection as the reader sees them: each object that is no container with its path (as stored,
+ * the name to access it with) and class, the objects of a level before the contents of its containers; of a directory the latest cycle of
+ * a name. The object is null for a key of a class that is no TObject (an RNTuple, a std::vector).
+ */
+//**************************************************************************************************
+void walk_contents(TObject* object, const string& path, const std::function<void(const string&, const string&, TObject*)>& onObject)
+{
+  auto pathOf = [&](const string& name) { return path.empty() ? name : path + "/" + name; };
+  vector<std::tuple<TObject*, string, bool>> containers;
+  auto listItem = [&](TObject* obj, const string& name, bool ownsObj) {
+    if (util::is_container(obj->IsA())) {
+      containers.emplace_back(obj, name, ownsObj);
+      return;
+    }
+    onObject(pathOf(name), obj->ClassName(), obj);
+    if (ownsObj) delete obj;
+  };
+  if (auto* directory = dynamic_cast<TDirectory*>(object)) {
+    // the latest cycle of a name (listed first), as the reader takes it: one for data, one for a directory, list or folder
+    std::set<std::tuple<string, bool>> listed;
+    for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {
+      if (!key) continue;
+      const string name = key->GetName();
+      const TClass* keyClass = TClass::GetClass(key->GetClassName());
+      if (!listed.emplace(name, util::is_container(keyClass)).second) continue;
+      if (keyClass && !keyClass->IsTObject()) {
+        onObject(pathOf(name), key->GetClassName(), nullptr);
+        continue;
+      }
+      TObject* obj = key->ReadObj();
+      if (!obj) {
+        logger::warning("Skipping key {} of type {}; the class is not available.", name, key->GetClassName());
+        continue;
+      }
+      listItem(obj, name, true);
+    }
+  } else {
+    util::for_each_item(object, [&](const string& name, TObject* item) {
+      listItem(item, name, false);
+      return false;
+    });
+  }
+  for (auto& [container, name, ownsContainer] : containers) {
+    walk_contents(container, pathOf(name), onObject);
+    if (ownsContainer) delete container;
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Whether a project has a data source of this name (in its stored data sources).
+ */
+//**************************************************************************************************
+bool is_data_source_of(const string& project, const string& dataSource)
+{
+  std::error_code existsError;
+  if (dataSource.empty() || !std::filesystem::exists(Config::Get().DataSourcesFile(project), existsError)) return false;
+  ptree dataSources;
+  try {
+    boost::property_tree::read_info(Config::Get().DataSourcesFile(project), dataSources);
+  } catch (const boost::property_tree::ptree_error&) {
+    return false;
+  }
+  return dataSources.find(dataSource) != dataSources.not_found();
+}
+
+//**************************************************************************************************
+/**
+ * srp print <data source>[:<path>]: the contents of a data source of the current project as the reader sees them (its inputs expanded as
+ * when reading): each object once, with a note where it is in several inputs (trees and RNTuples are chained over them, of other data the
+ * first input is read) or not in all; tables by their data name. A path naming one object gives its details as for one file (of the first
+ * input holding it; a chained tree with its entries in all). The inputs themselves only at verbosity debug.
+ */
+//**************************************************************************************************
+bool print_data_source(const string& dataSource, const string& path)
+{
+  PlotManager plotManager(Config::Get().CurrentProject());
+  plotManager.LoadDataSources();
+  const vector<string> inputs = plotManager.ExpandInputs(dataSource);
+  if (inputs.empty()) {
+    logger::error("Data source {} has no inputs that can be read.", dataSource);
+    return false;
+  }
+  struct found_t {
+    string className;
+    vector<string> inputs;  // holding it, in their order
+  };
+  vector<string> order;
+  std::map<string, found_t> found;
+  auto record = [&](const string& objectPath, const string& className, const string& input) {
+    auto [it, isNew] = found.try_emplace(objectPath, found_t{className, {}});
+    if (isNew) order.push_back(objectPath);
+    it->second.inputs.push_back(input);
+  };
+  size_t nRootInputs{};  // the notes count the inputs that can hold ROOT objects
+  for (const auto& input : inputs) {
+    logger::debug("  input {}", input);
+    const auto fileAndFolder = util::split_input_path(util::expand_path(input).value_or(input));
+    if (util::str_ends_with(fileAndFolder[0], util::kTableFileEndings)) {
+      if (path.empty()) record(std::filesystem::path(fileAndFolder[0]).stem().string(), "table", input);
+      continue;
+    }
+    ++nRootInputs;
+    std::unique_ptr<TFile> file;
+    {
+      auto quiet = util::ignore_root_messages_below(kFatal);
+      file = util::open_input_file(fileAndFolder[0]);
+    }
+    if (!file || file->IsZombie()) {
+      logger::warning("Cannot open input {}.", input);
+      continue;
+    }
+    const string folder = (fileAndFolder.size() > 1) ? fileAndFolder[1] : "";
+    TObject* root = find_in_file(file.get(), folder);
+    TObject* start = (root && !path.empty()) ? find_in_file(root, path) : root;
+    if (!start) continue;
+    if (!util::is_container(start->IsA())) {
+      record(path, start->ClassName(), input);
+    } else {
+      walk_contents(start, path, [&](const string& objectPath, const string& className, TObject*) { record(objectPath, className, input); });
+    }
+  }
+  if (order.empty()) {
+    logger::error("Path not found in data source {}: {}.", dataSource, path);
+    return false;
+  }
+  auto isChained = [](const string& className) { return className == "TTree" || className == "TNtuple" || className == "TNtupleD" || className == "ROOT::RNTuple" || className == "ROOT::Experimental::RNTuple"; };
+  logger::print("data source {}: {}", dataSource, util::plural(inputs.size(), "input"));
+  auto note = [&](const found_t& object) -> string {
+    const size_t n = object.inputs.size();
+    if (nRootInputs <= 1 || object.className == "table") return "";
+    if (isChained(object.className)) return (n == 1) ? fmt::format("in 1 of {} inputs", nRootInputs) : fmt::format("chained over {}{} inputs", n, (n < nRootInputs) ? fmt::format(" of {}", nRootInputs) : "");
+    if (n == 1) return fmt::format("in 1 of {} inputs", nRootInputs);
+    return fmt::format("in {} of {} inputs: read from the first", n, nRootInputs);
+  };
+  // one object: its details as for one file, then where it is
+  if (order.size() == 1 && order[0] == path && !path.empty()) {
+    const found_t& object = found[path];
+    const auto fileAndFolder = util::split_input_path(object.inputs.front());
+    const string first = fileAndFolder[0] + ":" + ((fileAndFolder.size() > 1) ? fileAndFolder[1] + "/" : "") + path;
+    if (!print_root_file_contents(first)) return false;
+    if (isChained(object.className) && object.inputs.size() > 1 && object.className != "ROOT::RNTuple") {
+      TChain chain(path.substr(path.rfind('/') + 1).data());
+      for (const auto& input : object.inputs) {
+        const auto parts = util::split_input_path(input);
+        chain.Add((parts[0] + "/" + ((parts.size() > 1) ? parts[1] + "/" : "") + path).data());
+      }
+      logger::print("  {}: {} entries in all", note(object), chain.GetEntries());
+    } else if (const string where = note(object); !where.empty()) {
+      logger::print("  {}", where);
+    }
+    return true;
+  }
+  string printedFolder = "-";
+  for (const auto& objectPath : order) {
+    const found_t& object = found[objectPath];
+    const auto [folderPart, name] = util::split_path(objectPath);
+    if (folderPart != printedFolder && !folderPart.empty()) logger::print("{}/", folderPart);
+    printedFolder = folderPart;
+    const string where = note(object);
+    logger::print("- [{}] {}{}", object.className, name, where.empty() ? "" : " (" + where + ")");
+  }
+  return true;
+}
+
+//**************************************************************************************************
+/**
  * srp print <file>[:<path>]: the contents of a ROOT file (false with an error).
  */
 //**************************************************************************************************
@@ -650,38 +865,9 @@ bool print_root_file_contents(const string& inputPath)
     return false;
   }
 
-  // a path goes down as the reader does: the latest directory, folder or collection of a name (a newer key of the name holding
-  // data does not hide it), the value of a map under its key
-  auto findObject = [](TObject* root, const string& path) -> TObject* {
-    TObject* current = root;
-    size_t pos = 0;
-    while (current && pos < path.size()) {
-      auto next = path.find('/', pos);
-      auto part = path.substr(pos, next == string::npos ? string::npos : next - pos);
-
-      if (auto* directory = dynamic_cast<TDirectory*>(current)) {
-        TKey* key = util::find_container_key(directory, part);
-        TClass* keyClass = (key) ? util::readable_class(key) : nullptr;
-        if (!keyClass) return nullptr;
-        current = (keyClass->InheritsFrom(TDirectory::Class())) ? static_cast<TObject*>(util::open_directory(directory, key)) : key->ReadObj();
-      } else if (util::is_container(current->IsA())) {
-        TObject* found{};
-        util::for_each_item(current, [&](const string& name, TObject* item) {
-          if (name == part) found = item;
-          return found != nullptr;
-        });
-        current = found;
-      } else {
-        return nullptr;
-      }
-      pos = next == string::npos ? path.size() : next + 1;
-    }
-    return current;
-  };
-
   TObject* root = inputFile.get();
   if (!startPath.empty()) {
-    root = findObject(root, startPath);
+    root = find_in_file(root, startPath);
     if (!root) {
       logger::error("Path not found: {}.", startPath);
       return false;
@@ -796,69 +982,19 @@ bool print_root_file_contents(const string& inputPath)
     }
   };
 
-  std::function<void(TObject*, const string&)> loopData =
-    [&](TObject* object, const string& path) {
-      if (!util::is_container(object->IsA())) {
-        // listed by the name under which it is stored, which is the one to access it with (the object's own name can differ)
-        const auto [folder, name] = util::split_path(path);
-        if (!folder.empty()) logger::print("{}/", folder);
-        logger::print("- [{}] {}", object->ClassName(), name);
-        printBranches(object);
-        return;
-      }
-      bool printedPath = false;
-      auto printPath = [&]() {
-        if (!printedPath && !path.empty()) logger::print("{}/", path);
-        printedPath = true;
-      };
-      // the objects of this level first, then the containers: listed after a container, they would look as if inside it
-      vector<std::tuple<TObject*, string, bool>> containers;
-      auto listItem = [&](TObject* obj, const string& name, bool ownsObj) {
-        if (util::is_container(obj->IsA())) {
-          containers.emplace_back(obj, name, ownsObj);
-          return;
-        }
-        printPath();
-        logger::print("- [{}] {}", obj->ClassName(), name);
-        printBranches(obj);
-        if (ownsObj) delete obj;
-      };
-      if (auto* directory = dynamic_cast<TDirectory*>(object)) {
-        // the latest cycle of a name (listed first), as the reader takes it: one for data, one for a directory, list or folder
-        std::set<std::tuple<string, bool>> listed;
-        for (auto* key : TRangeDynCast<TKey>(directory->GetListOfKeys())) {
-          if (!key) continue;
-          const string name = key->GetName();
-          const TClass* keyClass = TClass::GetClass(key->GetClassName());
-          if (!listed.emplace(name, util::is_container(keyClass)).second) continue;
-          // a key of a class that is no TObject (an RNTuple, a std::vector) cannot be read as one
-          if (keyClass && !keyClass->IsTObject()) {
-            printPath();
-            logger::print("- [{}] {}", key->GetClassName(), name);
-            continue;
-          }
-          TObject* obj = key->ReadObj();
-          if (!obj) {
-            logger::warning("Skipping key {} of type {}; the class is not available.", name, key->GetClassName());
-            continue;
-          }
-          listItem(obj, name, true);
-        }
-      } else {
-        util::for_each_item(object, [&](const string& name, TObject* item) {
-          listItem(item, name, false);
-          return false;
-        });
-      }
-      for (auto& [container, name, ownsContainer] : containers) {
-        loopData(container, path.empty() ? name : path + "/" + name);
-        if (ownsContainer) delete container;
-      }
-    };
+  // the folder of a listed object is printed once, before its first object
+  string printedFolder = "-";
+  auto listObject = [&](const string& path, const string& className, TObject* object) {
+    const auto [folder, name] = util::split_path(path);
+    if (folder != printedFolder && !folder.empty()) logger::print("{}/", folder);
+    printedFolder = folder;
+    logger::print("- [{}] {}", className, name);
+    if (object) printBranches(object);
+  };
   if (!util::is_container(root->IsA())) {
     printDetails(root, startPath);
   } else {
-    loopData(root, startPath);
+    walk_contents(root, startPath, listObject);
   }
   return true;
 }

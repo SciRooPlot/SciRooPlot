@@ -100,6 +100,8 @@ class PlotManager
 
   void SaveDataSources(const std::optional<std::string>& file = {}) const;
   void LoadDataSources(const std::optional<std::string>& file = {}, bool replace = false);
+  // the inputs of a data source as they are read: wildcards, directories and folder patterns expanded, each input once (srp print)
+  std::vector<std::string> ExpandInputs(const std::string& dataSource) const;
 
   void AddPlot(Plot plot);
   void AddBasePlot(Plot basePlot);
@@ -269,7 +271,6 @@ class PlotManager
   void MakeUserData(const std::string& dataSource, const std::string& dataName, std::unique_ptr<TObject>& dataPtr);
   void ChainTrees(required_data_t& requiredData);
   bool IsBuffered(const std::string& dataSource, const std::string& name) const;
-  std::vector<std::string> ExpandInputs(const std::string& dataSource) const;
   static std::string SearchedFolder(const std::string& dataSource, const std::string& inputFolder);
   bool IsDataSourceDefined(const std::string& dataSource) const;
   static std::string DataLocation(const std::string& dataSource, const std::string& name);
