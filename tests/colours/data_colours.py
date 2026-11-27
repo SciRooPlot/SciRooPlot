@@ -143,20 +143,26 @@ for name, (setup, padID, n) in OVERVIEWS.items():
 for args, said in ((("no_base", 1), "there is no base plot no_base"), (("ov_srp", 3), "base plot ov_srp has no pad 3"), (("ov_srp", 0), "base plot ov_srp has no pad 0")):
     _, text = captured(lambda args=args: p.pm.AddColorOverview("bad", "overview", *args))
     check(f"colour overview of a missing base plot or pad refused: {said}", said in text, text.strip())
-# data drawn invisible (every part it draws: alpha 0, marker size 0 without a line, the colour of the background): a hint; data with one
-# visible part, and markers in the background colour on a map, none
+# data drawn invisible (every part it draws: alpha 0, marker size 0 without a line, the colour of the background, which is the frame's
+# fill if it has one): a hint; data with one visible part, markers in the background colour on a map, hollow boxes (drawn as their
+# outline) and data in the pad's colour on a frame filled in another colour none
 INVISIBLE = {
     "alpha0": (lambda d: d.SetDrawOption(S.points).SetColor(ROOT.kBlue).SetAlpha(0.0), True),
     "no_marker": (lambda d: d.SetDrawOption("P").SetMarkerSize(0.0), True),
     "background": (lambda d: d.SetDrawOption(S.points).SetColor(ROOT.kWhite), True),
     "one_part_seen": (lambda d: d.SetDrawOption(S.points).SetMarkerColor(ROOT.kWhite).SetLineColor(ROOT.kRed), False),
     "on_map": (lambda d: d.SetDrawOption("P").SetMarkerColor(ROOT.kWhite).SetMarkerStyle(20), False),
+    "hollow_boxes": (lambda d: d.SetDrawOption("2").SetFillStyle(0).SetLineColor(ROOT.kBlack), False),
+    "on_frame_fill": (lambda d: d.SetDrawOption(S.points).SetColor(ROOT.kWhite), False),
+    "frame_fill_colour": (lambda d: d.SetDrawOption(S.points).SetColor(ROOT.kBlack), True),
 }
 for name, (look, _) in INVISIBLE.items():
     plot = S.Plot(f"invisible_{name}", "colours", "2d" if name == "on_map" else "1d")
     if name == "on_map":
         plot[1].AddData("hist2d", "styled").SetDrawOption(S.colz)
-    look(plot[1].AddData("graph_errors" if name == "one_part_seen" else "graph", "styled"))  # error bars in the line colour
+    if name.startswith(("on_frame", "frame_fill")):
+        plot[1].SetFrameFill(1001, ROOT.kBlack)
+    look(plot[1].AddData("graph_errors" if name in ("one_part_seen", "hollow_boxes") else "graph", "styled"))  # error bars in the line colour
     p.pm.AddPlot(plot)
 run = p.plot("colours|overview")
 for name, (_, want) in INVISIBLE.items():

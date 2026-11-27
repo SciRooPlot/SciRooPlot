@@ -10655,8 +10655,8 @@ void PlotPainter::HintSqueezedData(TPad* pad) const
 //**************************************************************************************************
 /**
  * Hints at 1d data drawn invisible: every part its drawing option draws (markers, lines and error bars, fill) has alpha 0, a size or width 0
- * (markers drawn as a dot have no size), no fill style, or the colour of the background (the pad's fill, or the canvas's if the pad is
- * transparent; not in a pad with a map, which the data lies on). Only at verbosity hint.
+ * (markers drawn as a dot have no size; a fill area without fill style is drawn as its outline), or the colour of the background (the
+ * frame's fill, else the pad's, else the canvas's; not in a pad with a map, which the data lies on). Only at verbosity hint.
  */
 //**************************************************************************************************
 void PlotPainter::HintInvisibleData(TPad* pad) const
@@ -10666,8 +10666,15 @@ void PlotPainter::HintInvisibleData(TPad* pad) const
     const TColor* color = gROOT->GetColor(index);
     return (color) ? std::array<float_t, 4>{color->GetRed(), color->GetGreen(), color->GetBlue(), color->GetAlpha()} : std::array<float_t, 4>{0.f, 0.f, 0.f, 1.f};
   };
-  const TVirtualPad* backgroundPad = (pad->GetFillStyle() == 0 || pad->GetFillStyle() == 4000) ? pad->GetCanvas() : pad;
-  const auto background = rgba(backgroundPad->GetFillColor());
+  auto hollow = [](Style_t style) { return style == 0 || style == 4000; };
+  // the data lies on the frame fill, else on the pad's, else on the canvas's
+  Color_t backgroundIndex = pad->GetCanvas()->GetFillColor();
+  if (!hollow(pad->GetFrameFillStyle())) {
+    backgroundIndex = pad->GetFrameFillColor();
+  } else if (!hollow(pad->GetFillStyle())) {
+    backgroundIndex = pad->GetFillColor();
+  }
+  const auto background = rgba(backgroundIndex);
   // data drawn on a map lies on its colours, not on the background
   bool onMap = false;
   for (TObject* obj : *pad->GetListOfPrimitives()) {
@@ -10678,7 +10685,9 @@ void PlotPainter::HintInvisibleData(TPad* pad) const
   auto unseen = [&](Color_t index) -> string {
     const auto color = rgba(index);
     if (color[3] == 0.f) return "alpha 0";
-    if (!onMap && color[0] == background[0] && color[1] == background[1] && color[2] == background[2]) return "the colour of the background";
+    // the same in pictures (8 bits per channel): ROOT's colour 10, the frame fill of the base plots, is white at 0.999
+    auto same = [&](size_t i) { return std::abs(color[i] - background[i]) < 1.f / 255.f; };
+    if (!onMap && same(0) && same(1) && same(2)) return "the colour of the background";
     return "";
   };
   for (TObjLink* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
@@ -10710,7 +10719,14 @@ void PlotPainter::HintInvisibleData(TPad* pad) const
       look("markers", (!dot && marker->GetMarkerSize() <= 0.f) ? "marker size 0" : unseen(marker->GetMarkerColor()));
     }
     if (str_contains(elements, "L") || str_contains(elements, "E")) look("lines", (line->GetLineWidth() <= 0) ? "line width 0" : unseen(line->GetLineColor()));
-    if (str_contains(elements, "F")) look("fill", (fill->GetFillStyle() == 0 || fill->GetFillStyle() == 4000) ? "no fill style" : unseen(fill->GetFillColor()));
+    if (str_contains(elements, "F")) {
+      // a hollow fill area is drawn as its outline in the line colour
+      if (hollow(fill->GetFillStyle())) {
+        look("fill", (line->GetLineWidth() <= 0) ? "no fill style, line width 0" : unseen(line->GetLineColor()));
+      } else {
+        look("fill", unseen(fill->GetFillColor()));
+      }
+    }
     if (!visible && !reasons.empty()) logger::hint("Plot {}: data {} of pad {} is drawn invisible ({}).", mPlotLabel, name.substr(0, colon), pad->GetNumber(), reasons);
   }
 }
