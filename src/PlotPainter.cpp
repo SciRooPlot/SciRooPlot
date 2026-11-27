@@ -3546,13 +3546,20 @@ void PlotPainter::WidenFrame(item_state_t& state, const string& drawOptAxis)
     const char valueLabel = (hbarFrame) ? 'X' : 'Y';       // the pad axis of the contents of a 1d frame
     const TAxis* axis = (axisLabel == 'X') ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis();
     optional<double_t> userMin = MinRange(pad, padDefaults, padLabel);
-    // an axis without positive range loses its log scale (ApplyAxisSettings): a lower range at or below zero applies to it again
-    if (!userMin && axis->GetXmax() <= 0.) {
+    optional<double_t> userMax = MaxRange(pad, padDefaults, padLabel);
+    // an axis without positive range (its bins or the upper range set) loses its log scale (ApplyAxisSettings): a lower range at or below
+    // zero applies to it again; the shown range ends with the bin of the upper range (one starting there is left out, as by SetRangeUser)
+    double_t shownMax = axis->GetXmax();
+    if (userMax) {
+      int32_t lastBin = axis->FindFixBin(*userMax);
+      if (lastBin > 1 && axis->GetBinLowEdge(lastBin) >= *userMax) --lastBin;
+      shownMax = axis->GetBinUpEdge(lastBin);
+    }
+    if (!userMin && shownMax <= 0.) {
       for (const auto* axisSettings : AxisSettings(pad, padDefaults, padLabel)) {
         if (axisSettings->GetMinRange()) userMin = axisSettings->GetMinRange();
       }
     }
-    optional<double_t> userMax = MaxRange(pad, padDefaults, padLabel);
     const optional<bool> logY = IsLog(pad, padDefaults, valueLabel);
     const optional<double_t> rangeMin = userMin, rangeMax = userMax;  // the user's range, before the reset below
     constexpr double_t relTol = 1e-12;
