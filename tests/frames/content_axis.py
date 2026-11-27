@@ -4,7 +4,7 @@ warned about (ROOT colours the boxes linearly) and not applied; with a log scale
 its colours; the settings of 'Z' (also its divisions) stay on the binned z axis and do not reach the colour scale, the divisions of 'C'
 are those of the colour scale; the colour scale takes the text colour and alpha of the pad; a 'C' axis in a pad without a 3d histogram
 is warned about. The look set on 'C' (colours, alphas, ticks) and colour levels given for the data are also those of the scale in a
-ColorScale() cell.
+ColorScale() cell. A 3d histogram of one value in every bin gets the range widened by 10 % of it, with the colour levels spread over it.
 Cases: every 3d histogram kind × a range on 'C' (both ends, minimum, maximum), a title on 'C', a log 'C', a log 'Z', a range and title on 'Z',
 divisions on 'C' and 'Z', and the named cases.
 Reference: the frame, data and colour scale read back (minimum, maximum, colour levels, the colour scale's axis title and divisions, the
@@ -12,7 +12,7 @@ z axis: the bins holding the range and its divisions).
 Covers: the content axis of 3d histograms.
 """
 
-from srptest import DATA_3D, DATA_KINDS, Project, S, add_data, cases, check, close, data_objects, describe, finish, rgba
+from srptest import DATA_3D, DATA_KINDS, ROOT, Project, S, add_data, cases, check, close, data_objects, describe, finish, rgba
 
 KINDS = tuple(k for k in DATA_3D if "binned" in DATA_KINDS[k][2])
 SETTINGS = {"range": (5.0, 400.0), "min_only": (50.0, None), "max_only": (None, 300.0), "title": None, "log": None, "log_z": None, "z_axis": None, "pad_text": None, "divisions": None}
@@ -72,6 +72,17 @@ LEVELS = [10.0, 50.0, 100.0, 300.0]
 plot = S.Plot("levels_cell", S.PanelLayout([[S.Panel(), S.ColorScale(1)]]))
 plot.SetGroup("named")
 add_data(plot[1], KINDS[0]).SetDrawOption(S.colz).SetContours(LEVELS)
+p.pm.AddPlot(plot)
+
+# a 3d histogram of one value in every bin: its range is widened by 10 % of the value, the colour levels spread over the widened range
+flat = ROOT.TH3D("flat3", "", 3, 0.0, 3.0, 3, 0.0, 3.0, 3, 0.0, 3.0)
+for x in range(1, 4):
+    for y in range(1, 4):
+        for z in range(1, 4):
+            flat.SetBinContent(x, y, z, 5.0)
+p.source("flat", {"flat3": flat})
+plot = S.Plot("flat", "named", "2d")
+plot[1].AddData("flat3", "flat")
 p.pm.AddPlot(plot)
 
 run = p.plot()
@@ -151,5 +162,9 @@ for i, case in enumerate(todo):
         want = (ref.GetBinLowEdge(ref.GetFirst()), ref.GetBinUpEdge(ref.GetLast()))
         check(f"{what}: the range of 'Z' on the binned z axis", close(shown[0], want[0], 1e-9) and close(shown[1], want[1], 1e-9), f"{shown} instead of {want}")
         check(f"{what}: the look of 'Z' stays off the colour scale", palette is None or (abs(palette.GetAxis().GetLabelSize() - 0.06) > 1e-3 and palette.GetAxis().GetTitle() != "binned z"), f"{palette.GetAxis().GetLabelSize() if palette else None}")
+flatFrame = run.frame_hist("flat", "named")
+flatLevels = [flatFrame.GetContourLevel(k) for k in range(flatFrame.GetContour())] if flatFrame else []
+ok = len(flatLevels) > 1 and close(flatFrame.GetMinimum(), 4.5, 1e-9) and close(flatFrame.GetMaximum(), 5.5, 1e-9) and close(flatLevels[0], 4.5, 1e-9) and close(flatLevels[-1] + (flatLevels[1] - flatLevels[0]), 5.5, 1e-9)
+check("a 3d histogram of one value: range widened by 10 % of it, the colour levels spread over the widened range", ok, f"frame {flatFrame and (flatFrame.GetMinimum(), flatFrame.GetMaximum())}, levels {flatLevels[:1]} … {flatLevels[-1:]}")
 check("a 'C' axis in a pad without a 3d histogram is warned about", any("The C axis of pad 1 is ignored" in m for m in run.messages("no_th3", "named")), " | ".join(run.messages("no_th3", "named")))
 finish()
