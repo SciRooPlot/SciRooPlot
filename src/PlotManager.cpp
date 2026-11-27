@@ -5039,6 +5039,218 @@ optional<string> PlotManager::AttachJoin(TChain& chain, const string& treeName, 
 
 //**************************************************************************************************
 /**
+ * Helpers of ProcessDataRequests.
+ */
+//**************************************************************************************************
+namespace
+{
+// the reason for a failed data query: the first compiler error or error of ROOT's tree reader (if any) in what ROOT wrote
+string first_error(const string& rootOutput, bool withReader)
+{
+  std::istringstream lines(rootOutput);
+  for (string line; std::getline(lines, line);) {
+    const auto compilerError = line.find("error: ");
+    const auto readerError = (withReader && str_starts_with(line, "Error in <TTreeReader")) ? line.find(">: ") : string::npos;
+    if (compilerError != string::npos || readerError != string::npos) {
+      string reason = line.substr((compilerError != string::npos) ? compilerError + 7 : readerError + 3);
+      if (str_ends_with(reason, ".")) reason.pop_back();
+      return reason;
+    }
+  }
+  return "";
+}
+// ... or else the exception message
+string error_reason(const std::exception& exception, const string& rootOutput)
+{
+  string reason = first_error(rootOutput, true);
+  if (!reason.empty()) return reason;
+  reason = exception.what();
+  reason.erase(0, reason.find_first_not_of(" \n"));
+  reason = reason.substr(0, reason.find('\n'));
+  if (str_ends_with(reason, ".")) reason.pop_back();
+  return reason;
+}
+
+// the columns of C strings of a tree and its friends (by their RDataFrame names)
+vector<string> c_string_columns(TTree* tree)
+{
+  vector<string> cStringColumns;
+  if (!tree) return cStringColumns;
+  tree->LoadTree(0);  // a chain has no leaves before its first tree is loaded
+  auto collect = [&cStringColumns](TTree* leavesTree, const string& prefix) {
+    if (!leavesTree || !leavesTree->GetListOfLeaves()) return;
+    for (auto* obj : *leavesTree->GetListOfLeaves()) {
+      auto* leaf = static_cast<TLeaf*>(obj);
+      if (leaf->IsA() != TLeafC::Class()) continue;
+      auto* branch = leaf->GetBranch();
+      cStringColumns.push_back(prefix + ((branch->GetNleaves() == 1) ? branch->GetFullName() : leaf->GetFullName()).Data());
+    }
+  };
+  collect(tree->GetTree(), "");
+  if (auto* friends = tree->GetListOfFriends()) {
+    for (auto* obj : *friends) {
+      auto* friendElement = static_cast<TFriendElement*>(obj);
+      collect(friendElement->GetTree(), string(friendElement->GetName()) + ".");
+    }
+  }
+  return cStringColumns;
+}
+
+// the aliases stored with a tree (a chain's own and those stored with its trees): name, expression
+vector<std::pair<string, string>> tree_aliases(TTree* tree)
+{
+  vector<std::pair<string, string>> aliases;
+  if (!tree) return aliases;
+  for (TTree* aliasTree : {tree, tree->GetTree()}) {  // a chain's own aliases and those stored with its trees
+    if (!aliasTree || !aliasTree->GetListOfAliases()) continue;
+    for (auto* alias : *aliasTree->GetListOfAliases()) {
+      const string aliasName = alias->GetName();
+      const bool isNew = std::none_of(aliases.begin(), aliases.end(), [&](const auto& known) { return known.first == aliasName; });
+      if (isNew) aliases.emplace_back(aliasName, alias->GetTitle());
+    }
+  }
+  return aliases;
+}
+
+// captures what ROOT writes to std::cerr
+class OutputCapture : public std::streambuf
+{
+ public:
+  string Text()
+  {
+    std::lock_guard<std::mutex> lock(mMutex);
+    return mText;
+  }
+
+ protected:
+  int_type overflow(int_type ch) override
+  {
+    if (!traits_type::eq_int_type(ch, traits_type::eof())) {
+      std::lock_guard<std::mutex> lock(mMutex);
+      mText += traits_type::to_char_type(ch);
+    }
+    return traits_type::not_eof(ch);
+  }
+  std::streamsize xsputn(const char_type* text, std::streamsize count) override
+  {
+    std::lock_guard<std::mutex> lock(mMutex);
+    mText.append(text, static_cast<size_t>(count));
+    return count;
+  }
+
+ private:
+  std::mutex mMutex;
+  string mText;
+};
+// defines the aliases the expressions of a request name (the aliases they name first); false if RDataFrame cannot read one of them (reported)
+bool define_aliases(ROOT::RDF::RNode& node, const vector<string>& expressions, const vector<std::pair<string, string>>& aliases, const string& what)
+{
+  if (aliases.empty()) return true;
+  set<string> defined;
+  std::function<bool(const string&)> defineNamed = [&](const string& expression) {
+    for (size_t pos = 0; pos < expression.size();) {
+      if (!std::isalpha(static_cast<unsigned char>(expression[pos])) && expression[pos] != '_') {
+        ++pos;
+        continue;
+      }
+      size_t end = pos;
+      while (end < expression.size() && (std::isalnum(static_cast<unsigned char>(expression[end])) || expression[end] == '_'))
+        ++end;
+      const string word = expression.substr(pos, end - pos);
+      pos = end;
+      auto alias = std::find_if(aliases.begin(), aliases.end(), [&](const auto& known) { return known.first == word; });
+      if (alias == aliases.end() || defined.count(word) || node.HasColumn(word)) continue;
+      defined.insert(word);
+      if (!defineNamed(alias->second)) return false;
+      try {
+        node = node.Define(alias->first, alias->second);
+      } catch (const std::runtime_error&) {
+        logger::error("Cannot use alias {} of {}: RDataFrame cannot read its expression {}.", alias->first, what, alias->second);
+        return false;
+      }
+    }
+    return true;
+  };
+  return std::all_of(expressions.begin(), expressions.end(), defineNamed);
+}
+// rows without a matching row in a joined tree are skipped (its columns have no values for them): a column of each tree joined by key or
+// by an index column whose value is missing for those rows (a template: the joins are types of the plots, the matches of the manager)
+template <typename Join, typename Match>
+vector<string> match_columns(ROOT::RDataFrame& df, const vector<Join>& joins, const vector<shared_ptr<Match>>& joinMatches)
+{
+  vector<string> matchColumns;
+  for (const auto& match : joinMatches) {
+    if (!match->requiredMatch.empty()) matchColumns.push_back(match->requiredMatch);
+  }
+  for (const auto& join : joins) {
+    if (join.keepUnmatched) continue;
+    if (!join.keys.empty()) matchColumns.push_back(join.GetAlias() + "." + join.keys[0]);
+    // joined by an index column: a column of the joined tree has no value without a match (a single value: RDataFrame takes an array
+    // with a size column for missing in every row, ROOT bug 85)
+    if (!join.indexColumn.empty()) {
+      const string prefix = join.GetAlias() + ".";
+      string first;
+      for (const auto& column : df.GetColumnNames()) {
+        if (!str_starts_with(column, prefix)) continue;
+        if (first.empty()) first = column;
+        if (!str_contains(df.GetColumnType(column), "RVec") && !str_contains(df.GetColumnType(column), "vector")) {
+          first = column;
+          break;
+        }
+      }
+      if (!first.empty()) matchColumns.push_back(first);
+    }
+  }
+  return matchColumns;
+}
+// joins keeping rows without a match: their columns have a value in those rows (as alias.column, and by the bare name unless the tree has
+// a column of that name), alias.matched tells whether a row has one (RDataFrame allows no '.' in a defined name: the renames returned)
+template <typename Join, typename Match>
+vector<std::pair<string, string>> joined_values(ROOT::RDF::RNode& base, ROOT::RDataFrame& df, const vector<Join>& joins, const vector<shared_ptr<Match>>& joinMatches,
+                                                TTree* tree, const string& what)
+{
+  vector<std::pair<string, string>> renames;
+  base = base.DefinePerSample("SRP_SAMPLE", [](unsigned int, const ROOT::RDF::RSampleInfo& sample) { return sample.AsString(); });
+  for (const auto& match : joinMatches) {
+    if (match->defineMatched) base = match->defineMatched(base);
+  }
+  // a bare name stands for a joined column if the tree itself has none of that name: RDataFrame takes it from the first joined tree
+  // that has it
+  map<string, string> firstJoinedWith;  // bare name -> alias
+  for (const auto& join : joins) {
+    const string prefix = join.GetAlias() + ".";
+    for (const auto& column : df.GetColumnNames()) {
+      if (str_starts_with(column, prefix)) firstJoinedWith.emplace(column.substr(prefix.size()), join.GetAlias());
+    }
+  }
+  for (const auto& join : joins) {
+    if (!join.keepUnmatched) continue;
+    const string prefix = join.GetAlias() + ".";
+    const string matchedColumn = "SRP_MATCHED_" + join.GetAlias();
+    for (const auto& column : df.GetColumnNames()) {
+      if (!str_starts_with(column, prefix)) continue;
+      if (!Match::MaskUnmatched(base, column, matchedColumn)) {
+        logger::warning("Column {} of type {} for {} has no value for rows without a match: they read the value of another row (filter on {}matched).", column,
+                        df.GetColumnType(column), what, prefix);
+        continue;
+      }
+      const string bare = column.substr(prefix.size());
+      const bool isOwn = tree && tree->GetListOfBranches() && tree->GetListOfBranches()->FindObject(bare.data());
+      if (!isOwn && bare.find('.') == string::npos && firstJoinedWith[bare] == join.GetAlias() && df.HasColumn(bare)) Match::MaskUnmatched(base, bare, matchedColumn);
+    }
+    renames.emplace_back(prefix + "matched", matchedColumn);
+  }
+  for (const auto& match : joinMatches) {
+    for (const auto& [column, defined] : match->renames) {
+      if (!df.HasColumn(column)) renames.emplace_back(column, defined);
+    }
+  }
+  return renames;
+}
+}  // namespace
+
+//**************************************************************************************************
+/**
  * Process all requests (projections, profiles, scatter plots) of one tree or table.
  * The requests are booked together, so the data is read in one go (plus one pass for requests that auto-detect their axis ranges).
  * Requests that must be processed sequentially (scatter plots, entry ranges) share a separate single-threaded pass.
@@ -5051,30 +5263,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   using data_info_t = Plot::Pad::Data::data_info_t;
   auto start = std::chrono::steady_clock::now();
 
-  // extract the reason for a failed data query: the first compiler error or error of ROOT's tree reader (if any) or the exception message
-  auto getFirstError = [](const string& rootOutput, bool withReader) -> string {
-    std::istringstream lines(rootOutput);
-    for (string line; std::getline(lines, line);) {
-      const auto compilerError = line.find("error: ");
-      const auto readerError = (withReader && str_starts_with(line, "Error in <TTreeReader")) ? line.find(">: ") : string::npos;
-      if (compilerError != string::npos || readerError != string::npos) {
-        string reason = line.substr((compilerError != string::npos) ? compilerError + 7 : readerError + 3);
-        if (str_ends_with(reason, ".")) reason.pop_back();
-        return reason;
-      }
-    }
-    return "";
-  };
-  auto getCompilerError = [&getFirstError](const string& rootOutput) { return getFirstError(rootOutput, false); };
-  auto getErrorReason = [&getFirstError](const std::exception& exception, const string& rootOutput) {
-    string reason = getFirstError(rootOutput, true);
-    if (!reason.empty()) return reason;
-    reason = exception.what();
-    reason.erase(0, reason.find_first_not_of(" \n"));
-    reason = reason.substr(0, reason.find('\n'));
-    if (str_ends_with(reason, ".")) reason.pop_back();
-    return reason;
-  };
+  const auto getCompilerError = [](const string& rootOutput) { return first_error(rootOutput, false); };
 
   vector<const data_info_t*> parallelInfos;
   vector<const data_info_t*> sequentialInfos;
@@ -5101,75 +5290,21 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   // C strings (leaves of type C, e.g. Branch("name", buffer, "name/C") or uproot's mktree) are read by RDataFrame as RVec<Char_t>
   // padded with null characters, which cannot be compared with a string: they are given to the requests as string
   // (a redefined column is only evaluated where a request reads it)
-  vector<string> cStringColumns;
-  if (tree) {
-    tree->LoadTree(0);  // a chain has no leaves before its first tree is loaded
-    auto collect = [&cStringColumns](TTree* leavesTree, const string& prefix) {
-      if (!leavesTree || !leavesTree->GetListOfLeaves()) return;
-      for (auto* obj : *leavesTree->GetListOfLeaves()) {
-        auto* leaf = static_cast<TLeaf*>(obj);
-        if (leaf->IsA() != TLeafC::Class()) continue;
-        auto* branch = leaf->GetBranch();
-        cStringColumns.push_back(prefix + ((branch->GetNleaves() == 1) ? branch->GetFullName() : leaf->GetFullName()).Data());
-      }
-    };
-    collect(tree->GetTree(), "");
-    if (auto* friends = tree->GetListOfFriends()) {
-      for (auto* obj : *friends) {
-        auto* friendElement = static_cast<TFriendElement*>(obj);
-        collect(friendElement->GetTree(), string(friendElement->GetName()) + ".");
-      }
-    }
-  }
+  const vector<string> cStringColumns = c_string_columns(tree);
 
   // aliases stored with a tree (TTree::SetAlias) are no columns for RDataFrame: those a request names, directly or through other aliases,
   // are defined for it (the aliases they name first); a column of the same name is kept
-  vector<std::pair<string, string>> aliases;  // name, expression
-  if (tree) {
-    for (TTree* aliasTree : {tree, tree->GetTree()}) {  // a chain's own aliases and those stored with its trees
-      if (!aliasTree || !aliasTree->GetListOfAliases()) continue;
-      for (auto* alias : *aliasTree->GetListOfAliases()) {
-        const string aliasName = alias->GetName();
-        const bool isNew = std::none_of(aliases.begin(), aliases.end(), [&](const auto& known) { return known.first == aliasName; });
-        if (isNew) aliases.emplace_back(aliasName, alias->GetTitle());
-      }
-    }
-  }
+  const auto aliases = tree_aliases(tree);  // name, expression
   // defines the aliases the expressions of a request name; false if RDataFrame cannot read one of them (reported)
   auto defineAliases = [&](ROOT::RDF::RNode& node, const data_info_t& info) {
     if (aliases.empty()) return true;
-    set<string> defined;
-    std::function<bool(const string&)> defineNamed = [&](const string& expression) {
-      for (size_t pos = 0; pos < expression.size();) {
-        if (!std::isalpha(static_cast<unsigned char>(expression[pos])) && expression[pos] != '_') {
-          ++pos;
-          continue;
-        }
-        size_t end = pos;
-        while (end < expression.size() && (std::isalnum(static_cast<unsigned char>(expression[end])) || expression[end] == '_'))
-          ++end;
-        const string word = expression.substr(pos, end - pos);
-        pos = end;
-        auto alias = std::find_if(aliases.begin(), aliases.end(), [&](const auto& known) { return known.first == word; });
-        if (alias == aliases.end() || defined.count(word) || node.HasColumn(word)) continue;
-        defined.insert(word);
-        if (!defineNamed(alias->second)) return false;
-        try {
-          node = node.Define(alias->first, alias->second);
-        } catch (const std::runtime_error&) {
-          logger::error("Cannot use alias {} of {} {}: RDataFrame cannot read its expression {}.", alias->first, type, DataLocation(dataSource, name), alias->second);
-          return false;
-        }
-      }
-      return true;
-    };
     vector<string> expressions{info.weight.value_or("")};
     for (const auto& dim : info.dataDims)
       expressions.push_back(dim.var);
     for (const auto& list : {info.filters, info.definitions.values}) {
       if (list) expressions.insert(expressions.end(), list->begin(), list->end());
     }
-    return std::all_of(expressions.begin(), expressions.end(), defineNamed);
+    return define_aliases(node, expressions, aliases, fmt::format("{} {}", type, DataLocation(dataSource, name)));
   };
 
   // errors that only show up while reading may come from inputs of a chained tree with a different structure
@@ -5179,37 +5314,6 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
   uint32_t nPasses{};
   uint32_t nRequests{};
   vector<std::pair<const data_info_t*, std::pair<optional<ULong64_t>, ULong64_t>>> entryCounts;  // (entries before filter, after filter)
-
-  // captures what ROOT writes to std::cerr
-  class OutputCapture : public std::streambuf
-  {
-   public:
-    string Text()
-    {
-      std::lock_guard<std::mutex> lock(mMutex);
-      return mText;
-    }
-
-   protected:
-    int_type overflow(int_type ch) override
-    {
-      if (!traits_type::eq_int_type(ch, traits_type::eof())) {
-        std::lock_guard<std::mutex> lock(mMutex);
-        mText += traits_type::to_char_type(ch);
-      }
-      return traits_type::not_eof(ch);
-    }
-    std::streamsize xsputn(const char_type* text, std::streamsize count) override
-    {
-      std::lock_guard<std::mutex> lock(mMutex);
-      mText.append(text, static_cast<size_t>(count));
-      return count;
-    }
-
-   private:
-    std::mutex mMutex;
-    string mText;
-  };
 
   // process a group of requests on a common data frame
   std::function<void(const vector<const data_info_t*>&, bool)> processGroup;
@@ -5232,74 +5336,11 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
       auto nEntriesTotal = df->Count();
       auto passGuard = make_scope_guard([&]() { nPasses += df->GetNRuns(); });
 
-      // rows without a matching row in a joined tree are skipped (its columns have no values for them): a column of each tree joined by
-      // key or by an index column whose value is missing for those rows
-      vector<string> matchColumns;
-      if (joins) {
-        for (const auto& match : joinMatches) {
-          if (!match->requiredMatch.empty()) matchColumns.push_back(match->requiredMatch);
-        }
-        for (const auto& join : *joins) {
-          if (join.keepUnmatched) continue;
-          if (!join.keys.empty()) matchColumns.push_back(join.GetAlias() + "." + join.keys[0]);
-          // joined by an index column: a column of the joined tree has no value without a match (a single value: RDataFrame takes an array
-          // with a size column for missing in every row, ROOT bug 85)
-          if (!join.indexColumn.empty()) {
-            const string prefix = join.GetAlias() + ".";
-            string first;
-            for (const auto& column : df->GetColumnNames()) {
-              if (!str_starts_with(column, prefix)) continue;
-              if (first.empty()) first = column;
-              if (!str_contains(df->GetColumnType(column), "RVec") && !str_contains(df->GetColumnType(column), "vector")) {
-                first = column;
-                break;
-              }
-            }
-            if (!first.empty()) matchColumns.push_back(first);
-          }
-        }
-      }
+      const vector<string> matchColumns = (joins) ? match_columns(*df, *joins, joinMatches) : vector<string>{};
       ROOT::RDF::RNode base = *df;
-      // joins keeping rows without a match: their columns have a value in those rows (as alias.column, and by the bare name unless the tree
-      // has a column of that name), alias.matched tells whether a row has one (RDataFrame allows no '.' in a defined name: renamed)
+      // joins keeping rows without a match: their columns have a value in those rows (see joined_values)
       vector<std::pair<string, string>> renames;
-      if (joins && !joinMatches.empty()) {
-        base = base.DefinePerSample("SRP_SAMPLE", [](unsigned int, const ROOT::RDF::RSampleInfo& sample) { return sample.AsString(); });
-        for (const auto& match : joinMatches) {
-          if (match->defineMatched) base = match->defineMatched(base);
-        }
-        // a bare name stands for a joined column if the tree itself has none of that name: RDataFrame takes it from the first joined tree
-        // that has it
-        map<string, string> firstJoinedWith;  // bare name -> alias
-        for (const auto& join : *joins) {
-          const string prefix = join.GetAlias() + ".";
-          for (const auto& column : df->GetColumnNames()) {
-            if (str_starts_with(column, prefix)) firstJoinedWith.emplace(column.substr(prefix.size()), join.GetAlias());
-          }
-        }
-        for (const auto& join : *joins) {
-          if (!join.keepUnmatched) continue;
-          const string prefix = join.GetAlias() + ".";
-          const string matchedColumn = "SRP_MATCHED_" + join.GetAlias();
-          for (const auto& column : df->GetColumnNames()) {
-            if (!str_starts_with(column, prefix)) continue;
-            if (!join_match_t::MaskUnmatched(base, column, matchedColumn)) {
-              logger::warning("Column {} of type {} for {} has no value for rows without a match: they read the value of another row (filter on {}matched).", column,
-                              df->GetColumnType(column), DataLocation(dataSource, name), prefix);
-              continue;
-            }
-            const string bare = column.substr(prefix.size());
-            const bool isOwn = tree && tree->GetListOfBranches() && tree->GetListOfBranches()->FindObject(bare.data());
-            if (!isOwn && bare.find('.') == string::npos && firstJoinedWith[bare] == join.GetAlias() && df->HasColumn(bare)) join_match_t::MaskUnmatched(base, bare, matchedColumn);
-          }
-          renames.emplace_back(prefix + "matched", matchedColumn);
-        }
-        for (const auto& match : joinMatches) {
-          for (const auto& [column, defined] : match->renames) {
-            if (!df->HasColumn(column)) renames.emplace_back(column, defined);
-          }
-        }
-      }
+      if (joins && !joinMatches.empty()) renames = joined_values(base, *df, *joins, joinMatches, tree, DataLocation(dataSource, name));
       // with joins the columns of the tree itself can be named <tree>.column too, as those of a joined tree (e.g. to tell one apart from a
       // joined column of the same name)
       if (joins && !joins->empty() && tree && tree->GetListOfBranches()) {
@@ -5341,7 +5382,7 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
         } catch (const std::exception& e) {
           if (type == "table" && dynamic_cast<const std::invalid_argument*>(&e)) throw;  // the csv reader or an expression: handled below
           rejected.push_back(info);
-          logger::error("Invalid query for {} {} ({}): {}.", type, DataLocation(dataSource, name), info->GetDescription(), getErrorReason(e, rootOutput.Text().substr(outputStart)));
+          logger::error("Invalid query for {} {} ({}): {}.", type, DataLocation(dataSource, name), info->GetDescription(), error_reason(e, rootOutput.Text().substr(outputStart)));
         }
       }
       // a pass to determine the axis ranges is only required if some request wants them to be auto-detected
@@ -5391,9 +5432,9 @@ void PlotManager::ProcessDataRequests(const string& type, const string& dataSour
           processGroup({request.GetInfo()}, sequential);
         }
       } else if (requests.size() == 1) {
-        logger::error("Invalid query for {} {} ({}): {}{}.", type, DataLocation(dataSource, name), requests[0].GetInfo()->GetDescription(), getErrorReason(e, rootOutput.Text()), chainHint);
+        logger::error("Invalid query for {} {} ({}): {}{}.", type, DataLocation(dataSource, name), requests[0].GetInfo()->GetDescription(), error_reason(e, rootOutput.Text()), chainHint);
       } else {
-        logger::error("Cannot read {} {}: {}{}.", type, DataLocation(dataSource, name), getErrorReason(e, rootOutput.Text()), chainHint);
+        logger::error("Cannot read {} {}: {}{}.", type, DataLocation(dataSource, name), error_reason(e, rootOutput.Text()), chainHint);
       }
     }
   };
