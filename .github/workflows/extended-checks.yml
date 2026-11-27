@@ -136,11 +136,12 @@ jobs:
       - name: Install dependencies
         run: ./.github/scripts/install-linux.sh
 
-      # the tests of the shell functions run in bash and in zsh; the output tests take screenshots with ImageMagick;
-      # the tests of remote inputs serve their files with an XRootD server; programs with a decimal-comma locale need one (de_DE)
-      - name: Install zsh, ImageMagick, XRootD and a German locale
+      # the tests of the shell functions run in bash and in zsh; the output tests take screenshots with ImageMagick and drive the windows
+      # of modes show and spread with a window manager (openbox, xdotool, wmctrl, xwininfo); the tests of remote inputs serve their files
+      # with an XRootD server; programs with a decimal-comma locale need one (de_DE)
+      - name: Install zsh, ImageMagick, window tools, XRootD and a German locale
         run: |
-          sudo apt-get install -y --no-install-recommends zsh imagemagick xrootd-server locales
+          sudo apt-get install -y --no-install-recommends zsh imagemagick openbox xdotool wmctrl x11-utils xrootd-server locales
           sudo locale-gen de_DE.UTF-8
 
       - name: Install ROOT
@@ -173,6 +174,7 @@ jobs:
         shell: bash -el {0}
         env:
           SRP_TESTS_FULL: 1
+          SRP_WINDOWS_WAIT: 2
         run: xvfb-run -a ctest --test-dir build --output-on-failure --parallel 2
 
   # all dependencies at the minimum versions required in CMakeLists.txt

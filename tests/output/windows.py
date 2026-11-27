@@ -2,11 +2,11 @@
 window actions by xdotool and wmctrl): browsing with s and a, d moving the shown plot into a window of its own (in front, the browsing
 window going on with the next plot), q closing one window, x all, the window manager closing or minimizing windows, and the keys typed
 in the terminal. Prints PASS/FAIL per step; screenshots of the screen after some steps are in the work folder (ImageMagick's import).
-Not run by CTest: timing-dependent (a slow machine needs --wait 2) and it needs the tools below.
-Needs: Xvfb, openbox, xdotool, wmctrl, xwininfo (apt-get install xvfb openbox xdotool wmctrl imagemagick x11-utils).
+Timing-dependent: the pause after each action is SRP_WINDOWS_WAIT seconds (default 1; the weekly run takes 2) or --wait.
+Needs: Xvfb, openbox, xdotool, wmctrl, xwininfo (apt-get install xvfb openbox xdotool wmctrl imagemagick x11-utils); skipped without them.
 Also: show after a plot that could not be made opens one window, for the plot made after it.
 
-usage: SRP_PREFIX=<build or install> SRP_TESTS_WORK=<folder> PYTHONPATH=tests python3 tests/tools/interactive/windows.py [--wait 1]
+usage: SRP_PREFIX=<build or install> SRP_TESTS_WORK=<folder> PYTHONPATH=tests python3 tests/output/windows.py [--wait 1]
 """
 
 import os
@@ -18,7 +18,7 @@ import subprocess
 import sys
 import time
 
-wait = float(sys.argv[sys.argv.index("--wait") + 1]) if "--wait" in sys.argv else 1.0
+wait = float(sys.argv[sys.argv.index("--wait") + 1]) if "--wait" in sys.argv else float(os.environ.get("SRP_WINDOWS_WAIT", "1"))
 import srptest as S  # noqa: E402
 from srptest import check, finish  # noqa: E402
 

@@ -32,8 +32,9 @@ made again and again in one process without leaving ROOT objects behind (`repeat
 
 `tools/` is never run by CTest: what two builds draw compared pixel by pixel (`compare/outputs.py`), how fast they plot
 (`compare/speed.py`), the memory of one process plotting again and again (`compare/memory.py`), how often a plot run calls a function
-(`compare/calls.py`, with gdb), the windows of modes show and spread driven on a virtual display (`interactive/windows.py`), and raw ROOT
-options as SciRooPlot draws them next to plain ROOT (`raw_options.py`). Each says in its docstring how to run it.
+(`compare/calls.py`, with gdb), and raw ROOT options as SciRooPlot draws them next to plain ROOT (`raw_options.py`). Each says in its
+docstring how to run it. The windows of modes show and spread are driven on a virtual display with a window manager by `output/windows.py`
+(skipped without openbox, xdotool, wmctrl and xwininfo; the weekly run installs them).
 
 ## Writing a test
 
