@@ -465,7 +465,7 @@ bool PlotManager::ReplaceOutputFile(const string& tmpPath, const string& filePat
 bool PlotManager::CreateOutputDirectory() const
 {
   if (Config::Get().OutputDirOverride() && OutputFolder().empty()) {
-    logger::error("No files are written: SCIROOPLOT_OUTDIR uses a variable that is not set.");
+    logger::error("No files are written: SCIROOPLOT_OUTDIR ({}) uses the variable {}, which is not set.", gSystem->Getenv("SCIROOPLOT_OUTDIR"), Config::Get().OutputDirUnsetVariable());
     return false;
   }
   if (OutputFolder().empty()) {

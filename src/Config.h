@@ -90,6 +90,7 @@ class Config
   const std::string& CurrentProject() const { return (mCurrentOverride) ? *mCurrentOverride : mCurrentProject; }
   // where this process writes the files of every project (SCIROOPLOT_OUTDIR), instead of their output directories
   const std::optional<std::string>& OutputDirOverride() const { return mOutputDirOverride; }
+  const std::string& OutputDirUnsetVariable() const { return mOutputDirUnsetVariable; }
   bool ProjectsFileUnreadable() const { return mProjectsUnreadable; }  // projects.info exists but could not be read
 
   bool SetSetting(const std::string& key, const std::string& value);  // as the srp command of its name (false for a bad value, which is reported)
@@ -166,6 +167,7 @@ class Config
   std::string mCurrentProject;
   std::optional<std::string> mCurrentOverride;    // SCIROOPLOT_PROJECT: the current project of this process only, never saved
   std::optional<std::string> mOutputDirOverride;  // SCIROOPLOT_OUTDIR: where this process writes its files, never saved
+  std::string mOutputDirUnsetVariable;            // a variable SCIROOPLOT_OUTDIR names that is not set (then it is empty)
 };
 
 }  // namespace SciRooPlot
