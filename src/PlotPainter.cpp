@@ -5867,7 +5867,8 @@ bool PlotPainter::SpansFrame(const Plot::Pad::Data& data, char axisLabel)
 //**************************************************************************************************
 /**
  * The extent of the data drawn in a pad along an axis of its frame histogram (with horizontal bars the axes of the histogram, see
- * AddAxisRoom), within the ranges drawn so far {xMin, xMax, yMin, yMax} (in pad orientation); on a log axis only positive values count.
+ * AddAxisRoom), within the ranges drawn so far {xMin, xMax, yMin, yMax} (in the orientation of the frame histogram, swapped for HBAR);
+ * on a log axis only positive values count.
  */
 //**************************************************************************************************
 optional<std::pair<double_t, double_t>> PlotPainter::DataExtent(TPad* pad_ptr, TH1* frame, const Plot::Pad::Data* refFunc, char axisLabel, bool isLog,

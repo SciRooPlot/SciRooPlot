@@ -189,11 +189,6 @@ int main(int argc, char* argv[])
 
 //**************************************************************************************************
 /**
- * Runs an srp command (0 on success, 1 with an error reported).
- */
-//**************************************************************************************************
-//**************************************************************************************************
-/**
  * Help, info, projects and settings: headings, then names and their explanations in two columns.
  */
 //**************************************************************************************************
@@ -656,6 +651,11 @@ int command_get(const string& project, const string& property)
   return 0;
 }
 
+//**************************************************************************************************
+/**
+ * Runs an srp command (0 on success, 1 with an error reported).
+ */
+//**************************************************************************************************
 int run_command(const string& command, const string& project, const string& property, const string& setting)
 {
   listing_t listing;  // help, info, projects and settings

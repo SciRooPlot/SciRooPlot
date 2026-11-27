@@ -1094,11 +1094,6 @@ void export_shape(py::module_& m)
 
 //**************************************************************************************************
 /**
- * The helpers for data of the Python world (table(), in-memory ROOT objects from PyROOT).
- */
-//**************************************************************************************************
-//**************************************************************************************************
-/**
  * The data of the Python world as ROOT objects: graph(), histo(), histo2d() and table().
  */
 //**************************************************************************************************
@@ -1152,7 +1147,6 @@ auto weightsFor(py::handle weights, size_t n) -> optional<Values>
 }
 
 // bins as for numpy.histogram: a number of bins or the bin edges
-
 auto binning(py::handle bins, const string& what) -> std::variant<int32_t, vector<double>>
 {
   // as numpy: a 0-d array (np.array(4)) is a number of bins; True is no number of bins (pybind11 would take it as 1)
@@ -1180,7 +1174,6 @@ auto binning(py::handle bins, const string& what) -> std::variant<int32_t, vecto
 }
 
 // the range of a number of bins: as given, or from the values
-
 auto rangeFor(const optional<pair<double, double>>& range, const Values& v, const string& what)
 {
   if (range) {
@@ -1199,7 +1192,6 @@ auto rangeFor(const optional<pair<double, double>>& range, const Values& v, cons
 
 // as numpy.histogram, the last bin includes its upper edge (ROOT fills the overflow): such values are moved below it, as little
 // as the bin lookup allows (with even bins one step can still round into the overflow), in a copy made only if there are any
-
 auto fillValues(const double* v, size_t n, const TAxis* axis, vector<double>& moved) -> const double*
 {
   const double upper = axis->GetXmax();
@@ -1214,7 +1206,6 @@ auto fillValues(const double* v, size_t n, const TAxis* axis, vector<double>& mo
 
 // NaN belongs to no bin (ROOT's FillN would put it into the overflow and count it as an entry): such entries are left out with a
 // warning, infinite values go into the flows as ROOT fills them; returns the entries kept (the columns of all of them in kept)
-
 auto withoutNaN(const string& name, const vector<const double*>& columns, size_t n, vector<vector<double>>& kept) -> size_t
 {
   vector<char> isNaN(n, 0);
@@ -1373,7 +1364,6 @@ auto histo2d(const string& name, py::object xValues, py::object yValues, py::obj
 // a table as a tree, from a dict of arrays, a numpy structured array or a pandas DataFrame (anything with columns and item access),
 // or from a 2D array (rows x columns, as pandas reads it) with the names given in columns:
 // numbers and bools keep their type, strings become string branches, other columns are skipped with a warning
-
 auto table(const string& name, py::object data, py::object columnNames)
 {
   py::module_ np;
