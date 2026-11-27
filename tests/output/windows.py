@@ -22,7 +22,7 @@ wait = float(sys.argv[sys.argv.index("--wait") + 1]) if "--wait" in sys.argv els
 import srptest as S  # noqa: E402
 from srptest import check, finish  # noqa: E402
 
-missingTools = [tool for tool in ("Xvfb", "openbox", "xdotool", "wmctrl") if not shutil.which(tool)]
+missingTools = [tool for tool in ("Xvfb", "openbox", "xdotool", "wmctrl", "xwininfo") if not shutil.which(tool)]
 if missingTools:
     S.skip(f"needs {', '.join(missingTools)}")
 number = random.randrange(100, 30000)
