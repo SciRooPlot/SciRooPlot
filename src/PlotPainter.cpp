@@ -10600,8 +10600,9 @@ void PlotPainter::HintAlikeData(TPad* pad) const
 //**************************************************************************************************
 /**
  * Hints at 1d data squeezed into a small part of the height of a flat pad with a linear y axis and only 1d data (counted are the values
- * within the x range of the frame with their error bars, a filled histogram down to zero): all data of the pad within less than a tenth
- * of the y range, so that it looks flat (a range set too wide). Only at verbosity hint.
+ * within the x range of the frame with their error bars, a filled histogram down to zero, and functions between their lowest and highest
+ * value there): all data of the pad within less than a tenth of the y range, so that it looks flat (a range set too wide); data without
+ * any spread is left alone. Only at verbosity hint.
  */
 //**************************************************************************************************
 void PlotPainter::HintSqueezedData(TPad* pad) const
@@ -10640,10 +10641,14 @@ void PlotPainter::HintSqueezedData(TPad* pad) const
         const double_t y = graph->GetPointY(i);
         add(graph->GetPointX(i), y - std::max(graph->GetErrorYlow(i), 0.), y + std::max(graph->GetErrorYhigh(i), 0.));
       }
+    } else if (auto* func = dynamic_cast<TF1*>(obj); func && func->GetNdim() == 1) {
+      const double_t xLow = std::max(frame[0], func->GetXmin()), xHigh = std::min(frame[2], func->GetXmax());
+      if (xLow < xHigh) add(0.5 * (xLow + xHigh), func->GetMinimum(xLow, xHigh), func->GetMaximum(xLow, xHigh));
     }
   }
-  if (extent && extent->second - extent->first < frameHeight / 10.) {
-    logger::hint("Plot {}: the data of pad {} fill only {:.0f}% of the height of its y axis and look flat: a narrower y range (or the automatic one) shows them.", mPlotLabel, pad->GetNumber(), 100. * (extent->second - extent->first) / frameHeight);
+  // data without any spread (a constant, a single point) looks flat in every range
+  if (extent && extent->second > extent->first && extent->second - extent->first < frameHeight / 10.) {
+    logger::hint("Plot {}: the data of pad {} fill only {:.2g}% of the height of its y axis and look flat: a narrower y range (or the automatic one) shows them.", mPlotLabel, pad->GetNumber(), 100. * (extent->second - extent->first) / frameHeight);
   }
 }
 

@@ -100,12 +100,15 @@ for i, (log, r) in enumerate(EDGE_RANGES):
     plot[1]["Y"].SetLog(log).SetRange(*r)
     p.pm.AddPlot(plot)
 # data squeezed by a y range set far too wide (under a tenth of its height: a hint); the automatic range, a range a little wider, a pad
-# with a map and a log axis none
-for name, yRange, log, overMap in (("squeezed", (0, 200), False, False), ("snug", (0, 14), False, False), ("automatic", None, False, False), ("squeezed_log", (1, 1e6), True, False), ("squeezed_map", (0, 200), False, True)):
+# with a map and a log axis none, nor data without spread (a constant without errors) or a function filling the range beside the data
+SQUEEZED = {"squeezed": True, "snug": False, "automatic": False, "squeezed_log": False, "squeezed_map": False, "constant": False, "with_function": False}
+for name, yRange, log, overMap in (("squeezed", (0, 200), False, False), ("snug", (0, 14), False, False), ("automatic", None, False, False), ("squeezed_log", (1, 1e6), True, False), ("squeezed_map", (0, 200), False, True), ("constant", None, False, False), ("with_function", (0, 200), False, False)):
     plot = S.Plot(name, "ranges", "1d")
     if overMap:
         plot[1].AddData("disc_map", "steps").SetDrawOption(S.colz)
-    plot[1].AddData("steps", "steps")
+    plot[1].AddData("constant" if name == "constant" else "steps", "steps")
+    if name == "with_function":
+        plot[1].AddFunction("2*x*x").SetRangeX(0, 10)
     if yRange:
         plot[1]["Y"].SetRange(*yRange).SetLog(log)
     p.pm.AddPlot(plot)
@@ -113,6 +116,11 @@ discMap = own(ROOT.TH2D("disc_map", "", 10, 0, 10, 10, 0, 200))
 for b in range(1, 101):
     discMap.SetBinContent(b, 1.0)
 p.pm.AddDataSource("steps", discMap)
+constant = own(ROOT.TH1D("constant", "", 10, 0, 10))
+for b in range(1, 11):
+    constant.SetBinContent(b, 1.0)
+    constant.SetBinError(b, 0.0)
+p.pm.AddDataSource("steps", constant)
 run = p.plot("ranges")
 
 for i, case in enumerate(todo):
@@ -208,7 +216,7 @@ frame = run.frame("narrow_peak", "ranges")
 funcs = [obj for obj in run.objects("narrow_peak", "ranges") if obj.InheritsFrom("TF1")]
 peak = 0.99 * funcs[0].GetMaximum() if funcs else None  # (the frame of 1000 samples reached 0.64)
 check("a function sampled at SetNpx points gives the frame: its peak inside", bool(frame) and peak is not None and frame["Y"][1] >= peak, f"frame up to {frame['Y'][1] if frame else None}, peak {peak}")
-for name, want in (("squeezed", True), ("snug", False), ("automatic", False), ("squeezed_log", False), ("squeezed_map", False)):
+for name, want in SQUEEZED.items():
     said = [m for m in run.messages(name, "ranges") if "look flat" in m]
     check(f"data under a tenth of the height of a linear y axis of 1d data gets a hint, other data none: {name}", len(said) == int(want), " | ".join(said))
 check("no errors from the run", not run.errors(), " | ".join(run.errors()[:3]))
