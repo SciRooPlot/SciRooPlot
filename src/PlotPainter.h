@@ -370,6 +370,28 @@ class PlotPainter
   bool ReadContentAxis(item_state_t& state, double_t& min, double_t& max);
   template <typename T>
   void EmptyMapFrame(item_state_t& state, const std::pair<double_t, double_t>& graphRangeZ, const std::pair<double_t, double_t>& graphStoredZ);
+  // the settings of an axis merged over pad 0 and the pad (MergeAxisSettings)
+  struct merged_axis_t {
+    std::optional<int16_t> textFontTitle;
+    std::optional<float_t> textSizeTitle;
+    std::optional<color_t> textColorTitle;
+    std::optional<float_t> textAlphaTitle;
+    std::optional<int16_t> textFontLabel;
+    std::optional<float_t> textSizeLabel;
+    std::optional<color_t> textColorLabel;
+    std::optional<float_t> textAlphaLabel;
+    std::optional<float_t> labelAngle;
+    std::optional<double_t> userRangeMin;
+    std::optional<double_t> userRangeMax;
+    bool userTitleOffset{};
+    bool userTitleCenter{};
+    std::optional<color_t> axisColor;  // merged over pad 0 and the pad like the title and labels: an alpha of pad 0 stays with a colour of the pad
+    std::optional<float_t> axisAlpha;
+  };
+  merged_axis_t MergeAxisSettings(pad_state_t& padState, char axisLabel, TAxis* axis_ptr);
+  static double_t PositiveMinimumInFrame(TH1* axisHist_ptr, const std::optional<std::vector<std::array<double_t, 3>>>& graphPositivePoints,
+                                         const std::optional<std::vector<std::array<double_t, 5>>>& polyPositiveBins);
+  static void ApplyLabelAngle(TAxis* axis_ptr, char axisLabel, bool hbarFrame, uint8_t padID, float_t angle);
   template <typename T>
   void ApplyAxisSettings(pad_state_t& padState, char axisLabel, const std::optional<std::vector<std::array<double_t, 3>>>& graphPositivePoints,
                          const std::optional<std::vector<std::array<double_t, 5>>>& polyPositiveBins, const std::optional<double_t>& graphPositiveMinimumX);

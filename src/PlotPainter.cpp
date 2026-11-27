@@ -3792,10 +3792,6 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
   auto& pad = padState.pad;
   auto& padID = padState.padID;
   auto& pad_ptr = padState.pad_ptr;
-  auto& textFont = padState.textFont;
-  auto& textSize = padState.textSize;
-  auto& textColor = padState.textColor;
-  auto& textAlpha = padState.textAlpha;
   auto& axisHist_ptr = padState.axisHist_ptr;
   auto& hbarFrame = padState.hbarFrame;
   const int32_t frameDim = axisHist_ptr->GetDimension();
@@ -3811,111 +3807,23 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
     axis_ptr = axisHist_ptr->GetZaxis();
   if (!axis_ptr) return;
 
-  auto textFontTitle = textFont;
-  auto textSizeTitle = textSize;
-  auto textColorTitle = textColor;
-  auto textAlphaTitle = textAlpha;
-  auto textFontLabel = textFont;
-  auto textSizeLabel = textSize;
-  auto textColorLabel = textColor;
-  auto textAlphaLabel = textAlpha;
-  optional<float_t> labelAngle;
-
-  optional<double_t> userRangeMin;
-  optional<double_t> userRangeMax;
-  bool userTitleOffset{};
-  bool userTitleCenter{};
-  optional<color_t> axisColor;  // merged over pad 0 and the pad like the title and labels: an alpha of pad 0 stays with a colour of the pad
-  optional<float_t> axisAlpha;
-
   // first apply default pad values and then settings for this specific pad
-  for (const auto* axisSettings : AxisSettings(pad, padDefaults, axisLabel)) {
-    const auto& axisLayout = *axisSettings;
-    if (axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).data());
-
-    if (axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
-    if (axisLayout.GetLabelFont()) textFontLabel = axisLayout.GetLabelFont();
-
-    if (axisLayout.GetTitleColor()) textColorTitle = axisLayout.GetTitleColor();
-    if (axisLayout.GetLabelColor()) textColorLabel = axisLayout.GetLabelColor();
-
-    if (axisLayout.GetTitleAlpha()) textAlphaTitle = axisLayout.GetTitleAlpha();
-    if (axisLayout.GetLabelAlpha()) textAlphaLabel = axisLayout.GetLabelAlpha();
-
-    if (axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
-    if (axisLayout.GetLabelSize()) textSizeLabel = axisLayout.GetLabelSize();
-    if (axisLayout.GetLabelAngle()) labelAngle = axisLayout.GetLabelAngle();
-
-    if (axisLayout.GetTitleCenter()) {
-      axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
-      userTitleCenter = true;
-    }
-    if (axisLayout.GetLabelCenter()) axis_ptr->CenterLabels(*axisLayout.GetLabelCenter());
-
-    if (axisLayout.GetAxisColor()) axisColor = axisLayout.GetAxisColor();
-    if (axisLayout.GetAxisAlpha()) axisAlpha = axisLayout.GetAxisAlpha();
-
-    if (axisLayout.GetTitleOffset()) {
-      axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
-      userTitleOffset = true;
-    }
-    if (axisLayout.GetLabelOffset()) axis_ptr->SetLabelOffset(*axisLayout.GetLabelOffset());
-
-    if (axisLayout.GetTickLength()) axis_ptr->SetTickLength(*axisLayout.GetTickLength());
-    if (axisLayout.GetMaxDigits()) axis_ptr->SetMaxDigits(*axisLayout.GetMaxDigits());
-
-    if (axisLayout.GetNumDivisions()) axis_ptr->SetNdivisions(*axisLayout.GetNumDivisions());
-
-    if (axisLayout.GetOppositeTicks()) {
-      if (axisLabel == 'X') {
-        pad_ptr->SetTickx(*axisLayout.GetOppositeTicks());
-      } else if (axisLabel == 'Y') {
-        pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
-      }
-    }
-    if (axisLayout.GetNoExponent()) {
-      axis_ptr->SetNoExponent(*axisLayout.GetNoExponent());
-    }
-    if (axisLayout.GetMoreLogLabels()) {
-      axis_ptr->SetMoreLogLabels(*axisLayout.GetMoreLogLabels());
-    }
-    if (axisLayout.GetTimeFormat()) {
-      axis_ptr->SetTimeDisplay(1);
-      axis_ptr->SetTimeFormat((*axisLayout.GetTimeFormat()).data());
-    }
-    if (axisLayout.GetTickOrientation()) {
-      axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).data());
-    }
-
-    // the ranges are applied below, once the default and pad-specific settings are merged
-    if (axisLayout.GetMinRange()) userRangeMin = axisLayout.GetMinRange();
-    if (axisLayout.GetMaxRange()) userRangeMax = axisLayout.GetMaxRange();
-
-    if (axisLayout.GetLog() && *axisLayout.GetLog() && padState.polargram && axisLabel != 'Z') {
-      ReportIgnored(fmt::format("The log scale of the {} axis of pad {}", axisLabel, padID), "a polar grid has no x and y axes");
-    } else if (axisLayout.GetLog()) {
-      if (axisLabel == 'X') {
-        pad_ptr->SetLogx(*axisLayout.GetLog());
-      } else if (axisLabel == 'Y') {
-        pad_ptr->SetLogy(*axisLayout.GetLog());
-      } else if (axisLabel == 'Z') {
-        pad_ptr->SetLogz(*axisLayout.GetLog());
-      }
-    }
-    if (axisLabel != 'Z' && (axisLayout.GetColorScaleOffset() || axisLayout.GetColorScaleWidth())) {
-      ReportIgnored(fmt::format("The colour scale offset or width of the {} axis", axisLabel), "only the Z axis (C of a 3d histogram) has a colour scale");
-    }
-    if (axisLabel == 'Z' && (axisLayout.GetGrid() || axisLayout.GetOppositeTicks())) {
-      ReportIgnored("A grid or opposite ticks of the Z axis", "ROOT draws them on X and Y only", true);
-    }
-    if (axisLayout.GetGrid()) {
-      if (axisLabel == 'X') {
-        pad_ptr->SetGridx(*axisLayout.GetGrid());
-      } else if (axisLabel == 'Y') {
-        pad_ptr->SetGridy(*axisLayout.GetGrid());
-      }
-    }
-  }
+  auto merged = MergeAxisSettings(padState, axisLabel, axis_ptr);
+  auto& textFontTitle = merged.textFontTitle;
+  auto& textSizeTitle = merged.textSizeTitle;
+  auto& textColorTitle = merged.textColorTitle;
+  auto& textAlphaTitle = merged.textAlphaTitle;
+  auto& textFontLabel = merged.textFontLabel;
+  auto& textSizeLabel = merged.textSizeLabel;
+  auto& textColorLabel = merged.textColorLabel;
+  auto& textAlphaLabel = merged.textAlphaLabel;
+  auto& labelAngle = merged.labelAngle;
+  auto& userRangeMin = merged.userRangeMin;
+  auto& userRangeMax = merged.userRangeMax;
+  auto& userTitleOffset = merged.userTitleOffset;
+  auto& userTitleCenter = merged.userTitleCenter;
+  auto& axisColor = merged.axisColor;
+  auto& axisAlpha = merged.axisAlpha;
   axis_ptr->SetAxisColor(ColorWithAlpha(axis_ptr->GetAxisColor(), axisColor, axisAlpha));
   // the title set above or stored with the input
   if (string title = axis_ptr->GetTitle(); title.find('\\') != string::npos) {
@@ -4037,44 +3945,7 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
       if (ignoredRangeMin) applyUserRange(std::exchange(ignoredRangeMin, nullopt), userRangeMax, true);
     };
     if (isLog && isDependentAxis) {
-      // the smallest positive value is taken from the data drawn inside the frame's ranges (the binned axes are set before):
-      // GetMinimum(0.) would return the stored minimum (which every graph frame has)
-      double_t positiveMinimum = std::numeric_limits<double_t>::infinity();
-      const TAxis* xAxis = axisHist_ptr->GetXaxis();
-      const TAxis* yAxis = axisHist_ptr->GetYaxis();
-      const auto binRange = [](const TAxis* axis) { return std::make_pair(std::max(axis->GetFirst(), 1), std::min(axis->GetLast(), axis->GetNbins())); };
-      if (graphPositivePoints) {
-        // the frame of a 1d graph has its x axis set to the range (a point counts where its x error bar reaches into it), that of a
-        // 2d graph its bins selected
-        const auto inRange = [&](const TAxis* axis, double_t low, double_t high) {
-          const auto [first, last] = binRange(axis);
-          return high >= axis->GetBinLowEdge(first) && low <= axis->GetBinUpEdge(last);
-        };
-        for (const auto& [a, b, value] : *graphPositivePoints) {
-          const bool shown = (frameDim == 1) ? inRange(xAxis, a, b) : inRange(xAxis, a, a) && inRange(yAxis, b, b);
-          if (shown) positiveMinimum = std::min(positiveMinimum, value);
-        }
-      } else if (polyPositiveBins) {
-        // the polygons reaching into the x and y ranges of the frame
-        const auto [firstX, lastX] = binRange(xAxis);
-        const auto [firstY, lastY] = binRange(yAxis);
-        for (const auto& [x0, x1, y0, y1, content] : *polyPositiveBins) {
-          const bool shownX = x1 >= xAxis->GetBinLowEdge(firstX) && x0 <= xAxis->GetBinUpEdge(lastX);
-          if (shownX && y1 >= yAxis->GetBinLowEdge(firstY) && y0 <= yAxis->GetBinUpEdge(lastY)) positiveMinimum = std::min(positiveMinimum, content);
-        }
-      } else {
-        const auto [firstX, lastX] = binRange(xAxis);
-        const auto [firstY, lastY] = (frameDim > 1) ? binRange(yAxis) : std::make_pair(0, 0);
-        const auto [firstZ, lastZ] = (frameDim > 2) ? binRange(axisHist_ptr->GetZaxis()) : std::make_pair(0, 0);
-        for (int32_t binZ = firstZ; binZ <= lastZ; ++binZ) {
-          for (int32_t binY = firstY; binY <= lastY; ++binY) {
-            for (int32_t binX = firstX; binX <= lastX; ++binX) {
-              const double_t content = axisHist_ptr->GetBinContent(binX, binY, binZ);
-              if (content > 0.) positiveMinimum = std::min(positiveMinimum, content);
-            }
-          }
-        }
-      }
+      const double_t positiveMinimum = PositiveMinimumInFrame(axisHist_ptr, graphPositivePoints, polyPositiveBins);
       if (std::isinf(positiveMinimum)) {
         // a positive user range is enough for ROOT (e.g. an empty histogram as frame), as is a positive minimum stored with a histogram
         // that defines the frame (graph frames always have a stored minimum, computed from the points)
@@ -4149,30 +4020,7 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
   }
   if (textColorLabel) axis_ptr->SetLabelColor(textColorLabel->ToIndex());
   if (textAlphaLabel) axis_ptr->SetLabelColor(TColor::GetColorTransparent(axis_ptr->GetLabelColor(), *textAlphaLabel));
-  if (labelAngle) {
-    // with horizontal bars the bin labels are on the vertical axis, where TGaxis paints them horizontally (angle 0, as on a y axis)
-    if (axisLabel == 'X' && !hbarFrame && axis_ptr->GetLabels()) {
-      // TGaxis::PaintAxis knows four orientations of the bin labels (the bits LabelsOption sets), each with the alignment that fits
-      // it; another angle is given to every label (ChangeLabel numbers them by bin, takes only angles >= 0) with the alignment
-      // ROOT uses for its tilted ones: a label rising to the right ends at its tick, a falling one starts there
-      const float_t angle = *labelAngle;
-      const std::array<std::pair<float_t, TAxis::EStatusBits>, 4> orientations{
-        {{0.f, TAxis::kLabelsHori}, {90.f, TAxis::kLabelsVert}, {20.f, TAxis::kLabelsUp}, {-20.f, TAxis::kLabelsDown}}};
-      bool fixed{};
-      for (const auto& [fixedAngle, bit] : orientations) {
-        axis_ptr->SetBit(bit, angle == fixedAngle);
-        fixed = fixed || angle == fixedAngle;
-      }
-      if (!fixed) {
-        const float_t positive = std::fmod(std::fmod(angle, 360.f) + 360.f, 360.f);
-        for (int32_t bin = 1; bin <= axis_ptr->GetNbins(); ++bin) {
-          axis_ptr->ChangeLabel(bin, positive, -1., (positive < 180.f) ? 32 : 12);
-        }
-      }
-    } else {
-      logger::warning("The label angle of the {} axis of pad {} is not applied: ROOT tilts only the bin labels of an x axis drawn horizontally.", axisLabel, padID);
-    }
-  }
+  if (labelAngle) ApplyLabelAngle(axis_ptr, axisLabel, hbarFrame, padID, *labelAngle);
   // ROOT places a y title with offset 0 automatically next to the widest label, but the gap it leaves is the title size
   // read as a fraction of the pad width (see TGaxis::PaintAxis), i.e. it grows for pads that are wider than high.
   // With a pixel font the gap is the title height in every pad, so relative fonts are converted for the automatic placement.
@@ -4181,6 +4029,203 @@ void PlotPainter::ApplyAxisSettings(pad_state_t& padState, char axisLabel, const
     const auto [padWidthPixel, padHeightPixel] = PadSizePixel(pad_ptr);
     axis_ptr->SetTitleFont(axis_ptr->GetTitleFont() / 10 * 10 + 3);
     axis_ptr->SetTitleSize(static_cast<float_t>(axis_ptr->GetTitleSize() * std::min(padWidthPixel, padHeightPixel) / mScale));
+  }
+}
+
+//**************************************************************************************************
+/**
+ * The settings of an axis, first those of pad 0 and then those of the pad: what ROOT's axis takes is set on it, the text attributes,
+ * ranges and colours are returned merged (applied by ApplyAxisSettings).
+ */
+//**************************************************************************************************
+PlotPainter::merged_axis_t PlotPainter::MergeAxisSettings(pad_state_t& padState, char axisLabel, TAxis* axis_ptr)
+{
+  const auto& padDefaults = padState.padDefaults;
+  const auto& pad = padState.pad;
+  const auto& padID = padState.padID;
+  auto& pad_ptr = padState.pad_ptr;
+  merged_axis_t merged{padState.textFont, padState.textSize, padState.textColor, padState.textAlpha, padState.textFont, padState.textSize, padState.textColor, padState.textAlpha};
+  auto& textFontTitle = merged.textFontTitle;
+  auto& textSizeTitle = merged.textSizeTitle;
+  auto& textColorTitle = merged.textColorTitle;
+  auto& textAlphaTitle = merged.textAlphaTitle;
+  auto& textFontLabel = merged.textFontLabel;
+  auto& textSizeLabel = merged.textSizeLabel;
+  auto& textColorLabel = merged.textColorLabel;
+  auto& textAlphaLabel = merged.textAlphaLabel;
+  auto& labelAngle = merged.labelAngle;
+  auto& userRangeMin = merged.userRangeMin;
+  auto& userRangeMax = merged.userRangeMax;
+  auto& userTitleOffset = merged.userTitleOffset;
+  auto& userTitleCenter = merged.userTitleCenter;
+  auto& axisColor = merged.axisColor;
+  auto& axisAlpha = merged.axisAlpha;
+  for (const auto* axisSettings : AxisSettings(pad, padDefaults, axisLabel)) {
+    const auto& axisLayout = *axisSettings;
+    if (axisLayout.GetTitle()) axis_ptr->SetTitle((*axisLayout.GetTitle()).data());
+
+    if (axisLayout.GetTitleFont()) textFontTitle = axisLayout.GetTitleFont();
+    if (axisLayout.GetLabelFont()) textFontLabel = axisLayout.GetLabelFont();
+
+    if (axisLayout.GetTitleColor()) textColorTitle = axisLayout.GetTitleColor();
+    if (axisLayout.GetLabelColor()) textColorLabel = axisLayout.GetLabelColor();
+
+    if (axisLayout.GetTitleAlpha()) textAlphaTitle = axisLayout.GetTitleAlpha();
+    if (axisLayout.GetLabelAlpha()) textAlphaLabel = axisLayout.GetLabelAlpha();
+
+    if (axisLayout.GetTitleSize()) textSizeTitle = axisLayout.GetTitleSize();
+    if (axisLayout.GetLabelSize()) textSizeLabel = axisLayout.GetLabelSize();
+    if (axisLayout.GetLabelAngle()) labelAngle = axisLayout.GetLabelAngle();
+
+    if (axisLayout.GetTitleCenter()) {
+      axis_ptr->CenterTitle(*axisLayout.GetTitleCenter());
+      userTitleCenter = true;
+    }
+    if (axisLayout.GetLabelCenter()) axis_ptr->CenterLabels(*axisLayout.GetLabelCenter());
+
+    if (axisLayout.GetAxisColor()) axisColor = axisLayout.GetAxisColor();
+    if (axisLayout.GetAxisAlpha()) axisAlpha = axisLayout.GetAxisAlpha();
+
+    if (axisLayout.GetTitleOffset()) {
+      axis_ptr->SetTitleOffset(*axisLayout.GetTitleOffset());
+      userTitleOffset = true;
+    }
+    if (axisLayout.GetLabelOffset()) axis_ptr->SetLabelOffset(*axisLayout.GetLabelOffset());
+
+    if (axisLayout.GetTickLength()) axis_ptr->SetTickLength(*axisLayout.GetTickLength());
+    if (axisLayout.GetMaxDigits()) axis_ptr->SetMaxDigits(*axisLayout.GetMaxDigits());
+
+    if (axisLayout.GetNumDivisions()) axis_ptr->SetNdivisions(*axisLayout.GetNumDivisions());
+
+    if (axisLayout.GetOppositeTicks()) {
+      if (axisLabel == 'X') {
+        pad_ptr->SetTickx(*axisLayout.GetOppositeTicks());
+      } else if (axisLabel == 'Y') {
+        pad_ptr->SetTicky(*axisLayout.GetOppositeTicks());
+      }
+    }
+    if (axisLayout.GetNoExponent()) {
+      axis_ptr->SetNoExponent(*axisLayout.GetNoExponent());
+    }
+    if (axisLayout.GetMoreLogLabels()) {
+      axis_ptr->SetMoreLogLabels(*axisLayout.GetMoreLogLabels());
+    }
+    if (axisLayout.GetTimeFormat()) {
+      axis_ptr->SetTimeDisplay(1);
+      axis_ptr->SetTimeFormat((*axisLayout.GetTimeFormat()).data());
+    }
+    if (axisLayout.GetTickOrientation()) {
+      axis_ptr->SetTicks((*axisLayout.GetTickOrientation()).data());
+    }
+
+    // the ranges are applied below, once the default and pad-specific settings are merged
+    if (axisLayout.GetMinRange()) userRangeMin = axisLayout.GetMinRange();
+    if (axisLayout.GetMaxRange()) userRangeMax = axisLayout.GetMaxRange();
+
+    if (axisLayout.GetLog() && *axisLayout.GetLog() && padState.polargram && axisLabel != 'Z') {
+      ReportIgnored(fmt::format("The log scale of the {} axis of pad {}", axisLabel, padID), "a polar grid has no x and y axes");
+    } else if (axisLayout.GetLog()) {
+      if (axisLabel == 'X') {
+        pad_ptr->SetLogx(*axisLayout.GetLog());
+      } else if (axisLabel == 'Y') {
+        pad_ptr->SetLogy(*axisLayout.GetLog());
+      } else if (axisLabel == 'Z') {
+        pad_ptr->SetLogz(*axisLayout.GetLog());
+      }
+    }
+    if (axisLabel != 'Z' && (axisLayout.GetColorScaleOffset() || axisLayout.GetColorScaleWidth())) {
+      ReportIgnored(fmt::format("The colour scale offset or width of the {} axis", axisLabel), "only the Z axis (C of a 3d histogram) has a colour scale");
+    }
+    if (axisLabel == 'Z' && (axisLayout.GetGrid() || axisLayout.GetOppositeTicks())) {
+      ReportIgnored("A grid or opposite ticks of the Z axis", "ROOT draws them on X and Y only", true);
+    }
+    if (axisLayout.GetGrid()) {
+      if (axisLabel == 'X') {
+        pad_ptr->SetGridx(*axisLayout.GetGrid());
+      } else if (axisLabel == 'Y') {
+        pad_ptr->SetGridy(*axisLayout.GetGrid());
+      }
+    }
+  }
+  return merged;
+}
+
+//**************************************************************************************************
+/**
+ * The smallest positive value of the data drawn inside the frame's ranges (the binned axes are set before), infinity if there is none:
+ * GetMinimum(0.) would return the stored minimum (which every graph frame has).
+ */
+//**************************************************************************************************
+double_t PlotPainter::PositiveMinimumInFrame(TH1* axisHist_ptr, const optional<vector<array<double_t, 3>>>& graphPositivePoints,
+                                             const optional<vector<array<double_t, 5>>>& polyPositiveBins)
+{
+  const int32_t frameDim = axisHist_ptr->GetDimension();
+  double_t positiveMinimum = std::numeric_limits<double_t>::infinity();
+  const TAxis* xAxis = axisHist_ptr->GetXaxis();
+  const TAxis* yAxis = axisHist_ptr->GetYaxis();
+  const auto binRange = [](const TAxis* axis) { return std::make_pair(std::max(axis->GetFirst(), 1), std::min(axis->GetLast(), axis->GetNbins())); };
+  if (graphPositivePoints) {
+    // the frame of a 1d graph has its x axis set to the range (a point counts where its x error bar reaches into it), that of a
+    // 2d graph its bins selected
+    const auto inRange = [&](const TAxis* axis, double_t low, double_t high) {
+      const auto [first, last] = binRange(axis);
+      return high >= axis->GetBinLowEdge(first) && low <= axis->GetBinUpEdge(last);
+    };
+    for (const auto& [a, b, value] : *graphPositivePoints) {
+      const bool shown = (frameDim == 1) ? inRange(xAxis, a, b) : inRange(xAxis, a, a) && inRange(yAxis, b, b);
+      if (shown) positiveMinimum = std::min(positiveMinimum, value);
+    }
+  } else if (polyPositiveBins) {
+    // the polygons reaching into the x and y ranges of the frame
+    const auto [firstX, lastX] = binRange(xAxis);
+    const auto [firstY, lastY] = binRange(yAxis);
+    for (const auto& [x0, x1, y0, y1, content] : *polyPositiveBins) {
+      const bool shownX = x1 >= xAxis->GetBinLowEdge(firstX) && x0 <= xAxis->GetBinUpEdge(lastX);
+      if (shownX && y1 >= yAxis->GetBinLowEdge(firstY) && y0 <= yAxis->GetBinUpEdge(lastY)) positiveMinimum = std::min(positiveMinimum, content);
+    }
+  } else {
+    const auto [firstX, lastX] = binRange(xAxis);
+    const auto [firstY, lastY] = (frameDim > 1) ? binRange(yAxis) : std::make_pair(0, 0);
+    const auto [firstZ, lastZ] = (frameDim > 2) ? binRange(axisHist_ptr->GetZaxis()) : std::make_pair(0, 0);
+    for (int32_t binZ = firstZ; binZ <= lastZ; ++binZ) {
+      for (int32_t binY = firstY; binY <= lastY; ++binY) {
+        for (int32_t binX = firstX; binX <= lastX; ++binX) {
+          const double_t content = axisHist_ptr->GetBinContent(binX, binY, binZ);
+          if (content > 0.) positiveMinimum = std::min(positiveMinimum, content);
+        }
+      }
+    }
+  }
+  return positiveMinimum;
+}
+
+//**************************************************************************************************
+/**
+ * The angle of the labels of an axis: only the bin labels of an x axis drawn horizontally can be tilted.
+ */
+//**************************************************************************************************
+void PlotPainter::ApplyLabelAngle(TAxis* axis_ptr, char axisLabel, bool hbarFrame, uint8_t padID, float_t angle)
+{
+  // with horizontal bars the bin labels are on the vertical axis, where TGaxis paints them horizontally (angle 0, as on a y axis)
+  if (axisLabel == 'X' && !hbarFrame && axis_ptr->GetLabels()) {
+    // TGaxis::PaintAxis knows four orientations of the bin labels (the bits LabelsOption sets), each with the alignment that fits
+    // it; another angle is given to every label (ChangeLabel numbers them by bin, takes only angles >= 0) with the alignment
+    // ROOT uses for its tilted ones: a label rising to the right ends at its tick, a falling one starts there
+    const std::array<std::pair<float_t, TAxis::EStatusBits>, 4> orientations{
+      {{0.f, TAxis::kLabelsHori}, {90.f, TAxis::kLabelsVert}, {20.f, TAxis::kLabelsUp}, {-20.f, TAxis::kLabelsDown}}};
+    bool fixed{};
+    for (const auto& [fixedAngle, bit] : orientations) {
+      axis_ptr->SetBit(bit, angle == fixedAngle);
+      fixed = fixed || angle == fixedAngle;
+    }
+    if (!fixed) {
+      const float_t positive = std::fmod(std::fmod(angle, 360.f) + 360.f, 360.f);
+      for (int32_t bin = 1; bin <= axis_ptr->GetNbins(); ++bin) {
+        axis_ptr->ChangeLabel(bin, positive, -1., (positive < 180.f) ? 32 : 12);
+      }
+    }
+  } else {
+    logger::warning("The label angle of the {} axis of pad {} is not applied: ROOT tilts only the bin labels of an x axis drawn horizontally.", axisLabel, padID);
   }
 }
 
