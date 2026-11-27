@@ -17,9 +17,9 @@ IGNORED = re.compile(r"(?<![\w:])(ReportIgnored|ignored)\(")
 
 
 def shown(text):
-    """a format string as shown on the site: the arguments as …"""
+    """a format string as shown on the site: the arguments as … (adjacent ones, e.g. colour codes around a name, as one)"""
     text = text.replace('\\"', '"').replace("\\n", " ").replace("{{", "\x01").replace("}}", "\x02")
-    return re.sub(r"\{[^{}]*\}", "…", text).replace("\x01", "{").replace("\x02", "}").strip()
+    return re.sub(r"(\{[^{}]*\})+", "…", text).replace("\x01", "{").replace("\x02", "}").strip()
 
 
 def arguments(source, start):
