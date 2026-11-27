@@ -464,6 +464,10 @@ bool PlotManager::ReplaceOutputFile(const string& tmpPath, const string& filePat
 //**************************************************************************************************
 bool PlotManager::CreateOutputDirectory() const
 {
+  if (Config::Get().OutputDirOverride() && OutputFolder().empty()) {
+    logger::error("No files are written: SCIROOPLOT_OUTDIR uses a variable that is not set.");
+    return false;
+  }
   if (OutputFolder().empty()) {
     logger::error("No output directory was specified: set one with {}.", (mProjectName.empty()) ? "SetOutputDirectory" : fmt::format("srp set {} outdir <folder> (or SetOutputDirectory in the program)", mProjectName));
     return false;
@@ -1687,7 +1691,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   const bool isInteractiveMode = (mode == "show" || mode == "spread");
   const bool needsDisplay = isInteractiveMode || mode == "macro";
   // said once for all plots (a program plotting in memory has no project directory unless it sets one); print writes nothing
-  if (!isInteractiveMode && mode != "print" && OutputFolder().empty()) {
+  if (!isInteractiveMode && mode != "print" && OutputFolder().empty() && !Config::Get().OutputDirOverride()) {
     // in a project (the plot command) the folder is set with srp, in a program with SetOutputDirectory
     const string how = (mProjectName.empty()) ? "SetOutputDirectory" : fmt::format("srp set {} outdir <folder> (or SetOutputDirectory in the program)", mProjectName);
     logger::error("No output directory was specified: set one with {} before writing plots in mode '{}'.", how, mode);

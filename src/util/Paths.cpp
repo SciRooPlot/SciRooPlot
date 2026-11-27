@@ -58,8 +58,8 @@ vector<string> split_input_path(const string& input)
 }
 
 // expands a leading ~ and environment variables ($VAR, ${VAR}) like bash; wildcards are matched where the paths are used
-// nullopt if a variable is not set (reported here)
-std::optional<string> expand_path(const string& path)
+// nullopt if a variable is not set (reported here, or only named in unsetVariable where the logger cannot be used yet)
+std::optional<string> expand_path(const string& path, string* unsetVariable)
 {
   string expandedPath;
   size_t pos = 0;
@@ -94,7 +94,11 @@ std::optional<string> expand_path(const string& path)
     const string name = path.substr(nameStart, nameEnd - nameStart);
     const char* value = std::getenv(name.data());
     if (!value) {
-      logger::error("Environment variable {} used in path {} is not set.", name, path);
+      if (unsetVariable) {
+        *unsetVariable = name;
+      } else {
+        logger::error("Environment variable {} used in path {} is not set.", name, path);
+      }
       return std::nullopt;
     }
     expandedPath += value;

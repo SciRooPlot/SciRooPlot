@@ -33,7 +33,7 @@
 
 namespace SciRooPlot::util
 {
-std::optional<std::string> expand_path(const std::string& path);
+std::optional<std::string> expand_path(const std::string& path, std::string* unsetVariable = nullptr);
 
 // a URL like root://host//path or https://host/path: read through ROOT's network plugins, not the local file system
 inline bool is_remote(const std::string& path)

@@ -167,7 +167,12 @@ Config::Config()
   }
   // the folder this process writes its files to (e.g. a check that must not overwrite the user's output), the stored ones untouched
   if (const char* outdir = gSystem->Getenv("SCIROOPLOT_OUTDIR"); outdir && *outdir) {
-    if (auto expanded = expand_path(outdir); expanded && !expanded->empty()) {
+    string unsetVariable;
+    if (auto expanded = expand_path(outdir, &unsetVariable); !expanded) {
+      // no fallback to the stored folders: the files the variable keeps from being overwritten would be
+      mOutputDirOverride = "";
+      std::cerr << "SCIROOPLOT_OUTDIR '" << outdir << "' uses the variable " << unsetVariable << ", which is not set: no files are written." << std::endl;
+    } else if (!expanded->empty()) {
       mOutputDirOverride = std::filesystem::absolute(*expanded).lexically_normal().string();
     }
   }

@@ -6,7 +6,8 @@ run as it was (it is written at the end of a run); a Plots.root that is a symbol
 a link to a file not written yet, through another link).
 The UserData.root of a project is replaced only when the program saves the project, and the files a process writes the in-memory inputs
 to are gone when it ends (also those of a process ended by a signal, once another one writes in-memory inputs).
-SCIROOPLOT_OUTDIR sends the files of one process to another folder, the output folder of the project and its stored path untouched.
+SCIROOPLOT_OUTDIR sends the files of one process to another folder, the output folder of the project and its stored path untouched; one
+naming a variable that is not set writes nothing.
 Covers: two runs at once, a write of Plots.root cut short, Ctrl-C during a long run, a Plots.root linked elsewhere, in-memory inputs."""
 
 import os
@@ -40,6 +41,14 @@ check(
     "SCIROOPLOT_OUTDIR: the pictures written there, none in the output folder of the project, its stored path unchanged",
     moved.rc == 0 and os.path.isfile(os.path.join(elsewhere, "g", "p1.png")) and not os.path.exists(os.path.join(out, "g", "p1.png")) and storedOut == out,
     f"stored {storedOut} | {moved.log[-300:]}",
+)
+# a variable in it that is not set: said, and nothing written (not into the output folder of the project either)
+os.environ.pop("SRP_TEST_UNSET", None)
+unexpanded = p.plot("g", "p2", mode="png", env={"SCIROOPLOT_OUTDIR": "$SRP_TEST_UNSET/x"})
+check(
+    "SCIROOPLOT_OUTDIR with a variable that is not set: said, no picture written anywhere",
+    unexpanded.rc > 0 and "SRP_TEST_UNSET, which is not set" in unexpanded.log and not os.path.exists(os.path.join(out, "g", "p2.png")),
+    f"exit status {unexpanded.rc} | {unexpanded.log[-300:]}",
 )
 
 
