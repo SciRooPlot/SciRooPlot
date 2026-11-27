@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
       return 1;
     }
     // the most words a command takes (with the command itself), as srp help shows them
-    static const std::map<string, int> maxWords{{"help", 1}, {"info", 1}, {"settings", 1}, {"clean", 1}, {"reset", 1}, {"projects", 2}, {"select", 2}, {"remove", 2}, {"confdir", 2}, {"print", 2}, {"open", 2}, {"colorwheel", 2}, {"rename", 3}, {"get", 3}, {"unset", 3}, {"cache", 3}, {"add", 4}, {"set", 4}, {"plotmode", 2}, {"color", 2}, {"verbosity", 2}, {"matchmode", 2}, {"matchcase", 2}, {"screenscale", 2}, {"bitmapscale", 2}};
+    static const std::map<string, int> maxWords{{"help", 1}, {"info", 1}, {"settings", 1}, {"clean", 1}, {"reset", 1}, {"projects", 2}, {"select", 2}, {"remove", 2}, {"confdir", 2}, {"print", 2}, {"plot", 3}, {"open", 2}, {"colorwheel", 2}, {"rename", 3}, {"get", 3}, {"unset", 3}, {"cache", 3}, {"add", 4}, {"set", 4}, {"plotmode", 2}, {"color", 2}, {"verbosity", 2}, {"matchmode", 2}, {"matchcase", 2}, {"screenscale", 2}, {"bitmapscale", 2}};
     if (auto words = maxWords.find(command); words != maxWords.end() && argc - 1 > words->second) {
       logger::error("Too many arguments for srp {} (srp help shows its arguments; quote a value containing spaces).", command);
       return 1;
@@ -278,6 +278,7 @@ int command_help(listing_t& listing)
   row("srp print hepdata:<record>[:<table>]", "data names of a HEPData record (or downloaded file)");
   row("srp print <table file>", "data name, rows and column types of a table");
   row("srp print <data source>[:<path>]", "objects of a data source of the current project as read");
+  row("srp plot <file>[:<path>] <name>", "show one object of a ROOT file on screen");
   row("srp open <file>", "open a ROOT file in a TBrowser");
   row("srp colorwheel [<file>]", "ROOT's colours with their names");
   heading("Environment");
@@ -329,6 +330,66 @@ int command_open(const string& project)
     rb->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
   }
   app->Run();
+  return 0;
+}
+
+//**************************************************************************************************
+/**
+ * srp plot.
+ */
+//**************************************************************************************************
+int command_plot(const string& project, const string& property)
+{
+  // one object shown in the shipped look, without a project: the file (or a folder in it) is the data source, the name a path below it
+  if (project.empty() || property.empty()) {
+    logger::error("Specify a file and an object: srp plot <file>[:<path>] <name>.");
+    return 1;
+  }
+  const auto input = util::expand_path(project);  // as in the inputs of data sources
+  if (!input) return 1;                           // reported
+  const auto fileAndFolder = util::split_input_path(*input);
+  std::error_code existsError;
+  if (util::is_missing_local_file(fileAndFolder[0], existsError)) {
+    logger::error("Could not find file {}.", fileAndFolder[0]);
+    return 1;
+  }
+  // 2d data gets the base plot with colour scale; data not found is reported by the plot
+  bool is2d{};
+  {
+    std::unique_ptr<TFile> file;
+    {
+      auto quiet = util::ignore_root_messages_below(kFatal);  // a file that is not a ROOT file is reported below
+      file = util::open_input_file(fileAndFolder[0]);
+    }
+    if (!file || file->IsZombie()) {
+      logger::error("Cannot read {}: srp plot shows objects of ROOT files.", fileAndFolder[0]);
+      return 1;
+    }
+    const string folder = (fileAndFolder.size() > 1) ? fileAndFolder[1] + "/" : "";
+    TObject* object = find_in_file(file.get(), folder + property);
+    if (auto* hist = dynamic_cast<TH1*>(object)) {
+      is2d = hist->GetDimension() > 1;
+    } else if (auto* function = dynamic_cast<TF1*>(object)) {
+      is2d = function->GetNdim() > 1;
+    } else if (auto* efficiency = dynamic_cast<TEfficiency*>(object)) {
+      is2d = efficiency->GetDimension() > 1;
+    } else {
+      is2d = dynamic_cast<TGraph2D*>(object);
+    }
+  }
+  // the plot is named after the object, with the characters a plot name cannot hold as _
+  string plotName = property;
+  for (auto& c : plotName) {
+    if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_' && c != '-') c = '_';
+  }
+  const string basePlot = (is2d) ? "2d" : "1d";
+  PlotManager plotManager;
+  plotManager.AddDataSource("file", *input);
+  plotManager.AddBasePlot(PlotManager::MakeBasePlot(basePlot));
+  Plot plot(plotName, "srp", basePlot);
+  plot[1].AddData(property, "file");
+  plotManager.AddPlot(plot);
+  if (!plotManager.GeneratePlots("show")) return 1;
   return 0;
 }
 
@@ -603,6 +664,8 @@ int run_command(const string& command, const string& project, const string& prop
     return command_help(listing);
   } else if (command == "open") {
     return command_open(project);
+  } else if (command == "plot") {
+    return command_plot(project, property);
   } else if (command == "colorwheel") {
     return command_colorwheel(project);
   } else if (command == "print" && util::is_hepdata_input(project)) {

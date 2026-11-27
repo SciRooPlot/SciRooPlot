@@ -152,6 +152,7 @@ Names are given for C++; the Python name is the same unless stated. Saved defini
 | An unreadable `settings.info` of a project was reported, but `srp projects` succeeded and `srp get`/`set` added that the program declares no setting | One error; `srp projects` exits with 1 | CLI | Nothing. |
 | `srp print <name>` of a data source of the current project (no file of that name) failed (no such file) | The objects of the data source as the reader sees them, with where they are in its inputs; a path names a folder or one object | CLI | Nothing. |
 | `srp print` of a table file (`.csv`, `.dat`, `.txt`, `.tsv`, `.tab`) failed (no ROOT file) | Its data name, rows, delimiter and the type of each column, as the data sources read it | CLI | Nothing. |
+| A quick look at one object of a file needed a plotting program | `srp plot <file>[:<path>] <name>` shows it on screen in the look of base plot `1d` (2d data: `2d`), without a project | CLI | Nothing. |
 | `srp print`, `srp open` and `srp colorwheel` took a file name literally (`srp colorwheel "~/w.png"` wrote the file and reported a failure) | `~` and environment variables are expanded, as in the inputs of data sources | CLI | Nothing. |
 | `srp get @current` and `srp confdir @current` without a selected project failed without a message; `srp cd`, `srp edit` and `srp out` added "could not … project" to srp's error; `srp remove` and `srp reset` printed nothing | One message saying why (no project selected, an unknown project); remove and reset name the projects removed | CLI | Nothing. |
 
