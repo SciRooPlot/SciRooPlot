@@ -929,9 +929,10 @@ bool print_data_source(const string& dataSource, const string& path)
   size_t nRootInputs{};  // the notes count the inputs that can hold ROOT objects
   for (const auto& input : inputs) {
     logger::debug("  input {}", input);
-    const auto fileAndFolder = util::split_input_path(util::expand_path(input).value_or(input));
+    const string expanded = util::expand_path(input).value_or(input);  // what the details below open again
+    const auto fileAndFolder = util::split_input_path(expanded);
     if (util::str_ends_with(fileAndFolder[0], util::kTableFileEndings)) {
-      if (path.empty()) record(std::filesystem::path(fileAndFolder[0]).stem().string(), "table", input);
+      if (path.empty()) record(std::filesystem::path(fileAndFolder[0]).stem().string(), "table", expanded);
       continue;
     }
     ++nRootInputs;
@@ -949,9 +950,9 @@ bool print_data_source(const string& dataSource, const string& path)
     TObject* start = (root && !path.empty()) ? find_in_file(root, path) : root;
     if (!start) continue;
     if (!util::is_container(start->IsA())) {
-      record(path, start->ClassName(), input);
+      record(path, start->ClassName(), expanded);
     } else {
-      walk_contents(start, path, [&](const string& objectPath, const string& className, TObject*) { record(objectPath, className, input); });
+      walk_contents(start, path, [&](const string& objectPath, const string& className, TObject*) { record(objectPath, className, expanded); });
     }
   }
   if (order.empty()) {

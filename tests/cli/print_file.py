@@ -251,7 +251,8 @@ for start in ("", ":dir"):
 
 # a data source of the current project (not an existing file): its inputs as the reader expands them, each object once with where it is
 # (a tree chained over the inputs, other data read from the first input holding it), tables by their data name; a path names a folder
-# or one object (its details, a chained tree with its entries in all); the inputs themselves only at verbosity debug
+# or one object (its details, a chained tree with its entries in all, also of inputs written with a variable); the inputs themselves only
+# at verbosity debug
 sourceFolder = config_folder("source_files")
 for i in range(3):
     rf = ROOT.TFile(os.path.join(sourceFolder, f"run{i}.root"), "RECREATE")
@@ -271,9 +272,10 @@ for i in range(3):
 with open(os.path.join(sourceFolder, "spec.csv"), "w") as fh:
     fh.write("a,b\n1,2\n")
 sourceConfig = config_folder("source_config")
+os.environ["SRP_SOURCE_FILES"] = sourceFolder  # for the inputs of envsrc, in every process
 program = os.path.join(sourceFolder, "define.py")
 with open(program, "w") as fh:
-    fh.write(f"from SciRooPlot import PlotManager\npm = PlotManager('sources')\npm.AddDataSource('src', ['{sourceFolder}/run*.root', '{sourceFolder}/spec.csv'])\npm.SaveProject()\n")
+    fh.write(f"from SciRooPlot import PlotManager\npm = PlotManager('sources')\npm.AddDataSource('src', ['{sourceFolder}/run*.root', '{sourceFolder}/spec.csv'])\npm.AddDataSource('envsrc', ['$SRP_SOURCE_FILES/run0.root', '$SRP_SOURCE_FILES/run1.root'])\npm.SaveProject()\n")
 setUp = [run(SRP, "add", "sources", program, os.path.join(sourceFolder, "out"), config=sourceConfig), python(open(program).read(), config=sourceConfig), run(SRP, "select", "sources", config=sourceConfig)]
 check("srp print of a data source: project set up", all(o.rc == 0 for o in setUp), " | ".join(o.tail() for o in setUp))
 out = run(SRP, "print", "src", config=sourceConfig, cwd=sourceFolder)
@@ -281,6 +283,10 @@ want = ["data source src: 4 inputs", "- [TTree] events (chained over 3 inputs)",
 check("srp print of a data source: each object once, where it is in the inputs, tables by name", out.rc == 0 and [line.strip("| ").strip() for line in out.stdout.splitlines()] == want, out.tail())
 out = run(SRP, "print", "src:events", config=sourceConfig)
 check("srp print of a tree in a data source: its details and its entries chained over the inputs", out.rc == 0 and "- [TTree] events" in out.stdout and "chained over 3 inputs: 60 entries in all" in out.stdout, out.tail())
+out = run(SRP, "print", "envsrc:events", config=sourceConfig)
+check("srp print of a tree in a data source of inputs written with a variable: its details and its entries", out.rc == 0 and "- [TTree] events" in out.stdout and "30 entries in all" in out.stdout, out.tail())
+out = run(SRP, "print", "envsrc:hA", config=sourceConfig)
+check("srp print of one object of a data source of inputs written with a variable", out.rc == 0 and "- [TH1D] hA" in out.stdout, out.tail())
 out = run(SRP, "print", "src:dir", config=sourceConfig)
 check("srp print of a folder of a data source", out.rc == 0 and "- [TH1D] hB (in 1 of 3 inputs)" in out.stdout and "hA" not in out.stdout, out.tail())
 out = run(SRP, "print", "src:nothing", config=sourceConfig)
