@@ -780,10 +780,16 @@ bool print_table_contents(const string& fileName)
   const auto options = util::table_options(fileName);
   if (!options) return false;
   ROOT::RDataFrame table = ROOT::RDF::FromCSV(fileName, *options);
-  const auto nRows = *table.Count();
+  ULong64_t nRows = 0;
+  try {
+    nRows = *table.Count();  // reads every value: a cell not of its column's type throws
+  } catch (const std::exception& e) {
+    logger::error("Cannot read table {}: it contains a value that does not match the type of its column ({}).", fileName, util::without_final_period(e.what()));
+    return false;
+  }
   const char delimiter = options->fDelimiter;
   const string delimiterName = (delimiter == '\t') ? "tabs" : ((delimiter == ' ') ? "spaces" : fmt::format("'{}'", delimiter));
-  logger::print("- [table] {}: {} rows, separated by {}", std::filesystem::path(fileName).stem().string(), nRows, delimiterName);
+  logger::print("- [table] {}: {}, separated by {}", std::filesystem::path(fileName).stem().string(), util::plural(nRows, "row"), delimiterName);
   const ROOT::RDF::RCsvDS columns(fileName, *options);  // in the order of the file
   for (const auto& column : columns.GetColumnNames())
     logger::print("  -> {} ({})", column, columns.GetTypeName(column));

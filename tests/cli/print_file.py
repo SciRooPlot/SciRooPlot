@@ -210,11 +210,18 @@ with open(table, "w") as fh:
 out = run(SRP, "print", table)
 want = ["- [table] spectrum: 3 rows, separated by ';'", "  -> pt (double)", "  -> n (Long64_t)", "  -> label (std::string)"]
 check("srp print of a table: data name, rows, delimiter and the type each column is read as", out.rc == 0 and out.stdout.splitlines() == want, out.tail())
-broken = os.path.join(folder, "broken.csv")
-with open(broken, "w") as fh:
-    fh.write("a,b\n1,2\n3\n")
-out = run(SRP, "print", broken)
-check("srp print of a table that cannot be read: exit 1, one error", out.rc == 1 and len(out.errors()) == 1 and "Cannot read table" in out.errors()[0], out.tail())
+single = os.path.join(folder, "single.txt")
+with open(single, "w") as fh:
+    fh.write("x y\n1 2\n")
+out = run(SRP, "print", single)
+check("srp print of a table of one row: \"1 row\"", out.rc == 0 and out.stdout.splitlines()[:1] == ["- [table] single: 1 row, separated by spaces"], out.tail())
+# a row with fields missing, and a value that does not match the type of its column further down
+for name, text in (("broken", "a,b\n1,2\n3\n"), ("mismatch", "a,b\n1,2\n2,3\n3,x\n")):
+    broken = os.path.join(folder, f"{name}.csv")
+    with open(broken, "w") as fh:
+        fh.write(text)
+    out = run(SRP, "print", broken)
+    check(f"srp print of a table that cannot be read ({name}): exit 1, one error naming the table", out.rc == 1 and len(out.errors()) == 1 and f"Cannot read table {broken}" in out.errors()[0], out.tail())
 
 # a ~ and environment variables in the file name, as in the inputs of data sources
 out = run(SRP, "print", "${SRP_TESTS_PRINT_DIR}/" + os.path.basename(path), env={"SRP_TESTS_PRINT_DIR": os.path.dirname(path)})
