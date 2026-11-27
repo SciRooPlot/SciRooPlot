@@ -798,7 +798,9 @@ bool print_table_contents(const string& fileName)
   try {
     nRows = *table.Count();  // reads every value: a cell not of its column's type throws
   } catch (const std::exception& e) {
-    logger::error("Cannot read table {}: it contains a value that does not match the type of its column ({}).", fileName, util::without_final_period(e.what()));
+    // ROOT's reason is the bare name of the conversion that failed (stoll, stod): left out, it says nothing to a user
+    const string reason = util::without_final_period(e.what());
+    logger::error("Cannot read table {}: it contains a value that does not match the type of its column{}.", fileName, (reason.find(' ') == string::npos) ? "" : " (" + reason + ")");
     return false;
   }
   const char delimiter = options->fDelimiter;

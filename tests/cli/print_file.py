@@ -16,6 +16,7 @@ Covers: details of every data kind alone, stack and multigraph members, file bel
 without a file or display, colorwheel into a file, srp plot of objects it cannot show."""
 
 import os
+import re
 import subprocess
 import sys
 
@@ -229,6 +230,8 @@ for name, text in (("broken", "a,b\n1,2\n3\n"), ("mismatch", "a,b\n1,2\n2,3\n3,x
         fh.write(text)
     out = run(SRP, "print", broken)
     check(f"srp print of a table that cannot be read ({name}): exit 1, one error naming the table", out.rc == 1 and len(out.errors()) == 1 and f"Cannot read table {broken}" in out.errors()[0], out.tail())
+    if name == "mismatch":
+        check("srp print of a table with a value not of its column's type: no bare name of a conversion as the reason", out.errors() and not re.search(r"\((stoll|stod|stoi|stoul)\)", out.errors()[0]), out.tail())
 
 # a ~ and environment variables in the file name, as in the inputs of data sources
 out = run(SRP, "print", "${SRP_TESTS_PRINT_DIR}/" + os.path.basename(path), env={"SRP_TESTS_PRINT_DIR": os.path.dirname(path)})
