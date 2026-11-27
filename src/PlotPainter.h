@@ -302,6 +302,11 @@ class PlotPainter
   std::string WebEachPaintCommand(TCanvas* canvas);
   std::string WebGlobalsCommand(bool webTitles, const std::optional<std::string>& webTextFormat, const std::optional<std::pair<double_t, double_t>>& webCandleRanges) const;
   void FinishPad(pad_state_t& padState);
+  void FinishClippedSteps(pad_state_t& padState);
+  void MoveColorScale(pad_state_t& padState);
+  void RedrawAxes(pad_state_t& padState);
+  void PlaceBoxes(pad_state_t& padState);
+  void HintAxisLabels(pad_state_t& padState);
   void StyleContentScale(pad_state_t& padState);
   static bool ApplyContentLook(TAxis* zAxis, const Plot::Pad& pad, const Plot::Pad& padDefaults, const std::optional<float_t>& textAlpha, bool withSizes);
   void PlaceStatsBox(pad_state_t& padState, std::unique_ptr<TPaveStats> stats, const Plot::Pad::StatsBox& statsBox);

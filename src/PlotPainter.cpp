@@ -1271,11 +1271,8 @@ void PlotPainter::FinishPad(pad_state_t& padState)
   auto& axisHist_ptr = padState.axisHist_ptr;
   auto& polarFrame = padState.polarFrame;
   auto& polargram = padState.polargram;
-  auto& padProjection = padState.padProjection;
   auto& contentFrame = padState.contentFrame;
   auto& hbarFrame = padState.hbarFrame;
-  auto& statsBoxes = padState.statsBoxes;
-  auto& clippedSteps = padState.clippedSteps;
 
   const bool flatFrame = axisHist_ptr && !pad_ptr->GetView() && !polarFrame && !polargram;
   if (flatFrame) AddAxisRoom(pad, padDefaults, padID, pad_ptr, axisHist_ptr, (hasRefFunc) ? drawData[1].get() : nullptr, padSetup);
@@ -1289,11 +1286,91 @@ void PlotPainter::FinishPad(pad_state_t& padState)
   // the placement of the boxes below relies on the painted data (painting creates e.g. the palette of a colour plot):
   // the pad is updated once for all data, since every update repaints everything drawn so far
   pad_ptr->Update();
-  // the clipped steps are ROOT's steps cut at the frame, which is known now: HIST goes down to the base line of the steps at the outer edges
-  // and fills down to it (0, or the lower frame edge if that is above 0 or on a log axis); HIST ][ (hist_open) also leaves out the bins at
-  // the ends that lie on the base line, with the step down to them: bins with the content of the base and, if the base is the lower frame
-  // edge, all bins below it (TGraphPainter::PaintGrapHist). The steps (two points per bin, for hist_clipped between the two points of the
-  // outer edges) and the outline of their fill follow
+  FinishClippedSteps(padState);
+  // z titles with offset 0 next to their labels: the z axis of a 3D view and the colour scales (the range of the frame is final now)
+  if (axisHist_ptr && axisHist_ptr->GetDimension() == 3) {
+    StyleContentScale(padState);
+  } else if (axisHist_ptr && axisHist_ptr->GetDimension() == 2) {
+    const vector<label_range_t> ranges{{axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), static_cast<bool>(pad_ptr->GetLogz())}};
+    if (IsViewFrame(pad_ptr, axisHist_ptr)) PlaceZTitle(pad_ptr, axisHist_ptr->GetZaxis(), ranges);
+    for (TObject* primitive : *pad_ptr->GetListOfPrimitives()) {
+      auto* hist = dynamic_cast<TH1*>(primitive);
+      if (hist && hist->GetDimension() == 2 && hist->GetListOfFunctions()->FindObject("palette")) PlaceZTitle(pad_ptr, hist->GetZaxis(), ranges);
+    }
+    pad_ptr->Modified();
+  }
+  if (flatFrame) {
+    // the ranges as drawn, for the axes shared with other pads (pad coordinates of a log axis are decades)
+    mFrameRanges[{padID, 'X'}] = {FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx()), FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx())};
+    mFrameRanges[{padID, 'Y'}] = {FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()), FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy())};
+    mFrameHists[padID] = axisHist_ptr;
+  }
+  // the colour axis of a 2d frame is z, its range the minimum and maximum, also in a 3D view (x and y of a view are projected, not shared);
+  // the colour axis of a 3d histogram is its contents (C), kept under Z for the z groups (a 3d function has no colour scale)
+  if (axisHist_ptr && (axisHist_ptr->GetDimension() == 2 || contentFrame) && !polarFrame && !polargram) {
+    mFrameRanges[{padID, 'Z'}] = {axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum()};
+    mScaleHists[padID] = axisHist_ptr;
+    if (contentFrame) mContentScales.insert(padID);
+  }
+
+  MoveColorScale(padState);
+
+  RedrawAxes(padState);
+
+  // shapes need the final frame: behind the data right after the frame histogram, the others after the data (and before the boxes, which avoid them)
+  const bool canDrawShapes = axisHist_ptr && !pad_ptr->GetView() && !polargram;
+  if (!pad.GetShapes().empty() && !canDrawShapes) {
+    logger::warning("The shapes of pad {} are not drawn: they need a cartesian axis frame (no 3d view, no polar graphs).", padID);
+  } else if (!pad.GetShapes().empty()) {
+    DrawShapes(pad, padDefaults, padID, pad_ptr, Plot::Pad::Shape::layer_t::behind_data, axisHist_ptr);
+    DrawShapes(pad, padDefaults, padID, pad_ptr, Plot::Pad::Shape::layer_t::after_data, nullptr);
+  }
+
+  PlaceBoxes(padState);
+  if (canDrawShapes) DrawShapes(pad, padDefaults, padID, pad_ptr, Plot::Pad::Shape::layer_t::on_top, nullptr);
+
+  // viewing angles of 3D drawings: the pad's own, else those of pad 0
+  if (auto theta = get_first(pad.GetViewTheta(), padDefaults.GetViewTheta())) {
+    pad_ptr->SetTheta(*theta);
+  }
+  if (auto phi = get_first(pad.GetViewPhi(), padDefaults.GetViewPhi())) {
+    pad_ptr->SetPhi(*phi);
+  }
+  if (pad_ptr->GetView()) {
+    padState.view = true;
+  } else if (pad.GetViewTheta() || pad.GetViewPhi()) {
+    ReportIgnored(fmt::format("The view of pad {}", padID), "it draws nothing in 3d");
+  }
+
+  for (auto axisLabel : {'X', 'Y'}) {
+    bool hide{};
+    for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
+      if (axis->GetHideClippedLabels()) hide = *axis->GetHideClippedLabels();
+    }
+    if (hide && axisHist_ptr && !polarFrame && !polargram) HideClippedLabels(pad_ptr, ((axisLabel == 'X') != hbarFrame) ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis(), axisLabel);
+  }
+  HintAxisLabels(padState);
+  if (axisHist_ptr && !polarFrame && !polargram && !hbarFrame && !pad_ptr->GetView()) {
+    ReportOutsideFrame(pad_ptr);
+    HintSqueezedData(pad_ptr);
+  }
+  HintAlikeData(pad_ptr);
+  HintInvisibleData(pad_ptr);
+}
+
+//**************************************************************************************************
+/**
+ * The clipped steps are ROOT's steps cut at the frame, which is known now: HIST goes down to the base line of the steps at the outer edges
+ * and fills down to it (0, or the lower frame edge if that is above 0 or on a log axis); HIST ][ (hist_open) also leaves out the bins at
+ * the ends that lie on the base line, with the step down to them: bins with the content of the base and, if the base is the lower frame
+ * edge, all bins below it (TGraphPainter::PaintGrapHist). The steps (two points per bin, for hist_clipped between the two points of the
+ * outer edges) and the outline of their fill follow.
+ */
+//**************************************************************************************************
+void PlotPainter::FinishClippedSteps(pad_state_t& padState)
+{
+  auto& pad_ptr = padState.pad_ptr;
+  auto& clippedSteps = padState.clippedSteps;
   if (!clippedSteps.empty()) {
     const bool logX = pad_ptr->GetLogx();
     const bool logY = pad_ptr->GetLogy();
@@ -1339,34 +1416,21 @@ void PlotPainter::FinishPad(pad_state_t& padState)
       }
     }
   }
-  // z titles with offset 0 next to their labels: the z axis of a 3D view and the colour scales (the range of the frame is final now)
-  if (axisHist_ptr && axisHist_ptr->GetDimension() == 3) {
-    StyleContentScale(padState);
-  } else if (axisHist_ptr && axisHist_ptr->GetDimension() == 2) {
-    const vector<label_range_t> ranges{{axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum(), static_cast<bool>(pad_ptr->GetLogz())}};
-    if (IsViewFrame(pad_ptr, axisHist_ptr)) PlaceZTitle(pad_ptr, axisHist_ptr->GetZaxis(), ranges);
-    for (TObject* primitive : *pad_ptr->GetListOfPrimitives()) {
-      auto* hist = dynamic_cast<TH1*>(primitive);
-      if (hist && hist->GetDimension() == 2 && hist->GetListOfFunctions()->FindObject("palette")) PlaceZTitle(pad_ptr, hist->GetZaxis(), ranges);
-    }
-    pad_ptr->Modified();
-  }
-  if (flatFrame) {
-    // the ranges as drawn, for the axes shared with other pads (pad coordinates of a log axis are decades)
-    mFrameRanges[{padID, 'X'}] = {FromPad(pad_ptr->GetUxmin(), pad_ptr->GetLogx()), FromPad(pad_ptr->GetUxmax(), pad_ptr->GetLogx())};
-    mFrameRanges[{padID, 'Y'}] = {FromPad(pad_ptr->GetUymin(), pad_ptr->GetLogy()), FromPad(pad_ptr->GetUymax(), pad_ptr->GetLogy())};
-    mFrameHists[padID] = axisHist_ptr;
-  }
-  // the colour axis of a 2d frame is z, its range the minimum and maximum, also in a 3D view (x and y of a view are projected, not shared);
-  // the colour axis of a 3d histogram is its contents (C), kept under Z for the z groups (a 3d function has no colour scale)
-  if (axisHist_ptr && (axisHist_ptr->GetDimension() == 2 || contentFrame) && !polarFrame && !polargram) {
-    mFrameRanges[{padID, 'Z'}] = {axisHist_ptr->GetMinimum(), axisHist_ptr->GetMaximum()};
-    mScaleHists[padID] = axisHist_ptr;
-    if (contentFrame) mContentScales.insert(padID);
-  }
+}
 
-  // the colour scale ROOT made while painting starts 0.005 of the pad width right of the frame and is 0.045 wide: other values
-  // (Axis::SetColorScaleOffset/SetColorScaleWidth, which the base plots set from pixels) move it before the boxes are placed
+//**************************************************************************************************
+/**
+ * The colour scale ROOT made while painting starts 0.005 of the pad width right of the frame and is 0.045 wide: other values
+ * (Axis::SetColorScaleOffset/SetColorScaleWidth, which the base plots set from pixels) move it before the boxes are placed.
+ */
+//**************************************************************************************************
+void PlotPainter::MoveColorScale(pad_state_t& padState)
+{
+  auto& padDefaults = padState.padDefaults;
+  auto& pad = padState.pad;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& padProjection = padState.padProjection;
   optional<float_t> scaleOffset;
   optional<float_t> scaleWidth;
   // (the scale of a 3d histogram shows its contents: it is set on the C axis; the defaults of a layout are kept apart from the axes)
@@ -1392,7 +1456,23 @@ void PlotPainter::FinishPad(pad_state_t& padState)
       palette->ConvertNDCtoPad();
     }
   }
+}
 
+//**************************************************************************************************
+/**
+ * Axes drawn again over the data: those of a polar frame, or the frame axes (redraw axes).
+ */
+//**************************************************************************************************
+void PlotPainter::RedrawAxes(pad_state_t& padState)
+{
+  auto& padDefaults = padState.padDefaults;
+  auto& pad = padState.pad;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& polarFrame = padState.polarFrame;
+  auto& polargram = padState.polargram;
+  auto& padProjection = padState.padProjection;
+  auto& hbarFrame = padState.hbarFrame;
   const bool redrawAxes = get_first_or(false, pad.GetRedrawAxes(), padDefaults.GetRedrawAxes());
   if (polarFrame) {
     // the radial axis of a flat polar drawing: below the disc, from the centre to the right edge (the radius is measured from the centre),
@@ -1454,19 +1534,22 @@ void PlotPainter::FinishPad(pad_state_t& padState)
     }
     axes->Draw("SAME AXIS");
   }
+}
 
-  // shapes need the final frame: behind the data right after the frame histogram, the others after the data (and before the boxes, which avoid them)
-  const bool canDrawShapes = axisHist_ptr && !pad_ptr->GetView() && !polargram;
-  if (!pad.GetShapes().empty() && !canDrawShapes) {
-    logger::warning("The shapes of pad {} are not drawn: they need a cartesian axis frame (no 3d view, no polar graphs).", padID);
-  } else if (!pad.GetShapes().empty()) {
-    DrawShapes(pad, padDefaults, padID, pad_ptr, Plot::Pad::Shape::layer_t::behind_data, axisHist_ptr);
-    DrawShapes(pad, padDefaults, padID, pad_ptr, Plot::Pad::Shape::layer_t::after_data, nullptr);
-  }
-
-  // boxes in three passes, so that every automatic placement knows the boxes already there: those with a given position, then the
-  // automatic ones asked for a corner (they get it before a box free to take any corner does), then those taking the best corner;
-  // legends, texts and images; the statistics boxes come after those with a given position and before the automatic ones of a pass
+//**************************************************************************************************
+/**
+ * Boxes in three passes, so that every automatic placement knows the boxes already there: those with a given position, then the
+ * automatic ones asked for a corner (they get it before a box free to take any corner does), then those taking the best corner;
+ * legends, texts and images; the statistics boxes come after those with a given position and before the automatic ones of a pass.
+ */
+//**************************************************************************************************
+void PlotPainter::PlaceBoxes(pad_state_t& padState)
+{
+  auto& padDefaults = padState.padDefaults;
+  auto& pad = padState.pad;
+  auto& padID = padState.padID;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& statsBoxes = padState.statsBoxes;
   enum class pass_t : uint8_t {
     fixed,
     corner,
@@ -1508,28 +1591,21 @@ void PlotPainter::FinishPad(pad_state_t& padState)
   for (const auto pass : {pass_t::fixed, pass_t::corner, pass_t::best}) {
     placeBoxes(pass);
   }
-  if (canDrawShapes) DrawShapes(pad, padDefaults, padID, pad_ptr, Plot::Pad::Shape::layer_t::on_top, nullptr);
+}
 
-  // viewing angles of 3D drawings: the pad's own, else those of pad 0
-  if (auto theta = get_first(pad.GetViewTheta(), padDefaults.GetViewTheta())) {
-    pad_ptr->SetTheta(*theta);
-  }
-  if (auto phi = get_first(pad.GetViewPhi(), padDefaults.GetViewPhi())) {
-    pad_ptr->SetPhi(*phi);
-  }
-  if (pad_ptr->GetView()) {
-    padState.view = true;
-  } else if (pad.GetViewTheta() || pad.GetViewPhi()) {
-    ReportIgnored(fmt::format("The view of pad {}", padID), "it draws nothing in 3d");
-  }
-
-  for (auto axisLabel : {'X', 'Y'}) {
-    bool hide{};
-    for (const auto* axis : AxisSettings(pad, padDefaults, axisLabel)) {
-      if (axis->GetHideClippedLabels()) hide = *axis->GetHideClippedLabels();
-    }
-    if (hide && axisHist_ptr && !polarFrame && !polargram) HideClippedLabels(pad_ptr, ((axisLabel == 'X') != hbarFrame) ? axisHist_ptr->GetXaxis() : axisHist_ptr->GetYaxis(), axisLabel);
-  }
+//**************************************************************************************************
+/**
+ * Numbers of a linear x axis running into each other, a log axis without labels: said, with the remedy.
+ */
+//**************************************************************************************************
+void PlotPainter::HintAxisLabels(pad_state_t& padState)
+{
+  auto& padID = padState.padID;
+  auto& pad_ptr = padState.pad_ptr;
+  auto& axisHist_ptr = padState.axisHist_ptr;
+  auto& polarFrame = padState.polarFrame;
+  auto& polargram = padState.polargram;
+  auto& hbarFrame = padState.hbarFrame;
   // the numbers of a linear x axis without exponent (the shipped look: no factor at the axis end, where a touching panel or a colour
   // scale would be) run into each other for wide or offset ranges: said, with the remedy
   if (axisHist_ptr && !polarFrame && !polargram && !pad_ptr->GetView() && !pad_ptr->GetLogx()) {
@@ -1578,12 +1654,6 @@ void PlotPainter::FinishPad(pad_state_t& padState)
       }
     }
   }
-  if (axisHist_ptr && !polarFrame && !polargram && !hbarFrame && !pad_ptr->GetView()) {
-    ReportOutsideFrame(pad_ptr);
-    HintSqueezedData(pad_ptr);
-  }
-  HintAlikeData(pad_ptr);
-  HintInvisibleData(pad_ptr);
 }
 
 //**************************************************************************************************
