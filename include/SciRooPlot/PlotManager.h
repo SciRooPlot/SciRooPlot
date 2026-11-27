@@ -182,6 +182,15 @@ class PlotManager
   struct canvas_deleter_t;
   static bool IsValidDataSourceName(const std::string& dataSource);
   void ForgetBufferedData(const std::string& dataSource);
+  void ForgetChangedInputs();
+  void RequestData(const std::string& dataSource, const std::string& name, const Plot::Pad::Data::data_info_t& info);
+  void RequestDataOf(Plot& plot);
+  bool ReadsRemoteInputs(const std::set<std::string>& sourcesToRead) const;
+  size_t ExpandInputsToRead(const std::set<std::string>& sourcesToRead);
+  void ReportMissingData(const std::vector<Plot*>& selectedPlots);
+  void SetUpGif(const std::string& mode, const std::vector<Plot*>& selectedPlots);
+  void ReportFailedPlot(Plot& plot);
+  bool SaveOutputFile(const std::string& mode, const std::vector<Plot*>& selectedPlots);
   bool SaveDataToRootFile(const std::set<std::pair<std::string, std::string>>& keys) const;
   static bool ReplaceOutputFile(const std::string& tmpPath, const std::string& filePath, bool writeError);
 

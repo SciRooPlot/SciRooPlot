@@ -1758,52 +1758,13 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
 
   // only what the selected plots need is read: the requests of earlier calls and what they could not read are dropped (data read stays buffered)
   mDataInfoBuffer.clear();
-  // data sources whose input files were rewritten (or removed) since they were read are read again (one stat per input file;
-  // files added since to a directory or wildcard input are not noticed)
-  vector<string> rewritten;
-  for (const auto& [dataSource, times] : mInputTimes) {
-    const bool changed = std::any_of(times.begin(), times.end(), [](const auto& fileTime) {
-      std::error_code timeError;
-      return std::filesystem::last_write_time(fileTime.first, timeError) != fileTime.second || timeError;
-    });
-    if (changed) rewritten.push_back(dataSource);
-  }
-  for (const auto& dataSource : rewritten) {
-    logger::info("Inputs of data source {} changed since they were read: reading them again.", dataSource);
-    ForgetBufferedData(dataSource);
-  }
-  for (auto& [dataSource, buffer] : mDataBuffer) {
-    for (auto it = buffer.begin(); it != buffer.end();) {
-      it = (it->second) ? std::next(it) : buffer.erase(it);
-    }
-  }
-  // also requests without projection info are registered: trees and tables then report that they cannot be plotted directly
-  auto request = [this](const string& dataSource, const string& name, const Plot::Pad::Data::data_info_t& info) {
-    mDataBuffer[dataSource][name];
-    auto& dataInfos = mDataInfoBuffer[dataSource][name];
-    const string nameSuffix = info.GetNameSuffix();
-    auto known = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == nameSuffix; });
-    if (known == dataInfos.end()) dataInfos.push_back(info);
-  };
+  ForgetChangedInputs();
   for (auto& plot : mPlots) {
     if (!matches(plot.GetName(), plot.GetGroup())) continue;
     selectedPlots.push_back(&plot);
     if (mode == "print") continue;  // printing the definitions needs no data
 
-    // determine which input data are needed for plots
-    for (auto& [padID, pad] : plot.GetPads()) {
-      if (auto refFunc = RefFuncDrawnIn(plot, padID)) mDataBuffer[refFunc->GetDataSource()][refFunc->GetName()];
-      if (padID == 0) continue;  // data and frame of pad 0 are not drawn (AddPlot warns about the data), so they are not read either
-      auto padData = pad.GetData();
-      if (pad.GetFrame()) padData.push_back(pad.GetFrame());  // the frame of a pad is read like its data
-      for (const auto& data : padData) {
-        request(data->GetDataSource(), data->GetName(), data->GetDataInfo());
-        if (data->GetType() == "ratio") {
-          const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
-          request(ratio->GetDenomDataSource(), ratio->GetDenomName(), ratio->GetDenomDataInfo());
-        }
-      }
-    }
+    RequestDataOf(plot);
   }
 
   if (selectedPlots.empty()) {
@@ -1835,23 +1796,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
   // remote inputs are read from local copies (srp cache on), copied when first read and again when the remote file changed: every remote
   // open, also those of RDataFrame; afterwards ROOT reads through the cache only when asked to again (its default)
   // (set up only if an input to read is remote)
-  auto isRemoteSource = [this](const string& dataSource) {
-    auto inputs = mInputs.find(dataSource.substr(0, dataSource.find(':')));
-    return inputs != mInputs.end() && std::any_of(inputs->second.begin(), inputs->second.end(), [](const string& input) { return is_remote(expand_path(input).value_or(input)); });
-  };
-  bool readsRemote = std::any_of(sourcesToRead.begin(), sourcesToRead.end(), isRemoteSource);
-  for (const auto& source : sourcesToRead) {  // and the data sources of joined trees
-    auto infos = mDataInfoBuffer.find(source);
-    if (infos == mDataInfoBuffer.end()) continue;
-    for (const auto& [name, dataInfos] : infos->second) {
-      for (const auto& dataInfo : dataInfos) {
-        if (!dataInfo.joins) continue;
-        for (const auto& join : *dataInfo.joins) {
-          readsRemote = readsRemote || (!join.dataSource.empty() && isRemoteSource(join.dataSource));
-        }
-      }
-    }
-  }
+  const bool readsRemote = ReadsRemoteInputs(sourcesToRead);
   const string cacheDir = (readsRemote && Config::Get().CacheOn()) ? Config::Get().CacheFolder() : "";
   std::error_code cacheError;
   const bool useCache = !cacheDir.empty() && util::make_cache_folder(cacheDir, cacheError) && [&cacheDir]() {
@@ -1863,80 +1808,14 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     if (useCache) TFile::SetCacheFileDir(TFile::GetCacheFileDir(), true, false);
   });
   auto cacheNoteGuard = filter_root_messages([](Int_t level, Bool_t, const char* location, const char*) { return level < kWarning && location && string(location) == "TFile::OpenFromCache"; });
-  size_t nInputs{};
-  for (const auto& dataSource : sourcesToRead) {
-    // data sources restricted to a folder are read together with the data source they are part of
-    const string baseSource = dataSource.substr(0, dataSource.find(':'));
-    if (mExpandedInputs.find(baseSource) != mExpandedInputs.end()) continue;
-    nInputs += (mExpandedInputs[baseSource] = ExpandInputs(baseSource)).size();
-    // UserData.root holds the in-memory inputs of all data sources: AddDataSource already makes their data be read again
-    auto& times = mInputTimes[baseSource];
-    for (const auto& input : mExpandedInputs[baseSource]) {
-      const string fileName = split_input_path(expand_path(input).value_or(""))[0];
-      std::error_code timeError;
-      const auto time = std::filesystem::last_write_time(fileName, timeError);
-      if (!timeError && !is_remote(fileName) && fileName != mUserDataFile && fileName != UserDataProcessFile()) times[fileName] = time;
-    }
-  }
+  const size_t nInputs = ExpandInputsToRead(sourcesToRead);
   if (nItemsToRead) {
     logger::info("Reading {} from {}{}.", plural(nItemsToRead, "data item"), (nInputs) ? plural(nInputs, "input") + " in " : "", plural(sourcesToRead.size(), "data source"));
   }
   try {
     FillBuffer();
-    {
-      // the summary counts everything the plots cannot get, whether not found or failed to read (its details come with each plot)
-      uint32_t nAffectedPlots{};
-      set<std::pair<string, string>> missingItems;  // (dataSource, name+suffix)
-      for (auto plot : selectedPlots) {
-        auto missing = GetMissingData(*plot);
-        if (!missing.empty()) {
-          ++nAffectedPlots;
-          for (const auto& [dataSource, name, dataInfo] : missing) {
-            missingItems.emplace(dataSource, name + dataInfo.GetNameSuffix());
-          }
-        }
-      }
-      if (nAffectedPlots > 0) {
-        logger::error("{} of {} plots cannot be created due to {}.", nAffectedPlots, selectedPlots.size(), plural(missingItems.size(), "missing data item"));
-      }
-    }
-    // the frames of a gif are the plots that can be made, in the order they were defined; the last one closes it (its file name tells ROOT
-    // how the animation repeats). The gif is named after the deepest group all frames are in and lies next to the folder of that group
-    // (frames of animations/legoRotation: animations/legoRotation.gif); frames without a common group make animation.gif in the output directory
-    mGifName.clear();
-    mGifPendingFrame.reset();
-    mGifSize.reset();
-    mGifSizeReported = false;
-    if (str_starts_with(mode, "gif")) {
-      // ROOT's syntax: +<centiseconds a frame is shown>; the last frame +NN plays the animation once, ++NN++ loops endlessly, +NN++RR repeats
-      // it RR times (mode gif+<centiseconds>[++[<repeats>]], checked by is_valid_plot_mode)
-      const size_t loopPos = mode.find("++");
-      const string delay = (mode.size() > 4) ? mode.substr(4, (loopPos == string::npos) ? string::npos : loopPos - 4) : "50";
-      const string repeats = (loopPos == string::npos) ? "" : mode.substr(loopPos + 2);
-      mGifFrameSuffix = "+" + delay;
-      mGifLastFrameSuffix = (loopPos == string::npos) ? mGifFrameSuffix : (repeats.empty() ? "++" + delay + "++" : "+" + delay + "++" + repeats);
-      optional<vector<string>> commonGroup;
-      // frames that cannot be made are left out of the name here already (missing data, a missing base plot)
-      auto hasBasePlot = [this](const Plot& plot) {
-        return !plot.GetBasePlotName() || FindBasePlot(*plot.GetBasePlotName());
-      };
-      for (auto plot : selectedPlots) {
-        if (!GetMissingData(*plot).empty() || plot->GetGroup().empty() || !hasBasePlot(*plot)) continue;
-        const vector<string> parts = split_string(plot->GetGroup(), '/');
-        if (!commonGroup) {
-          commonGroup = parts;
-          continue;
-        }
-        commonGroup->erase(std::mismatch(commonGroup->begin(), commonGroup->end(), parts.begin(), parts.end()).first, commonGroup->end());
-      }
-      if (commonGroup) {
-        string folder = OutputFolder();
-        for (size_t i = 0; i + 1 < commonGroup->size(); ++i)
-          folder += "/" + (*commonGroup)[i];
-        mGifName = folder + "/" + (commonGroup->empty() ? string("animation") : commonGroup->back()) + ".gif";
-        gSystem->Unlink(mGifName.data());  // the frames are appended to the file
-      }
-    }
+    ReportMissingData(selectedPlots);
+    SetUpGif(mode, selectedPlots);
     mExitInteractiveBrowsing = false;
     mDetached.reset();
     mBrowseCanvases.clear();
@@ -1946,28 +1825,7 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     // generate plots
     bool allCreated = true;
     auto reportFailure = [&](Plot* plot) {
-      auto missingData = GetMissingData(*plot);
-      string message = fmt::format("Plot {} could not be created.", Plot::Label(*plot));
-      for (const auto& [dataSource, name, dataInfo] : missingData) {
-        message += "\n         - missing " + DataLocation(dataSource, name);
-        if (!dataInfo.dataDims.empty()) message += " [" + dataInfo.GetDescription() + "]";
-        if (!IsDataSourceDefined(dataSource)) {
-          vector<string> sources;
-          for (const auto& [source, inputs] : mInputs)
-            sources.push_back(source);
-          const auto similar = SimilarNames(dataSource.substr(0, dataSource.find(':')), name_candidates_t(std::move(sources)));
-          message += (similar.empty()) ? " (data source not defined)" : " (data source not defined; did you mean " + join_strings(similar, ", ") + "?)";
-        } else if (auto it = mNotFoundData.find(dataSource); it != mNotFoundData.end() && it->second.count(name)) {
-          string suggestion;
-          if (auto similar = mSimilarNames.find(dataSource); similar != mSimilarNames.end()) {
-            if (auto names = similar->second.find(name); names != similar->second.end()) {
-              suggestion = "; did you mean " + join_strings(names->second, ", ") + "?";
-            }
-          }
-          message += " (not found in the inputs of " + dataSource + suggestion + ")";
-        }
-      }
-      logger::error("{}", message);
+      ReportFailedPlot(*plot);
       allCreated = false;
     };
     if (mode == "show") {
@@ -2010,22 +1868,248 @@ bool PlotManager::GeneratePlots(const string& mode, const string& name, const st
     } else if (mWroteFile) {
       logger::log("The files are in {} (a folder per group).", OutputFolder());
     }
-    bool saved = true;
-    if (mode == "file") {
-      saved = SavePlotsToRootFile();
-    } else if (mode == "data") {
-      set<std::pair<string, string>> keys;
-      for (auto plot : selectedPlots) {
-        for (const auto& [dataSource, name, dataInfo] : GetNeededData(*plot))
-          keys.emplace(dataSource, name + dataInfo.GetNameSuffix());
-      }
-      saved = SaveDataToRootFile(keys);
-    }
+    const bool saved = SaveOutputFile(mode, selectedPlots);
     return allCreated && saved;
   } catch (const std::exception& e) {
     logger::error("An unexpected error occurred: {}.", util::without_final_period(e.what()));
     return false;
   }
+}
+
+//**************************************************************************************************
+/**
+ * Data sources whose input files were rewritten (or removed) since they were read are read again (one stat per input file;
+ * files added since to a directory or wildcard input are not noticed); the data they could not read before is dropped.
+ */
+//**************************************************************************************************
+void PlotManager::ForgetChangedInputs()
+{
+  vector<string> rewritten;
+  for (const auto& [dataSource, times] : mInputTimes) {
+    const bool changed = std::any_of(times.begin(), times.end(), [](const auto& fileTime) {
+      std::error_code timeError;
+      return std::filesystem::last_write_time(fileTime.first, timeError) != fileTime.second || timeError;
+    });
+    if (changed) rewritten.push_back(dataSource);
+  }
+  for (const auto& dataSource : rewritten) {
+    logger::info("Inputs of data source {} changed since they were read: reading them again.", dataSource);
+    ForgetBufferedData(dataSource);
+  }
+  for (auto& [dataSource, buffer] : mDataBuffer) {
+    for (auto it = buffer.begin(); it != buffer.end();) {
+      it = (it->second) ? std::next(it) : buffer.erase(it);
+    }
+  }
+}
+
+//**************************************************************************************************
+/**
+ * A data item the plots need: also requests without projection info are registered (trees and tables then report that they cannot
+ * be plotted directly).
+ */
+//**************************************************************************************************
+void PlotManager::RequestData(const string& dataSource, const string& name, const Plot::Pad::Data::data_info_t& info)
+{
+  mDataBuffer[dataSource][name];
+  auto& dataInfos = mDataInfoBuffer[dataSource][name];
+  const string nameSuffix = info.GetNameSuffix();
+  auto known = std::find_if(dataInfos.begin(), dataInfos.end(), [&](const auto& dataInfo) { return dataInfo.GetNameSuffix() == nameSuffix; });
+  if (known == dataInfos.end()) dataInfos.push_back(info);
+}
+
+//**************************************************************************************************
+/**
+ * The input data a plot needs.
+ */
+//**************************************************************************************************
+void PlotManager::RequestDataOf(Plot& plot)
+{
+  for (auto& [padID, pad] : plot.GetPads()) {
+    if (auto refFunc = RefFuncDrawnIn(plot, padID)) mDataBuffer[refFunc->GetDataSource()][refFunc->GetName()];
+    if (padID == 0) continue;  // data and frame of pad 0 are not drawn (AddPlot warns about the data), so they are not read either
+    auto padData = pad.GetData();
+    if (pad.GetFrame()) padData.push_back(pad.GetFrame());  // the frame of a pad is read like its data
+    for (const auto& data : padData) {
+      RequestData(data->GetDataSource(), data->GetName(), data->GetDataInfo());
+      if (data->GetType() == "ratio") {
+        const auto& ratio = std::dynamic_pointer_cast<Plot::Pad::Ratio>(data);
+        RequestData(ratio->GetDenomDataSource(), ratio->GetDenomName(), ratio->GetDenomDataInfo());
+      }
+    }
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Whether a data source to read or one of the trees joined to its data has a remote input.
+ */
+//**************************************************************************************************
+bool PlotManager::ReadsRemoteInputs(const set<string>& sourcesToRead) const
+{
+  auto isRemoteSource = [this](const string& dataSource) {
+    auto inputs = mInputs.find(dataSource.substr(0, dataSource.find(':')));
+    return inputs != mInputs.end() && std::any_of(inputs->second.begin(), inputs->second.end(), [](const string& input) { return is_remote(expand_path(input).value_or(input)); });
+  };
+  bool readsRemote = std::any_of(sourcesToRead.begin(), sourcesToRead.end(), isRemoteSource);
+  for (const auto& source : sourcesToRead) {  // and the data sources of joined trees
+    auto infos = mDataInfoBuffer.find(source);
+    if (infos == mDataInfoBuffer.end()) continue;
+    for (const auto& [name, dataInfos] : infos->second) {
+      for (const auto& dataInfo : dataInfos) {
+        if (!dataInfo.joins) continue;
+        for (const auto& join : *dataInfo.joins) {
+          readsRemote = readsRemote || (!join.dataSource.empty() && isRemoteSource(join.dataSource));
+        }
+      }
+    }
+  }
+  return readsRemote;
+}
+
+//**************************************************************************************************
+/**
+ * The inputs of the data sources to read, with the times their files were written (to notice them rewritten); returns their number.
+ */
+//**************************************************************************************************
+size_t PlotManager::ExpandInputsToRead(const set<string>& sourcesToRead)
+{
+  size_t nInputs{};
+  for (const auto& dataSource : sourcesToRead) {
+    // data sources restricted to a folder are read together with the data source they are part of
+    const string baseSource = dataSource.substr(0, dataSource.find(':'));
+    if (mExpandedInputs.find(baseSource) != mExpandedInputs.end()) continue;
+    nInputs += (mExpandedInputs[baseSource] = ExpandInputs(baseSource)).size();
+    // UserData.root holds the in-memory inputs of all data sources: AddDataSource already makes their data be read again
+    auto& times = mInputTimes[baseSource];
+    for (const auto& input : mExpandedInputs[baseSource]) {
+      const string fileName = split_input_path(expand_path(input).value_or(""))[0];
+      std::error_code timeError;
+      const auto time = std::filesystem::last_write_time(fileName, timeError);
+      if (!timeError && !is_remote(fileName) && fileName != mUserDataFile && fileName != UserDataProcessFile()) times[fileName] = time;
+    }
+  }
+  return nInputs;
+}
+
+//**************************************************************************************************
+/**
+ * The summary of the data the plots cannot get, whether not found or failed to read (its details come with each plot).
+ */
+//**************************************************************************************************
+void PlotManager::ReportMissingData(const vector<Plot*>& selectedPlots)
+{
+  uint32_t nAffectedPlots{};
+  set<std::pair<string, string>> missingItems;  // (dataSource, name+suffix)
+  for (auto plot : selectedPlots) {
+    auto missing = GetMissingData(*plot);
+    if (!missing.empty()) {
+      ++nAffectedPlots;
+      for (const auto& [dataSource, name, dataInfo] : missing) {
+        missingItems.emplace(dataSource, name + dataInfo.GetNameSuffix());
+      }
+    }
+  }
+  if (nAffectedPlots > 0) {
+    logger::error("{} of {} plots cannot be created due to {}.", nAffectedPlots, selectedPlots.size(), plural(missingItems.size(), "missing data item"));
+  }
+}
+
+//**************************************************************************************************
+/**
+ * The frames of a gif are the plots that can be made, in the order they were defined; the last one closes it (its file name tells ROOT
+ * how the animation repeats). The gif is named after the deepest group all frames are in and lies next to the folder of that group
+ * (frames of animations/legoRotation: animations/legoRotation.gif); frames without a common group make animation.gif in the output directory
+ */
+//**************************************************************************************************
+void PlotManager::SetUpGif(const string& mode, const vector<Plot*>& selectedPlots)
+{
+  mGifName.clear();
+  mGifPendingFrame.reset();
+  mGifSize.reset();
+  mGifSizeReported = false;
+  if (str_starts_with(mode, "gif")) {
+    // ROOT's syntax: +<centiseconds a frame is shown>; the last frame +NN plays the animation once, ++NN++ loops endlessly, +NN++RR repeats
+    // it RR times (mode gif+<centiseconds>[++[<repeats>]], checked by is_valid_plot_mode)
+    const size_t loopPos = mode.find("++");
+    const string delay = (mode.size() > 4) ? mode.substr(4, (loopPos == string::npos) ? string::npos : loopPos - 4) : "50";
+    const string repeats = (loopPos == string::npos) ? "" : mode.substr(loopPos + 2);
+    mGifFrameSuffix = "+" + delay;
+    mGifLastFrameSuffix = (loopPos == string::npos) ? mGifFrameSuffix : (repeats.empty() ? "++" + delay + "++" : "+" + delay + "++" + repeats);
+    optional<vector<string>> commonGroup;
+    // frames that cannot be made are left out of the name here already (missing data, a missing base plot)
+    auto hasBasePlot = [this](const Plot& plot) {
+      return !plot.GetBasePlotName() || FindBasePlot(*plot.GetBasePlotName());
+    };
+    for (auto plot : selectedPlots) {
+      if (!GetMissingData(*plot).empty() || plot->GetGroup().empty() || !hasBasePlot(*plot)) continue;
+      const vector<string> parts = split_string(plot->GetGroup(), '/');
+      if (!commonGroup) {
+        commonGroup = parts;
+        continue;
+      }
+      commonGroup->erase(std::mismatch(commonGroup->begin(), commonGroup->end(), parts.begin(), parts.end()).first, commonGroup->end());
+    }
+    if (commonGroup) {
+      string folder = OutputFolder();
+      for (size_t i = 0; i + 1 < commonGroup->size(); ++i)
+        folder += "/" + (*commonGroup)[i];
+      mGifName = folder + "/" + (commonGroup->empty() ? string("animation") : commonGroup->back()) + ".gif";
+      gSystem->Unlink(mGifName.data());  // the frames are appended to the file
+    }
+  }
+}
+
+//**************************************************************************************************
+/**
+ * What a plot that could not be made misses, with names close to those not found.
+ */
+//**************************************************************************************************
+void PlotManager::ReportFailedPlot(Plot& plot)
+{
+  auto missingData = GetMissingData(plot);
+  string message = fmt::format("Plot {} could not be created.", Plot::Label(plot));
+  for (const auto& [dataSource, name, dataInfo] : missingData) {
+    message += "\n         - missing " + DataLocation(dataSource, name);
+    if (!dataInfo.dataDims.empty()) message += " [" + dataInfo.GetDescription() + "]";
+    if (!IsDataSourceDefined(dataSource)) {
+      vector<string> sources;
+      for (const auto& [source, inputs] : mInputs)
+        sources.push_back(source);
+      const auto similar = SimilarNames(dataSource.substr(0, dataSource.find(':')), name_candidates_t(std::move(sources)));
+      message += (similar.empty()) ? " (data source not defined)" : " (data source not defined; did you mean " + join_strings(similar, ", ") + "?)";
+    } else if (auto it = mNotFoundData.find(dataSource); it != mNotFoundData.end() && it->second.count(name)) {
+      string suggestion;
+      if (auto similar = mSimilarNames.find(dataSource); similar != mSimilarNames.end()) {
+        if (auto names = similar->second.find(name); names != similar->second.end()) {
+          suggestion = "; did you mean " + join_strings(names->second, ", ") + "?";
+        }
+      }
+      message += " (not found in the inputs of " + dataSource + suggestion + ")";
+    }
+  }
+  logger::error("{}", message);
+}
+
+//**************************************************************************************************
+/**
+ * Modes file and data: the plots or their data in one ROOT file.
+ */
+//**************************************************************************************************
+bool PlotManager::SaveOutputFile(const string& mode, const vector<Plot*>& selectedPlots)
+{
+  bool saved = true;
+  if (mode == "file") {
+    saved = SavePlotsToRootFile();
+  } else if (mode == "data") {
+    set<std::pair<string, string>> keys;
+    for (auto plot : selectedPlots) {
+      for (const auto& [dataSource, name, dataInfo] : GetNeededData(*plot))
+        keys.emplace(dataSource, name + dataInfo.GetNameSuffix());
+    }
+    saved = SaveDataToRootFile(keys);
+  }
+  return saved;
 }
 
 //**************************************************************************************************
