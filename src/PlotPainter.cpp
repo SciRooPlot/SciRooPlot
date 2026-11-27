@@ -5719,162 +5719,9 @@ void PlotPainter::AddAxisRoom(const Plot::Pad& pad, const Plot::Pad& padDefaults
     std::swap(xMin, yMin);
     std::swap(xMax, yMax);
   }
-  // functions given as formula in the plot definition span the frame along the axes without a range of their own
-  auto spansFrame = [](const Plot::Pad::Data& data, char axisLabel) {
-    if (data.GetDataSource() != kUserFunctions) return false;
-    return (axisLabel == 'X') ? !data.GetMinRangeX() && !data.GetMaxRangeX() : !data.GetMinRangeY() && !data.GetMaxRangeY();
-  };
 
-  // extent of the drawn data along an axis
-  auto dataExtent = [&](char axisLabel) -> optional<std::pair<double_t, double_t>> {
-    const bool isLog = isLogAxis(axisLabel);
-    double_t lowest = std::numeric_limits<double_t>::infinity();
-    double_t highest = -std::numeric_limits<double_t>::infinity();
-    auto add = [&](double_t low, double_t value, double_t high) {
-      if (!std::isfinite(value)) return;
-      if (isLog) {
-        if (value <= 0.) return;  // not drawn on a log axis
-        if (low <= 0.) low = value;
-      }
-      lowest = std::min(lowest, low);
-      highest = std::max(highest, high);
-    };
-    auto inX = [&](double_t low, double_t up) { return up >= xMin && low <= xMax; };
-    auto inY = [&](double_t low, double_t up) { return up >= yMin && low <= yMax; };
-    auto addHist1d = [&](const TH1* hist, bool withErrors) {
-      const TAxis* xAxis = hist->GetXaxis();
-      for (int32_t bin = xAxis->GetFirst(); bin <= xAxis->GetLast(); ++bin) {
-        const double_t low = xAxis->GetBinLowEdge(bin);
-        const double_t up = xAxis->GetBinUpEdge(bin);
-        if (axisLabel == 'X') {
-          add(low, xAxis->GetBinCenter(bin), up);
-        } else if (inX(low, up)) {
-          const double_t content = hist->GetBinContent(bin);
-          const double_t error = (withErrors) ? hist->GetBinError(bin) : 0.;
-          add(content - error, content, content + error);
-        }
-      }
-    };
-    TIter next(pad_ptr->GetListOfPrimitives());
-    while (TObject* obj = next()) {
-      auto definition = mDataDefinitions.find(obj);
-      if (obj == frame || definition == mDataDefinitions.end() || definition->second.get() == refFunc) continue;
-      const Plot::Pad::Data& data = *definition->second;
-      if (auto* hist = dynamic_cast<TH1*>(obj)) {
-        if (hist->GetDimension() == 1) {
-          TString option = next.GetOption();
-          option.ToUpper();
-          option.ReplaceAll("SAME", "");
-          option.ReplaceAll("TEXT", "");
-          if (axisLabel != 'Z') addHist1d(hist, option.Contains("E"));
-        } else if (auto* poly = dynamic_cast<TH2Poly*>(hist)) {
-          for (TObject* binObj : *poly->GetBins()) {
-            auto* bin = static_cast<TH2PolyBin*>(binObj);
-            if (axisLabel == 'X') {
-              add(bin->GetXMin(), 0.5 * (bin->GetXMin() + bin->GetXMax()), bin->GetXMax());
-            } else if (axisLabel == 'Y') {
-              add(bin->GetYMin(), 0.5 * (bin->GetYMin() + bin->GetYMax()), bin->GetYMax());
-            } else if (inX(bin->GetXMin(), bin->GetXMax()) && inY(bin->GetYMin(), bin->GetYMax())) {
-              add(bin->GetContent(), bin->GetContent(), bin->GetContent());
-            }
-          }
-        } else if (hist->GetDimension() == 2) {
-          const TAxis* xAxis = hist->GetXaxis();
-          const TAxis* yAxis = hist->GetYaxis();
-          if (axisLabel == 'X') {
-            add(xAxis->GetBinLowEdge(xAxis->GetFirst()), xAxis->GetBinCenter(xAxis->GetFirst()), xAxis->GetBinUpEdge(xAxis->GetLast()));
-          } else if (axisLabel == 'Y') {
-            add(yAxis->GetBinLowEdge(yAxis->GetFirst()), yAxis->GetBinCenter(yAxis->GetFirst()), yAxis->GetBinUpEdge(yAxis->GetLast()));
-          } else {
-            for (int32_t binX = xAxis->GetFirst(); binX <= xAxis->GetLast(); ++binX) {
-              if (!inX(xAxis->GetBinLowEdge(binX), xAxis->GetBinUpEdge(binX))) continue;
-              for (int32_t binY = yAxis->GetFirst(); binY <= yAxis->GetLast(); ++binY) {
-                if (!inY(yAxis->GetBinLowEdge(binY), yAxis->GetBinUpEdge(binY))) continue;
-                const double_t content = hist->GetBinContent(binX, binY);
-                add(content, content, content);
-              }
-            }
-          }
-        }
-      } else if (auto* graph = dynamic_cast<TGraph*>(obj)) {
-        // a histogram drawn with a clipped alias is a graph of steps down to far below the frame: its bins count
-        if (auto source = mSourceHists.find(obj); source != mSourceHists.end() && graph->IsA() == TGraph::Class()) {
-          if (axisLabel != 'Z') addHist1d(source->second.get(), false);
-          continue;
-        }
-        for (int32_t i = 0; i < graph->GetN(); ++i) {
-          double_t x = graph->GetPointX(i);
-          double_t y = graph->GetPointY(i);
-          double_t xLow = std::max(graph->GetErrorXlow(i), 0.);  // -1 for graphs without errors
-          double_t xHigh = std::max(graph->GetErrorXhigh(i), 0.);
-          double_t yLow = std::max(graph->GetErrorYlow(i), 0.);
-          double_t yHigh = std::max(graph->GetErrorYhigh(i), 0.);
-          if (hbar) {
-            // drawn in pad coordinates: its x runs along the value axis of the horizontal bars, its y along their binned axis
-            std::swap(x, y);
-            std::swap(xLow, yLow);
-            std::swap(xHigh, yHigh);
-          }
-          if (axisLabel == 'X') {
-            add(x - xLow, x, x + xHigh);
-          } else if (axisLabel == 'Y' && (is2d || inX(x, x))) {
-            // y of a 2d pad is binned (all points), y of a 1d pad the value axis (points within the x range)
-            add(y - yLow, y, y + yHigh);
-          }
-        }
-      } else if (auto* graph2d = dynamic_cast<TGraph2D*>(obj)) {
-        for (int32_t i = 0; i < graph2d->GetN(); ++i) {
-          const double_t x = graph2d->GetX()[i];
-          const double_t y = graph2d->GetY()[i];
-          const double_t z = graph2d->GetZ()[i];
-          if (axisLabel == 'X') {
-            add(x, x, x);
-          } else if (axisLabel == 'Y') {
-            add(y, y, y);
-          } else if (axisLabel == 'Z' && inX(x, x) && inY(y, y)) {
-            const double_t error = std::max(graph2d->GetErrorZ(i), 0.);  // -1 for graphs without errors
-            add(z - error, z, z + error);
-          }
-        }
-      } else if (auto* func = dynamic_cast<TF1*>(obj)) {
-        if (func->GetNdim() == 1) {
-          // drawn in pad coordinates: with horizontal bars its x runs along their value axis and its values along their binned axis
-          const double_t from = std::max(func->GetXmin(), (hbar) ? yMin : xMin);
-          const double_t to = std::min(func->GetXmax(), (hbar) ? yMax : xMax);
-          if (axisLabel == histLabel('X')) {
-            if (!spansFrame(data, 'X')) add(func->GetXmin(), 0.5 * (func->GetXmin() + func->GetXmax()), func->GetXmax());
-          } else if (axisLabel == histLabel('Y')) {
-            const int32_t nPoints = std::max(func->GetNpx(), 2);
-            for (int32_t i = 0; i < nPoints && from < to; ++i) {
-              const double_t value = func->Eval(from + (to - from) * i / (nPoints - 1));
-              add(value, value, value);
-            }
-          }
-        } else if (auto* func2d = dynamic_cast<TF2*>(func); func2d && func->GetNdim() == 2) {
-          const double_t from = std::max(func2d->GetXmin(), xMin);
-          const double_t to = std::min(func2d->GetXmax(), xMax);
-          if (axisLabel == 'X') {
-            if (!spansFrame(data, 'X')) add(func2d->GetXmin(), 0.5 * (func2d->GetXmin() + func2d->GetXmax()), func2d->GetXmax());
-          } else if (axisLabel == 'Y') {
-            if (!spansFrame(data, 'Y')) add(func2d->GetYmin(), 0.5 * (func2d->GetYmin() + func2d->GetYmax()), func2d->GetYmax());
-          } else {
-            const double_t fromY = std::max(func2d->GetYmin(), yMin);
-            const double_t toY = std::min(func2d->GetYmax(), yMax);
-            const int32_t nX = std::max(func2d->GetNpx(), 2);
-            const int32_t nY = std::max(func2d->GetNpy(), 2);
-            for (int32_t i = 0; i < nX && from < to; ++i) {
-              for (int32_t j = 0; j < nY && fromY < toY; ++j) {
-                const double_t value = func2d->Eval(from + (to - from) * i / (nX - 1), fromY + (toY - fromY) * j / (nY - 1));
-                add(value, value, value);
-              }
-            }
-          }
-        }
-      }
-    }
-    if (lowest > highest) return {};
-    return std::make_pair(lowest, highest);
-  };
+  // extent of the drawn data along an axis, within the ranges of the frame drawn so far
+  auto dataExtent = [&](char axisLabel) { return DataExtent(pad_ptr, frame, refFunc, axisLabel, isLogAxis(axisLabel), {xMin, xMax, yMin, yMax}); };
 
   // the histograms of the pad were cut at the frame along its binned axes: for the extent they get back their own data range,
   // and afterwards they are cut at the frame again, whether it changed or not (candles and violins are not cut along their distribution)
@@ -5901,7 +5748,7 @@ void PlotPainter::AddAxisRoom(const Plot::Pad& pad, const Plot::Pad& padDefaults
       auto* func = dynamic_cast<TF1*>(obj);
       auto definition = mDataDefinitions.find(obj);
       if (!func || definition == mDataDefinitions.end()) continue;
-      if (definition->second.get() != refFunc && !spansFrame(*definition->second, funcLabel)) continue;
+      if (definition->second.get() != refFunc && !SpansFrame(*definition->second, funcLabel)) continue;
       if (func->GetNdim() == 1 && funcLabel == 'X') {
         func->SetRange(newMin, newMax);
       } else if (auto* func2d = dynamic_cast<TF2*>(func); func2d && func->GetNdim() == 2) {
@@ -5995,6 +5842,178 @@ void PlotPainter::AddAxisRoom(const Plot::Pad& pad, const Plot::Pad& padDefaults
     ((axisLabel == 'X') ? xMax : yMax) = newMax;
     stretchFunctions(axisLabel, newMin, newMax);
   }
+}
+
+//**************************************************************************************************
+/**
+ * Functions given as formula in the plot definition span the frame along the axes without a range of their own.
+ */
+//**************************************************************************************************
+bool PlotPainter::SpansFrame(const Plot::Pad::Data& data, char axisLabel)
+{
+  if (data.GetDataSource() != kUserFunctions) return false;
+  return (axisLabel == 'X') ? !data.GetMinRangeX() && !data.GetMaxRangeX() : !data.GetMinRangeY() && !data.GetMaxRangeY();
+}
+
+//**************************************************************************************************
+/**
+ * The extent of the data drawn in a pad along an axis of its frame histogram (with horizontal bars the axes of the histogram, see
+ * AddAxisRoom), within the ranges drawn so far {xMin, xMax, yMin, yMax} (in pad orientation); on a log axis only positive values count.
+ */
+//**************************************************************************************************
+optional<std::pair<double_t, double_t>> PlotPainter::DataExtent(TPad* pad_ptr, TH1* frame, const Plot::Pad::Data* refFunc, char axisLabel, bool isLog,
+                                                                const array<double_t, 4>& ranges) const
+{
+  const double_t xMin = ranges[0], xMax = ranges[1], yMin = ranges[2], yMax = ranges[3];  // (lambdas capture no structured bindings in C++17)
+  const bool is2d = frame->GetDimension() > 1;
+  const bool hbar = IsHBarFrame(pad_ptr, frame);
+  auto histLabel = [hbar](char padLabel) { return HBarAxis(padLabel, hbar); };
+  double_t lowest = std::numeric_limits<double_t>::infinity();
+  double_t highest = -std::numeric_limits<double_t>::infinity();
+  auto add = [&](double_t low, double_t value, double_t high) {
+    if (!std::isfinite(value)) return;
+    if (isLog) {
+      if (value <= 0.) return;  // not drawn on a log axis
+      if (low <= 0.) low = value;
+    }
+    lowest = std::min(lowest, low);
+    highest = std::max(highest, high);
+  };
+  auto inX = [&](double_t low, double_t up) { return up >= xMin && low <= xMax; };
+  auto inY = [&](double_t low, double_t up) { return up >= yMin && low <= yMax; };
+  auto addHist1d = [&](const TH1* hist, bool withErrors) {
+    const TAxis* xAxis = hist->GetXaxis();
+    for (int32_t bin = xAxis->GetFirst(); bin <= xAxis->GetLast(); ++bin) {
+      const double_t low = xAxis->GetBinLowEdge(bin);
+      const double_t up = xAxis->GetBinUpEdge(bin);
+      if (axisLabel == 'X') {
+        add(low, xAxis->GetBinCenter(bin), up);
+      } else if (inX(low, up)) {
+        const double_t content = hist->GetBinContent(bin);
+        const double_t error = (withErrors) ? hist->GetBinError(bin) : 0.;
+        add(content - error, content, content + error);
+      }
+    }
+  };
+  TIter next(pad_ptr->GetListOfPrimitives());
+  while (TObject* obj = next()) {
+    auto definition = mDataDefinitions.find(obj);
+    if (obj == frame || definition == mDataDefinitions.end() || definition->second.get() == refFunc) continue;
+    const Plot::Pad::Data& data = *definition->second;
+    if (auto* hist = dynamic_cast<TH1*>(obj)) {
+      if (hist->GetDimension() == 1) {
+        TString option = next.GetOption();
+        option.ToUpper();
+        option.ReplaceAll("SAME", "");
+        option.ReplaceAll("TEXT", "");
+        if (axisLabel != 'Z') addHist1d(hist, option.Contains("E"));
+      } else if (auto* poly = dynamic_cast<TH2Poly*>(hist)) {
+        for (TObject* binObj : *poly->GetBins()) {
+          auto* bin = static_cast<TH2PolyBin*>(binObj);
+          if (axisLabel == 'X') {
+            add(bin->GetXMin(), 0.5 * (bin->GetXMin() + bin->GetXMax()), bin->GetXMax());
+          } else if (axisLabel == 'Y') {
+            add(bin->GetYMin(), 0.5 * (bin->GetYMin() + bin->GetYMax()), bin->GetYMax());
+          } else if (inX(bin->GetXMin(), bin->GetXMax()) && inY(bin->GetYMin(), bin->GetYMax())) {
+            add(bin->GetContent(), bin->GetContent(), bin->GetContent());
+          }
+        }
+      } else if (hist->GetDimension() == 2) {
+        const TAxis* xAxis = hist->GetXaxis();
+        const TAxis* yAxis = hist->GetYaxis();
+        if (axisLabel == 'X') {
+          add(xAxis->GetBinLowEdge(xAxis->GetFirst()), xAxis->GetBinCenter(xAxis->GetFirst()), xAxis->GetBinUpEdge(xAxis->GetLast()));
+        } else if (axisLabel == 'Y') {
+          add(yAxis->GetBinLowEdge(yAxis->GetFirst()), yAxis->GetBinCenter(yAxis->GetFirst()), yAxis->GetBinUpEdge(yAxis->GetLast()));
+        } else {
+          for (int32_t binX = xAxis->GetFirst(); binX <= xAxis->GetLast(); ++binX) {
+            if (!inX(xAxis->GetBinLowEdge(binX), xAxis->GetBinUpEdge(binX))) continue;
+            for (int32_t binY = yAxis->GetFirst(); binY <= yAxis->GetLast(); ++binY) {
+              if (!inY(yAxis->GetBinLowEdge(binY), yAxis->GetBinUpEdge(binY))) continue;
+              const double_t content = hist->GetBinContent(binX, binY);
+              add(content, content, content);
+            }
+          }
+        }
+      }
+    } else if (auto* graph = dynamic_cast<TGraph*>(obj)) {
+      // a histogram drawn with a clipped alias is a graph of steps down to far below the frame: its bins count
+      if (auto source = mSourceHists.find(obj); source != mSourceHists.end() && graph->IsA() == TGraph::Class()) {
+        if (axisLabel != 'Z') addHist1d(source->second.get(), false);
+        continue;
+      }
+      for (int32_t i = 0; i < graph->GetN(); ++i) {
+        double_t x = graph->GetPointX(i);
+        double_t y = graph->GetPointY(i);
+        double_t xLow = std::max(graph->GetErrorXlow(i), 0.);  // -1 for graphs without errors
+        double_t xHigh = std::max(graph->GetErrorXhigh(i), 0.);
+        double_t yLow = std::max(graph->GetErrorYlow(i), 0.);
+        double_t yHigh = std::max(graph->GetErrorYhigh(i), 0.);
+        if (hbar) {
+          // drawn in pad coordinates: its x runs along the value axis of the horizontal bars, its y along their binned axis
+          std::swap(x, y);
+          std::swap(xLow, yLow);
+          std::swap(xHigh, yHigh);
+        }
+        if (axisLabel == 'X') {
+          add(x - xLow, x, x + xHigh);
+        } else if (axisLabel == 'Y' && (is2d || inX(x, x))) {
+          // y of a 2d pad is binned (all points), y of a 1d pad the value axis (points within the x range)
+          add(y - yLow, y, y + yHigh);
+        }
+      }
+    } else if (auto* graph2d = dynamic_cast<TGraph2D*>(obj)) {
+      for (int32_t i = 0; i < graph2d->GetN(); ++i) {
+        const double_t x = graph2d->GetX()[i];
+        const double_t y = graph2d->GetY()[i];
+        const double_t z = graph2d->GetZ()[i];
+        if (axisLabel == 'X') {
+          add(x, x, x);
+        } else if (axisLabel == 'Y') {
+          add(y, y, y);
+        } else if (axisLabel == 'Z' && inX(x, x) && inY(y, y)) {
+          const double_t error = std::max(graph2d->GetErrorZ(i), 0.);  // -1 for graphs without errors
+          add(z - error, z, z + error);
+        }
+      }
+    } else if (auto* func = dynamic_cast<TF1*>(obj)) {
+      if (func->GetNdim() == 1) {
+        // drawn in pad coordinates: with horizontal bars its x runs along their value axis and its values along their binned axis
+        const double_t from = std::max(func->GetXmin(), (hbar) ? yMin : xMin);
+        const double_t to = std::min(func->GetXmax(), (hbar) ? yMax : xMax);
+        if (axisLabel == histLabel('X')) {
+          if (!SpansFrame(data, 'X')) add(func->GetXmin(), 0.5 * (func->GetXmin() + func->GetXmax()), func->GetXmax());
+        } else if (axisLabel == histLabel('Y')) {
+          const int32_t nPoints = std::max(func->GetNpx(), 2);
+          for (int32_t i = 0; i < nPoints && from < to; ++i) {
+            const double_t value = func->Eval(from + (to - from) * i / (nPoints - 1));
+            add(value, value, value);
+          }
+        }
+      } else if (auto* func2d = dynamic_cast<TF2*>(func); func2d && func->GetNdim() == 2) {
+        const double_t from = std::max(func2d->GetXmin(), xMin);
+        const double_t to = std::min(func2d->GetXmax(), xMax);
+        if (axisLabel == 'X') {
+          if (!SpansFrame(data, 'X')) add(func2d->GetXmin(), 0.5 * (func2d->GetXmin() + func2d->GetXmax()), func2d->GetXmax());
+        } else if (axisLabel == 'Y') {
+          if (!SpansFrame(data, 'Y')) add(func2d->GetYmin(), 0.5 * (func2d->GetYmin() + func2d->GetYmax()), func2d->GetYmax());
+        } else {
+          const double_t fromY = std::max(func2d->GetYmin(), yMin);
+          const double_t toY = std::min(func2d->GetYmax(), yMax);
+          const int32_t nX = std::max(func2d->GetNpx(), 2);
+          const int32_t nY = std::max(func2d->GetNpy(), 2);
+          for (int32_t i = 0; i < nX && from < to; ++i) {
+            for (int32_t j = 0; j < nY && fromY < toY; ++j) {
+              const double_t value = func2d->Eval(from + (to - from) * i / (nX - 1), fromY + (toY - fromY) * j / (nY - 1));
+              add(value, value, value);
+            }
+          }
+        }
+      }
+    }
+  }
+  if (lowest > highest) return {};
+  return std::make_pair(lowest, highest);
 }
 
 //**************************************************************************************************

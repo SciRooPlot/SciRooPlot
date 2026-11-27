@@ -450,6 +450,9 @@ class PlotPainter
   std::optional<data_ptr_t> InputClone(TObject* input, const std::string& messageName, const std::optional<Plot::Pad::Data::proj_info_t>& projInfo, bool keepStoredRanges = false);
   std::optional<data_ptr_t> DenominatorClone(const Plot::Pad::Ratio& ratio, const data_buffer_t& dataBuffer);
   void AddAxisRoom(const Plot::Pad& pad, const Plot::Pad& padDefaults, uint8_t padID, TPad* pad_ptr, TH1* frame, const Plot::Pad::Data* refFunc, std::string& padSetup);
+  static bool SpansFrame(const Plot::Pad::Data& data, char axisLabel);
+  std::optional<std::pair<double_t, double_t>> DataExtent(TPad* pad_ptr, TH1* frame, const Plot::Pad::Data* refFunc, char axisLabel, bool isLog,
+                                                          const std::array<double_t, 4>& ranges) const;
   void ApplyScale(TObject* obj, std::set<TObject*>& done, const std::string& drawOption = "");
   Width_t ScaleLineWidth(Width_t width) const;
   Style_t ScaleMarkerStyle(Style_t style) const;
