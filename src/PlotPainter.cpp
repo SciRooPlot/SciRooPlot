@@ -3550,7 +3550,9 @@ void PlotPainter::WidenFrame(item_state_t& state, const string& drawOptAxis)
     // an axis without positive range (its bins or the upper range set) loses its log scale (ApplyAxisSettings): a lower range at or below
     // zero applies to it again; the shown range ends with the bin of the upper range (one starting there is left out, as by SetRangeUser)
     double_t shownMax = axis->GetXmax();
-    if (userMax) {
+    if (userMax && *userMax >= axis->GetXmax()) {
+      shownMax = *userMax;  // beyond the bins: the frame is widened to it
+    } else if (userMax) {
       int32_t lastBin = axis->FindFixBin(*userMax);
       if (lastBin > 1 && axis->GetBinLowEdge(lastBin) >= *userMax) --lastBin;
       shownMax = axis->GetBinUpEdge(lastBin);

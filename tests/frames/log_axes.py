@@ -77,7 +77,8 @@ plot[1]["Y"].SetRange(0.2, 0.8)
 p.pm.AddPlot(plot)
 # negative data with a range whose lower end is at or below zero: the log scale is off, the axis shows the whole range as without log
 # (also a range below the data, an upper end alone below it (empty, warned about with and without log), and bins at or below zero with
-# a lower range beyond them, or bins on both sides of zero with a range below zero reaching beyond them)
+# a lower range beyond them, or bins on both sides of zero with a range below zero reaching beyond them, or an upper range beyond the
+# last bin edge at or below zero)
 negatives = {"neg1": ROOT.TH1D("neg1", "", 10, 0.0, 10.0), "neg2": ROOT.TH2D("neg2", "", 10, 0.0, 10.0, 10, 0.0, 10.0)}
 for h in negatives.values():
     for c in range(h.GetNcells()):
@@ -85,10 +86,16 @@ for h in negatives.values():
             h.SetBinContent(c, -1.0 - c % 10)
 negatives["negx"] = ROOT.TH1D("negx", "", 10, -10.0, 0.0)
 negatives["crossx"] = ROOT.TH1D("crossx", "", 20, -10.0, 10.0)
+negatives["coarsex"] = ROOT.TH1D("coarsex", "", 3, -10.0, -1.0)
+negatives["finex"] = ROOT.TH1D("finex", "", 11, -15.0, 0.0)
 for b in range(1, 11):
     negatives["negx"].SetBinContent(b, b)
 for b in range(1, 21):
     negatives["crossx"].SetBinContent(b, b)
+for b in range(1, 4):
+    negatives["coarsex"].SetBinContent(b, b)
+for b in range(1, 12):
+    negatives["finex"].SetBinContent(b, b)
 p.source("negatives", negatives)
 NEGATIVE_RANGES = [
     ("neg1", "Y", (-30.0, 5.0)),
@@ -97,6 +104,8 @@ NEGATIVE_RANGES = [
     ("neg1", "Y", (None, -12.0)),
     ("negx", "X", (-20.0, -2.0)),
     ("crossx", "X", (-20.0, -2.0)),
+    ("coarsex", "X", (-20.0, -0.5)),
+    ("finex", "X", (-20.0, 0.0)),
 ]
 for k, (name, axis, (low, high)) in enumerate(NEGATIVE_RANGES):
     for log in (True, False):
