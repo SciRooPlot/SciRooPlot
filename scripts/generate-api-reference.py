@@ -212,6 +212,7 @@ def main():
         "- `draw_option_t`: " + ", ".join(f"`{a}`" for a in aliases),
         "- `box_placement_t`: " + ", ".join(f"`{v}`" for v in values("BOX_PLACEMENTS", "PLACEMENT")),
         "- `coordinates_t`: " + ", ".join(f"`{v}`" for v in values("COORDINATE_SYSTEMS", "COORDINATES")),
+        "- `ratio_errors_t`: " + ", ".join(f"`{v}`" for v in values("RATIO_ERRORS", "RATIO_ERROR")),
         "",
     ]
     # the skill names the version it describes, so agents can compare it with the installed one
