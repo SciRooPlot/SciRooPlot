@@ -192,167 +192,419 @@ int main(int argc, char* argv[])
  * Runs an srp command (0 on success, 1 with an error reported).
  */
 //**************************************************************************************************
-int run_command(const string& command, const string& project, const string& property, const string& setting)
-{
-  // help, info, projects and settings: headings, then names and their explanations in two columns
+//**************************************************************************************************
+/**
+ * Help, info, projects and settings: headings, then names and their explanations in two columns.
+ */
+//**************************************************************************************************
+struct listing_t {
   bool firstHeading = true;
-  auto heading = [&firstHeading](const string& title) {
+  void Heading(const string& title)
+  {
     if (!firstHeading) logger::print("");
     firstHeading = false;
     logger::print("{}{}{}", logger::begin_color(logger::Color::Yellow), title, logger::end_color());
-  };
-  auto rows = [](int column) {
+  }
+  static std::function<void(const string&, const string&)> Rows(int column)
+  {
     return [column](const string& name, const string& text) {
       logger::print("  {}{:<{}}{}  {}", logger::begin_color(logger::Color::Cyan), name, column, logger::end_color(), text);
     };
+  }
+};
+
+//**************************************************************************************************
+/**
+ * srp help.
+ */
+//**************************************************************************************************
+int command_help(listing_t& listing)
+{
+  auto heading = [&listing](const string& title) { listing.Heading(title); };
+  const auto rows = &listing_t::Rows;
+  const auto row = rows(39);
+  heading("Projects");
+  row("srp projects [<project>]", "all projects or one: program, folders, plots, inputs");
+  row("srp select <project>", "select a project");
+  row("srp rename <project> <name>", "rename a project");
+  row("srp remove <project>", "remove a project (its code is kept)");
+  heading("New projects");
+  row("srp init-cpp <project> [<dir>]", "minimal C++ skeleton");
+  row("srp init-py <project> [<dir>]", "minimal Python skeleton");
+  row("srp example-cpp <project> [<dir>]", "commented C++ examples with data");
+  row("srp example-py <project> [<dir>]", "commented Python examples with data");
+  row("srp add <project> <program> [<outdir>]", "register an existing program");
+  heading("Project properties");
+  row("srp get <project> <property>", "print a property");
+  row("srp set <project> <property> <value>", "set a property");
+  row("srp unset <project> <property>", "clear a property (a setting: its default)");
+  heading("Project folders");
+  row("srp confdir [<project>]", "print the config folder");
+  row("srp cd [<project>]", "go to the program folder");
+  row("srp edit [<project>]", "open the source files");
+  row("srp out [<project>]", "open the output folder");
+  heading("Plotting");
+  row("plot <group> <name> [<mode>]", "create the matching plots");
+  heading("Plot modes");
+  row("show", "on screen, one after the other");
+  row("spread", "on screen, all at once");
+  row("pdf eps ps svg png jpg", "one image file per plot");
+  row("gif[+<centiseconds>[++[<repeats>]]]", "all plots as one animation, ++ loops it");
+  row("root html json xml", "one ROOT or web file per plot");
+  row("macro", "one ROOT macro per plot");
+  row("file", "all canvases in one ROOT file");
+  row("data", "all input objects in one ROOT file");
+  row("print", "the definitions in the terminal");
+  row("list", "the names in the terminal");
+  heading("Settings");
+  row("srp settings", "show the settings (a setting without value: its value)");
+  row("srp plotmode <mode>", "default plot mode (initially show)");
+  row("srp color (bright | dark | off)", "colours of the messages");
+  row("srp verbosity <level>", "lowest level of messages shown");
+  row("srp matchmode (exact | contains)", "patterns match whole names or parts");
+  row("srp matchcase (sensitive | insensitive)", "case sensitivity of the patterns");
+  row("srp screenscale <factor>", "size of plots on screen (default 1)");
+  row("srp bitmapscale <factor>", "resolution of png/jpg/gif (default 1)");
+  row("srp cache (on [<folder>] | off)", "local copies of remote inputs (default off)");
+  heading("Maintenance");
+  row("srp info", "installation and build details");
+  row("srp update", "update SciRooPlot");
+  row("srp reinstall", "reinstall SciRooPlot from scratch");
+  row("srp clean", "remove projects whose code is gone");
+  row("srp reset", "remove all projects (their code is kept)");
+  row("srp help", "this overview");
+  heading("Utilities");
+  row("srp print <file>[:<path>]", "objects in a ROOT file (below a path), one object with details");
+  row("srp print hepdata:<record>[:<table>]", "data names of a HEPData record (or downloaded file)");
+  row("srp print <table file>", "data name, rows and column types of a table");
+  row("srp print <data source>[:<path>]", "objects of a data source of the current project as read");
+  row("srp open <file>", "open a ROOT file in a TBrowser");
+  row("srp colorwheel [<file>]", "ROOT's colours with their names");
+  heading("Environment");
+  row("SCIROOPLOT_CONFIG_PATH", "config folder (default ~/.SciRooPlot)");
+  heading("Arguments");
+  row("<project>", "a project name (@current: selected project)");
+  row("<property>", "program | outdir | <setting>");
+  row("<setting>", "declared and read by the program with Setting");
+  row("<group> <name>", "regular expressions for plot groups and names");
+  row("<mode>", "one of the plot modes");
+  row("<level>", "debug | hint | log | info | warning | error | silent");
+  return 0;
+}
+
+//**************************************************************************************************
+/**
+ * srp open.
+ */
+//**************************************************************************************************
+int command_open(const string& project)
+{
+  if (project.empty()) {
+    logger::error("Specify a file: srp open <file>.");
+    return 1;
+  }
+  // ~ and environment variables as in the inputs of data sources
+  const auto expanded = util::expand_path(project);
+  if (!expanded) return 1;  // reported
+  const string& fileName = *expanded;
+  std::error_code existsError;
+  if (util::is_missing_local_file(fileName, existsError)) {  // a remote file is opened through ROOT, as the inputs of data sources
+    logger::error("Could not find file {}.", fileName);
+    return 1;
+  }
+  TFile* file{};
+  {
+    auto quiet = util::ignore_root_messages_below(kFatal);  // a file that is not a ROOT file is reported below
+    file = util::open_input_file(fileName).release();
+  }
+  if (!file || file->IsZombie()) {
+    logger::error("Cannot read {}: srp open shows ROOT files.", fileName);
+    return 1;
+  }
+  gROOT->SetWebDisplay("off");  // the classic browser, as the plots are shown in classic canvases (closing it ends the program)
+  auto app = open_window_application("open");
+  if (!app) return 1;
+  TBrowser* browser = new TBrowser("TBrowser", file, "SciRooPlot", 1200, 1000);
+  if (auto* rb = dynamic_cast<TRootBrowser*>(browser->GetBrowserImp())) {
+    rb->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+  }
+  app->Run();
+  return 0;
+}
+
+//**************************************************************************************************
+/**
+ * srp colorwheel.
+ */
+//**************************************************************************************************
+int command_colorwheel(const string& project)
+{
+  // optional: save the wheel instead of showing it (~ and environment variables expanded, as ROOT would when saving)
+  const auto expanded = util::expand_path(project);
+  if (!expanded) return 1;  // reported
+  const string fileName = *expanded;
+  if (!fileName.empty()) {
+    // ROOT writes PostScript for any other ending (it compares them case-sensitively: .PNG too; .tif too, .tiff it cannot write)
+    static const std::set<string> imageEndings = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".xpm", ".svg", ".pdf", ".eps", ".ps"};
+    if (!imageEndings.count(std::filesystem::path(fileName).extension().string())) {
+      logger::error("Cannot write the colour wheel to {}: give a file name ending in .png, .pdf, .svg, .eps, .jpg or .gif (in lower case).", fileName);
+      return 1;
+    }
+  }
+  std::unique_ptr<TApplication> app;
+  if (fileName.empty()) {
+    app = open_window_application("colorwheel");
+    if (!app) return 1;
+  } else {
+    gROOT->SetBatch(true);
+  }
+  auto* canvas = new TCanvas("colorwheel", "ROOT colour wheel", 800, 800);
+  auto* wheel = new TColorWheel();
+  wheel->SetCanvas(canvas);
+  wheel->Draw();
+  canvas->SetFillColor(kWhite);  // instead of the background colour TColorWheel gives the canvas
+  canvas->SetFillStyle(1001);
+  canvas->Update();
+  if (!fileName.empty()) {
+    canvas->SetCanvasSize(800, 800);  // the drawing area, without the window frame
+    std::error_code removeError;
+    std::filesystem::remove(fileName, removeError);  // ROOT reports a failed write but returns nothing: the file must be new
+    {
+      auto quiet = util::ignore_root_messages_below(kWarning);  // ROOT's "Info in <TCanvas::Print>: ... has been created"
+      canvas->SaveAs(fileName.data());
+    }
+    std::error_code existsError;
+    if (!std::filesystem::is_regular_file(fileName, existsError)) {
+      logger::error("Could not write the colour wheel to {}.", fileName);
+      return 1;
+    }
+    return 0;
+  }
+  canvas->ToggleEventStatus();  // the status bar names the colour under the mouse
+  if (auto* imp = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) {
+    imp->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
+  }
+  app->Run();
+  return 0;
+}
+
+//**************************************************************************************************
+/**
+ * srp settings.
+ */
+//**************************************************************************************************
+int command_settings(listing_t& listing)
+{
+  auto heading = [&listing](const string& title) { listing.Heading(title); };
+  const auto rows = &listing_t::Rows;
+  // named as the srp commands that change them
+  const auto row = rows(15);
+  heading("Settings");
+  for (const char* setting : kSettings) {
+    row(setting, setting_value(setting));
+  }
+  row("current project", Config::Get().CurrentProject().empty() ? "none" : Config::Get().CurrentProject());
+  return 0;
+}
+
+//**************************************************************************************************
+/**
+ * srp info.
+ */
+//**************************************************************************************************
+int command_info(listing_t& listing)
+{
+  auto heading = [&listing](const string& title) { listing.Heading(title); };
+  const auto rows = &listing_t::Rows;
+  auto getenv = [](const char* name) {
+    const char* value = std::getenv(name);
+    return value ? value : "<not set>";
   };
+  const auto row = rows(15);
+  heading(fmt::format("SciRooPlot {}", SCIROOPLOT_VERSION));
+  heading("Installation");
+  row("prefix", getenv("SCIROOPLOT_ROOT"));
+  row("programs", getenv("SCIROOPLOT_BIN"));
+  row("library", getenv("SCIROOPLOT_LIB"));
+  const std::filesystem::path sourceDir(getenv("SCIROOPLOT_SOURCE_DIR"));
+  if (std::filesystem::exists(sourceDir)) row("source", std::filesystem::canonical(sourceDir).string());
+  row("env script", getenv("SCIROOPLOT_ENV"));
+  heading("Configuration");
+  row("folder", Config::Get().Path().string() + (std::getenv("SCIROOPLOT_CONFIG_PATH") ? "  (SCIROOPLOT_CONFIG_PATH)" : "  (default)"));
+  row("current project", Config::Get().CurrentProject().empty() ? "none" : Config::Get().CurrentProject());
+  heading("Dependencies");
+  row("ROOT", fmt::format("{}  {}", SCIROOPLOT_ROOT_VERSION, SCIROOPLOT_ROOT_EXECUTABLE));
+  row("Python", getenv("SCIROOPLOT_PYTHON_EXECUTABLE"));
+  string boostVersion = BOOST_LIB_VERSION;
+  std::replace(boostVersion.begin(), boostVersion.end(), '_', '.');
+  row("Boost", boostVersion);
+  row("fmt", fmt::format("{}.{}.{}  {}", FMT_VERSION / 10000, FMT_VERSION / 100 % 100, FMT_VERSION % 100, SCIROOPLOT_FMT_INFO));
+  row("pybind11", SCIROOPLOT_PYBIND11_INFO);
+  heading("Build");
+  row("type", SCIROOPLOT_BUILD_TYPE);
+  row("commit", SCIROOPLOT_GIT_DESCRIBE);
+  row("compiler", SCIROOPLOT_CXX_COMPILER);
+  return 0;
+}
+
+//**************************************************************************************************
+/**
+ * srp projects.
+ */
+//**************************************************************************************************
+int command_projects(const string& project, listing_t& listing)
+{
+  auto heading = [&listing](const string& title) { listing.Heading(title); };
+  const auto rows = &listing_t::Rows;
+  if (!project.empty() && !Config::Get().Exists(project)) {
+    Config::Get().ReportUnknown(project);
+    return 1;
+  }
+  // without a project: every project, the current one marked
+  const vector<string> projects = project.empty() ? Config::Get().ProjectNames() : vector<string>{project};
+  if (projects.empty() && Config::Get().ProjectsFileUnreadable()) {
+    logger::error("Cannot list the projects: {} could not be read. Fix or remove it.", Config::Get().ProjectsFile());
+    return 1;
+  }
+  if (projects.empty()) {
+    logger::print("No projects yet: srp init-py <project>, srp init-cpp <project> or srp add <project> <program>.");
+    return 0;
+  }
+  bool readable = true;
+  for (const string& name : projects) {
+    // the tab-completion list has one line <name>,<group> per plot
+    size_t nPlots = 0;
+    std::set<string> groups;
+    std::ifstream plotList(Config::Get().ProjectPath(name) / "tabcomp.csv");
+    for (string line; std::getline(plotList, line);) {
+      if (line.empty()) continue;
+      ++nPlots;
+      groups.insert(line.substr(line.rfind(',') + 1));
+    }
+    size_t nDataSources = 0;
+    size_t nInputs = 0;
+    if (std::filesystem::exists(Config::Get().DataSourcesFile(name))) {
+      ptree dataSources;
+      try {
+        boost::property_tree::read_info(Config::Get().DataSourcesFile(name), dataSources);
+        nDataSources = dataSources.size();
+        for (const auto& [sourceName, dataSource] : dataSources)
+          nInputs += dataSource.count("INPUT");
+      } catch (const boost::property_tree::ptree_error& e) {
+        logger::error("Cannot read {} ({}).", Config::Get().DataSourcesFile(name), e.what());
+        readable = false;
+      }
+    }
+    string lastSaved = "never";
+    if (FileStat_t fileStat; gSystem->GetPathInfo(Config::Get().PlotsFile(name).data(), fileStat) == 0) {
+      const std::time_t time = fileStat.fMtime;
+      std::tm localTime{};
+      char buffer[32];
+      if (time == 0) {  // made older than the program by srp set
+        lastSaved = "before a setting changed (plot runs the program again)";
+      } else if (localtime_r(&time, &localTime) && std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", &localTime)) {
+        lastSaved = buffer;
+      }
+    }
+    // program and output folder first, then the settings the program declares, values left from settings it no longer declares,
+    // then what the program saved
+    auto properties = Config::Get().Properties(name);
+    const auto declared = Config::Get().DeclaredSettings(name);
+    if (!declared) readable = false;
+    const ptree settings = declared.value_or(ptree{});
+    size_t width = 12;
+    for (const auto& [property, value] : properties)
+      width = std::max(width, property.size());
+    for (const auto& [setting, declaration] : settings)
+      width = std::max(width, setting.size());
+    const auto row = rows(static_cast<int>(width));
+    const bool markCurrent = project.empty() && name == Config::Get().CurrentProject();
+    heading(fmt::format("Project {}{}", name, markCurrent ? "  (current)" : ""));
+    for (const char* property : {"program", "outdir"}) {
+      auto it = properties.find(property);
+      row(property, it == properties.end() || it->second.empty() ? "-" : it->second);
+      if (it != properties.end()) properties.erase(it);
+    }
+    // the value (with the default where it differs), the descriptions aligned behind
+    vector<std::tuple<string, string, string>> settingRows;
+    size_t valueWidth = 0;
+    for (const auto& [setting, declaration] : settings) {
+      const string defaultValue = declaration.get<string>("default", "");
+      auto it = properties.find(setting);
+      const string value = (it == properties.end() || it->second.empty()) ? defaultValue : it->second;
+      // a value the declaration no longer allows: the program uses the default
+      const string allowed = Config::AllowedSettingValues(declaration, value);
+      string shown;
+      if (!allowed.empty()) {
+        shown = (defaultValue.empty() ? "-" : defaultValue) + "  (the value set, " + value + ", is not " + allowed + ")";
+      } else {
+        shown = (value.empty() ? "-" : value) + ((value == defaultValue) ? "" : "  (default " + (defaultValue.empty() ? "-" : defaultValue) + ")");
+      }
+      valueWidth = std::max(valueWidth, shown.size());
+      settingRows.emplace_back(setting, shown, declaration.get<string>("description", ""));
+      if (it != properties.end()) properties.erase(it);
+    }
+    for (const auto& [setting, shown, description] : settingRows)
+      row(setting, description.empty() ? shown : fmt::format("{:<{}}  {}", shown, valueWidth, description));
+    for (const auto& [property, value] : properties)
+      if (!value.empty()) row(property, value + "  (not a setting of the program: srp unset removes it)");
+    row("plots", fmt::format("{} in {}", nPlots, util::plural(groups.size(), "group")));
+    row("data sources", fmt::format("{} with {}", nDataSources, util::plural(nInputs, "input")));
+    row("last saved", lastSaved);
+  }
+  if (!readable) return 1;
+  return 0;
+}
+
+//**************************************************************************************************
+/**
+ * srp get.
+ */
+//**************************************************************************************************
+int command_get(const string& project, const string& property)
+{
+  if (project.empty()) {
+    logger::error("Specify project or use @current.");
+    return 1;
+  }
+  if (!Config::Get().Exists(project)) {
+    Config::Get().ReportUnknown(project);
+    return 1;
+  }
+  if (property.empty()) {
+    logger::error("Specify a property of {}.", project);
+    return 1;
+  }
+  if (property == "program" || property == "outdir") {
+    const string path = (property == "program") ? Config::Get().Program(project) : Config::Get().OutputDir(project);
+    if (path.empty() && !Config::Get().Property(project, property).empty()) return 1;  // the path could not be expanded (reported)
+    std::cout << path << std::endl;
+  } else {
+    const auto declaration = Config::Get().DeclaredSetting(project, property);
+    if (!declaration) return 1;
+    const string value = Config::Get().Property(project, property);
+    const string defaultValue = declaration->get<string>("default", "");
+    // a value the declaration no longer allows: the program uses the default
+    if (const string allowed = Config::AllowedSettingValues(*declaration, value); !value.empty() && !allowed.empty()) {
+      logger::warning("The value '{}' set for setting {} of project {} is not {}: the default '{}' is used.", value, property, project, allowed, defaultValue);
+      std::cout << defaultValue << std::endl;
+    } else {
+      std::cout << (value.empty() ? defaultValue : value) << std::endl;
+    }
+  }
+  return 0;
+}
+
+int run_command(const string& command, const string& project, const string& property, const string& setting)
+{
+  listing_t listing;  // help, info, projects and settings
 
   if (command == "help") {
-    const auto row = rows(39);
-    heading("Projects");
-    row("srp projects [<project>]", "all projects or one: program, folders, plots, inputs");
-    row("srp select <project>", "select a project");
-    row("srp rename <project> <name>", "rename a project");
-    row("srp remove <project>", "remove a project (its code is kept)");
-    heading("New projects");
-    row("srp init-cpp <project> [<dir>]", "minimal C++ skeleton");
-    row("srp init-py <project> [<dir>]", "minimal Python skeleton");
-    row("srp example-cpp <project> [<dir>]", "commented C++ examples with data");
-    row("srp example-py <project> [<dir>]", "commented Python examples with data");
-    row("srp add <project> <program> [<outdir>]", "register an existing program");
-    heading("Project properties");
-    row("srp get <project> <property>", "print a property");
-    row("srp set <project> <property> <value>", "set a property");
-    row("srp unset <project> <property>", "clear a property (a setting: its default)");
-    heading("Project folders");
-    row("srp confdir [<project>]", "print the config folder");
-    row("srp cd [<project>]", "go to the program folder");
-    row("srp edit [<project>]", "open the source files");
-    row("srp out [<project>]", "open the output folder");
-    heading("Plotting");
-    row("plot <group> <name> [<mode>]", "create the matching plots");
-    heading("Plot modes");
-    row("show", "on screen, one after the other");
-    row("spread", "on screen, all at once");
-    row("pdf eps ps svg png jpg", "one image file per plot");
-    row("gif[+<centiseconds>[++[<repeats>]]]", "all plots as one animation, ++ loops it");
-    row("root html json xml", "one ROOT or web file per plot");
-    row("macro", "one ROOT macro per plot");
-    row("file", "all canvases in one ROOT file");
-    row("data", "all input objects in one ROOT file");
-    row("print", "the definitions in the terminal");
-    row("list", "the names in the terminal");
-    heading("Settings");
-    row("srp settings", "show the settings (a setting without value: its value)");
-    row("srp plotmode <mode>", "default plot mode (initially show)");
-    row("srp color (bright | dark | off)", "colours of the messages");
-    row("srp verbosity <level>", "lowest level of messages shown");
-    row("srp matchmode (exact | contains)", "patterns match whole names or parts");
-    row("srp matchcase (sensitive | insensitive)", "case sensitivity of the patterns");
-    row("srp screenscale <factor>", "size of plots on screen (default 1)");
-    row("srp bitmapscale <factor>", "resolution of png/jpg/gif (default 1)");
-    row("srp cache (on [<folder>] | off)", "local copies of remote inputs (default off)");
-    heading("Maintenance");
-    row("srp info", "installation and build details");
-    row("srp update", "update SciRooPlot");
-    row("srp reinstall", "reinstall SciRooPlot from scratch");
-    row("srp clean", "remove projects whose code is gone");
-    row("srp reset", "remove all projects (their code is kept)");
-    row("srp help", "this overview");
-    heading("Utilities");
-    row("srp print <file>[:<path>]", "objects in a ROOT file (below a path), one object with details");
-    row("srp print hepdata:<record>[:<table>]", "data names of a HEPData record (or downloaded file)");
-    row("srp print <table file>", "data name, rows and column types of a table");
-    row("srp print <data source>[:<path>]", "objects of a data source of the current project as read");
-    row("srp open <file>", "open a ROOT file in a TBrowser");
-    row("srp colorwheel [<file>]", "ROOT's colours with their names");
-    heading("Environment");
-    row("SCIROOPLOT_CONFIG_PATH", "config folder (default ~/.SciRooPlot)");
-    heading("Arguments");
-    row("<project>", "a project name (@current: selected project)");
-    row("<property>", "program | outdir | <setting>");
-    row("<setting>", "declared and read by the program with Setting");
-    row("<group> <name>", "regular expressions for plot groups and names");
-    row("<mode>", "one of the plot modes");
-    row("<level>", "debug | hint | log | info | warning | error | silent");
+    return command_help(listing);
   } else if (command == "open") {
-    if (project.empty()) {
-      logger::error("Specify a file: srp open <file>.");
-      return 1;
-    }
-    // ~ and environment variables as in the inputs of data sources
-    const auto expanded = util::expand_path(project);
-    if (!expanded) return 1;  // reported
-    const string& fileName = *expanded;
-    std::error_code existsError;
-    if (util::is_missing_local_file(fileName, existsError)) {  // a remote file is opened through ROOT, as the inputs of data sources
-      logger::error("Could not find file {}.", fileName);
-      return 1;
-    }
-    TFile* file{};
-    {
-      auto quiet = util::ignore_root_messages_below(kFatal);  // a file that is not a ROOT file is reported below
-      file = util::open_input_file(fileName).release();
-    }
-    if (!file || file->IsZombie()) {
-      logger::error("Cannot read {}: srp open shows ROOT files.", fileName);
-      return 1;
-    }
-    gROOT->SetWebDisplay("off");  // the classic browser, as the plots are shown in classic canvases (closing it ends the program)
-    auto app = open_window_application("open");
-    if (!app) return 1;
-    TBrowser* browser = new TBrowser("TBrowser", file, "SciRooPlot", 1200, 1000);
-    if (auto* rb = dynamic_cast<TRootBrowser*>(browser->GetBrowserImp())) {
-      rb->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
-    }
-    app->Run();
+    return command_open(project);
   } else if (command == "colorwheel") {
-    // optional: save the wheel instead of showing it (~ and environment variables expanded, as ROOT would when saving)
-    const auto expanded = util::expand_path(project);
-    if (!expanded) return 1;  // reported
-    const string fileName = *expanded;
-    if (!fileName.empty()) {
-      // ROOT writes PostScript for any other ending (it compares them case-sensitively: .PNG too; .tif too, .tiff it cannot write)
-      static const std::set<string> imageEndings = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".xpm", ".svg", ".pdf", ".eps", ".ps"};
-      if (!imageEndings.count(std::filesystem::path(fileName).extension().string())) {
-        logger::error("Cannot write the colour wheel to {}: give a file name ending in .png, .pdf, .svg, .eps, .jpg or .gif (in lower case).", fileName);
-        return 1;
-      }
-    }
-    std::unique_ptr<TApplication> app;
-    if (fileName.empty()) {
-      app = open_window_application("colorwheel");
-      if (!app) return 1;
-    } else {
-      gROOT->SetBatch(true);
-    }
-    auto* canvas = new TCanvas("colorwheel", "ROOT colour wheel", 800, 800);
-    auto* wheel = new TColorWheel();
-    wheel->SetCanvas(canvas);
-    wheel->Draw();
-    canvas->SetFillColor(kWhite);  // instead of the background colour TColorWheel gives the canvas
-    canvas->SetFillStyle(1001);
-    canvas->Update();
-    if (!fileName.empty()) {
-      canvas->SetCanvasSize(800, 800);  // the drawing area, without the window frame
-      std::error_code removeError;
-      std::filesystem::remove(fileName, removeError);  // ROOT reports a failed write but returns nothing: the file must be new
-      {
-        auto quiet = util::ignore_root_messages_below(kWarning);  // ROOT's "Info in <TCanvas::Print>: ... has been created"
-        canvas->SaveAs(fileName.data());
-      }
-      std::error_code existsError;
-      if (!std::filesystem::is_regular_file(fileName, existsError)) {
-        logger::error("Could not write the colour wheel to {}.", fileName);
-        return 1;
-      }
-      return 0;
-    }
-    canvas->ToggleEventStatus();  // the status bar names the colour under the mouse
-    if (auto* imp = dynamic_cast<TRootCanvas*>(canvas->GetCanvasImp())) {
-      imp->Connect("CloseWindow()", "TApplication", gApplication, "Terminate()");
-    }
-    app->Run();
+    return command_colorwheel(project);
   } else if (command == "print" && util::is_hepdata_input(project)) {
     if (!util::print_hepdata(project, Config::Get().CacheFolder())) return 1;
   } else if (command == "print" && util::str_ends_with(project, util::kTableFileEndings)) {
@@ -370,13 +622,7 @@ int run_command(const string& command, const string& project, const string& prop
       return 1;
     }
   } else if (command == "settings") {
-    // named as the srp commands that change them
-    const auto row = rows(15);
-    heading("Settings");
-    for (const char* setting : kSettings) {
-      row(setting, setting_value(setting));
-    }
-    row("current project", Config::Get().CurrentProject().empty() ? "none" : Config::Get().CurrentProject());
+    return command_settings(listing);
   } else if (std::find(std::begin(kSettings), std::end(kSettings), command) != std::end(kSettings)) {
     // without a value: the current one
     if (project.empty()) {
@@ -391,34 +637,7 @@ int run_command(const string& command, const string& project, const string& prop
     const string value = (command == "cache" && !property.empty()) ? project + " " + property : project;
     if (!Config::GetMutable().SetSetting(command, value)) return 1;
   } else if (command == "info") {
-    auto getenv = [](const char* name) {
-      const char* value = std::getenv(name);
-      return value ? value : "<not set>";
-    };
-    const auto row = rows(15);
-    heading(fmt::format("SciRooPlot {}", SCIROOPLOT_VERSION));
-    heading("Installation");
-    row("prefix", getenv("SCIROOPLOT_ROOT"));
-    row("programs", getenv("SCIROOPLOT_BIN"));
-    row("library", getenv("SCIROOPLOT_LIB"));
-    const std::filesystem::path sourceDir(getenv("SCIROOPLOT_SOURCE_DIR"));
-    if (std::filesystem::exists(sourceDir)) row("source", std::filesystem::canonical(sourceDir).string());
-    row("env script", getenv("SCIROOPLOT_ENV"));
-    heading("Configuration");
-    row("folder", Config::Get().Path().string() + (std::getenv("SCIROOPLOT_CONFIG_PATH") ? "  (SCIROOPLOT_CONFIG_PATH)" : "  (default)"));
-    row("current project", Config::Get().CurrentProject().empty() ? "none" : Config::Get().CurrentProject());
-    heading("Dependencies");
-    row("ROOT", fmt::format("{}  {}", SCIROOPLOT_ROOT_VERSION, SCIROOPLOT_ROOT_EXECUTABLE));
-    row("Python", getenv("SCIROOPLOT_PYTHON_EXECUTABLE"));
-    string boostVersion = BOOST_LIB_VERSION;
-    std::replace(boostVersion.begin(), boostVersion.end(), '_', '.');
-    row("Boost", boostVersion);
-    row("fmt", fmt::format("{}.{}.{}  {}", FMT_VERSION / 10000, FMT_VERSION / 100 % 100, FMT_VERSION % 100, SCIROOPLOT_FMT_INFO));
-    row("pybind11", SCIROOPLOT_PYBIND11_INFO);
-    heading("Build");
-    row("type", SCIROOPLOT_BUILD_TYPE);
-    row("commit", SCIROOPLOT_GIT_DESCRIBE);
-    row("compiler", SCIROOPLOT_CXX_COMPILER);
+    return command_info(listing);
   } else if (command == "confdir") {
     // also the folder of a project saved by its program but not yet added (env.sh reads plots.info there)
     const bool unknown = find_illegal_name_char(project) || (!Config::Get().Exists(project) && !std::filesystem::is_directory(Config::Get().ProjectPath(project)));
@@ -435,103 +654,7 @@ int run_command(const string& command, const string& project, const string& prop
   } else if (command == "reset") {
     if (!Config::GetMutable().Reset()) return 1;
   } else if (command == "projects") {
-    if (!project.empty() && !Config::Get().Exists(project)) {
-      Config::Get().ReportUnknown(project);
-      return 1;
-    }
-    // without a project: every project, the current one marked
-    const vector<string> projects = project.empty() ? Config::Get().ProjectNames() : vector<string>{project};
-    if (projects.empty() && Config::Get().ProjectsFileUnreadable()) {
-      logger::error("Cannot list the projects: {} could not be read. Fix or remove it.", Config::Get().ProjectsFile());
-      return 1;
-    }
-    if (projects.empty()) {
-      logger::print("No projects yet: srp init-py <project>, srp init-cpp <project> or srp add <project> <program>.");
-      return 0;
-    }
-    bool readable = true;
-    for (const string& name : projects) {
-      // the tab-completion list has one line <name>,<group> per plot
-      size_t nPlots = 0;
-      std::set<string> groups;
-      std::ifstream plotList(Config::Get().ProjectPath(name) / "tabcomp.csv");
-      for (string line; std::getline(plotList, line);) {
-        if (line.empty()) continue;
-        ++nPlots;
-        groups.insert(line.substr(line.rfind(',') + 1));
-      }
-      size_t nDataSources = 0;
-      size_t nInputs = 0;
-      if (std::filesystem::exists(Config::Get().DataSourcesFile(name))) {
-        ptree dataSources;
-        try {
-          boost::property_tree::read_info(Config::Get().DataSourcesFile(name), dataSources);
-          nDataSources = dataSources.size();
-          for (const auto& [sourceName, dataSource] : dataSources)
-            nInputs += dataSource.count("INPUT");
-        } catch (const boost::property_tree::ptree_error& e) {
-          logger::error("Cannot read {} ({}).", Config::Get().DataSourcesFile(name), e.what());
-          readable = false;
-        }
-      }
-      string lastSaved = "never";
-      if (FileStat_t fileStat; gSystem->GetPathInfo(Config::Get().PlotsFile(name).data(), fileStat) == 0) {
-        const std::time_t time = fileStat.fMtime;
-        std::tm localTime{};
-        char buffer[32];
-        if (time == 0) {  // made older than the program by srp set
-          lastSaved = "before a setting changed (plot runs the program again)";
-        } else if (localtime_r(&time, &localTime) && std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", &localTime)) {
-          lastSaved = buffer;
-        }
-      }
-      // program and output folder first, then the settings the program declares, values left from settings it no longer declares,
-      // then what the program saved
-      auto properties = Config::Get().Properties(name);
-      const auto declared = Config::Get().DeclaredSettings(name);
-      if (!declared) readable = false;
-      const ptree settings = declared.value_or(ptree{});
-      size_t width = 12;
-      for (const auto& [property, value] : properties)
-        width = std::max(width, property.size());
-      for (const auto& [setting, declaration] : settings)
-        width = std::max(width, setting.size());
-      const auto row = rows(static_cast<int>(width));
-      const bool markCurrent = project.empty() && name == Config::Get().CurrentProject();
-      heading(fmt::format("Project {}{}", name, markCurrent ? "  (current)" : ""));
-      for (const char* property : {"program", "outdir"}) {
-        auto it = properties.find(property);
-        row(property, it == properties.end() || it->second.empty() ? "-" : it->second);
-        if (it != properties.end()) properties.erase(it);
-      }
-      // the value (with the default where it differs), the descriptions aligned behind
-      vector<std::tuple<string, string, string>> settingRows;
-      size_t valueWidth = 0;
-      for (const auto& [setting, declaration] : settings) {
-        const string defaultValue = declaration.get<string>("default", "");
-        auto it = properties.find(setting);
-        const string value = (it == properties.end() || it->second.empty()) ? defaultValue : it->second;
-        // a value the declaration no longer allows: the program uses the default
-        const string allowed = Config::AllowedSettingValues(declaration, value);
-        string shown;
-        if (!allowed.empty()) {
-          shown = (defaultValue.empty() ? "-" : defaultValue) + "  (the value set, " + value + ", is not " + allowed + ")";
-        } else {
-          shown = (value.empty() ? "-" : value) + ((value == defaultValue) ? "" : "  (default " + (defaultValue.empty() ? "-" : defaultValue) + ")");
-        }
-        valueWidth = std::max(valueWidth, shown.size());
-        settingRows.emplace_back(setting, shown, declaration.get<string>("description", ""));
-        if (it != properties.end()) properties.erase(it);
-      }
-      for (const auto& [setting, shown, description] : settingRows)
-        row(setting, description.empty() ? shown : fmt::format("{:<{}}  {}", shown, valueWidth, description));
-      for (const auto& [property, value] : properties)
-        if (!value.empty()) row(property, value + "  (not a setting of the program: srp unset removes it)");
-      row("plots", fmt::format("{} in {}", nPlots, util::plural(groups.size(), "group")));
-      row("data sources", fmt::format("{} with {}", nDataSources, util::plural(nInputs, "input")));
-      row("last saved", lastSaved);
-    }
-    if (!readable) return 1;
+    return command_projects(project, listing);
   } else if (command == "remove") {
     if (!Config::GetMutable().Remove(project)) return 1;
   } else if (command == "select") {
@@ -539,35 +662,7 @@ int run_command(const string& command, const string& project, const string& prop
   } else if (command == "add") {
     if (!Config::GetMutable().Add(project, property, setting)) return 1;
   } else if (command == "get") {
-    if (project.empty()) {
-      logger::error("Specify project or use @current.");
-      return 1;
-    }
-    if (!Config::Get().Exists(project)) {
-      Config::Get().ReportUnknown(project);
-      return 1;
-    }
-    if (property.empty()) {
-      logger::error("Specify a property of {}.", project);
-      return 1;
-    }
-    if (property == "program" || property == "outdir") {
-      const string path = (property == "program") ? Config::Get().Program(project) : Config::Get().OutputDir(project);
-      if (path.empty() && !Config::Get().Property(project, property).empty()) return 1;  // the path could not be expanded (reported)
-      std::cout << path << std::endl;
-    } else {
-      const auto declaration = Config::Get().DeclaredSetting(project, property);
-      if (!declaration) return 1;
-      const string value = Config::Get().Property(project, property);
-      const string defaultValue = declaration->get<string>("default", "");
-      // a value the declaration no longer allows: the program uses the default
-      if (const string allowed = Config::AllowedSettingValues(*declaration, value); !value.empty() && !allowed.empty()) {
-        logger::warning("The value '{}' set for setting {} of project {} is not {}: the default '{}' is used.", value, property, project, allowed, defaultValue);
-        std::cout << defaultValue << std::endl;
-      } else {
-        std::cout << (value.empty() ? defaultValue : value) << std::endl;
-      }
-    }
+    return command_get(project, property);
   } else if (command == "unset") {
     if (!Config::GetMutable().SetProperty(project, property, "")) return 1;
   } else if (command == "set") {
