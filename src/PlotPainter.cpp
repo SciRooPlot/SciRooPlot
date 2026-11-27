@@ -1578,8 +1578,12 @@ void PlotPainter::FinishPad(pad_state_t& padState)
       }
     }
   }
-  if (axisHist_ptr && !polarFrame && !polargram && !hbarFrame && !pad_ptr->GetView()) ReportOutsideFrame(pad_ptr);
+  if (axisHist_ptr && !polarFrame && !polargram && !hbarFrame && !pad_ptr->GetView()) {
+    ReportOutsideFrame(pad_ptr);
+    HintSqueezedData(pad_ptr);
+  }
   HintAlikeData(pad_ptr);
+  HintInvisibleData(pad_ptr);
 }
 
 //**************************************************************************************************
@@ -7368,6 +7372,23 @@ void PlotPainter::HintAtPlacedBox(TPad* pad, const string& boxType, double_t upp
   if (CoversData(pad, upperLeftX, upperLeftY - heightNDC, widthNDC, heightNDC)) {
     logger::hint("Plot {}: the {} at the position set for it lies on drawn data (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}, in units of the pad).", mPlotLabel, boxType, upperLeftX, upperLeftY, widthNDC, heightNDC);
   }
+  // the legends, texts and statistics boxes drawn in the pad before it (in NDC: those not painted yet still hold them as given)
+  for (TObject* obj : *pad->GetListOfPrimitives()) {
+    auto* other = dynamic_cast<TPave*>(obj);
+    if (!other || other->InheritsFrom("TPaletteAxis") || string(other->GetName()) == "title") continue;
+    double_t x1 = other->GetX1NDC(), x2 = other->GetX2NDC(), y1 = other->GetY1NDC(), y2 = other->GetY2NDC();
+    if (x1 == 0. && x2 == 0. && y1 == 0. && y2 == 0.) {
+      if (!TString(other->GetOption()).Contains("NDC")) continue;
+      x1 = other->GetX1(), x2 = other->GetX2(), y1 = other->GetY1(), y2 = other->GetY2();
+    }
+    // covering more than half of the smaller box (boxes have margins around their text: neighbours touching a little are fine)
+    const double_t overlapX = std::min(upperLeftX + widthNDC, x2) - std::max(upperLeftX, x1);
+    const double_t overlapY = std::min(upperLeftY, y2) - std::max(upperLeftY - heightNDC, y1);
+    if (overlapX > 0. && overlapY > 0. && overlapX * overlapY > 0.5 * std::min(widthNDC * heightNDC, (x2 - x1) * (y2 - y1))) {
+      logger::hint("Plot {}: the {} at the position set for it lies on another box of the pad (upper left corner ({:.3g}, {:.3g}), size {:.3g} x {:.3g}, in units of the pad).", mPlotLabel, boxType, upperLeftX, upperLeftY, widthNDC, heightNDC);
+      break;
+    }
+  }
 }
 
 //**************************************************************************************************
@@ -10430,6 +10451,119 @@ void PlotPainter::HintAlikeData(TPad* pad) const
     if (alike != it) {
       logger::hint("Plot {}: data {} and {} of pad {} look alike (the same drawing option, colours and styles): nothing tells them apart.", mPlotLabel, alike->first, it->first, pad->GetNumber());
     }
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Hints at 1d data squeezed into a small part of the height of a flat pad with a linear y axis and only 1d data (counted are the values
+ * within the x range of the frame with their error bars, a filled histogram down to zero): all data of the pad within less than a tenth
+ * of the y range, so that it looks flat (a range set too wide). Only at verbosity hint.
+ */
+//**************************************************************************************************
+void PlotPainter::HintSqueezedData(TPad* pad) const
+{
+  if (logger::muted() || logger::detail::verbosity() < logger::detail::level::hint || pad->GetLogy()) return;
+  const auto frame = CountedFrame(pad);
+  const double_t frameHeight = frame[3] - frame[1];
+  if (!(frameHeight > 0.)) return;
+  // the lowest and highest value of the data within the frame
+  optional<std::pair<double_t, double_t>> extent;
+  for (TObject* obj : *pad->GetListOfPrimitives()) {
+    const auto* mapHist = dynamic_cast<TH1*>(obj);
+    if ((mapHist && mapHist->GetDimension() > 1) || obj->InheritsFrom(TGraph2D::Class())) return;  // a map fills the frame
+    const string name = obj->GetName();
+    const size_t colon = name.find(':');
+    const bool isData = colon != string::npos && colon != 0 && colon <= 5 && std::all_of(name.begin(), name.begin() + colon, [](char c) { return std::isdigit(static_cast<unsigned char>(c)); });
+    if (!isData) continue;
+    if (name.substr(0, colon) == "0") continue;  // the reference function
+    auto add = [&](double_t x, double_t low, double_t high) {
+      if (x < frame[0] || x > frame[2] || !std::isfinite(low) || !std::isfinite(high)) return;
+      low = std::max(low, frame[1]);
+      high = std::min(high, frame[3]);
+      if (low > high) return;
+      extent = (extent) ? std::pair{std::min(extent->first, low), std::max(extent->second, high)} : std::pair{low, high};
+    };
+    if (auto* hist = dynamic_cast<TH1*>(obj); hist && hist->GetDimension() == 1) {
+      const bool filled = hist->GetFillStyle() != 0;
+      for (int32_t bin = 1; bin <= hist->GetNbinsX(); ++bin) {
+        const double_t content = hist->GetBinContent(bin);
+        if (content == 0. && !filled) continue;
+        const double_t low = content - hist->GetBinErrorLow(bin), high = content + hist->GetBinErrorUp(bin);
+        add(hist->GetXaxis()->GetBinCenter(bin), (filled) ? std::min(low, 0.) : low, (filled) ? std::max(high, 0.) : high);
+      }
+    } else if (auto* graph = dynamic_cast<TGraph*>(obj)) {
+      for (int32_t i = 0; i < graph->GetN(); ++i) {
+        const double_t y = graph->GetPointY(i);
+        add(graph->GetPointX(i), y - std::max(graph->GetErrorYlow(i), 0.), y + std::max(graph->GetErrorYhigh(i), 0.));
+      }
+    }
+  }
+  if (extent && extent->second - extent->first < frameHeight / 10.) {
+    logger::hint("Plot {}: the data of pad {} fill only {:.0f}% of the height of its y axis and look flat: a narrower y range (or the automatic one) shows them.", mPlotLabel, pad->GetNumber(), 100. * (extent->second - extent->first) / frameHeight);
+  }
+}
+
+//**************************************************************************************************
+/**
+ * Hints at 1d data drawn invisible: every part its drawing option draws (markers, lines and error bars, fill) has alpha 0, a size or width 0
+ * (markers drawn as a dot have no size), no fill style, or the colour of the background (the pad's fill, or the canvas's if the pad is
+ * transparent; not in a pad with a map, which the data lies on). Only at verbosity hint.
+ */
+//**************************************************************************************************
+void PlotPainter::HintInvisibleData(TPad* pad) const
+{
+  if (logger::muted() || logger::detail::verbosity() < logger::detail::level::hint) return;
+  auto rgba = [](Color_t index) -> std::array<float_t, 4> {
+    const TColor* color = gROOT->GetColor(index);
+    return (color) ? std::array<float_t, 4>{color->GetRed(), color->GetGreen(), color->GetBlue(), color->GetAlpha()} : std::array<float_t, 4>{0.f, 0.f, 0.f, 1.f};
+  };
+  const TVirtualPad* backgroundPad = (pad->GetFillStyle() == 0 || pad->GetFillStyle() == 4000) ? pad->GetCanvas() : pad;
+  const auto background = rgba(backgroundPad->GetFillColor());
+  // data drawn on a map lies on its colours, not on the background
+  bool onMap = false;
+  for (TObject* obj : *pad->GetListOfPrimitives()) {
+    auto* hist = dynamic_cast<TH1*>(obj);
+    if ((hist && hist->GetDimension() > 1) || obj->InheritsFrom(TGraph2D::Class())) onMap = true;
+  }
+  // why a part cannot be seen, empty if it can
+  auto unseen = [&](Color_t index) -> string {
+    const auto color = rgba(index);
+    if (color[3] == 0.f) return "alpha 0";
+    if (!onMap && color[0] == background[0] && color[1] == background[1] && color[2] == background[2]) return "the colour of the background";
+    return "";
+  };
+  for (TObjLink* link = pad->GetListOfPrimitives()->FirstLink(); link; link = link->Next()) {
+    TObject* obj = link->GetObject();
+    const string name = obj->GetName();
+    const size_t colon = name.find(':');
+    const bool isData = colon != string::npos && colon != 0 && colon <= 5 && std::all_of(name.begin(), name.begin() + colon, [](char c) { return std::isdigit(static_cast<unsigned char>(c)); });
+    if (!isData || name.substr(0, colon) == "0") continue;
+    const auto* hist = dynamic_cast<TH1*>(obj);
+    if ((hist && hist->GetDimension() > 1) || obj->InheritsFrom(TGraph2D::Class()) || obj->InheritsFrom(TF2::Class())) continue;
+    const auto* line = dynamic_cast<TAttLine*>(obj);
+    const auto* marker = dynamic_cast<TAttMarker*>(obj);
+    const auto* fill = dynamic_cast<TAttFill*>(obj);
+    if (!line || !marker || !fill) continue;
+    const string elements = str_upper(GetLegendSymbol(obj, link->GetOption()).elements);
+    if (elements.empty()) continue;
+    string reasons;
+    bool visible = false;
+    auto look = [&](const string& part, const string& why) {
+      if (why.empty()) {
+        visible = true;
+      } else {
+        reasons += ((reasons.empty()) ? "" : "; ") + part + ": " + why;
+      }
+    };
+    if (str_contains(elements, "P")) {
+      const Style_t style = marker->GetMarkerStyle();
+      const bool dot = style == 1 || style == 6 || style == 7;
+      look("markers", (!dot && marker->GetMarkerSize() <= 0.f) ? "marker size 0" : unseen(marker->GetMarkerColor()));
+    }
+    if (str_contains(elements, "L") || str_contains(elements, "E")) look("lines", (line->GetLineWidth() <= 0) ? "line width 0" : unseen(line->GetLineColor()));
+    if (str_contains(elements, "F")) look("fill", (fill->GetFillStyle() == 0 || fill->GetFillStyle() == 4000) ? "no fill style" : unseen(fill->GetFillColor()));
+    if (!visible && !reasons.empty()) logger::hint("Plot {}: data {} of pad {} is drawn invisible ({}).", mPlotLabel, name.substr(0, colon), pad->GetNumber(), reasons);
   }
 }
 

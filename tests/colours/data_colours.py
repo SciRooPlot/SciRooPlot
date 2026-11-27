@@ -7,7 +7,9 @@ Data that is not drawn (a graph without points) takes its entry too, so the data
 Every data kind, with lists of the pad, of pad 0 and of both, separate marker, line and fill lists of different lengths, and plots
 without a base plot.
 Data of a pad drawn alike (the same drawing option, colours, styles and sizes of lines, markers and fills; 1d data only) is named in a
-hint, each item with the first one before it that it looks like, and no hint is given for data that differs.
+hint, each item with the first one before it that it looks like, and no hint is given for data that differs. Data drawn invisible (every
+part it draws with alpha 0, size or width 0, or the colour of the background) gets a hint; data with a part that can be seen, or lying on a
+map, none.
 A colour overview of a pad of a base plot (AddColorOverview) shows, in order, the marker colours the data of that pad gets when it sets
 none (lists and gradients of the pad, of pad 0, SciRooPlot's); a base plot or pad that does not exist is refused with an error.
 Covers: each colour setter sets only its own part, marker and line of one data item from the same entry.
@@ -141,7 +143,25 @@ for name, (setup, padID, n) in OVERVIEWS.items():
 for args, said in ((("no_base", 1), "there is no base plot no_base"), (("ov_srp", 3), "base plot ov_srp has no pad 3"), (("ov_srp", 0), "base plot ov_srp has no pad 0")):
     _, text = captured(lambda args=args: p.pm.AddColorOverview("bad", "overview", *args))
     check(f"colour overview of a missing base plot or pad refused: {said}", said in text, text.strip())
+# data drawn invisible (every part it draws: alpha 0, marker size 0 without a line, the colour of the background): a hint; data with one
+# visible part, and markers in the background colour on a map, none
+INVISIBLE = {
+    "alpha0": (lambda d: d.SetDrawOption(S.points).SetColor(ROOT.kBlue).SetAlpha(0.0), True),
+    "no_marker": (lambda d: d.SetDrawOption("P").SetMarkerSize(0.0), True),
+    "background": (lambda d: d.SetDrawOption(S.points).SetColor(ROOT.kWhite), True),
+    "one_part_seen": (lambda d: d.SetDrawOption(S.points).SetMarkerColor(ROOT.kWhite).SetLineColor(ROOT.kRed), False),
+    "on_map": (lambda d: d.SetDrawOption("P").SetMarkerColor(ROOT.kWhite).SetMarkerStyle(20), False),
+}
+for name, (look, _) in INVISIBLE.items():
+    plot = S.Plot(f"invisible_{name}", "colours", "2d" if name == "on_map" else "1d")
+    if name == "on_map":
+        plot[1].AddData("hist2d", "styled").SetDrawOption(S.colz)
+    look(plot[1].AddData("graph_errors" if name == "one_part_seen" else "graph", "styled"))  # error bars in the line colour
+    p.pm.AddPlot(plot)
 run = p.plot("colours|overview")
+for name, (_, want) in INVISIBLE.items():
+    said = [m for m in run.messages(f"invisible_{name}", "colours") if "is drawn invisible" in m]
+    check(f"data drawn invisible gets a hint, data with a part that can be seen none: {name}", len(said) == int(want), " | ".join(said) or " | ".join(run.errors()[:2]))
 
 for i, case in enumerate(todo):
     what = describe(case)

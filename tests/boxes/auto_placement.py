@@ -14,7 +14,8 @@ Covers: functions drawn with a fill, histograms with an error option but no erro
 steps, lines and bands of histograms through the bin centres, graphs without errors drawn with error boxes or bands, multi-error graphs
 by their largest errors, the edges of bands between the cells of the placement, 2d graphs and functions drawn as maps, the frame of 3d
 views of functions, boxes on top of each other when there is no room, a box asked for a corner placed before one taking the best corner, the
-hint for a box placed by hand on the data, and the named cases.
+hint for a box placed by hand on the data or on another box (covering more than half of the smaller one; neighbours touching get none),
+and the named cases.
 """
 
 import math
@@ -317,6 +318,14 @@ plot[1].AddText(0.55, 0.75, "a text on the points").SetFrameCoordinates()
 plot[1].AddText(0.05, 0.95, "a text in free space").SetFrameCoordinates()
 plot[1].AddLegend(0.55, 0.25).SetFrameCoordinates()
 q.pm.AddPlot(plot)
+# boxes placed by hand on each other (a hint for the later one) and next to each other, touching (none)
+plot = S.Plot("on_each_other", "order", "1d")
+plot[1].AddData("rising", "rising")
+plot[1].AddText(0.05, 0.95, "first text").SetFrameCoordinates()
+plot[1].AddText(0.06, 0.94, "second text").SetFrameCoordinates()
+plot[1].AddText(0.05, 0.45, "upper").SetFrameCoordinates()
+plot[1].AddText(0.05, 0.4, "lower").SetFrameCoordinates()
+q.pm.AddPlot(plot)
 # boxes placed by hand next to data that is not drawn there: a step histogram beyond the frame (ROOT clips it) under a text in the top margin,
 # the empty part of a polar grid, the corner beside the disc of a polar map
 steep = ROOT.TH1D("steep", "", 20, 0.0, 10.0)
@@ -353,6 +362,8 @@ with order.held():
 check("a box asked for a corner is placed before a box free to take the best corner: the text gets the top left", placed is not None and placed[1][0] < placed[0][0] and placed[1][3] > placed[0][3], f"{placed}")
 hints = order.hints("lies on drawn data")
 check("a text placed by hand on the data gets a hint", any("text 1 of pad 1" in h for h in hints), " | ".join(hints))
+said = [m for m in order.messages("on_each_other", "order") if "lies on another box" in m]
+check("a box placed by hand on another box gets a hint, neighbours touching none", len(said) == 1 and "text 2 of pad 1" in said[0], " | ".join(said))
 check("a text and a legend placed by hand in free space get none", not any("text 2 of pad 1" in h or "legend 1 of pad 1" in h for h in order.messages("by_hand", "order")), " | ".join(hints))
 for name, what in (("beyond_frame", "above data ROOT clips at the frame"), ("polar_grid", "on the empty part of a polar grid"), ("polar_map", "beside the disc of a polar map")):
     said = [m for m in order.messages(name, "order") if "lies on drawn data" in m]

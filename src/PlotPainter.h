@@ -506,6 +506,8 @@ class PlotPainter
   // 1d histograms and graphs of a flat pad that lie entirely beyond one edge of its frame (the first data decides the frame): warned
   void ReportOutsideFrame(TPad* pad) const;
   void HintAlikeData(TPad* pad) const;
+  void HintSqueezedData(TPad* pad) const;
+  void HintInvisibleData(TPad* pad) const;
   // the outline of a fill symbol: the line of the data (as TLegend draws it), none, or thin and solid in the line colour (boxes)
   enum class outline_t { line,
                          none,
