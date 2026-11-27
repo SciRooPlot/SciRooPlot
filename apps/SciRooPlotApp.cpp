@@ -340,6 +340,10 @@ int command_plot(const string& project, const string& property)
     logger::error("Specify a file and an object: srp plot <file>[:<path>] <name>.");
     return 1;
   }
+  if (util::is_hepdata_input(project)) {
+    logger::error("srp plot shows objects of ROOT files: srp print {} lists the data names of the record, which a plotting program reads from a data source {}.", project, project);
+    return 1;
+  }
   const auto input = util::expand_path(project);  // as in the inputs of data sources
   if (!input) return 1;                           // reported
   const auto fileAndFolder = util::split_input_path(*input);
@@ -362,6 +366,16 @@ int command_plot(const string& project, const string& property)
     }
     const string folder = (fileAndFolder.size() > 1) ? fileAndFolder[1] + "/" : "";
     TObject* object = find_in_file(file.get(), folder + property);
+    // what the reader takes apart (folders, stacks) or reads through projections (trees, n-dimensional histograms) cannot be shown as is
+    const string printLine = fmt::format("srp print {}:{}", project, property);
+    if (object && util::is_container(object->IsA())) {
+      logger::error("{} holds other objects ({}): {} lists them, srp plot shows one of them.", property, object->ClassName(), printLine);
+      return 1;
+    }
+    if (object && (object->InheritsFrom(TTree::Class()) || object->InheritsFrom(THnBase::Class()) || string(object->ClassName()) == "ROOT::RNTuple")) {
+      logger::error("{} is a {}: srp plot shows histograms, graphs and functions; {} lists its {}, and a plotting program projects it (Project1D, ...).", property, object->ClassName(), printLine, (object->InheritsFrom(THnBase::Class())) ? "axes" : "columns");
+      return 1;
+    }
     if (auto* hist = dynamic_cast<TH1*>(object)) {
       is2d = hist->GetDimension() > 1;
     } else if (auto* function = dynamic_cast<TF1*>(object)) {

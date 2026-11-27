@@ -5,14 +5,15 @@ only what is there; also for files below a folder with ':' in its name, and for 
 given with its details (axes and binning, entries, integral, under- and overflow, contents and the smallest above 0, means of profiles,
 points and ranges of graphs, formula and range of functions, entries of trees), as ROOT gives them for the object. A missing file, a file that is no
 ROOT file and a path not in the file fail with exit status 1 and one error. srp open without a file, with a missing file or one that is
-no ROOT file, and srp open and srp colorwheel without a graphical display (X11 only) end with exit status 1 and one error. srp
+no ROOT file, and srp open and srp colorwheel without a graphical display (X11 only) end with exit status 1 and one error, as srp plot
+of a tree, a folder, a stack or a HEPData record (saying what to use instead) and of a missing file. srp
 colorwheel <file> writes an image file without ROOT's messages, and refuses a name that is no image file. File names may hold ~ and
 environment variables, as the inputs of data sources. srp print <table file> gives the data name of a table, its rows and delimiter
 and each column with the type the reader gives it; a table that cannot be read fails with exit status 1 and one error.
 srp print <data source>[:<path>] (a data source of the current project, unless a file of that name exists) lists its objects as the reader
 sees them, with where they are in the inputs; a path names a folder or one object (details as for a file); the inputs only at debug.
 Covers: details of every data kind alone, stack and multigraph members, file below a folder with ':', several cycles of a name, map values, srp open and colorwheel
-without a file or display, colorwheel into a file."""
+without a file or display, colorwheel into a file, srp plot of objects it cannot show."""
 
 import os
 import subprocess
@@ -201,6 +202,12 @@ if sys.platform.startswith("linux"):  # X11: without DISPLAY there is no display
         except subprocess.TimeoutExpired:
             ok, detail = False, "still running after a minute"
         check(f"srp {args[0]} without a graphical display: exit 1, one error saying so", ok, detail)
+
+# srp plot of what it cannot show (a tree, a folder, a stack of histograms, a HEPData record) or of a missing file: exit 1, one error saying
+# what to do instead, before any window is opened
+for args, reason in (((path, "tree"), "srp print"), ((path, "dir"), "srp print"), ((path, "stack"), "srp print"), (("hepdata:ins1", "h"), "srp print hepdata:ins1"), ((os.path.join(folder, "nosuch.root"), "h"), "Could not find file")):
+    out = run(SRP, "plot", *args, env={"DISPLAY": None, "WAYLAND_DISPLAY": None}, timeout=60)
+    check(f"srp plot {os.path.basename(args[0])} {args[1]}: exit 1, one error ({reason})", out.rc == 1 and len(out.errors()) == 1 and reason in out.errors()[0], out.tail())
 
 # a table file: its data name, rows and delimiter, each column with the type it is read as (integers stay integers, a column of integers
 # with a decimal further down is floating point, text is text); a table that cannot be read fails with one error
