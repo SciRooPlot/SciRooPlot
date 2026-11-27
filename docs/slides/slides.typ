@@ -652,7 +652,8 @@
           [#prompt `srp matchmode exact|contains`], [Match whole names or any part.],
           [#prompt `srp matchcase sensitive|insensitive`], [Case sensitivity of the patterns.],
           [#prompt `srp screenscale|bitmapscale <factor>`], [Size of plots on screen, or resolution of png/jpg/gif files (initially `1`).],
-          [#prompt `srp print|open <file>`], [List the contents of a ROOT file, or open it in a `TBrowser`.],
+          [#prompt `srp print|open <file>`], [List a ROOT file, table or data source, or open it in a `TBrowser`.],
+          [#prompt `srp plot <file> <name>`], [Show one object of a file, without a plotting program.],
           [#prompt `srp colorwheel [<file>]`], [ROOT's colours and their names (or saved to a file).],
           [#prompt `srp settings|info|help`], [Settings, installation, all commands.],
         ),
@@ -1734,7 +1735,7 @@
 
       - Filter rows, define derived quantities, and use arbitrary C++ expressions of the columns for projections and selections.
 
-      - `Join()` adds the columns of another tree, row by row or matched by up to two integer key columns, `JoinByIndex()` at the row an index column holds (rows without a match are skipped).
+      - `Join()` adds the columns of another tree, row by row or matched by up to two integer key columns, `JoinByIndex()` at the row an index column holds (rows without a match are skipped, or kept with `keepUnmatched`).
 
       - Entry ranges can be selected to process only subsets of the input.
     ],
@@ -2209,7 +2210,7 @@
         [`Scatter(x, y, z)`], [Points in 3D (2D graph), e.g. drawn as `points_colz` or `triangles`.],
         [`Define(key, value)`], [Define a derived variable for use in expressions.],
         [`Filter(filter)`], [Apply a row-selection expression, e.g. `"eta > 0"`. Chainable.],
-        [`Join(tree, keys, alias)`], [Add the columns of another tree, e.g. `Join("scores")` row by row or #if lang == "py" [`Join(["events", "src"], ["run", "event"])`] else [`Join({"events", "src"}, {"run", "event"})`] by key (rows without a match are skipped); columns as `"scores.col"`. Chainable.],
+        [`Join(tree, keys, alias)`], [Add the columns of another tree, e.g. `Join("scores")` row by row or #if lang == "py" [`Join(["events", "src"], ["run", "event"])`] else [`Join({"events", "src"}, {"run", "event"})`] by key (rows without a match are skipped, or kept with `keepUnmatched`); columns as `"scores.col"`. Chainable.],
         [`JoinByIndex(tree, indexColumn, alias)`], [Add the columns of the row an index column holds, counted within the joined tree of the same input, e.g. `JoinByIndex("O2collision", "fIndexCollisions")` for AO2D folders.],
         [`Entries(n)` / `Entries(min, max)`], [Limit processing to the first N entries or a range.],
       ), text-size: 11.5pt)
