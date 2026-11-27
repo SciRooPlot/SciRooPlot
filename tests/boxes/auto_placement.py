@@ -15,7 +15,8 @@ steps, lines and bands of histograms through the bin centres, graphs without err
 by their largest errors, the edges of bands between the cells of the placement, 2d graphs and functions drawn as maps, the frame of 3d
 views of functions, boxes on top of each other when there is no room, a box asked for a corner placed before one taking the best corner, the
 hint for a box placed by hand on the data or on another box (covering more than half of the smaller one; neighbours touching get none),
-and the named cases.
+room beside the angle labels of a polar grid, turned along the radius (O) and as values of an angle range (the label ink from the grid
+painted with and without labels), and the named cases.
 """
 
 import math
@@ -370,4 +371,51 @@ for name, what in (("beyond_frame", "above data ROOT clips at the frame"), ("pol
     check(f"a box placed by hand {what} gets no hint", not said, " | ".join(said))
 quiet = q.plot("order", env={"SCIROOPLOT_VERBOSITY": None})
 check("at the default verbosity the look at boxes placed by hand gives nothing", quiet.file and not quiet.hints(), " | ".join(quiet.hints()))
+
+# the angle labels of a polar grid as the placement sees them: automatically placed texts find room beside the labels turned along the
+# radius (option O: marked as a square of their length around their middle) and beside the numbers of an angle range that is no full turn
+# in radians (as written, not as fractions of pi), and none lies on them; where the labels are is taken from the painted grid (with labels
+# and without, option N; a few pixels of anti-aliasing at the edge of a text are allowed)
+polarGraph = ROOT.TGraphPolar(20)
+for i in range(20):
+    polarGraph.SetPoint(i, 0.3 * i, 0.2 + 0.01 * i)
+polarGraph.SetName("polar")
+r = Project("polar_labels")
+r.source("polar", {"polar": polarGraph})
+# (option, angle range, label size, divisions, texts, placement): cases where marks of another shape put a text on the labels, or leave
+# no room for it beside them
+POLAR_LABELS = {
+    "ortho": ("P O", None, 0.1, 8, 1, "bottom_right"),
+    "values": ("P", (0.0, 360.0), 0.06, 8, 2, "bottom_right"),
+    "values_room": ("P", (0.0, 360.0), 0.04, 16, 1, "top_right"),
+}
+for name, (option, angleRange, size, divisions, nTexts, placement) in POLAR_LABELS.items():
+    for suffix, extra in (("", ""), ("_unlabelled", " N")):
+        plot = S.Plot(name + suffix, "labels", "1d")
+        plot[1].AddData("polar", "polar", "data").SetDrawOption(option + extra)
+        plot[1]["X"].SetLabelSize(size).SetNumDivisions(divisions)
+        if angleRange:
+            plot[1]["X"].SetRange(*angleRange)
+        for k in range(nTexts):
+            plot[1].AddText(f"a text of some width {k}").SetAutoPlacement(getattr(S.box_placement_t, placement))
+        r.pm.AddPlot(plot)
+labelled = r.plot("labels")
+for name in POLAR_LABELS:
+    canvas = labelled.canvas(name, "labels")
+    pad = canvas.GetPrimitive("Pad_1")
+    texts = [(o.GetX1NDC(), o.GetY1NDC(), o.GetX2NDC(), o.GetY2NDC()) for o in pad.GetListOfPrimitives() if is_box(o) and o.InheritsFrom("TPaveText")]
+    withLabels, toPixel = pixels(canvas, lambda o: not is_box(o))
+    without, _ = pixels(labelled.canvas(f"{name}_unlabelled", "labels"), lambda o: not is_box(o))
+    ink = withLabels != without
+    crowded = re.findall(r"no free space for the text", " ".join(labelled.messages(name, "labels")))
+    onLabels = 0
+    for x1, y1, x2, y2 in texts:
+        (c1, r2), (c2, r1) = toPixel(x1, y1), toPixel(x2, y2)
+        onLabels += int(ink[int(r1) + 1 : int(r2) - 1, int(c1) + 1 : int(c2) - 1].sum())
+    option, _, _, _, nTexts, placement = POLAR_LABELS[name]
+    check(
+        f"automatically placed texts find room beside the angle labels of a polar grid ({name}: {option}, {nTexts} texts at {placement})",
+        ink.any() and len(texts) == nTexts and not crowded and onLabels <= 10,
+        f"{len(texts)} texts, {len(crowded)} without room, {onLabels} label pixels under them, {int(ink.sum())} label pixels",
+    )
 finish()
