@@ -1,6 +1,6 @@
-name: Extended checks
+name: Extended tests
 
-# Slower checks that do not need to run on every push: weekly (skipped if the
+# Slower tests that do not need to run on every push: weekly (skipped if the
 # default branch had no new commit in the last week) and on demand.
 on:
   schedule:
@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       run: ${{ steps.check.outputs.run }}
+      folders: ${{ steps.folders.outputs.folders }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -29,11 +30,17 @@ jobs:
             echo "run=false" >> "${GITHUB_OUTPUT}"
           fi
 
+      # the folders of tests/ that hold tests (tools/ never runs), each tested in a job of its own
+      - name: List test folders
+        id: folders
+        run: |
+          echo "folders=$(find tests -mindepth 1 -maxdepth 1 -type d ! -name tools ! -name __pycache__ -printf '%f\n' | sort | jq -R . | jq -sc .)" >> "${GITHUB_OUTPUT}"
+
   sanitizers:
     needs: changes
     if: needs.changes.outputs.run == 'true'
 
-    name: sanitizers
+    name: tests with sanitizers
 
     runs-on: ubuntu-latest
 
@@ -119,14 +126,22 @@ jobs:
             plot '.+' '.+' "${mode}"
           done
 
-  # consistency of what SciRooPlot draws over all data types, drawing options and styles: the tests in tests/ with tests/extended
-  consistency:
+  # what SciRooPlot draws over all data types, drawing options and styles: the tests in tests/ with their full case lists, one job per
+  # folder (all of them in one job did not finish on a hosted runner), its tests one after the other
+  tests:
     needs: changes
     if: needs.changes.outputs.run == 'true'
 
-    name: consistency
+    name: tests (${{ matrix.folder }})
 
     runs-on: ubuntu-latest
+
+    timeout-minutes: 240
+
+    strategy:
+      fail-fast: false
+      matrix:
+        folder: ${{ fromJSON(needs.changes.outputs.folders) }}
 
     steps:
 
@@ -175,14 +190,14 @@ jobs:
         env:
           SRP_TESTS_FULL: 1
           SRP_WINDOWS_WAIT: 2
-        run: xvfb-run -a ctest --test-dir build --output-on-failure --parallel 2
+        run: xvfb-run -a ctest --test-dir build --output-on-failure -L "^${{ matrix.folder }}$"
 
   # all dependencies at the minimum versions required in CMakeLists.txt
   floor:
     needs: changes
     if: needs.changes.outputs.run == 'true'
 
-    name: dependency floor
+    name: build at the dependency floor
 
     runs-on: ubuntu-latest
 
